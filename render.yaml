@@ -26,7 +26,19 @@ services:
         value: "587"
       - key: EMAIL_USE_TLS
         value: "True"
-      # The following must be set manually in the Render dashboard:
       # - EMAIL_HOST_USER
       # - EMAIL_HOST_PASSWORD
       # - APPWRITE_API_KEY
+
+  - type: web
+    name: quotahire-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: "https://quotahire-backend.onrender.com/api"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
