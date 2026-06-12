@@ -359,20 +359,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Send verification email manually using Django backend
-      try {
-        await fetch(`${API_BASE_URL}/auth/send-verification/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: userData.email,
-            name: userData.name,
-            appwrite_id: newAccount.$id
-          })
-        });
-      } catch (emailErr) {
-        console.error("Failed to send custom verification email", emailErr);
-      }
+      // Use Appwrite's built-in email verification (no SMTP/backend needed)
+      const verifyRedirectUrl = `${window.location.origin}/Quota-Hire/verify-email`;
+      await account.createVerification(verifyRedirectUrl);
 
       // Log out to enforce email verification before accessing app
       await account.deleteSession('current');

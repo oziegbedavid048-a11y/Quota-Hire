@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { account } from '../../lib/appwrite';
 
 export const VerifyEmail = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -12,34 +13,27 @@ export const VerifyEmail = () => {
   useEffect(() => {
     const verifyToken = async () => {
       const queryParams = new URLSearchParams(location.search);
-      const token = queryParams.get('token');
+      // Appwrite sends userId and secret in the URL when user clicks the email link
+      const userId = queryParams.get('userId');
+      const secret = queryParams.get('secret');
 
-      if (!token) {
+      if (!userId || !secret) {
         setStatus('error');
-        setErrorMessage('Verification token is missing from the link.');
+        setErrorMessage('Verification link is missing required parameters. Please request a new verification email.');
         return;
       }
 
       try {
-        const response = await fetch(`${(import.meta as any).env.VITE_API_URL}/auth/verify-email/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          setStatus('success');
-        } else {
-          setStatus('error');
-          setErrorMessage(data.error || 'Verification failed. The link might be expired.');
-        }
-      } catch (error) {
+        // Appwrite's built-in email verification — no backend call needed
+        await account.updateVerification(userId, secret);
+        setStatus('success');
+      } catch (error: any) {
         setStatus('error');
-        setErrorMessage('Could not connect to the server. Please try again later.');
+        setErrorMessage(
+          error?.message?.includes('expired')
+            ? 'This verification link has expired. Please log in and request a new one.'
+            : error?.message || 'Verification failed. The link may be invalid or already used.'
+        );
       }
     };
 
@@ -91,9 +85,9 @@ export const VerifyEmail = () => {
                     Your email address has been successfully verified. You can now access all features of Quota Hire.
                   </p>
                 </div>
-                <Link to="/dashboard" className="block">
+                <Link to="/login" className="block">
                   <Button className="w-full py-4 rounded-xl text-base font-bold text-white shadow-xl transition-all duration-300 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 hover:shadow-accent-500/30 hover:-translate-y-0.5">
-                    Continue to Dashboard
+                    Continue to Login
                   </Button>
                 </Link>
               </motion.div>
