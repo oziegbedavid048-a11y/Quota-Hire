@@ -53,14 +53,10 @@ class AppwriteWebhookView(APIView):
                         verify_link = f"{frontend_url}/verify-email?token={token}"
                         
                         try:
-                            template_path = settings.BASE_DIR / 'templates' / 'appwrite_email_template.html'
-                            with open(template_path, 'r', encoding='utf-8') as f:
-                                html_content = f.read()
-                            
-                            html_content = html_content.replace('{{user}}', name or email.split('@')[0])
-                            html_content = html_content.replace('{{redirect}}', verify_link)
-                            
-                            text_content = f"Hi {name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
+                            from .email_templates import get_verification_email_html
+                            display_name = name or email.split('@')[0]
+                            html_content = get_verification_email_html(user=display_name, redirect=verify_link)
+                            text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
                             
                             msg = EmailMultiAlternatives(
                                 subject="Verify your email for Quota Hire",

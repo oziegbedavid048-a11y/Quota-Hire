@@ -512,6 +512,7 @@ class SendVerificationEmailView(APIView):
         import jwt, datetime
         from django.conf import settings
         from django.core.mail import EmailMultiAlternatives
+        from .email_templates import get_verification_email_html
 
         token = jwt.encode({
             'appwrite_id': appwrite_id,
@@ -521,16 +522,11 @@ class SendVerificationEmailView(APIView):
         
         frontend_url = settings.FRONTEND_URL
         verify_link = f"{frontend_url}/verify-email?token={token}"
+        display_name = name or email.split('@')[0]
         
         try:
-            template_path = settings.BASE_DIR / 'templates' / 'appwrite_email_template.html'
-            with open(template_path, 'r', encoding='utf-8') as f:
-                html_content = f.read()
-            
-            html_content = html_content.replace('{{user}}', name or email.split('@')[0])
-            html_content = html_content.replace('{{redirect}}', verify_link)
-            
-            text_content = f"Hi {name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
+            html_content = get_verification_email_html(user=display_name, redirect=verify_link)
+            text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
             
             msg = EmailMultiAlternatives(
                 subject="Verify your email for Quota Hire",
@@ -568,15 +564,12 @@ class ForgotPasswordView(APIView):
         frontend_url = settings.FRONTEND_URL
         reset_link = f"{frontend_url}/reset-password?token={token}"
 
+        from .email_templates import get_recovery_email_html
+        display_name = user.first_name or user.username
+
         try:
-            template_path = settings.BASE_DIR / 'templates' / 'appwrite_recovery_email_template.html'
-            with open(template_path, 'r', encoding='utf-8') as f:
-                html_content = f.read()
-
-            html_content = html_content.replace('{{user}}', user.first_name or user.username)
-            html_content = html_content.replace('{{redirect}}', reset_link)
-
-            text_content = f"Hi {user.first_name or user.username},\n\nPlease reset your password using this link:\n{reset_link}"
+            html_content = get_recovery_email_html(user=display_name, redirect=reset_link)
+            text_content = f"Hi {display_name},\n\nPlease reset your password using this link:\n{reset_link}"
 
             msg = EmailMultiAlternatives(
                 subject="Reset your Quota Hire Password",
