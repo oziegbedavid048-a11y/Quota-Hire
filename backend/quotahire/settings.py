@@ -5,12 +5,17 @@ Quota Hire Django Settings
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config('SECRET_KEY', default='insecure-dev-key-change-in-production')
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
+SECRET_KEY = config('SECRET_KEY', default='insecure-dev-key-change-in-production' if DEBUG else '')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY must be set in production")
+
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 APPWRITE_ENDPOINT = config('APPWRITE_ENDPOINT', default='https://nyc.cloud.appwrite.io/v1')
 APPWRITE_PROJECT_ID = config('APPWRITE_PROJECT_ID', default='6a228524002b449caeac')
@@ -60,12 +65,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'quotahire.wsgi.application'
 
-# Database — SQLite for development
+# Database
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': config(
+        'DATABASE_URL',
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        cast=dj_database_url.parse
+    )
 }
 
 # Custom User Model
@@ -118,7 +124,7 @@ SIMPLE_JWT = {
 }
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Email Settings (SMTP) ─────────────────────────────────────────────────────

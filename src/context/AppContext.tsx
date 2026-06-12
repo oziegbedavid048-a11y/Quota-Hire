@@ -10,7 +10,7 @@ import {
 } from '../types';
 import { toast } from 'sonner';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export class ApiError extends Error {
   status: number;
@@ -361,7 +361,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       // Send verification email manually using Django backend
       try {
-        await fetch('http://localhost:8000/api/auth/send-verification/', {
+        await fetch(`${API_BASE_URL}/auth/send-verification/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

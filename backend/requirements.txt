@@ -6,3 +6,5 @@ pillow
 python-decouple
 gunicorn
 appwrite
+dj-database-url
+psycopg2-binary

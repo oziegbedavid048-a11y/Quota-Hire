@@ -519,7 +519,7 @@ class SendVerificationEmailView(APIView):
             'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
         }, settings.SECRET_KEY, algorithm='HS256')
         
-        frontend_url = 'http://localhost:5173'
+        frontend_url = settings.FRONTEND_URL
         verify_link = f"{frontend_url}/verify-email?token={token}"
         
         try:
@@ -565,7 +565,7 @@ class ForgotPasswordView(APIView):
             'exp': timezone.now() + timedelta(hours=1)
         }, settings.SECRET_KEY, algorithm='HS256')
 
-        frontend_url = 'http://localhost:5173'
+        frontend_url = settings.FRONTEND_URL
         reset_link = f"{frontend_url}/reset-password?token={token}"
 
         try:

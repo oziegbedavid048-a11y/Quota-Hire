@@ -31,7 +31,7 @@ export const Navbar = () => {
   };
   const getDashboardLink = () => {
     if (!currentUser) return '/';
-    if (currentUser.role === 'admin') return 'http://localhost:8000/admin/';
+    if (currentUser.role === 'admin') return `${import.meta.env.VITE_BACKEND_URL}/admin/`;
     if (currentUser.role === 'company') return '/dashboard';
     return '/dashboard';
   };
@@ -39,7 +39,7 @@ export const Navbar = () => {
     if (!currentUser) return '/';
     if (currentUser.role === 'company') return '/company/profile';
     if (currentUser.role === 'employee') return '/employee/profile';
-    return 'http://localhost:8000/admin/';
+    return `${import.meta.env.VITE_BACKEND_URL}/admin/`;
   };
   const isAuthPage =
   location.pathname === '/login' || location.pathname === '/signup';

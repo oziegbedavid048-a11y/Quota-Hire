@@ -28,7 +28,7 @@ function FloatingHeader({ toggleSidebar, user }: { toggleSidebar: () => void; us
     if (!user) return '/';
     if (user.role === 'company') return '/company/profile';
     if (user.role === 'employee') return '/employee/profile';
-    return 'http://localhost:8000/admin/';
+    return `${import.meta.env.VITE_BACKEND_URL}/admin/`;
   };
 
   const userAvatarUrl = user?.avatarUrl;
@@ -102,11 +102,11 @@ function PillSidebar({ isOpen, closeSidebar, user }: { isOpen: boolean; closeSid
     if (!user) return '/';
     if (user.role === 'company') return '/company/profile';
     if (user.role === 'employee') return '/employee/profile';
-    return 'http://localhost:8000/admin/';
+    return `${import.meta.env.VITE_BACKEND_URL}/admin/`;
   };
 
   const links = user?.role === 'admin' ? [
-    { name: 'Django Admin', href: 'http://localhost:8000/admin/', icon: LayoutDashboard },
+    { name: 'Django Admin', href: `${import.meta.env.VITE_BACKEND_URL}/admin/`, icon: LayoutDashboard },
   ] : [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     ...(user?.role === 'employee' ? [
