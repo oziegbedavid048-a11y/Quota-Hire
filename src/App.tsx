@@ -222,7 +222,7 @@ export function App() {
   return (
     <ThemeProvider>
       <AppProvider>
-        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Router basename="/Quota-Hire" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AppRoutes />
           <Toaster position="top-right" richColors closeButton theme="system" />
         </Router>
