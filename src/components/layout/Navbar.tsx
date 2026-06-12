@@ -49,7 +49,7 @@ export const Navbar = () => {
       <div className="max-w-6xl mx-auto rounded-[32px] border border-white/50 dark:border-white/10 bg-white/30 dark:bg-neutral-950/30 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
       <div className="px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="Quota Hire Logo" className="w-10 h-10 object-contain" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Quota Hire Logo" className="w-10 h-10 object-contain" />
           <span className="font-display font-bold text-xl tracking-tight text-neutral-900 dark:text-white">
             Quota Hire
           </span>

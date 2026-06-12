@@ -53,7 +53,7 @@ export const JobsList = () => {
             </div>
             <div className="w-48 h-48 md:w-56 md:h-56 shrink-0">
               <img
-                src="/images/browse_jobs_seeker.png"
+                src={`${import.meta.env.BASE_URL}images/browse_jobs_seeker.png`}
                 alt="Job Seeker 3D Character"
                 className="w-full h-full object-contain drop-shadow-xl animate-float"
               />

@@ -175,7 +175,7 @@ export const CompanyDashboardPage = () => {
 
           <div className="w-40 h-40 md:w-52 md:h-52 shrink-0 mb-4 md:mb-0">
             <img
-              src="/images/post_job_recruiter.png"
+              src={`${import.meta.env.BASE_URL}images/post_job_recruiter.png`}
               alt="Company 3D Illustration"
               className="w-full h-full object-contain drop-shadow-2xl animate-float"
             />

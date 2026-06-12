@@ -160,7 +160,7 @@ export const Home = () => {
 
               <div className="h-64 overflow-hidden">
                 <img
-                  src="/talent_3d.png"
+                  src={`${import.meta.env.BASE_URL}talent_3d.png`}
                   alt="Sales professional 3D Illustration"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
 
@@ -207,7 +207,7 @@ export const Home = () => {
 
               <div className="h-64 overflow-hidden">
                 <img
-                  src="/company_3d.png"
+                  src={`${import.meta.env.BASE_URL}company_3d.png`}
                   alt="Business handshake 3D Illustration"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
 

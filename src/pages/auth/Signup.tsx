@@ -167,7 +167,7 @@ export const Signup = () => {
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
                 className="w-14 h-14 sm:w-16 sm:h-16 mx-auto flex items-center justify-center mb-4 sm:mb-6 drop-shadow-md"
               >
-                <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
+                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-full h-full object-contain" />
               </motion.div>
               <h1 className="text-xl sm:text-2xl font-display font-bold text-neutral-900 dark:text-white mb-1 sm:mb-2 tracking-tight">
                 Create an account
@@ -380,7 +380,7 @@ export const Signup = () => {
         {/* ── RIGHT PANEL: 3D FIGURE + TEXT (desktop only) ── */}
         <div className="hidden lg:flex flex-row items-center justify-start relative z-20 pointer-events-none -ml-12 xl:-ml-20">
           <motion.img
-            src="/images/signup_human_3d.png"
+            src={`${import.meta.env.BASE_URL}images/signup_human_3d.png`}
             alt="Sign Up Illustration"
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}

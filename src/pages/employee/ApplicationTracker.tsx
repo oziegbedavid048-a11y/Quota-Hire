@@ -75,7 +75,7 @@ export const ApplicationTracker = () => {
         {/* Illustration — smaller on mobile */}
         <div className="w-28 h-28 sm:w-40 sm:h-40 md:w-52 md:h-52 shrink-0 relative z-10">
           <img
-            src="/images/tracker_illustration.png"
+            src={`${import.meta.env.BASE_URL}images/tracker_illustration.png`}
             alt="Application Tracker Illustration"
             className="w-full h-full object-contain drop-shadow-xl"
           />

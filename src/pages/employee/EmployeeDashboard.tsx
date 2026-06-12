@@ -164,7 +164,7 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
 
           <div className="w-40 h-40 md:w-52 md:h-52 shrink-0 mb-4 md:mb-0">
             <img
-              src="/images/employee_welcome.png"
+              src={`${import.meta.env.BASE_URL}images/employee_welcome.png`}
               alt="Welcome 3D Character"
               className="w-full h-full object-contain drop-shadow-2xl animate-float"
             />

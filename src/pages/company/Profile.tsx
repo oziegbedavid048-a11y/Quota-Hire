@@ -102,7 +102,7 @@ export const CompanyProfilePage = () => {
           </div>
           <div className="hidden md:block w-40 h-40 shrink-0">
             <img
-              src="/images/company_profile.png"
+              src={`${import.meta.env.BASE_URL}images/company_profile.png`}
               alt="Profile 3D Illustration"
               className="w-full h-full object-contain drop-shadow-xl animate-float"
             />

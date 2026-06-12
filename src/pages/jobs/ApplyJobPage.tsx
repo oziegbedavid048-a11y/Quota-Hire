@@ -270,7 +270,7 @@ export const ApplyJobPage = () => {
               <div className="w-56 h-56 sm:w-72 sm:h-72 mb-8 relative">
                 <div className="absolute inset-0 bg-accent-500/10 blur-3xl rounded-full"></div>
                 <img
-                  src="/images/reviewing_app_3d.png"
+                  src={`${import.meta.env.BASE_URL}images/reviewing_app_3d.png`}
                   alt="Reviewing"
                   className="w-full h-full object-contain drop-shadow-2xl relative z-10"
                   style={{ animation: 'float 3s ease-in-out infinite' }}
@@ -442,7 +442,7 @@ export const ApplyJobPage = () => {
               >
                 <div className="absolute inset-0 bg-accent-500/10 blur-3xl rounded-full" />
                 <img
-                  src="/images/success_plane_3d_nobg.png"
+                  src={`${import.meta.env.BASE_URL}images/success_plane_3d_nobg.png`}
                   alt="Success"
                   className="w-full h-full object-contain drop-shadow-2xl relative z-10"
                   style={{ animation: 'float 3s ease-in-out infinite' }}

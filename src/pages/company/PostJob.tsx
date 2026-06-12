@@ -220,7 +220,7 @@ export const PostJob = () => {
             </div>
             <div className="w-32 h-32 md:w-44 md:h-44 shrink-0">
               <img
-                src="/images/post_job_recruiter.png"
+                src={`${import.meta.env.BASE_URL}images/post_job_recruiter.png`}
                 alt="Recruiter 3D Character"
                 className="w-full h-full object-contain drop-shadow-xl animate-float"
               />

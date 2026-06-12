@@ -88,7 +88,7 @@ export const CompanySetup = () => {
             </div>
             <div className="w-32 h-32 md:w-44 md:h-44 shrink-0">
               <img
-                src="/images/company_setup.png"
+                src={`${import.meta.env.BASE_URL}images/company_setup.png`}
                 alt="Setup 3D Character"
                 className="w-full h-full object-contain drop-shadow-xl animate-float"
               />

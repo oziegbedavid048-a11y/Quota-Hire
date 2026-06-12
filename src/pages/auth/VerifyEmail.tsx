@@ -66,7 +66,7 @@ export const VerifyEmail = () => {
               transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
               className="w-16 h-16 mx-auto flex items-center justify-center mb-6"
             >
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain drop-shadow-md" />
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-full h-full object-contain drop-shadow-md" />
             </motion.div>
 
             {status === 'loading' && (
