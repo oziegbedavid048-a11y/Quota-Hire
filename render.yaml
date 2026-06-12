@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: quotahire-backend
+    env: python
+    region: ohio
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt && python manage.py migrate"
+    startCommand: "gunicorn quotahire.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "*"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APPWRITE_ENDPOINT
+        value: "https://nyc.cloud.appwrite.io/v1"
+      - key: APPWRITE_PROJECT_ID
+        value: "6a228524002b449caeac"
+      - key: EMAIL_HOST
+        value: "smtp.gmail.com"
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      # The following must be set manually in the Render dashboard:
+      # - EMAIL_HOST_USER
+      # - EMAIL_HOST_PASSWORD
+      # - APPWRITE_API_KEY

@@ -1,0 +1,89 @@
+/* @import url() FONT IMPORTS MUST ALWAYS BE AT THE VERY TOP OF THIS FILE, ABOVE THE TAILWIND IMPORTS — DO NOT DELETE THIS COMMENT */
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* CRITICAL: THE FOLLOWING TAILWIND IMPORTS MUST NEVER BE DELETED OR REORDERED — DO NOT DELETE THIS COMMENT */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+
+@layer base {
+  html {
+    @apply transition-colors duration-300;
+  }
+  body {
+    /* Warm-to-green gradient matching the dashboard hero card — used site-wide */
+    background: linear-gradient(135deg, #fffbeb 0%, #f4fbf2 100%);
+    background-attachment: fixed;
+    @apply text-ink font-sans antialiased selection:bg-accent-200 selection:text-accent-900 transition-colors duration-300;
+  }
+  .dark body {
+    /* Dark version: warm amber tint fading into deep green tint */
+    background: linear-gradient(135deg, #1c1508 0%, #050f03 100%);
+    background-attachment: fixed;
+    @apply text-neutral-50 selection:bg-accent-900 selection:text-accent-100;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-neutral-900;
+  }
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    @apply text-white;
+  }
+}
+
+/* Global transitions for inputs and buttons */
+@layer components {
+  .btn-soft {
+    @apply rounded-xl font-bold shadow-sm border border-transparent transition-all duration-300 hover:shadow-md active:scale-95;
+  }
+  .dark .btn-soft {
+    @apply shadow-sm hover:shadow-md;
+  }
+  
+  .input-soft {
+    @apply bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all duration-300 shadow-sm disabled:text-neutral-900 disabled:dark:text-white disabled:opacity-100;
+  }
+  
+  .card-soft {
+    @apply bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm transition-all duration-300;
+  }
+}
+
+/* Custom scrollbar for a polished feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-accent-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-accent-400;
+}
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-accent-700;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-accent-600;
+}
+/* Hide scrollbar for clean horizontal scrolling areas */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Float animation for 3D illustrations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}

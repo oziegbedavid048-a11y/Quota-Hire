@@ -1,0 +1,4 @@
+Loading image from: C:\Users\David\Desktop\QOUTA HIRE\public\logo.jpeg
+Removing background...
+Saving to: C:\Users\David\Desktop\QOUTA HIRE\public\logo.png
+Done! Background removed successfully.
