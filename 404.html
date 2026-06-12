@@ -1,14 +1,22 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/Quota-Hire/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quota Hire Recruiting Platform</title>
-    <script type="module" crossorigin src="/Quota-Hire/assets/index-66ANeJf_.js"></script>
-    <link rel="stylesheet" crossorigin href="/Quota-Hire/assets/index-B3s3Z5XF.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Quota Hire</title>
+  <script type="text/javascript">
+    // GitHub Pages SPA redirect trick
+    // Preserves the path and query string, redirects to index.html
+    var segmentCount = 1; // number of path segments in the repo name (Quota-Hire = 1)
+    var l = window.location;
+    l.replace(
+      l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+      l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?/' +
+      l.pathname.slice(1).split('/').slice(segmentCount).join('/').replace(/&/g, '~and~') +
+      (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.hash
+    );
+  </script>
+</head>
+<body>
+</body>
 </html>
