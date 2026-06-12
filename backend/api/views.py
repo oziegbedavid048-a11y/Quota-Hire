@@ -523,7 +523,7 @@ class SendVerificationEmailView(APIView):
         verify_link = f"{frontend_url}/verify-email?token={token}"
         
         try:
-            template_path = settings.BASE_DIR.parent / 'appwrite_email_template.html'
+            template_path = settings.BASE_DIR / 'templates' / 'appwrite_email_template.html'
             with open(template_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
             
@@ -569,7 +569,7 @@ class ForgotPasswordView(APIView):
         reset_link = f"{frontend_url}/reset-password?token={token}"
 
         try:
-            template_path = settings.BASE_DIR.parent / 'appwrite_recovery_email_template.html'
+            template_path = settings.BASE_DIR / 'templates' / 'appwrite_recovery_email_template.html'
             with open(template_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
 
