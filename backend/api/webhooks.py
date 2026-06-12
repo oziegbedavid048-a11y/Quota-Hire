@@ -49,7 +49,7 @@ class AppwriteWebhookView(APIView):
                             'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
                         }, settings.SECRET_KEY, algorithm='HS256')
                         
-                        frontend_url = 'http://localhost:5173' # Change this when deploying to production
+                        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
                         verify_link = f"{frontend_url}/verify-email?token={token}"
                         
                         try:
