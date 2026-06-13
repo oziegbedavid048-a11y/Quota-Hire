@@ -33,8 +33,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.mail import EmailMultiAlternatives
 import jwt
-from appwrite.client import Client
-from appwrite.services.users import Users
+
 import re
 import io
 import logging
