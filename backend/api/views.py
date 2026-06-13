@@ -216,16 +216,19 @@ class RegisterView(generics.CreateAPIView):
     permission_classes  = [permissions.AllowAny]
 
     def perform_create(self, serializer):
-        user = serializer.save()
-        # Automatically trigger verification email
-        import threading
+        from django.db import transaction
+        from rest_framework.exceptions import ValidationError
         
-        def send_email_task():
-            try:
+        try:
+            with transaction.atomic():
+                user = serializer.save()
+                
+                # Automatically trigger verification email
                 from django.conf import settings
                 from django.core.mail import EmailMultiAlternatives
                 from .email_templates import get_verification_email_html
                 import datetime
+                import jwt
                 
                 token = jwt.encode({
                     'email': user.email,
@@ -247,10 +250,12 @@ class RegisterView(generics.CreateAPIView):
                 )
                 msg.attach_alternative(html_content, "text/html")
                 msg.send(fail_silently=False)
-            except Exception as e:
-                logger.error(f"Failed to send manual verification email to {user.email}: {e}")
-
-        threading.Thread(target=send_email_task, daemon=True).start()
+                
+        except Exception as e:
+            logger.error(f"Registration failed - Could not send verification email to {serializer.validated_data.get('email')}: {e}")
+            raise ValidationError({
+                "email": "We couldn't send a verification email to this address. Please ensure the email is valid and try again later."
+            })
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
