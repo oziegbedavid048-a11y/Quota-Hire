@@ -42,9 +42,12 @@ export const Home = () => {
   const getInTouchRef = useRef<HTMLElement>(null);
   const isGetInTouchInView = useInView(getInTouchRef, { amount: 0.3 });
 
+  const howItWorksRef = useRef<HTMLElement>(null);
+  const isHowItWorksInView = useInView(howItWorksRef, { amount: 0.3 });
+
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-neutral-950 relative">
-      <ShaderAnimation isPaused={isWhyQuotaHireInView || isGetInTouchInView} />
+      <ShaderAnimation isPaused={isWhyQuotaHireInView || isGetInTouchInView || isHowItWorksInView} />
 
       {/* Shader Animation Hero */}
       <section className="relative z-10 min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -250,7 +253,7 @@ export const Home = () => {
       </section>
 
       {/* How It Works */}
-      <section className="py-24 relative">
+      <section ref={howItWorksRef} className="py-24 relative">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-xl md:text-2xl md:text-xl md:text-2xl md:text-2xl md:text-xl md:text-2xl font-display font-bold text-neutral-900 dark:text-white mb-6">
