@@ -225,8 +225,7 @@ class RegisterView(generics.CreateAPIView):
                 
                 # Automatically trigger verification email
                 from django.conf import settings
-                from django.core.mail import EmailMultiAlternatives
-                from .email_templates import get_verification_email_html
+                from .email_templates import get_verification_email_html, send_courier_email
                 import datetime
                 import jwt
                 
@@ -242,14 +241,12 @@ class RegisterView(generics.CreateAPIView):
                 html_content = get_verification_email_html(user=display_name, redirect=verify_link)
                 text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
                 
-                msg = EmailMultiAlternatives(
+                send_courier_email(
+                    to_email=user.email,
                     subject="Verify your email for Quota Hire",
-                    body=text_content,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[user.email]
+                    text_content=text_content,
+                    html_content=html_content
                 )
-                msg.attach_alternative(html_content, "text/html")
-                msg.send(fail_silently=False)
                 
         except Exception as e:
             logger.error(f"Registration failed - Could not send verification email to {serializer.validated_data.get('email')}: {e}")
@@ -550,8 +547,7 @@ class SendVerificationEmailView(APIView):
 
         import jwt, datetime
         from django.conf import settings
-        from django.core.mail import EmailMultiAlternatives
-        from .email_templates import get_verification_email_html
+        from .email_templates import get_verification_email_html, send_courier_email
 
         token = jwt.encode({
             'email': email,
@@ -566,14 +562,12 @@ class SendVerificationEmailView(APIView):
             html_content = get_verification_email_html(user=display_name, redirect=verify_link)
             text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
             
-            msg = EmailMultiAlternatives(
+            send_courier_email(
+                to_email=email,
                 subject="Verify your email for Quota Hire",
-                body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email]
+                text_content=text_content,
+                html_content=html_content
             )
-            msg.attach_alternative(html_content, "text/html")
-            msg.send(fail_silently=False)
         except Exception as e:
             logger.error(f"Failed to send manual verification email to {email}: {e}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -601,21 +595,19 @@ class ForgotPasswordView(APIView):
         frontend_url = settings.FRONTEND_URL
         reset_link = f"{frontend_url}/reset-password?token={token}"
 
-        from .email_templates import get_recovery_email_html
+        from .email_templates import get_recovery_email_html, send_courier_email
         display_name = user.first_name or user.username
 
         try:
             html_content = get_recovery_email_html(user=display_name, redirect=reset_link)
             text_content = f"Hi {display_name},\n\nPlease reset your password using this link:\n{reset_link}"
 
-            msg = EmailMultiAlternatives(
+            send_courier_email(
+                to_email=email,
                 subject="Reset your Quota Hire Password",
-                body=text_content,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email]
+                text_content=text_content,
+                html_content=html_content
             )
-            msg.attach_alternative(html_content, "text/html")
-            msg.send(fail_silently=False)
             
         except Exception as e:
             logger.error(f"Failed to send recovery email to {email}: {e}")

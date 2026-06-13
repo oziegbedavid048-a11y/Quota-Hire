@@ -1,7 +1,6 @@
 import logging
 import jwt
 import datetime
-from django.core.mail import EmailMultiAlternatives
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -53,19 +52,17 @@ class AppwriteWebhookView(APIView):
                         verify_link = f"{frontend_url}/verify-email?token={token}"
                         
                         try:
-                            from .email_templates import get_verification_email_html
+                            from .email_templates import get_verification_email_html, send_courier_email
                             display_name = name or email.split('@')[0]
                             html_content = get_verification_email_html(user=display_name, redirect=verify_link)
                             text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
                             
-                            msg = EmailMultiAlternatives(
+                            send_courier_email(
+                                to_email=email,
                                 subject="Verify your email for Quota Hire",
-                                body=text_content,
-                                from_email=settings.DEFAULT_FROM_EMAIL,
-                                to=[email]
+                                text_content=text_content,
+                                html_content=html_content
                             )
-                            msg.attach_alternative(html_content, "text/html")
-                            msg.send(fail_silently=False)
                             logger.info(f"Successfully sent custom verification email to {email}")
                         except Exception as e:
                             logger.error(f"Failed to send verification email to {email}: {e}")

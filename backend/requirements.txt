@@ -12,4 +12,3 @@ whitenoise
 django-redis
 django-cloudinary-storage
 cloudinary
-django-anymail[sendinblue]

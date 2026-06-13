@@ -257,3 +257,53 @@ def get_verification_email_html(user: str, redirect: str) -> str:
 def get_recovery_email_html(user: str, redirect: str) -> str:
     """Return the password recovery email HTML with placeholders filled in."""
     return RECOVERY_EMAIL_TEMPLATE.format(user=user, redirect=redirect)
+
+import json
+import urllib.request
+import urllib.error
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
+
+def send_courier_email(to_email: str, subject: str, text_content: str, html_content: str):
+    """Sends an email using the Courier REST API."""
+    url = "https://api.courier.com/send"
+    
+    payload = {
+        "message": {
+            "to": {
+                "email": to_email
+            },
+            "content": {
+                "title": subject,
+                "body": text_content,
+                "html": html_content
+            },
+            "routing": {
+                "method": "all",
+                "channels": ["email"]
+            }
+        }
+    }
+    
+    headers = {
+        "Authorization": f"Bearer {settings.COURIER_AUTH_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_data = response.read()
+            logger.info(f"Courier email sent to {to_email}: {res_data}")
+            return True
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        logger.error(f"Courier API error: {e.code} - {error_body}")
+        raise Exception(f"Courier API failed: {error_body}")
+    except Exception as e:
+        logger.error(f"Failed to send Courier email: {str(e)}")
+        raise e
