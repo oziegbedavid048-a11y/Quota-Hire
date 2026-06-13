@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   Camera,
   User,
   BadgeCheck,
-  Lock,
   Save,
   X,
   Building2,
@@ -18,15 +17,12 @@ import { CompanyProfile } from '../../types';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 
 export const CompanyProfilePage = () => {
-  const { currentUser, updateProfileImage, updateProfile, changePassword } = useAppContext();
+  const { currentUser, updateProfileImage, updateProfile } = useAppContext();
   const navigate = useNavigate();
   const profile = currentUser as CompanyProfile;
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<CompanyProfile>>({});
-  
-  const [passwordData, setPasswordData] = useState({ old_password: '', new_password: '' });
-  const [isEditingPassword, setIsEditingPassword] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -51,16 +47,6 @@ export const CompanyProfilePage = () => {
       // error handled in context
     }
   };
-
-  const handleChangePassword = async () => {
-    try {
-      await changePassword(passwordData);
-      setIsEditingPassword(false);
-      setPasswordData({ old_password: '', new_password: '' });
-    } catch (error) {
-      // error handled in context
-    }
-  };
   
   return (
     <div className="min-h-screen py-8 relative overflow-hidden">
@@ -79,11 +65,11 @@ export const CompanyProfilePage = () => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 card-soft relative overflow-hidden bg-gradient-to-r from-accent-50 to-warm-50 dark:from-accent-900/20 dark:to-warm-900/20 p-6 md:p-8 flex items-center justify-between"
+          className="mb-8 card-soft relative overflow-hidden bg-gradient-to-r from-accent-50 to-warm-50 dark:from-accent-900/20 dark:to-warm-900/20 p-6 md:p-8 flex flex-col-reverse md:flex-row items-center justify-between gap-6"
         >
           <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-accent-200/40 dark:bg-accent-900/40 rounded-full blur-[60px]" />
-          <div className="relative z-10 flex-1 pr-6">
-            <div className="flex items-center gap-3 mb-3">
+          <div className="relative z-10 flex-1 text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-accent-600 dark:text-accent-400 bg-accent-100 dark:bg-accent-900/40 px-3 py-1 rounded-full">
                 <Building2 size={12} /> Company Profile
               </span>
@@ -96,11 +82,11 @@ export const CompanyProfilePage = () => {
             <h1 className="text-2xl md:text-3xl font-display font-extrabold text-neutral-900 dark:text-white mb-2">
               Your Company <span className="text-accent-600 dark:text-accent-400">Settings</span>
             </h1>
-            <p className="text-neutral-500 dark:text-neutral-400 text-sm max-w-md">
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm max-w-md mx-auto md:mx-0">
               Keep your company details updated to attract the best talent. Verified companies receive 3x more applications.
             </p>
           </div>
-          <div className="hidden md:block w-40 h-40 shrink-0">
+          <div className="w-32 h-32 md:w-40 md:h-40 shrink-0">
             <img
               src={`${import.meta.env.BASE_URL}images/company_profile.png`}
               alt="Profile 3D Illustration"

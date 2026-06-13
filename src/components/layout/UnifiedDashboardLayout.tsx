@@ -259,6 +259,14 @@ export default function UnifiedDashboardLayout({ children }: { children: React.R
           toggleSidebar={() => setSidebarOpen(true)} 
           user={currentUser} 
         />
+
+        {currentUser && !currentUser.setupCompleted && (
+          <Link to={currentUser.role === 'company' ? '/company/profile' : '/employee/profile'} className="block bg-amber-500 hover:bg-amber-600 transition-colors text-white font-bold text-sm py-2 overflow-hidden shrink-0 relative z-20">
+            <div className="animate-marquee whitespace-nowrap inline-block">
+              ⚠️ You haven't completed your profile yet. Click here to complete your profile and unlock all features! ⚠️ You haven't completed your profile yet. Click here to complete your profile and unlock all features! ⚠️
+            </div>
+          </Link>
+        )}
         
         <main className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 pb-24 md:pb-8 pt-2 sm:pt-4 custom-scrollbar relative">
           <AnimatePresence mode="wait">

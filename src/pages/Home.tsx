@@ -124,7 +124,7 @@ export const Home = () => {
                   rightIcon={<ArrowRight size={18} />}
                   className="w-full sm:w-auto shadow-elevated">
 
-                  Find Your Next Role
+                  I am looking for job
                 </Button>
               </Link>
               <Link to="/signup?role=company">
@@ -133,7 +133,7 @@ export const Home = () => {
                   size="lg"
                   className="w-full sm:w-auto bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md shadow-sm">
 
-                  Hire Top Talent
+                  I am hiring
                 </Button>
               </Link>
             </motion.div>
@@ -160,8 +160,8 @@ export const Home = () => {
 
               <div className="h-64 overflow-hidden">
                 <img
-                  src={`${import.meta.env.BASE_URL}talent_3d.png`}
-                  alt="Sales professional 3D Illustration"
+                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80"
+                  alt="Sales professional working"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
 
               </div>
@@ -207,8 +207,8 @@ export const Home = () => {
 
               <div className="h-64 overflow-hidden">
                 <img
-                  src={`${import.meta.env.BASE_URL}company_3d.png`}
-                  alt="Business handshake 3D Illustration"
+                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=800&q=80"
+                  alt="Hiring manager reviewing candidates"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
 
               </div>

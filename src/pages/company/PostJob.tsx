@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle, Wand2, Briefcase, MapPin, CheckCircle2, FileText, Check } from 'lucide-react';
+import { ArrowLeft, Wand2, Briefcase, MapPin, CheckCircle2, FileText, Check, Shield } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
@@ -263,6 +263,13 @@ export const PostJob = () => {
                 <motion.div key="step1" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                   <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white mb-6">The Basics</h3>
                   
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 flex items-start gap-3">
+                    <Shield size={18} className="text-blue-500 mt-0.5 shrink-0" />
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      <strong>Privacy Notice:</strong> Your company contact information, email, and address are kept strictly confidential and will <span className="underline font-semibold">not</span> be accessible by applicants.
+                    </p>
+                  </div>
+
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <GlassInput
