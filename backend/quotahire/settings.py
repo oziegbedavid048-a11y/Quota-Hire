@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'cloudinary',
     'rest_framework',
     'corsheaders',
+    'anymail',
     # Local
     'api',
 ]
@@ -158,14 +159,10 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-# ── Email Settings (SMTP) ─────────────────────────────────────────────────────
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=465, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
-EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=True, cast=bool)
-EMAIL_TIMEOUT = 5  # Prevent Gunicorn timeout crash if SMTP is blocked
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=f"Quota Hire <{EMAIL_HOST_USER}>" if EMAIL_HOST_USER else "Quota Hire <noreply@quotahire.com>")
+# ── Email Settings (Brevo / Sendinblue via HTTP API) ─────────────────────────
+EMAIL_BACKEND = 'anymail.backends.sendinblue.EmailBackend'
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default="Quota Hire <quotahire.recruit@gmail.com>")
+ANYMAIL = {
+    "SENDINBLUE_API_KEY": config('BREVO_API_KEY', default=''),
+}
 
