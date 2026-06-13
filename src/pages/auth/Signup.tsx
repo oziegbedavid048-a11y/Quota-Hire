@@ -5,6 +5,7 @@ import { ArrowLeft, Mail, Lock, User, Building, Loader2, AlertTriangle, Phone, M
 import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { PasswordStrengthMeter } from '../../components/ui/PasswordStrengthMeter';
+import { ShaderAnimation } from '../../components/ui/ShaderAnimation';
 import { useAppContext } from '../../context/AppContext';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -125,6 +126,7 @@ export const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-neutral-50 dark:bg-neutral-950 font-body py-16 px-4">
+      <ShaderAnimation isPaused={false} />
       {/* Subtle ambient gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-accent-500/10 via-transparent to-warm-500/10 pointer-events-none" />
 
