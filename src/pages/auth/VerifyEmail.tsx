@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
@@ -9,23 +9,36 @@ export const VerifyEmail = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const location = useLocation();
+  const hasAttempted = useRef(false);
 
   useEffect(() => {
+    if (hasAttempted.current) return;
+    hasAttempted.current = true;
+
     const verifyToken = async () => {
       const queryParams = new URLSearchParams(location.search);
-      // Appwrite sends userId and secret in the URL when user clicks the email link
-      const userId = queryParams.get('userId');
-      const secret = queryParams.get('secret');
+      const token = queryParams.get('token');
 
-      if (!userId || !secret) {
+      if (!token) {
         setStatus('error');
-        setErrorMessage('Verification link is missing required parameters. Please request a new verification email.');
+        setErrorMessage('Verification link is missing the token. Please request a new verification email.');
         return;
       }
 
       try {
-        // Appwrite's built-in email verification — no backend call needed
-        await account.updateVerification(userId, secret);
+        // Use Django backend for custom email verification
+        const res = await fetch(`${(import.meta as any).env.VITE_API_URL || 'http://localhost:8000/api'}/auth/verify-email/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(data.error || 'Verification failed');
+        }
+        
         setStatus('success');
       } catch (error: any) {
         setStatus('error');

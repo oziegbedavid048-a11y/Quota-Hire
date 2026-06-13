@@ -414,7 +414,7 @@ export const Signup = () => {
               </div>
               <h2 className="text-2xl sm:text-3xl font-display font-bold text-neutral-900 dark:text-white mb-3">Check your email</h2>
               <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 mb-8 leading-relaxed">
-                We've sent a confirmation link to your email address. Please click the link to verify your account before logging in.
+                We've sent a confirmation link to your email address. Please click the link to verify your account before logging in. Please check your spam folder if it is not in your inbox.
               </p>
               <Button
                 onClick={() => navigate('/login')}
