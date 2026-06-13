@@ -5,14 +5,14 @@ import {
   Shield, ShieldCheck, AlertTriangle, Phone,
   Settings as SettingsIcon, CheckCircle2, Bell,
 } from 'lucide-react';
-import { useAppContext } from '../context/AppContext';
+import { useAppContext, apiFetch } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 type Tab = 'account' | 'security';
 
 export const Settings = () => {
-  const { currentUser, updateProfile, changePassword, apiFetch, logout } = useAppContext();
+  const { currentUser, updateProfile, changePassword, logout } = useAppContext();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<Tab>('account');
@@ -78,7 +78,7 @@ export const Settings = () => {
     }
     setIsSavingPassword(true);
     try {
-      await changePassword(passwordForm.old_password, passwordForm.new_password);
+      await changePassword({ old_password: passwordForm.old_password, new_password: passwordForm.new_password });
       setPasswordForm({ old_password: '', new_password: '', confirm_password: '' });
       toast.success('Password updated successfully!');
     } catch {
