@@ -286,13 +286,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await apiFetch('/auth/register/', {
           method: 'POST',
           body: JSON.stringify({
-              username: userData.name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random()*1000),
               email: userData.email,
+              name: userData.name,
               password: userData.password,
-              first_name: userData.name.split(' ')[0],
-              last_name: userData.name.split(' ').slice(1).join(' '),
+              password2: userData.password2,
               role: userData.role || 'employee',
-              location: [userData.city, userData.country].filter(Boolean).join(', ')
           })
       });
 
