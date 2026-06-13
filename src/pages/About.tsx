@@ -15,9 +15,12 @@ export const About = () => {
   
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950 relative">
+      <ShaderAnimation isPaused={false} />
+
       {/* Hero */}
-      <section className="pt-32 pb-24 relative overflow-hidden bg-gradient-to-br from-accent-500/10 via-white to-warm-500/10 dark:from-accent-500/10 dark:via-neutral-900 dark:to-warm-500/10 border-b border-neutral-200 dark:border-neutral-800">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
+      <section className="pt-32 pb-24 relative overflow-hidden bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 z-20">
+        <div className="absolute inset-0 bg-gradient-to-br from-accent-500/10 via-white to-warm-500/10 dark:from-accent-500/10 dark:via-neutral-900 dark:to-warm-500/10"></div>
+        <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
           <motion.div 
             initial="hidden" animate="visible" variants={fadeIn}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent-50 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 font-bold text-sm mb-6"
@@ -37,15 +40,12 @@ export const About = () => {
             Quota Hire is the exclusive network connecting elite, performance-verified sales professionals with high-growth companies.
           </motion.p>
           <motion.div initial="hidden" animate="visible" variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { delay: 0.4, duration: 0.6 } } }} className="mt-12 flex justify-center">
-            <img src={`${import.meta.env.BASE_URL}images/about_illustration_nobg.png`} alt="Team collaboration" className="w-full max-w-md object-contain drop-shadow-2xl animate-float" />
+            <img src={`${import.meta.env.BASE_URL}images/about_illustration_nobg.png`} alt="Team collaboration" className="w-full max-w-sm object-contain drop-shadow-2xl animate-float" />
           </motion.div>
         </div>
       </section>
 
-      <div className="relative overflow-hidden">
-        <ShaderAnimation isPaused={false} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 dark:opacity-60 dark:mix-blend-screen z-0" />
-
-        {/* Story */}
+      {/* Story */}
         <section className="py-24 relative z-10">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="grid md:grid-cols-2 gap-16 items-center">
@@ -69,7 +69,7 @@ export const About = () => {
       </section>
 
       {/* Values */}
-      <section className="py-24 relative overflow-hidden bg-white/60 dark:bg-neutral-950/60 backdrop-blur-md border-y border-neutral-200 dark:border-neutral-800 z-10">
+      <section className="py-24 relative border-y border-neutral-200 dark:border-neutral-800 z-10">
         <div className="container mx-auto px-4 max-w-6xl relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-neutral-900 dark:text-white">Our Core Values</h2>
@@ -99,7 +99,6 @@ export const About = () => {
           </Link>
         </div>
       </section>
-      </div>
     </div>
   );
 };
