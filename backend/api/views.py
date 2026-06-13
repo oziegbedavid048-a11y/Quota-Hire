@@ -215,6 +215,38 @@ class RegisterView(generics.CreateAPIView):
     serializer_class    = RegisterSerializer
     permission_classes  = [permissions.AllowAny]
 
+    def perform_create(self, serializer):
+        user = serializer.save()
+        # Automatically trigger verification email
+        try:
+            from django.conf import settings
+            from django.core.mail import EmailMultiAlternatives
+            from .email_templates import get_verification_email_html
+            import datetime
+            
+            token = jwt.encode({
+                'email': user.email,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+            }, settings.SECRET_KEY, algorithm='HS256')
+            
+            frontend_url = settings.FRONTEND_URL
+            verify_link = f"{frontend_url}/verify-email?token={token}"
+            display_name = user.get_full_name() or user.username
+            
+            html_content = get_verification_email_html(user=display_name, redirect=verify_link)
+            text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
+            
+            msg = EmailMultiAlternatives(
+                subject="Verify your email for Quota Hire",
+                body=text_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email]
+            )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=False)
+        except Exception as e:
+            logger.error(f"Failed to send manual verification email to {user.email}: {e}")
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """POST /api/auth/login/ — returns JWT access + refresh tokens with user info."""

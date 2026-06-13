@@ -102,10 +102,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     password  = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True, label='Confirm Password')
     name      = serializers.CharField(required=True, write_only=True)
+    phone     = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    city      = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    country   = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
     class Meta:
         model  = CustomUser
-        fields = ('email', 'name', 'role', 'password', 'password2')
+        fields = ('email', 'name', 'role', 'password', 'password2', 'phone', 'city', 'country')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
@@ -114,7 +117,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password2')
-        name  = validated_data.pop('name', '')
+        name    = validated_data.pop('name', '')
+        phone   = validated_data.pop('phone', '')
+        city    = validated_data.pop('city', '')
+        country = validated_data.pop('country', '')
+
         parts = name.strip().split(' ', 1)
         first = parts[0]
         last  = parts[1] if len(parts) > 1 else ''
@@ -127,11 +134,25 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name = first,
             last_name  = last,
         )
+        
+        if city or country:
+            user.location = f"{city}{', ' if city and country else ''}{country}"
+            user.save()
+
         # Auto-create the matching profile
         if user.role == 'employee':
-            EmployeeProfile.objects.create(user=user)
+            EmployeeProfile.objects.create(
+                user=user, 
+                phone_number=phone,
+                city=city,
+                country=country
+            )
         elif user.role == 'company':
-            CompanyProfile.objects.create(user=user, company_name=name)
+            CompanyProfile.objects.create(
+                user=user, 
+                company_name=name,
+                contact_phone=phone
+            )
         return user
 
 

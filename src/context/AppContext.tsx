@@ -294,9 +294,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           })
       });
 
-      // Django register automatically creates the base profile.
-      // Auto-login after registration
-      await login(userData.email, userData.password);
+      // Django register automatically creates the base profile and sends a verification email.
+      // We do NOT auto-login here, so the signup component can show the verification modal.
 
       toast.success('Account created successfully!');
     } catch (error: any) {
