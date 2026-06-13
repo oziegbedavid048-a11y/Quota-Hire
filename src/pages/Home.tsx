@@ -160,7 +160,7 @@ export const Home = () => {
 
               <div className="h-64 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80"
+                  src={`${import.meta.env.BASE_URL}talent_realistic.jpg`}
                   alt="Sales professional working"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
 
@@ -207,7 +207,7 @@ export const Home = () => {
 
               <div className="h-64 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=800&q=80"
+                  src={`${import.meta.env.BASE_URL}company_realistic.jpg`}
                   alt="Hiring manager reviewing candidates"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
 
