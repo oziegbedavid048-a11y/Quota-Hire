@@ -7,21 +7,16 @@ import {
   Mail,
   Phone,
   MapPin,
-  Eye,
   FileText,
   Briefcase,
   GraduationCap,
   Star,
-  Lock,
   Camera,
   BadgeCheck,
   Award,
   X,
   Save,
-  AlertCircle,
   User,
-  Linkedin,
-  BookOpen,
   CheckCircle2
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
@@ -115,7 +110,18 @@ export const EmployeeProfilePage = () => {
   };
 
   /* ── Nav rows ── */
-  const profileSections = [
+  type ProfileSectionItem = {
+    key: SectionKey;
+    icon: any;
+    label: string;
+    subtitle: string;
+    filled: boolean;
+    isLink?: boolean;
+    path?: string;
+    actionText?: string;
+    actionColor?: string;
+  };
+  const profileSections: { group: string, items: ProfileSectionItem[] }[] = [
     {
       group: 'Account Info',
       items: [

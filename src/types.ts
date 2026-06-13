@@ -10,6 +10,7 @@ export interface User {
   setupCompleted: boolean;
   isVerified?: boolean;
   savedJobs?: string[];
+  location?: string;
 }
 
 export interface EmployeeProfile extends User {
