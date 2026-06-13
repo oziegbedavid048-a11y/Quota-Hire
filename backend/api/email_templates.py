@@ -277,8 +277,13 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
             },
             "content": {
                 "title": subject,
-                "body": text_content,
-                "html": html_content
+                "version": "2022-01-01",
+                "elements": [
+                    {
+                        "type": "html",
+                        "content": html_content
+                    }
+                ]
             },
             "routing": {
                 "method": "all",
