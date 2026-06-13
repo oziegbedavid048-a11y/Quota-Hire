@@ -102,13 +102,13 @@ class RegisterSerializer(serializers.ModelSerializer):
     password  = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True, label='Confirm Password')
     name      = serializers.CharField(required=True, write_only=True)
-    phone     = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True, write_only=True)
     city      = serializers.CharField(required=False, allow_blank=True, write_only=True)
     country   = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
     class Meta:
         model  = CustomUser
-        fields = ('email', 'name', 'role', 'password', 'password2', 'phone', 'city', 'country')
+        fields = ('email', 'name', 'role', 'password', 'password2', 'phone_number', 'city', 'country')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
@@ -118,7 +118,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password2')
         name    = validated_data.pop('name', '')
-        phone   = validated_data.pop('phone', '')
+        phone_number = validated_data.pop('phone_number', '')
         city    = validated_data.pop('city', '')
         country = validated_data.pop('country', '')
 
@@ -143,7 +143,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         if user.role == 'employee':
             EmployeeProfile.objects.create(
                 user=user, 
-                phone_number=phone,
+                phone_number=phone_number,
                 city=city,
                 country=country
             )
@@ -151,7 +151,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             CompanyProfile.objects.create(
                 user=user, 
                 company_name=name,
-                contact_phone=phone
+                contact_phone=phone_number
             )
         return user
 
