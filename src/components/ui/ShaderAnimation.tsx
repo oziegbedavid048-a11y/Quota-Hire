@@ -74,7 +74,8 @@ export function ShaderAnimation({ isPaused = false }: ShaderAnimationProps) {
         
         if (isDark < 0.5) {
             float intensity = min(1.0, length(finalColor));
-            finalColor = mix(vec3(1.0), finalColor, intensity);
+            vec3 darkLines = vec3(1.0) - finalColor;
+            finalColor = mix(vec3(1.0), darkLines, intensity);
         }
         gl_FragColor = vec4(finalColor, 1.0);
       }

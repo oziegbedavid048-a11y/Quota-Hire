@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
 import { toast } from 'sonner';
 import { useScreenInit } from '../useScreenInit';
+import { ShaderAnimation } from '../components/ui/ShaderAnimation';
 
 export const Contact = () => {
   useScreenInit();
@@ -21,7 +22,8 @@ export const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-950">
+    <div className="min-h-screen bg-white dark:bg-neutral-950 relative">
+      <ShaderAnimation isPaused={false} />
       {/* Hero Section */}
       <section className="pt-32 pb-16 relative overflow-hidden bg-neutral-50 dark:bg-neutral-900">
         <div className="container mx-auto px-4 text-center">

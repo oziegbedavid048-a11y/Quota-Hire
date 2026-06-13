@@ -520,7 +520,7 @@ export const Home = () => {
                   <div className="absolute -right-[3px] top-32 w-[3px] h-16 bg-neutral-700 rounded-r-sm" />
 
                   {/* Screen — exact website dashboard light mode */}
-                  <div className="rounded-[36px] overflow-hidden relative bg-white flex flex-col" style={{ minHeight: '580px' }}>
+                  <div className="rounded-[36px] overflow-hidden relative bg-white flex flex-col h-[650px]">
 
                     {/* Status bar */}
                     <div className="px-6 pt-4 pb-2 flex items-center justify-between relative bg-white z-20">
