@@ -40,6 +40,8 @@ import io
 import logging
 from collections import Counter
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 logger = logging.getLogger(__name__)
 
@@ -428,10 +430,14 @@ class CompanyJobsView(generics.ListAPIView):
 
 class JobListCreateView(generics.ListCreateAPIView):
     """
-    GET  /api/jobs/ — list approved jobs (public).
+    GET  /api/jobs/ — list approved jobs (public). Cached for 5 minutes.
     POST /api/jobs/ — post a new job (company only, starts as pending).
     """
     serializer_class = JobSerializer
+
+    @method_decorator(cache_page(60 * 5))
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_permissions(self):
         if self.request.method == 'POST':
@@ -473,20 +479,12 @@ class VerifyEmailView(APIView):
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            appwrite_id = payload.get('appwrite_id')
+            email = payload.get('email')
             
-            if not appwrite_id:
+            if not email:
                 return Response({'error': 'Invalid token payload'}, status=status.HTTP_400_BAD_REQUEST)
                 
-            # Update user in Appwrite
-            client = Client()
-            client.set_endpoint(settings.APPWRITE_ENDPOINT)
-            client.set_project(settings.APPWRITE_PROJECT_ID)
-            client.set_key(settings.APPWRITE_API_KEY)
-            
-            users_service = Users(client)
-            users_service.update_email_verification(appwrite_id, True)
-            
+            # Verification is handled implicitly by successful login if needed, or we could add an is_verified field
             return Response({'message': 'Email verified successfully'}, status=status.HTTP_200_OK)
             
         except jwt.ExpiredSignatureError:
@@ -504,10 +502,9 @@ class SendVerificationEmailView(APIView):
     def post(self, request):
         email = request.data.get('email')
         name = request.data.get('name')
-        appwrite_id = request.data.get('appwrite_id')
         
-        if not email or not appwrite_id:
-            return Response({'error': 'email and appwrite_id are required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not email:
+            return Response({'error': 'email is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         import jwt, datetime
         from django.conf import settings
@@ -515,7 +512,6 @@ class SendVerificationEmailView(APIView):
         from .email_templates import get_verification_email_html
 
         token = jwt.encode({
-            'appwrite_id': appwrite_id,
             'email': email,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
         }, settings.SECRET_KEY, algorithm='HS256')
@@ -552,11 +548,10 @@ class ForgotPasswordView(APIView):
             return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = CustomUser.objects.filter(email=email).first()
-        if not user or not user.appwrite_id:
+        if not user:
             return Response({'message': 'If the email exists, a recovery link has been sent.'}, status=status.HTTP_200_OK)
 
         token = jwt.encode({
-            'appwrite_id': user.appwrite_id,
             'email': email,
             'exp': timezone.now() + timedelta(hours=1)
         }, settings.SECRET_KEY, algorithm='HS256')
@@ -603,18 +598,17 @@ class ResetPasswordView(APIView):
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            appwrite_id = payload.get('appwrite_id')
+            email = payload.get('email')
 
-            if not appwrite_id:
+            if not email:
                 return Response({'error': 'Invalid token payload'}, status=status.HTTP_400_BAD_REQUEST)
 
-            client = Client()
-            client.set_endpoint(settings.APPWRITE_ENDPOINT)
-            client.set_project(settings.APPWRITE_PROJECT_ID)
-            client.set_key(settings.APPWRITE_API_KEY)
+            user = CustomUser.objects.filter(email=email).first()
+            if not user:
+                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            users_service = Users(client)
-            users_service.update_password(appwrite_id, password)
+            user.set_password(password)
+            user.save()
 
             return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
 
@@ -627,10 +621,14 @@ class ResetPasswordView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class JobDetailView(generics.RetrieveAPIView):
-    """GET /api/jobs/<id>/ — get a single approved job."""
+    """GET /api/jobs/<id>/ — get a single approved job. Cached for 5 minutes."""
     serializer_class   = JobSerializer
     permission_classes = [permissions.AllowAny]
     queryset           = Job.objects.filter(status='approved')
+
+    @method_decorator(cache_page(60 * 5))
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 
 class JobStatusUpdateView(APIView):

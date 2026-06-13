@@ -1,5 +1,4 @@
 import { useEffect, useState, createContext, useContext, ReactNode } from 'react';
-import { account, databases, storage, appwriteConfig, ID, Query } from '../lib/appwrite';
 import {
   User,
   EmployeeProfile,
@@ -21,34 +20,22 @@ export class ApiError extends Error {
   }
 }
 
-// Custom fetch for Django backend (passing Appwrite JWT for auth)
-let cachedJwt: string | null = null;
-let jwtExpiry: number | null = null;
-
-export const getAppwriteJwt = async () => {
-  const now = Date.now();
-  if (cachedJwt && jwtExpiry && now < jwtExpiry) {
-    return cachedJwt;
-  }
-  try {
-    const jwt = await account.createJWT();
-    cachedJwt = jwt.jwt;
-    jwtExpiry = now + 14 * 60 * 1000;
-    return cachedJwt;
-  } catch (e) {
-    console.warn("Could not get Appwrite JWT", e);
-    return cachedJwt || '';
-  }
-};
-
+// Global fetch wrapper for Django API
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-  const jwtToken = await getAppwriteJwt();
+  const token = localStorage.getItem('access_token');
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {}),
+  const headers: any = {
     ...options.headers,
   };
+
+  // Only add content type if we aren't sending FormData
+  if (!(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   let response;
   try {
@@ -57,14 +44,25 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     throw new ApiError('We couldn\'t connect to the server. Please check your internet connection.', 0);
   }
 
+  if (response.status === 401 && token) {
+      // Basic token expiration handling - logout user if token is invalid/expired
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      window.location.href = '/login';
+      throw new ApiError('Session expired. Please log in again.', 401);
+  }
+
   if (!response.ok) {
     let errorMessage = 'An unexpected error occurred.';
     try {
       const errorData = await response.json();
-      errorMessage = errorData.detail || Object.values(errorData).flat()[0] || errorMessage;
+      errorMessage = errorData.detail || errorData.error || Object.values(errorData).flat()[0] || errorMessage;
     } catch (e) {}
     throw new ApiError(errorMessage as string, response.status);
   }
+
+  // Handle 204 No Content
+  if (response.status === 204) return null;
 
   const contentType = response.headers.get('content-type');
   if (!contentType || !contentType.includes('application/json')) {
@@ -73,25 +71,6 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
   return response.json();
 };
-
-export const normalizeJob = (j: any): Job => ({
-  id: j.$id,
-  companyId: j.company_user_id,
-  companyName: j.company_name,
-  companyLogoUrl: j.company_logo_url,
-  companyIsVerified: j.company_is_verified,
-  title: j.title,
-  description: j.description,
-  requirements: j.requirements || [],
-  employment_type: j.employment_type,
-  isRemote: j.is_remote,
-  location: j.location,
-  currency: j.currency,
-  salaryRange: j.salary_range,
-  commissionRange: j.commission_range,
-  status: j.status,
-  createdAt: j.created_at,
-});
 
 interface AppState {
   currentUser: User | EmployeeProfile | CompanyProfile | null;
@@ -146,145 +125,122 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const init = async () => {
-      try {
-        const session = await account.getSession('current');
-        if (session) {
-          await fetchData();
-        } else {
-          setState(prev => ({ ...prev, loading: false }));
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+            await fetchData();
+        } catch (e) {
+            setState(prev => ({ ...prev, loading: false }));
         }
-      } catch (error) {
+      } else {
         setState(prev => ({ ...prev, loading: false }));
       }
     };
     init();
   }, []);
 
-  const normalizeUser = (authUser: any, userProfile: any, specificProfile: any): any => {
-    if (!authUser || !userProfile) return null;
-    
-    const baseUser = {
-      id: authUser.$id,
-      email: authUser.email,
-      role: userProfile.role,
-      name: authUser.name,
-      avatarUrl: userProfile.avatar_url,
-      createdAt: userProfile.created_at,
-      setupCompleted: userProfile.setup_completed,
-      isVerified: true, // simplified
-      savedJobs: [],
-      location: userProfile.location || '',
-    };
-
-    if (userProfile.role === 'company' && specificProfile) {
-      return {
-        ...baseUser,
-        companyName: specificProfile.company_name || authUser.name,
-        website: specificProfile.website || '',
-        industry: specificProfile.industry || '',
-        description: specificProfile.description || '',
-        logoUrl: specificProfile.logo_url || userProfile.avatar_url,
-      };
-    } else if (userProfile.role === 'employee' && specificProfile) {
-      return {
-        ...baseUser,
-        title: specificProfile.title || '',
-        bio: specificProfile.bio || '',
-        linkedinUrl: specificProfile.linkedin_url || '',
-        resumeUrl: specificProfile.resume_url || '',
-        resumeFile: specificProfile.resume_file_id || '',
-        education: specificProfile.education || '',
-        skills: specificProfile.skills || [],
-        experienceYears: specificProfile.experience_years || 0,
-        phoneNumber: specificProfile.phone_number || '',
-        country: specificProfile.country || '',
-        city: specificProfile.city || '',
-        postalCode: specificProfile.postal_code || '',
-        streetAddress: specificProfile.street_address || '',
-      };
-    }
-    return baseUser;
-  };
-
   const fetchData = async () => {
     try {
       setState(prev => ({ ...prev, loading: true }));
       
-      const authUser = await account.get();
-      
-      // Get base profile
-      const userProfileList = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.userProfilesCollection,
-        [Query.equal('user_id', authUser.$id)]
-      );
-      const userProfile = userProfileList.documents[0];
+      // Fetch public jobs
+      const jobsData = await apiFetch('/jobs/');
+      const jobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
 
-      let specificProfile = null;
-      if (userProfile) {
-        const collectionId = userProfile.role === 'company' 
-          ? appwriteConfig.companyProfilesCollection 
-          : appwriteConfig.employeeProfilesCollection;
-        
-        const specificList = await databases.listDocuments(
-          appwriteConfig.databaseId,
-          collectionId,
-          [Query.equal('user_id', authUser.$id)]
-        );
-        specificProfile = specificList.documents[0];
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+          // Unauthenticated view
+          setState(prev => ({ ...prev, jobs, loading: false, appError: null }));
+          return;
       }
 
-      // Fetch public jobs
-      const jobsList = await databases.listDocuments(
-        appwriteConfig.databaseId,
-        appwriteConfig.jobsCollection,
-        [Query.orderDesc('created_at')]
-      );
-      const normalizedJobs = jobsList.documents.map(normalizeJob);
-      
       // Fetch private data
+      const user = await apiFetch('/auth/me/');
+      
+      let profileData = null;
       let applications: any[] = [];
       let notifications: any[] = [];
-      let savedJobIds: string[] = [];
+      let savedJobs: string[] = [];
       let savedJobDates: Record<string, string> = {};
 
-      if (userProfile) {
-        try {
-          if (userProfile.role === 'company') {
-            const myJobs = jobsList.documents.filter(j => j.company_user_id === authUser.$id).map(j => j.$id);
-            if (myJobs.length > 0) {
-              const appsList = await databases.listDocuments(appwriteConfig.databaseId, appwriteConfig.applicationsCollection, [Query.equal('job_id', myJobs)]);
-              applications = appsList.documents;
-            }
-          } else {
-            const appsList = await databases.listDocuments(appwriteConfig.databaseId, appwriteConfig.applicationsCollection, [Query.equal('employee_user_id', authUser.$id)]);
-            applications = appsList.documents;
-            
-            const savedList = await databases.listDocuments(appwriteConfig.databaseId, appwriteConfig.savedJobsCollection, [Query.equal('user_id', authUser.$id)]);
-            savedJobIds = savedList.documents.map(d => d.job_id);
-            savedList.documents.forEach(d => {
-              savedJobDates[d.job_id] = d.saved_at;
-            });
-          }
-
-          const notifsList = await databases.listDocuments(appwriteConfig.databaseId, appwriteConfig.notificationsCollection, [Query.equal('user_id', authUser.$id), Query.orderDesc('created_at')]);
-          notifications = notifsList.documents;
-        } catch (e) {
-          console.warn("Could not fetch private data", e);
-        }
+      if (user.role === 'employee') {
+          profileData = await apiFetch('/profile/employee/');
+          applications = await apiFetch('/applications/');
+          
+          user.saved_jobs = user.saved_jobs || [];
+          savedJobs = user.saved_jobs.map((j: any) => j.id || j);
+          
+      } else if (user.role === 'company') {
+          profileData = await apiFetch('/profile/company/');
+          // Currently, API doesn't have a direct /applications/ for companies returning all,
+          // but we will keep state empty or fetch specific later.
       }
 
-      const normalizedUser = normalizeUser(authUser, userProfile, specificProfile);
+      notifications = await apiFetch('/notifications/') || [];
+
+      // Map Django data back to frontend expected structure
+      const currentUserData = {
+          id: user.id.toString(),
+          email: user.email,
+          role: user.role,
+          name: user.full_name || user.username,
+          avatarUrl: user.avatar || '',
+          createdAt: user.created_at,
+          setupCompleted: user.setup_completed,
+          isVerified: user.is_verified,
+          savedJobs: savedJobs,
+          location: user.location || '',
+          ...(user.role === 'company' && profileData ? {
+              companyName: profileData.company_name || '',
+              website: profileData.website || '',
+              industry: profileData.industry || '',
+              description: profileData.description || '',
+              logoUrl: profileData.logo_url || user.avatar || '',
+          } : {}),
+          ...(user.role === 'employee' && profileData ? {
+              title: profileData.title || '',
+              bio: profileData.bio || '',
+              linkedinUrl: profileData.linkedin_url || '',
+              resumeUrl: profileData.resume_url || '',
+              education: profileData.education || '',
+              skills: profileData.skills || [],
+              experienceYears: profileData.experience_years || 0,
+              phoneNumber: profileData.phone_number || '',
+              country: profileData.country || '',
+              city: profileData.city || '',
+              postalCode: profileData.postal_code || '',
+              streetAddress: profileData.street_address || '',
+          } : {})
+      };
+
+      const normalizedJobs = jobs.map((j: any) => ({
+          id: j.id.toString(),
+          companyId: j.company?.toString() || j.company_name,
+          companyName: j.company_name,
+          companyLogoUrl: j.company_logo_url,
+          companyIsVerified: true,
+          title: j.title,
+          description: j.description,
+          requirements: j.requirements || [],
+          employment_type: j.employment_type,
+          isRemote: j.is_remote,
+          location: j.location,
+          currency: j.currency,
+          salaryRange: j.salary_range,
+          commissionRange: j.commission_range,
+          status: j.status,
+          createdAt: j.created_at,
+      }));
 
       setState(prev => ({
         ...prev,
-        currentUser: { ...normalizedUser, savedJobs: savedJobIds },
-        profileData: specificProfile,
-        savedJobs: savedJobIds,
+        currentUser: currentUserData,
+        profileData: profileData,
+        savedJobs,
         savedJobDates,
         jobs: normalizedJobs,
-        applications: applications.map(a => ({ id: a.$id, ...a })) as any,
-        notifications: notifications.map(n => ({ id: n.$id, ...n })) as any,
+        applications: applications.map(a => ({ id: a.id.toString(), ...a })) as any,
+        notifications: notifications.map((n: any) => ({ id: n.id.toString(), ...n })) as any,
         loading: false,
         appError: null
       }));
@@ -302,13 +258,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      await account.createEmailPasswordSession(email, password);
+      const data = await apiFetch('/auth/login/', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+      });
       
-      const user = await account.get();
-      if (!user.emailVerification) {
-        await account.deleteSession('current');
-        throw new Error("Please verify your email address before logging in.");
-      }
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
 
       await fetchData();
       toast.success(`Welcome back!`);
@@ -319,57 +275,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    try {
-      await account.deleteSession('current');
-    } catch (error) {}
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     setState(defaultState);
     toast.success('Logged out successfully');
   };
 
   const register = async (userData: any) => {
     try {
-      const newAccount = await account.create(ID.unique(), userData.email, userData.password, userData.name);
-      await account.createEmailPasswordSession(userData.email, userData.password);
-
-      // Create profile entries
-      const role = userData.role || 'employee';
-      const locationString = [userData.city, userData.country].filter(Boolean).join(', ');
-
-      await databases.createDocument(appwriteConfig.databaseId, appwriteConfig.userProfilesCollection, ID.unique(), {
-        user_id: newAccount.$id,
-        role: role,
-        setup_completed: false,
-        location: locationString,
-        created_at: new Date().toISOString(),
+      await apiFetch('/auth/register/', {
+          method: 'POST',
+          body: JSON.stringify({
+              username: userData.name.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random()*1000),
+              email: userData.email,
+              password: userData.password,
+              first_name: userData.name.split(' ')[0],
+              last_name: userData.name.split(' ').slice(1).join(' '),
+              role: userData.role || 'employee',
+              location: [userData.city, userData.country].filter(Boolean).join(', ')
+          })
       });
 
-      if (role === 'employee') {
-        await databases.createDocument(appwriteConfig.databaseId, appwriteConfig.employeeProfilesCollection, ID.unique(), {
-          user_id: newAccount.$id,
-          experience_years: 0,
-          phone_number: userData.phone || '',
-          city: userData.city || '',
-          country: userData.country || ''
-        });
-      } else {
-        await databases.createDocument(appwriteConfig.databaseId, appwriteConfig.companyProfilesCollection, ID.unique(), {
-          user_id: newAccount.$id,
-          company_name: userData.name,
-          contact_phone: userData.phone || ''
-        });
-      }
+      // Django register automatically creates the base profile.
+      // Auto-login after registration
+      await login(userData.email, userData.password);
 
-      // Use Django SMTP backend for email verification
-      await fetch(`${API_BASE_URL}/auth/send-verification/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userData.email, name: userData.name, appwrite_id: newAccount.$id })
-      });
-
-      // Log out to enforce email verification before accessing app
-      await account.deleteSession('current');
-
-      toast.success('Account created! Please check your email to verify your account.');
+      toast.success('Account created successfully!');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to register'}. Please try again.`);
       throw error;
@@ -380,10 +311,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (!state.currentUser) throw new Error('Not logged in');
       const payload = {
-        company_user_id: state.currentUser.id,
-        company_name: (state.currentUser as CompanyProfile).companyName || state.currentUser.name,
-        company_logo_url: (state.currentUser as CompanyProfile).logoUrl || '',
-        company_is_verified: true,
         title: jobData.title,
         description: jobData.description,
         requirements: jobData.requirements || [],
@@ -393,13 +320,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         salary_range: jobData.salaryRange || '',
         commission_range: jobData.commissionRange || '',
         currency: jobData.currency || 'USD',
-        status: 'pending',
-        created_at: new Date().toISOString(),
       };
 
-      const newJobRaw = await databases.createDocument(appwriteConfig.databaseId, appwriteConfig.jobsCollection, ID.unique(), payload);
-      const newJob = normalizeJob(newJobRaw);
-      setState(prev => ({ ...prev, jobs: [newJob, ...prev.jobs] }));
+      const newJobRaw = await apiFetch('/jobs/', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+      });
+      
+      // Fetch data to refresh job list
+      await fetchData();
       toast.success('Job posted successfully!', { description: 'You will be notified once the job listing is approved.' });
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to post job'}. Please try again.`);
@@ -408,23 +337,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const applyForJob = async (jobId: string, coverLetter?: string) => {
     try {
-      if (!state.currentUser) throw new Error('Not logged in');
-      const job = state.jobs.find(j => j.id === jobId);
-      if (!job) throw new Error('Job not found');
-
-      const payload = {
-        job_id: jobId,
-        job_title: job.title,
-        company_name: job.companyName,
-        employee_user_id: state.currentUser.id,
-        employee_name: state.currentUser.name,
-        status: 'pending',
-        cover_letter: coverLetter || '',
-        applied_at: new Date().toISOString(),
-      };
-
-      const newApp = await databases.createDocument(appwriteConfig.databaseId, appwriteConfig.applicationsCollection, ID.unique(), payload);
-      setState(prev => ({ ...prev, applications: [{ id: newApp.$id, ...newApp } as any, ...prev.applications] }));
+      await apiFetch(`/jobs/${jobId}/apply/`, {
+          method: 'POST',
+          body: JSON.stringify({ cover_letter: coverLetter || '' })
+      });
+      await fetchData();
       toast.success('Application submitted successfully');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to apply'}. Please try again.`);
@@ -433,8 +350,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateJobStatus = async (jobId: string, status: Job['status']) => {
     try {
-      await databases.updateDocument(appwriteConfig.databaseId, appwriteConfig.jobsCollection, jobId, { status });
-      setState(prev => ({ ...prev, jobs: prev.jobs.map(j => j.id === jobId ? { ...j, status } : j) }));
+      await apiFetch(`/jobs/${jobId}/status/`, {
+          method: 'PUT',
+          body: JSON.stringify({ status })
+      });
+      await fetchData();
       toast.success(`Job ${status}`);
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to update status'}. Please try again.`);
@@ -443,21 +363,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateApplicationStatus = async (appId: string, status: Application['status']) => {
     try {
-      const app = state.applications.find(a => (a as any).$id === appId || a.id === appId);
-      if (!app) throw new Error('Application not found');
-
-      await databases.updateDocument(appwriteConfig.databaseId, appwriteConfig.applicationsCollection, appId, { status });
-      
-      // Notify employee
-      await databases.createDocument(appwriteConfig.databaseId, appwriteConfig.notificationsCollection, ID.unique(), {
-        user_id: (app as any).employee_user_id,
-        title: `Application ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-        message: `Your application for "${(app as any).job_title}" has been ${status}.`,
-        read: false,
-        created_at: new Date().toISOString(),
+      await apiFetch(`/applications/${appId}/status/`, {
+          method: 'PUT',
+          body: JSON.stringify({ status })
       });
-
-      setState(prev => ({ ...prev, applications: prev.applications.map(a => a.id === appId ? { ...a, status } : a) }));
+      await fetchData();
       toast.success(`Application ${status}`);
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to update application'}. Please try again.`);
@@ -466,7 +376,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const markNotificationRead = async (id: string) => {
     try {
-      await databases.updateDocument(appwriteConfig.databaseId, appwriteConfig.notificationsCollection, id, { read: true });
+      await apiFetch(`/notifications/${id}/read/`, { method: 'PUT' });
       setState(prev => ({ ...prev, notifications: prev.notifications.map(n => n.id === id ? { ...n, read: true } : n) }));
     } catch (error: any) {
       console.error('Failed to mark read', error);
@@ -475,7 +385,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const generateCV = async (formData: any) => {
     try {
-      // Forward to Django API
       await apiFetch('/cv/generate/', {
         method: 'POST',
         body: JSON.stringify(formData)
@@ -489,19 +398,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfileImage = async (file: File) => {
     try {
-      if (!state.currentUser) return;
-      const uploadedFile = await storage.createFile(appwriteConfig.filesBucketId, ID.unique(), file);
-      const avatarUrl = storage.getFileView(appwriteConfig.filesBucketId, uploadedFile.$id).toString();
+      const formData = new FormData();
+      formData.append('avatar', file);
 
-      // Update users_profile
-      const userProfileList = await databases.listDocuments(appwriteConfig.databaseId, appwriteConfig.userProfilesCollection, [Query.equal('user_id', state.currentUser.id)]);
-      if (userProfileList.documents[0]) {
-        await databases.updateDocument(appwriteConfig.databaseId, appwriteConfig.userProfilesCollection, userProfileList.documents[0].$id, { avatar_url: avatarUrl });
-      }
-
-      if (state.currentUser.role === 'company' && state.profileData) {
-         await databases.updateDocument(appwriteConfig.databaseId, appwriteConfig.companyProfilesCollection, state.profileData.$id, { logo_url: avatarUrl });
-      }
+      await apiFetch('/profile/avatar/', {
+          method: 'POST',
+          body: formData
+      });
 
       await fetchData();
       toast.success('Profile picture updated!');
@@ -512,10 +415,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (profileData: any) => {
     try {
-      if (!state.currentUser || !state.profileData) return;
+      if (!state.currentUser) return;
       
       const payload: any = {};
-      // Map frontend fields to Appwrite fields
+      
+      // Generic
+      if (profileData.location !== undefined) payload.location = profileData.location;
+
+      // Employee
       if (profileData.title !== undefined) payload.title = profileData.title;
       if (profileData.bio !== undefined) payload.bio = profileData.bio;
       if (profileData.linkedinUrl !== undefined) payload.linkedin_url = profileData.linkedinUrl;
@@ -526,9 +433,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (profileData.phoneNumber !== undefined) payload.phone_number = profileData.phoneNumber;
       if (profileData.country !== undefined) payload.country = profileData.country;
       if (profileData.city !== undefined) payload.city = profileData.city;
-      if (profileData.postalCode !== undefined) payload.postal_code = profileData.postalCode;
-      if (profileData.streetAddress !== undefined) payload.street_address = profileData.streetAddress;
       
+      // Company
       if (profileData.companyName !== undefined) payload.company_name = profileData.companyName;
       if (profileData.website !== undefined) payload.website = profileData.website;
       if (profileData.industry !== undefined) payload.industry = profileData.industry;
@@ -536,19 +442,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (profileData.contactEmail !== undefined) payload.contact_email = profileData.contactEmail;
       if (profileData.contactPhone !== undefined) payload.contact_phone = profileData.contactPhone;
 
-      const collectionId = state.currentUser.role === 'company' ? appwriteConfig.companyProfilesCollection : appwriteConfig.employeeProfilesCollection;
+      const endpoint = state.currentUser.role === 'company' ? '/profile/company/' : '/profile/employee/';
       
-      await databases.updateDocument(appwriteConfig.databaseId, collectionId, state.profileData.$id, payload);
+      await apiFetch(endpoint, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+      });
 
-      // Update main users_profile if needed
-      if (profileData.location !== undefined || profileData.setupCompleted !== undefined) {
-         const userProfileList = await databases.listDocuments(appwriteConfig.databaseId, appwriteConfig.userProfilesCollection, [Query.equal('user_id', state.currentUser.id)]);
-         if (userProfileList.documents[0]) {
-           await databases.updateDocument(appwriteConfig.databaseId, appwriteConfig.userProfilesCollection, userProfileList.documents[0].$id, {
-             ...(profileData.location !== undefined && { location: profileData.location }),
-             ...(profileData.setupCompleted !== undefined && { setup_completed: profileData.setupCompleted })
-           });
-         }
+      // If location changed, update User model as well
+      if (profileData.location !== undefined) {
+          await apiFetch('/auth/me/', {
+              method: 'PUT',
+              body: JSON.stringify({ location: profileData.location })
+          });
       }
 
       await fetchData();
@@ -561,50 +467,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const uploadResume = async (file: File) => {
     try {
-      if (!state.currentUser) return;
-      const uploadedFile = await storage.createFile(appwriteConfig.filesBucketId, ID.unique(), file);
-      const resumeUrl = storage.getFileView(appwriteConfig.filesBucketId, uploadedFile.$id).toString();
-
-      // Forward to Django for parsing
       const formData = new FormData();
       formData.append('resume', file);
       
-      let parsed = null;
-      try {
-        const parseRes = await apiFetch('/profile/resume/upload/', {
-          method: 'POST',
-          headers: {}, // Remove Content-Type so browser sets boundary for FormData
-          body: formData as any,
-        });
-        parsed = parseRes?.parsed;
-      } catch (e) {
-        console.warn('Django resume parsing failed', e);
-      }
-
-      if (state.profileData && state.currentUser.role === 'employee') {
-        await databases.updateDocument(appwriteConfig.databaseId, appwriteConfig.employeeProfilesCollection, state.profileData.$id, { 
-          resume_url: resumeUrl,
-          resume_file_id: uploadedFile.$id,
-          ...(parsed ? { 
-            title: parsed.title,
-            bio: parsed.bio,
-            skills: parsed.skills,
-            education: parsed.education,
-            experience_years: parsed.experience_years,
-            phone_number: parsed.phone_number
-           } : {})
-        });
-        
-        if (parsed?.location) {
-           const userProfileList = await databases.listDocuments(appwriteConfig.databaseId, appwriteConfig.userProfilesCollection, [Query.equal('user_id', state.currentUser.id)]);
-           if (userProfileList.documents[0]) {
-             await databases.updateDocument(appwriteConfig.databaseId, appwriteConfig.userProfilesCollection, userProfileList.documents[0].$id, { location: parsed.location });
-           }
-        }
-      }
+      const res = await apiFetch('/profile/resume/upload/', {
+        method: 'POST',
+        body: formData,
+      });
 
       await fetchData();
-      return { parsed };
+      return { parsed: res?.parsed };
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to upload resume'}.`);
       throw error;
@@ -613,7 +485,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const changePassword = async (data: any) => {
     try {
-      await account.updatePassword(data.new_password, data.old_password);
+      await apiFetch('/auth/change-password/', {
+          method: 'POST',
+          body: JSON.stringify(data)
+      });
       toast.success('Password changed successfully');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to change password'}. Please try again.`);
@@ -623,13 +498,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const sendPasswordRecovery = async (email: string) => {
     try {
-      const res = await fetch(`${(import.meta as any).env.VITE_API_URL}/auth/forgot-password/`, {
+      await apiFetch('/auth/forgot-password/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send recovery email');
       toast.success('Password reset email sent. Please check your inbox.');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to send recovery email'}.`);
@@ -639,14 +511,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const resetPassword = async (token: string, newPassword: string, passwordConfirm: string) => {
     try {
-      // For Django custom flow, we use the token
-      const res = await fetch(`${(import.meta as any).env.VITE_API_URL}/auth/reset-password/`, {
+      await apiFetch('/auth/reset-password/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password: newPassword, passwordConfirm })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
       toast.success('Password reset successfully! You can now log in.');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to reset password'}.`);
@@ -656,41 +524,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleSavedJob = async (jobId: string) => {
     try {
-      if (!state.currentUser) return;
-      
-      const savedList = await databases.listDocuments(appwriteConfig.databaseId, appwriteConfig.savedJobsCollection, [
-        Query.equal('user_id', state.currentUser.id),
-        Query.equal('job_id', jobId)
-      ]);
-
-      if (savedList.documents.length > 0) {
-        // Unsave
-        await databases.deleteDocument(appwriteConfig.databaseId, appwriteConfig.savedJobsCollection, savedList.documents[0].$id);
-        setState(prev => {
-          const newDates = { ...prev.savedJobDates };
-          delete newDates[jobId];
-          return {
-            ...prev,
-            savedJobs: prev.savedJobs.filter(id => id !== jobId),
-            savedJobDates: newDates
-          };
-        });
-        toast.info('Job removed from saved');
-      } else {
-        // Save
-        const now = new Date().toISOString();
-        await databases.createDocument(appwriteConfig.databaseId, appwriteConfig.savedJobsCollection, ID.unique(), {
-          user_id: state.currentUser.id,
-          job_id: jobId,
-          saved_at: now
-        });
-        setState(prev => ({
-          ...prev,
-          savedJobs: [...prev.savedJobs, jobId],
-          savedJobDates: { ...prev.savedJobDates, [jobId]: now }
-        }));
-        toast.success('Job saved successfully!');
-      }
+      await apiFetch(`/jobs/${jobId}/save/`, { method: 'POST' });
+      await fetchData();
+      toast.success('Job saved status updated');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to save job'}. Please try again.`);
     }

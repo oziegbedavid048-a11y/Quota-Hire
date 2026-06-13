@@ -3,7 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { account } from '../../lib/appwrite';
+
 
 export const VerifyEmail = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
