@@ -166,7 +166,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (user.role === 'employee') {
           profileData = await apiFetch('/profile/employee/');
-          applications = await apiFetch('/applications/');
+          const appsData = await apiFetch('/applications/');
+          applications = Array.isArray(appsData) ? appsData : (appsData?.results || []);
           
           user.saved_jobs = user.saved_jobs || [];
           savedJobs = user.saved_jobs.map((j: any) => j.id || j);
@@ -177,7 +178,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           // but we will keep state empty or fetch specific later.
       }
 
-      notifications = await apiFetch('/notifications/') || [];
+      const notifData = await apiFetch('/notifications/') || [];
+      notifications = Array.isArray(notifData) ? notifData : (notifData?.results || []);
 
       // Map Django data back to frontend expected structure
       const currentUserData = {
