@@ -6,7 +6,6 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from . import views
-from . import webhooks
 
 urlpatterns = [
     # ── Auth ─────────────────────────────────────────────────────────────────
@@ -30,8 +29,6 @@ urlpatterns = [
     # ── CV & Resume ───────────────────────────────────────────────────────────
     path('profile/resume/upload/',  views.ResumeUploadView.as_view(),            name='resume-upload'),
 
-    # ── Webhooks ──────────────────────────────────────────────────────────────
-    path('webhooks/appwrite/',      webhooks.AppwriteWebhookView.as_view(),      name='webhook-appwrite'),
 
 
     # ── Analytics ─────────────────────────────────────────────────────────────
