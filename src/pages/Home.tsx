@@ -519,132 +519,130 @@ export const Home = () => {
                   <div className="absolute -left-[3px] top-52 w-[3px] h-12 bg-neutral-700 rounded-l-sm" />
                   <div className="absolute -right-[3px] top-32 w-[3px] h-16 bg-neutral-700 rounded-r-sm" />
 
-                  {/* Screen — full dark like website dashboard */}
-                  <div className="rounded-[36px] overflow-hidden" style={{ minHeight: '580px', background: 'linear-gradient(160deg, #0a0a0a 0%, #111111 60%, #1a0a00 100%)' }}>
+                  {/* Screen — exact website dashboard light mode */}
+                  <div className="rounded-[36px] overflow-hidden relative bg-white flex flex-col" style={{ minHeight: '580px' }}>
 
                     {/* Status bar */}
-                    <div className="px-6 pt-4 pb-2 flex items-center justify-between relative">
+                    <div className="px-6 pt-4 pb-2 flex items-center justify-between relative bg-white z-20">
                       {/* Dynamic island */}
                       <div className="absolute left-1/2 -translate-x-1/2 top-2.5 w-20 h-6 bg-black rounded-full z-10" />
-                      <span className="text-white/90 text-xs font-semibold">9:41</span>
+                      <span className="text-neutral-900 text-xs font-semibold">9:41</span>
                       <div className="flex items-center gap-1.5">
                         <div className="flex items-end gap-0.5 h-3">
                           {[1, 1.5, 2, 3].map((h, i) => (
-                            <div key={i} className="w-0.5 bg-white/80 rounded-sm" style={{ height: `${h * 4}px` }} />
+                            <div key={i} className="w-0.5 bg-neutral-900 rounded-sm" style={{ height: `${h * 4}px` }} />
                           ))}
                         </div>
-                        <div className="w-5 h-2.5 border border-white/60 rounded-sm flex items-center px-0.5">
-                          <div className="h-1.5 bg-white/80 rounded-sm" style={{ width: '70%' }} />
+                        <div className="w-5 h-2.5 border border-neutral-900 rounded-sm flex items-center px-0.5">
+                          <div className="h-1.5 bg-neutral-900 rounded-sm" style={{ width: '70%' }} />
                         </div>
                       </div>
                     </div>
 
-                    {/* App header with liquid glass */}
-                    <div className="px-4 pt-3 pb-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-neutral-500 text-[10px] uppercase tracking-wider font-medium">Dashboard</p>
-                          <h3 className="text-white font-bold text-sm leading-tight mt-0.5">Welcome, Alex 👋</h3>
-                        </div>
+                    <div className="flex-1 overflow-y-auto bg-neutral-50 pb-20 custom-scrollbar relative z-10">
+                      {/* App header (Navbar mobile) */}
+                      <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-neutral-200 shadow-sm">
                         <div className="flex items-center gap-2">
-                          {/* Notification bell */}
-                          <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                            <div className="w-3.5 h-3.5 relative">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-full h-full"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent-500 to-warm-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">QH</div>
+                           <span className="font-display font-bold text-neutral-900">Quota Hire</span>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-500 to-primary-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white shadow-sm">AJ</div>
+                      </div>
+
+                      {/* Dashboard Content */}
+                      <div className="p-4 space-y-4">
+                        {/* Welcome Banner */}
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent-500/10 via-white to-warm-500/10 border border-neutral-200 p-4 shadow-sm">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neutral-600 bg-white/60 px-2 py-0.5 rounded-full border border-neutral-200/50">
+                              <svg className="w-3 h-3 text-accent-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                              My Dashboard
+                            </span>
+                          </div>
+                          <h1 className="text-lg font-extrabold text-neutral-900 mb-1 leading-tight">
+                            Ready to crush it, <span className="text-accent-600">Alex!</span>
+                          </h1>
+                          <p className="text-neutral-600 text-[10px] max-w-md">
+                            You have <strong className="text-neutral-900">12 active applications</strong>.
+                          </p>
+                        </div>
+
+                        {/* Stat Cards Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white rounded-2xl p-3 border border-neutral-100 shadow-sm hover:-translate-y-0.5 transition-transform">
+                            <div className="w-8 h-8 rounded-xl bg-accent-50 flex items-center justify-center mb-2">
+                              <svg className="w-4 h-4 text-accent-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
                             </div>
+                            <p className="text-xl font-extrabold text-neutral-900">12</p>
+                            <p className="text-[10px] font-semibold text-neutral-500">Active Applications</p>
                           </div>
-                          {/* Avatar */}
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-500 to-primary-600 flex items-center justify-center text-white text-xs font-bold ring-1 ring-accent-400/40">AJ</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stats row — liquid glass cards */}
-                    <div className="px-4 grid grid-cols-3 gap-2 mb-3">
-                      {[
-                        { label: 'Applied', val: '12', icon: '📋', glow: 'rgba(217,104,32,0.15)' },
-                        { label: 'Interviews', val: '3', icon: '🎯', glow: 'rgba(16,185,129,0.15)' },
-                        { label: 'Views', val: '87', icon: '👁', glow: 'rgba(59,130,246,0.15)' },
-                      ].map((s) => (
-                        <div key={s.label} className="rounded-2xl p-2.5" style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: `0 4px 24px ${s.glow}` }}>
-                          <div className="text-base mb-0.5">{s.icon}</div>
-                          <div className="text-white font-bold text-sm">{s.val}</div>
-                          <div className="text-neutral-500 text-[10px] mt-0.5">{s.label}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Profile Strength — liquid glass */}
-                    <div className="px-4 mb-3">
-                      <div className="rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-accent-500 opacity-90" />
-                            <span className="text-white/80 text-xs font-medium">Profile Strength</span>
-                          </div>
-                          <span className="text-accent-400 text-xs font-bold">80%</span>
-                        </div>
-                        <div className="w-full rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                          <div className="h-1.5 rounded-full" style={{ width: '80%', background: 'linear-gradient(90deg, #d96820, #e28244)' }} />
-                        </div>
-                        <div className="mt-2 text-neutral-600 text-[10px]">Complete your profile to unlock more matches</div>
-                      </div>
-                    </div>
-
-                    {/* Recommended Jobs — liquid glass card */}
-                    <div className="px-4 mb-3">
-                      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <div className="px-3 py-2 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span className="text-white/90 text-xs font-bold">Recommended</span>
-                          <span className="text-accent-400 text-[10px] font-semibold">View all →</span>
-                        </div>
-                        {[
-                          { title: 'Sr. Account Executive', co: 'Northwind Cloud', badge: 'Remote', color: '#10b981' },
-                          { title: 'Enterprise AE', co: 'Helios SaaS', badge: 'Hybrid', color: '#3b82f6' },
-                        ].map((job, i) => (
-                          <div key={i} className="px-3 py-2.5 flex items-center justify-between" style={{ borderBottom: i === 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                            <div>
-                              <div className="text-white/90 text-xs font-semibold leading-tight">{job.title}</div>
-                              <div className="text-neutral-600 text-[10px] mt-0.5">{job.co}</div>
+                          <div className="bg-white rounded-2xl p-3 border border-neutral-100 shadow-sm hover:-translate-y-0.5 transition-transform">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center mb-2">
+                              <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                             </div>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: job.color, background: `${job.color}20`, border: `1px solid ${job.color}30` }}>{job.badge}</span>
+                            <p className="text-xl font-extrabold text-neutral-900">80%</p>
+                            <p className="text-[10px] font-semibold text-neutral-500">Profile Score</p>
                           </div>
-                        ))}
+                        </div>
+
+                        {/* Recent Applications */}
+                        <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-sm">
+                           <div className="flex justify-between items-center mb-3">
+                             <h2 className="text-sm font-extrabold text-neutral-900">Recent Applications</h2>
+                           </div>
+                           <div className="space-y-2">
+                             <div className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-neutral-50 hover:-translate-y-0.5 transition-transform shadow-sm">
+                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-100 to-warm-100 flex items-center justify-center text-accent-600 font-extrabold text-xs shadow-sm border border-white/50">S</div>
+                               <div className="flex-1 min-w-0">
+                                 <p className="text-[11px] font-bold text-neutral-900 truncate">Sr. Account Exec</p>
+                                 <p className="text-[9px] text-neutral-500 font-medium mt-0.5">Northwind Cloud</p>
+                               </div>
+                               <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-amber-50 text-amber-700">Under Review</span>
+                             </div>
+                             <div className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-neutral-50 hover:-translate-y-0.5 transition-transform shadow-sm">
+                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-100 to-warm-100 flex items-center justify-center text-accent-600 font-extrabold text-xs shadow-sm border border-white/50">E</div>
+                               <div className="flex-1 min-w-0">
+                                 <p className="text-[11px] font-bold text-neutral-900 truncate">Enterprise AE</p>
+                                 <p className="text-[9px] text-neutral-500 font-medium mt-0.5">Helios SaaS</p>
+                               </div>
+                               <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-purple-50 text-purple-700">Interview</span>
+                             </div>
+                             <div className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-neutral-50 hover:-translate-y-0.5 transition-transform shadow-sm">
+                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-100 to-warm-100 flex items-center justify-center text-accent-600 font-extrabold text-xs shadow-sm border border-white/50">G</div>
+                               <div className="flex-1 min-w-0">
+                                 <p className="text-[11px] font-bold text-neutral-900 truncate">Growth Marketer</p>
+                                 <p className="text-[9px] text-neutral-500 font-medium mt-0.5">Ozone Apps</p>
+                               </div>
+                               <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-neutral-100 text-neutral-600">Applied</span>
+                             </div>
+                           </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* CV card — dark accent */}
-                    <div className="px-4">
-                      <div className="rounded-2xl p-3 flex items-center gap-3" style={{ background: 'linear-gradient(135deg, rgba(217,104,32,0.18), rgba(196,82,26,0.08))', border: '1px solid rgba(217,104,32,0.25)', backdropFilter: 'blur(16px)' }}>
-                        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(217,104,32,0.2)', border: '1px solid rgba(217,104,32,0.3)' }}>
-                          <svg className="w-4 h-4 text-accent-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    {/* Bottom nav bar — exact mobile nav mimicking real app */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+                      <div className="flex justify-around items-center px-2 py-3">
+                        <div className="flex flex-col items-center text-accent-600 gap-1 cursor-pointer">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                          <span className="text-[9px] font-bold">Dashboard</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-white text-xs font-semibold">Your Sales CV</div>
-                          <div className="text-accent-500/70 text-[10px] truncate">Auto-generated · Ready to send</div>
+                        <div className="flex flex-col items-center text-neutral-400 gap-1 cursor-pointer hover:text-neutral-600 transition-colors">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                          <span className="text-[9px] font-medium">Jobs</span>
                         </div>
-                        <div className="text-white text-[10px] px-2.5 py-1 rounded-lg font-semibold flex-shrink-0" style={{ background: 'rgba(217,104,32,0.85)' }}>Download</div>
-                      </div>
-                    </div>
-
-                    {/* Bottom nav bar — liquid glass */}
-                    <div className="absolute bottom-0 left-0 right-0">
-                      <div className="mx-3 mb-3 rounded-2xl px-5 py-2.5 flex justify-around items-center" style={{ background: 'rgba(20,20,20,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        {[
-                          { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>, active: true },
-                          { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>, active: false },
-                          { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>, active: false },
-                          { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>, active: false },
-                        ].map((item, i) => (
-                          <div key={i} className="flex flex-col items-center gap-1" style={{ color: item.active ? '#d96820' : 'rgba(255,255,255,0.35)' }}>
-                            {item.icon}
-                            {item.active && <div className="w-1 h-1 rounded-full bg-accent-500" />}
-                          </div>
-                        ))}
+                        <div className="flex flex-col items-center text-neutral-400 gap-1 cursor-pointer hover:text-neutral-600 transition-colors">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                          <span className="text-[9px] font-medium">Tracker</span>
+                        </div>
+                        <div className="flex flex-col items-center text-neutral-400 gap-1 cursor-pointer hover:text-neutral-600 transition-colors">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                          <span className="text-[9px] font-medium">Profile</span>
+                        </div>
                       </div>
                       {/* Home indicator */}
                       <div className="pb-2 flex justify-center">
-                        <div className="w-24 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }} />
+                        <div className="w-24 h-1.5 rounded-full bg-neutral-300" />
                       </div>
                     </div>
                   </div>
