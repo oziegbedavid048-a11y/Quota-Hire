@@ -1,7 +1,36 @@
 import "./index.css";
-import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import * as Sentry from "@sentry/react";
+import posthog from 'posthog-js';
+import { PostHogProvider } from 'posthog-js/react';
+
+// Initialize Sentry
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration()
+    ],
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+    enableLogs: true
+  });
+}
+
+// Initialize PostHog
+if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
+  posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
+    api_host: import.meta.env.VITE_POSTHOG_HOST,
+    person_profiles: 'identified_only'
+  });
+}
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<App />);
+root.render(
+  <PostHogProvider client={posthog}>
+    <App />
+  </PostHogProvider>
+);

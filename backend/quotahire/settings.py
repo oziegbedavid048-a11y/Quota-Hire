@@ -6,6 +6,9 @@ from pathlib import Path
 from decouple import config
 from datetime import timedelta
 import dj_database_url
+import sentry_sdk
+from posthog import Posthog
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -162,3 +165,22 @@ CORS_ALLOW_CREDENTIALS = True
 COURIER_AUTH_TOKEN = config('COURIER_AUTH_TOKEN', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default="quotahire.recruit@gmail.com")
 
+# ── Sentry Configuration ─────────────────────────────────────────────────────
+SENTRY_DSN = config('SENTRY_DSN', default=None)
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        traces_sample_rate=1.0,
+        # Set profiles_sample_rate to 1.0 to profile 100%
+        # of sampled transactions.
+        # We recommend adjusting this value in production.
+        profiles_sample_rate=1.0,
+    )
+
+# ── PostHog Configuration ────────────────────────────────────────────────────
+POSTHOG_API_KEY = config('POSTHOG_API_KEY', default=None)
+POSTHOG_HOST = config('POSTHOG_HOST', default=None)
+if POSTHOG_API_KEY and POSTHOG_HOST:
+    posthog = Posthog(POSTHOG_API_KEY, host=POSTHOG_HOST)
