@@ -48,7 +48,8 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
       // Basic token expiration handling - logout user if token is invalid/expired
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      window.location.href = '/login';
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      window.location.href = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}login`;
       throw new ApiError('Session expired. Please log in again.', 401);
   }
 

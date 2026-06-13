@@ -4,7 +4,9 @@ import { Sparkles, CheckCircle2, AlertCircle, ArrowRight, Loader2, BarChart2 } f
 import { useAppContext } from '../../context/AppContext';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 
+import { useNavigate } from 'react-router-dom';
 export const AIProfileCoach = () => {
+  const navigate = useNavigate();
   const { currentUser } = useAppContext();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -163,7 +165,7 @@ export const AIProfileCoach = () => {
                       ))}
                     </ul>
                   )}
-                  <button onClick={() => window.location.href = '/employee/profile'} className="w-full mt-8 btn-soft bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 py-3">
+                  <button onClick={() => navigate('/employee/profile')} className="w-full mt-8 btn-soft bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 py-3">
                     Edit Profile Now
                   </button>
                 </motion.div>
