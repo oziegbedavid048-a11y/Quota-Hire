@@ -216,8 +216,8 @@ export const EmployeeProfilePage = () => {
               <input type="url" className={inputClass} placeholder="https://link-to-your-resume.com"
                 value={formData.resumeUrl || ''}
                 onChange={e => setFormData({ ...formData, resumeUrl: e.target.value })} />
-              {profile.resumeUrl && (
-                <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="inline-block mt-2 text-xs font-bold text-accent-600 hover:underline">
+              {(profile.resumeFile || profile.resumeUrl) && (
+                <a href={profile.resumeFile || profile.resumeUrl} target="_blank" rel="noreferrer" className="inline-block mt-2 text-xs font-bold text-accent-600 hover:underline">
                   View current resume →
                 </a>
               )}
