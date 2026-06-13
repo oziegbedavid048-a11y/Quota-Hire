@@ -984,10 +984,7 @@ class ResumeUploadView(APIView):
         text = extract_text_from_file(resume_file, filename)
 
         if not text:
-            return Response(
-                {'error': 'Could not extract text from the file. Please ensure it is not scanned or image-based.'},
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
+            text = ""
 
         # Parse text into fields
         parsed = parse_resume_text(text)
