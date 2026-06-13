@@ -97,7 +97,7 @@ def extract_text_from_file(file_obj, filename):
 
     if fname.endswith('.pdf'):
         try:
-            import fitz
+            import fitz  # type: ignore
             doc = fitz.open(stream=file_bytes, filetype="pdf")
             for page in doc:
                 page_text = page.get_text()
