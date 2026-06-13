@@ -9,7 +9,7 @@ export interface User {
   createdAt: string;
   setupCompleted: boolean;
   isVerified?: boolean;
-  savedJobs?: number[];
+  savedJobs?: string[];
 }
 
 export interface EmployeeProfile extends User {

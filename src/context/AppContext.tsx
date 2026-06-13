@@ -319,7 +319,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         currency: jobData.currency || 'USD',
       };
 
-      const newJobRaw = await apiFetch('/jobs/', {
+      await apiFetch('/jobs/', {
           method: 'POST',
           body: JSON.stringify(payload)
       });
