@@ -294,6 +294,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               password: userData.password,
               password2: userData.password2,
               role: userData.role || 'employee',
+              phone: userData.phone || '',
+              city: userData.city || '',
+              country: userData.country || '',
           })
       });
 
@@ -449,11 +452,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           body: JSON.stringify(payload)
       });
 
-      // If location changed, update User model as well
-      if (profileData.location !== undefined) {
+      // Update User model fields (like location and name)
+      const userPayload: any = {};
+      if (profileData.location !== undefined) userPayload.location = profileData.location;
+      if (profileData.name !== undefined) userPayload.name = profileData.name;
+      
+      if (Object.keys(userPayload).length > 0) {
           await apiFetch('/auth/me/', {
               method: 'PUT',
-              body: JSON.stringify({ location: profileData.location })
+              body: JSON.stringify(userPayload)
           });
       }
 

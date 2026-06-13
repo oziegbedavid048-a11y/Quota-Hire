@@ -4,14 +4,7 @@ django-cors-headers
 djangorestframework-simplejwt
 pillow
 python-decouple
-django
-djangorestframework
-django-cors-headers
-djangorestframework-simplejwt
-pillow
-python-decouple
 gunicorn
-appwrite
 dj-database-url
 psycopg2-binary
 whitenoise
@@ -20,3 +13,5 @@ django-cloudinary-storage
 cloudinary
 sentry-sdk
 posthog
+PyMuPDF
+python-docx

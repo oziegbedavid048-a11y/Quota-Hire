@@ -97,10 +97,10 @@ def extract_text_from_file(file_obj, filename):
 
     if fname.endswith('.pdf'):
         try:
-            import PyPDF2
-            reader = PyPDF2.PdfReader(io.BytesIO(file_bytes))
-            for page in reader.pages:
-                page_text = page.extract_text()
+            import fitz
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+            for page in doc:
+                page_text = page.get_text()
                 if page_text:
                     text += page_text + '\n'
         except Exception:
