@@ -186,7 +186,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           id: user.id.toString(),
           email: user.email,
           role: user.role,
-          name: user.full_name || user.username,
+          name: user.name || user.first_name || user.email || 'User',
           avatarUrl: user.avatar || '',
           createdAt: user.created_at,
           setupCompleted: user.setup_completed,
