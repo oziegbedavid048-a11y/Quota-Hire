@@ -45,9 +45,12 @@ export const Home = () => {
   const howItWorksRef = useRef<HTMLElement>(null);
   const isHowItWorksInView = useInView(howItWorksRef, { amount: 0.3 });
 
+  const readyToCrushRef = useRef<HTMLElement>(null);
+  const isReadyToCrushInView = useInView(readyToCrushRef, { amount: 0.3 });
+
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-neutral-950 relative">
-      <ShaderAnimation isPaused={isWhyQuotaHireInView || isGetInTouchInView || isHowItWorksInView} />
+      <ShaderAnimation isPaused={isWhyQuotaHireInView || isGetInTouchInView || isHowItWorksInView || isReadyToCrushInView} />
 
       {/* Shader Animation Hero */}
       <section className="relative z-10 min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -446,8 +449,8 @@ export const Home = () => {
 
 
 
-      {/* Final CTA Section */}
-      <section className="py-24 relative overflow-hidden">
+      {/* CTA Section */}
+      <section ref={readyToCrushRef} className="py-24 relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10 text-center">
           <motion.div
             initial={{
