@@ -4,9 +4,10 @@ import { useTheme } from '../../context/ThemeContext';
 
 interface ShaderAnimationProps {
   isPaused?: boolean;
+  className?: string;
 }
 
-export function ShaderAnimation({ isPaused = false }: ShaderAnimationProps) {
+export function ShaderAnimation({ isPaused = false, className }: ShaderAnimationProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -74,8 +75,7 @@ export function ShaderAnimation({ isPaused = false }: ShaderAnimationProps) {
         
         if (isDark < 0.5) {
             float intensity = min(1.0, length(finalColor));
-            vec3 darkLines = vec3(1.0) - finalColor;
-            finalColor = mix(vec3(1.0), darkLines, intensity);
+            finalColor = mix(vec3(1.0), finalColor, intensity);
         }
         gl_FragColor = vec4(finalColor, 1.0);
       }
@@ -194,6 +194,6 @@ export function ShaderAnimation({ isPaused = false }: ShaderAnimationProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 pointer-events-none mix-blend-multiply opacity-50 dark:opacity-60 dark:mix-blend-screen overflow-hidden z-0" />
+      className={className || "fixed inset-0 pointer-events-none mix-blend-multiply opacity-50 dark:opacity-60 dark:mix-blend-screen overflow-hidden z-0"} />
   );
 }

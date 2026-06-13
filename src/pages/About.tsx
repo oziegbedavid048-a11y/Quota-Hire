@@ -15,7 +15,6 @@ export const About = () => {
   
   return (
     <div className="min-h-screen bg-white dark:bg-neutral-950 relative">
-      <ShaderAnimation isPaused={false} />
       {/* Hero */}
       <section className="pt-32 pb-24 relative overflow-hidden bg-gradient-to-br from-accent-500/10 via-white to-warm-500/10 dark:from-accent-500/10 dark:via-neutral-900 dark:to-warm-500/10 border-b border-neutral-200 dark:border-neutral-800">
         <div className="container mx-auto px-4 max-w-4xl text-center">
@@ -37,11 +36,17 @@ export const About = () => {
           >
             Quota Hire is the exclusive network connecting elite, performance-verified sales professionals with high-growth companies.
           </motion.p>
+          <motion.div initial="hidden" animate="visible" variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { delay: 0.4, duration: 0.6 } } }} className="mt-12 flex justify-center">
+            <img src={`${import.meta.env.BASE_URL}images/about_illustration_nobg.png`} alt="Team collaboration" className="w-full max-w-md object-contain drop-shadow-2xl animate-float" />
+          </motion.div>
         </div>
       </section>
 
-      {/* Story */}
-      <section className="py-24">
+      <div className="relative overflow-hidden">
+        <ShaderAnimation isPaused={false} className="absolute inset-0 pointer-events-none mix-blend-multiply opacity-50 dark:opacity-60 dark:mix-blend-screen z-0" />
+
+        {/* Story */}
+        <section className="py-24 relative z-10">
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}>
@@ -52,9 +57,9 @@ export const About = () => {
                 <p>Meanwhile, third-party recruiters often spam candidates with irrelevant roles and hide compensation details until the final interview stages.</p>
               </div>
             </motion.div>
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className="relative flex justify-center">
-              <img src={`${import.meta.env.BASE_URL}images/about_illustration_nobg.png`} alt="Team collaboration" className="w-full max-w-md object-contain drop-shadow-2xl animate-float" />
-              <div className="absolute -bottom-6 left-4 md:-left-6 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md p-6 rounded-xl shadow-subtle border border-neutral-200 dark:border-neutral-800">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn} className="relative">
+              <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=1200" alt="Team meeting" className="rounded-2xl shadow-elevated" />
+              <div className="absolute -bottom-6 -left-6 bg-white dark:bg-neutral-900 p-6 rounded-xl shadow-subtle border border-neutral-200 dark:border-neutral-800">
                 <p className="text-xl md:text-2xl font-bold text-accent-600 dark:text-accent-400 mb-1">500+</p>
                 <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400">Companies Hiring</p>
               </div>
@@ -64,7 +69,7 @@ export const About = () => {
       </section>
 
       {/* Values */}
-      <section className="py-24 relative overflow-hidden bg-white dark:bg-neutral-950 border-y border-neutral-200 dark:border-neutral-800">
+      <section className="py-24 relative overflow-hidden bg-white/60 dark:bg-neutral-950/60 backdrop-blur-md border-y border-neutral-200 dark:border-neutral-800 z-10">
         <div className="container mx-auto px-4 max-w-6xl relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-6 text-neutral-900 dark:text-white">Our Core Values</h2>
@@ -86,7 +91,7 @@ export const About = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-24 text-center">
+      <section className="py-24 text-center relative z-10">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-neutral-900 dark:text-white mb-6">Join the revolution in sales hiring.</h2>
           <Link to="/signup?role=employee">
@@ -94,6 +99,7 @@ export const About = () => {
           </Link>
         </div>
       </section>
+      </div>
     </div>
   );
 };
