@@ -216,9 +216,7 @@ export const PostJob = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (step === 0 && !formData.package) return;
-    
-    if (step < 3) {
+    if (step < 4) {
       setStep(step + 1);
       return;
     }
@@ -333,12 +331,9 @@ export const PostJob = () => {
                 <motion.div key="step0" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                   <div className="text-center mb-8">
                     <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Our Service Packages</h3>
-                    <p className="text-neutral-500">Please select a hiring package structure before proceeding to post your job.</p>
+                    <p className="text-neutral-500">Review our available structures before posting your job.</p>
                   </div>
-                  <PackageCards 
-                    selected={formData.package} 
-                    onSelect={(id) => setFormData({ ...formData, package: id })} 
-                  />
+                  <PackageCards readOnly />
                 </motion.div>
               )}
 
@@ -578,7 +573,18 @@ export const PostJob = () => {
                   </div>
                 </motion.div>
               )}
-              {/* Removed Step 4 */}
+              {step === 4 && (
+                <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Select a Package</h3>
+                    <p className="text-neutral-500">Choose the hiring package that best fits your needs to post this job.</p>
+                  </div>
+                  <PackageCards 
+                    selected={formData.package} 
+                    onSelect={(id) => setFormData({ ...formData, package: id })} 
+                  />
+                </motion.div>
+              )}
             </AnimatePresence>
 
             <div className="mt-10 pt-6 border-t border-neutral-100 dark:border-neutral-800 flex justify-between">
@@ -593,10 +599,10 @@ export const PostJob = () => {
               <Button 
                 type="submit" 
                 className="btn-soft bg-accent-600 text-white shadow-soft" 
-                isLoading={isLoading && step === 3}
-                disabled={(step === 0 && !formData.package) || (step === 3 && isLoading)}
+                isLoading={isLoading && step === 4}
+                disabled={step === 4 && !formData.package}
               >
-                {step === 0 ? 'Continue' : step === 3 ? 'Post Job' : 'Next Step'}
+                {step === 0 ? 'Continue to Post Job' : step === 3 ? 'Continue to Select Package' : step === 4 ? 'Post Job' : 'Next Step'}
               </Button>
             </div>
           </form>
