@@ -63,6 +63,7 @@ export interface Job {
   currency?: string;
   salaryRange?: string;
   commissionRange?: string;
+  package?: string;
   status: JobStatus;
   createdAt: string;
 }

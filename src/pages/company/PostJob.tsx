@@ -105,8 +105,73 @@ const findMatchingTemplate = (title: string): string | null => {
   return null;
 };
 
+const PACKAGES = [
+  {
+    id: 'pipeline',
+    title: 'QUOTA HIRE PIPELINE',
+    subtitle: 'Recruit Sales Associate Only',
+    bestFor: 'You have Sales Manager + CRM + training',
+    weDo: 'Source, vet, test, shortlist 5-7 closers. You interview + hire + manage.',
+    youDo: 'Onboarding, training, daily management, payroll',
+    promise: 'We fill your pipeline with vetted closers. You manage.',
+    fee: '1. Base salary roles: 15% of 1st year base salary.\n2. Commission-only roles: 20% of expected 1-month OTE.',
+    guarantee: '90-day free replacement'
+  },
+  {
+    id: 'hunters',
+    title: 'QUOTA HIRE COMMISSION HUNTERS',
+    subtitle: 'Commission-Only Specialist',
+    bestFor: '100% commission pay. No base budget',
+    weDo: 'Pipeline vetting + commission mindset test + cold call roleplay',
+    youDo: 'Management + targets',
+    promise: 'Hunters who sell without base salary.',
+    fee: '20% of expected 1-month OTE per hire',
+    guarantee: '60-day replacement'
+  },
+  {
+    id: 'sales_ops',
+    title: 'QUOTA HIRE SALES OPS',
+    subtitle: 'Recruit + Manage Full Sales Team',
+    bestFor: 'You want revenue without hiring a Sales Manager',
+    weDo: 'Everything in Pipeline + daily management, scripts, KPI tracking, weekly coaching, pipeline reviews, fire underperformers, monthly reports',
+    youDo: 'Pay rep commission, product training, approve targets',
+    promise: 'We hire + manage. You collect revenue.',
+    fee: '1. Setup: 10% of annual base OR 20% of 1-month OTE.\n2. Monthly: 10% of base per rep.\n3. Bonus: 4% of team commission if target hit',
+    guarantee: 'Free replacement <60 days.\nTimeline: 21-30 days to full team.'
+  }
+];
+
+const PackageCards = ({ selected, onSelect, readOnly }: { selected?: string, onSelect?: (id: string) => void, readOnly?: boolean }) => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {PACKAGES.map(pkg => (
+        <div 
+          key={pkg.id} 
+          onClick={() => !readOnly && onSelect && onSelect(pkg.id)}
+          className={`flex flex-col bg-white dark:bg-neutral-900 rounded-2xl border-2 transition-all p-5 shadow-sm ${readOnly ? 'border-neutral-200 dark:border-neutral-800' : selected === pkg.id ? 'border-accent-500 shadow-md ring-4 ring-accent-500/20' : 'border-neutral-200 dark:border-neutral-800 hover:border-accent-300 cursor-pointer'}`}
+        >
+          <h4 className="font-black text-lg text-neutral-900 dark:text-white mb-1 leading-tight">{pkg.title}</h4>
+          <p className="text-accent-600 dark:text-accent-400 font-bold text-sm mb-4">{pkg.subtitle}</p>
+          
+          <div className="space-y-4 text-sm text-neutral-600 dark:text-neutral-400 flex-1">
+            <div><span className="font-bold text-neutral-800 dark:text-neutral-200">Best For:</span> {pkg.bestFor}</div>
+            <div><span className="font-bold text-neutral-800 dark:text-neutral-200">We Do:</span> {pkg.weDo}</div>
+            <div><span className="font-bold text-neutral-800 dark:text-neutral-200">You Do:</span> {pkg.youDo}</div>
+            <div><span className="font-bold text-neutral-800 dark:text-neutral-200">Promise:</span> {pkg.promise}</div>
+            <div className="whitespace-pre-line"><span className="font-bold text-neutral-800 dark:text-neutral-200">Fee:</span><br/>{pkg.fee}</div>
+          </div>
+          
+          <div className="mt-5 pt-4 border-t border-neutral-100 dark:border-neutral-800 whitespace-pre-line text-xs font-bold text-neutral-500">
+            <span className="text-green-600 dark:text-green-500">Guarantee:</span> {pkg.guarantee}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export const PostJob = () => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const { currentUser, postJob } = useAppContext();
   
   const [formData, setFormData] = useState({
@@ -122,7 +187,8 @@ export const PostJob = () => {
     contactPhone: '',
     companyName: (currentUser as CompanyProfile)?.companyName || currentUser?.name || '',
     companyAddress: '',
-    whatsappNumber: ''
+    whatsappNumber: '',
+    package: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [suggestedTemplate, setSuggestedTemplate] = useState<string | null>(null);
@@ -149,10 +215,12 @@ export const PostJob = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (step < 3) {
+    if (step < 4) {
       setStep(step + 1);
       return;
     }
+
+    if (!formData.package) return;
 
     setIsLoading(true);
     let finalDescription = formData.description;
@@ -171,7 +239,8 @@ export const PostJob = () => {
         contactPhone: formData.contactPhone,
         whatsappNumber: formData.whatsappNumber,
         companyAddress: formData.companyAddress,
-        companyName: formData.companyName
+        companyName: formData.companyName,
+        package: formData.package
       });
       setIsLoading(false);
       navigate('/dashboard');
@@ -225,28 +294,29 @@ export const PostJob = () => {
           </div>
         </motion.div>
 
-        {/* Stepper Progress */}
-        <div className="flex justify-between items-center mb-10 relative">
-          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-neutral-200 dark:bg-neutral-800 -z-10 rounded-full"></div>
-          <div className="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 bg-accent-500 -z-10 rounded-full transition-all duration-500" style={{ width: `${((step - 1) / 2) * 100}%` }}></div>
-          
-          {[
-            { id: 1, icon: Briefcase, label: "Basics" },
-            { id: 2, icon: FileText, label: "Details" },
-            { id: 3, icon: Check, label: "Review" }
-          ].map((s) => (
-            <div key={s.id} className="flex flex-col items-center">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-soft transition-all duration-500 ${
-                step >= s.id 
-                  ? 'bg-accent-500 text-white border-4 border-white dark:border-[#0f1115] scale-110' 
-                  : 'bg-white dark:bg-neutral-900 text-neutral-400 border-4 border-white dark:border-[#0f1115]'
-              }`}>
-                <s.icon size={20} strokeWidth={3} />
+        {step > 0 && step < 4 && (
+          <div className="flex justify-between items-center mb-10 relative">
+            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-neutral-200 dark:bg-neutral-800 -z-10 rounded-full"></div>
+            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 bg-accent-500 -z-10 rounded-full transition-all duration-500" style={{ width: `${((step - 1) / 2) * 100}%` }}></div>
+            
+            {[
+              { id: 1, icon: Briefcase, label: "Basics" },
+              { id: 2, icon: FileText, label: "Details" },
+              { id: 3, icon: Check, label: "Review" }
+            ].map((s) => (
+              <div key={s.id} className="flex flex-col items-center">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shadow-soft transition-all duration-500 ${
+                  step >= s.id 
+                    ? 'bg-accent-500 text-white border-4 border-white dark:border-[#0f1115] scale-110' 
+                    : 'bg-white dark:bg-neutral-900 text-neutral-400 border-4 border-white dark:border-[#0f1115]'
+                }`}>
+                  <s.icon size={20} strokeWidth={3} />
+                </div>
+                <span className={`mt-2 text-sm font-bold ${step >= s.id ? 'text-neutral-900 dark:text-white' : 'text-neutral-400'}`}>{s.label}</span>
               </div>
-              <span className={`mt-2 text-sm font-bold ${step >= s.id ? 'text-neutral-900 dark:text-white' : 'text-neutral-400'}`}>{s.label}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Form Card */}
         <motion.div 
@@ -492,10 +562,22 @@ export const PostJob = () => {
                   </div>
                 </motion.div>
               )}
+              {step === 4 && (
+                <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Select a Package</h3>
+                    <p className="text-neutral-500">Choose the hiring package that best fits your needs to post this job.</p>
+                  </div>
+                  <PackageCards 
+                    selected={formData.package} 
+                    onSelect={(id) => setFormData({ ...formData, package: id })} 
+                  />
+                </motion.div>
+              )}
             </AnimatePresence>
 
             <div className="mt-10 pt-6 border-t border-neutral-100 dark:border-neutral-800 flex justify-between">
-              {step > 1 ? (
+              {step > 0 ? (
                 <Button type="button" onClick={() => setStep(step - 1)} variant="outline" className="btn-soft border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300">
                   Back
                 </Button>
@@ -503,8 +585,13 @@ export const PostJob = () => {
                 <div></div>
               )}
               
-              <Button type="submit" className="btn-soft bg-accent-600 text-white shadow-soft" isLoading={isLoading && step === 3}>
-                {step === 3 ? 'Post Job' : 'Next Step'}
+              <Button 
+                type="submit" 
+                className="btn-soft bg-accent-600 text-white shadow-soft" 
+                isLoading={isLoading && step === 4}
+                disabled={step === 4 && !formData.package}
+              >
+                {step === 0 ? 'Continue to Post Job' : step === 3 ? 'Continue to Select Package' : step === 4 ? 'Post Job' : 'Next Step'}
               </Button>
             </div>
           </form>

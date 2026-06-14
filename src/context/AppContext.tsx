@@ -331,6 +331,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         whatsapp_number: jobData.whatsappNumber || '',
         company_address: jobData.companyAddress || '',
         custom_company_name: jobData.companyName || '',
+        package: jobData.package || '',
       };
 
       await apiFetch('/jobs/', {

@@ -115,9 +115,9 @@ class CompanyProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display    = ('title', 'company_name_display', 'status', 'status_badge', 'is_remote', 'location', 'created_at', 'edit_button')
+    list_display    = ('title', 'company_name_display', 'package', 'status', 'status_badge', 'is_remote', 'location', 'created_at', 'edit_button')
     list_display_links = ('title', 'edit_button')
-    list_filter     = ('status', 'is_remote', 'created_at')
+    list_filter     = ('status', 'package', 'is_remote', 'created_at')
     search_fields   = ('title', 'description', 'company__email', 'location')
     ordering        = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
@@ -127,7 +127,7 @@ class JobAdmin(admin.ModelAdmin):
         ('Job Details', {'fields': ('company', 'title', 'description', 'requirements')}),
         ('Location & Pay', {'fields': ('is_remote', 'location', 'currency', 'salary_range', 'commission_range')}),
         ('Contact Info (Hidden from users)', {'fields': ('custom_company_name', 'company_address', 'contact_email', 'contact_phone', 'whatsapp_number')}),
-        ('Status',      {'fields': ('status',)}),
+        ('Status & Package', {'fields': ('status', 'package')}),
         ('Timestamps',  {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
 

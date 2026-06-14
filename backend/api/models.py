@@ -142,6 +142,12 @@ class JobStatus(models.TextChoices):
     CLOSED   = 'closed',   'Closed'
 
 
+class JobPackage(models.TextChoices):
+    PIPELINE  = 'pipeline',  'Quota Hire Pipeline'
+    HUNTERS   = 'hunters',   'Quota Hire Commission Hunters'
+    SALES_OPS = 'sales_ops', 'Quota Hire Sales Ops'
+
+
 class Job(models.Model):
     """
     A job listing posted by a company.
@@ -169,6 +175,7 @@ class Job(models.Model):
     company_address  = models.CharField(max_length=300, blank=True)
     custom_company_name = models.CharField(max_length=200, blank=True)
     status           = models.CharField(max_length=20, choices=JobStatus.choices, default=JobStatus.PENDING)
+    package          = models.CharField(max_length=50, choices=JobPackage.choices, blank=True)
     created_at       = models.DateTimeField(auto_now_add=True)
     updated_at       = models.DateTimeField(auto_now=True)
 
