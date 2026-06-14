@@ -163,6 +163,7 @@ class JobSerializer(serializers.ModelSerializer):
     company_id       = serializers.SerializerMethodField()
     company_is_verified = serializers.SerializerMethodField()
     company_logo_url = serializers.SerializerMethodField()
+    applicants_count = serializers.SerializerMethodField()
 
     class Meta:
         model  = Job
@@ -171,7 +172,7 @@ class JobSerializer(serializers.ModelSerializer):
             'title', 'description', 'requirements', 'employment_type',
             'is_remote', 'location', 'salary_range', 'commission_range', 'currency',
             'contact_email', 'contact_phone', 'whatsapp_number', 'company_address', 'custom_company_name',
-            'status', 'package', 'created_at',
+            'status', 'package', 'applicants_count', 'created_at',
         )
         read_only_fields = ('id', 'status', 'created_at')
 
@@ -204,6 +205,9 @@ class JobSerializer(serializers.ModelSerializer):
         validated_data['company']  = self.context['request'].user
         validated_data['status']   = 'pending'
         return super().create(validated_data)
+
+    def get_applicants_count(self, obj):
+        return obj.applications.count()
 
 
 # ── Application Serializers ───────────────────────────────────────────────────
