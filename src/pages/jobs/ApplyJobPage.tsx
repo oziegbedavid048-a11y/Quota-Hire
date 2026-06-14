@@ -266,8 +266,8 @@ export const ApplyJobPage = () => {
 
           {/* Transition – Reviewing */}
           {flowState === 'transition' && (
-            <div className="flex-1 p-8 sm:p-12 flex flex-col items-center justify-center text-center">
-              <div className="w-56 h-56 sm:w-72 sm:h-72 mb-8 relative">
+            <div className="flex-1 p-6 sm:p-12 flex flex-col items-center justify-center text-center">
+              <div className="w-48 h-48 sm:w-72 sm:h-72 mb-6 sm:mb-8 relative">
                 <div className="absolute inset-0 bg-accent-500/10 blur-3xl rounded-full"></div>
                 <img
                   src={`${import.meta.env.BASE_URL}images/reviewing_app_3d.png`}
@@ -431,14 +431,14 @@ export const ApplyJobPage = () => {
 
           {/* Success */}
           {flowState === 'success' && (
-            <div className="flex-1 p-8 sm:p-12 flex flex-col items-center justify-center text-center relative overflow-hidden">
+            <div className="flex-1 p-6 sm:p-12 flex flex-col items-center justify-center text-center relative overflow-hidden">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_center,rgba(249,115,22,0.1),transparent_70%)] rounded-full blur-3xl pointer-events-none" />
 
               <motion.div
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                className="w-48 h-48 sm:w-64 sm:h-64 mb-8 mx-auto relative z-10"
+                className="w-40 h-40 sm:w-64 sm:h-64 mb-6 sm:mb-8 mx-auto relative z-10"
               >
                 <div className="absolute inset-0 bg-accent-500/10 blur-3xl rounded-full" />
                 <img
@@ -455,10 +455,10 @@ export const ApplyJobPage = () => {
                 transition={{ delay: 0.2 }}
                 className="relative z-10 w-full"
               >
-                <h3 className="text-3xl sm:text-4xl font-display font-extrabold text-neutral-900 dark:text-white mb-4 tracking-tight">
+                <h3 className="text-2xl sm:text-4xl font-display font-extrabold text-neutral-900 dark:text-white mb-3 sm:mb-4 tracking-tight">
                   Application Submitted! 🎉
                 </h3>
-                <p className="text-neutral-500 dark:text-neutral-400 text-sm sm:text-base font-medium mb-10 max-w-sm mx-auto leading-relaxed">
+                <p className="text-neutral-500 dark:text-neutral-400 text-sm sm:text-base font-medium mb-8 sm:mb-10 max-w-sm mx-auto leading-relaxed px-4 sm:px-0">
                   Your profile and contact details have been successfully and securely delivered. Best of luck!
                 </p>
                 <button

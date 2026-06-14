@@ -326,6 +326,16 @@ export const PostJob = () => {
           
           <form onSubmit={handleSubmit} className="relative z-10">
             <AnimatePresence mode="wait">
+              {step === 0 && (
+                <motion.div key="step0" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Our Service Packages</h3>
+                    <p className="text-neutral-500">Review our available structures before posting your job.</p>
+                  </div>
+                  <PackageCards readOnly />
+                </motion.div>
+              )}
+
               {step === 1 && (
                 <motion.div key="step1" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                   <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white mb-6">The Basics</h3>
