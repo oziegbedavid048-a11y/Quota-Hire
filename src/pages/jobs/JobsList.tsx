@@ -121,7 +121,7 @@ export const JobsList = () => {
                   <div className="bg-white dark:bg-neutral-900 p-5 md:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md hover:border-accent-300 dark:hover:border-accent-700 transition-all duration-200">
                     
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
-                      <div className="flex items-start gap-4">
+                      <div className="flex items-start gap-3 md:gap-4 w-full md:w-auto overflow-hidden">
                         {job.companyLogoUrl ? (
                           <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden flex-shrink-0 border border-neutral-200 dark:border-neutral-700">
                             <img src={job.companyLogoUrl} alt={job.companyName} className="w-full h-full object-cover" />
@@ -131,17 +131,17 @@ export const JobsList = () => {
                             {job.companyName?.charAt(0) || 'C'}
                           </div>
                         )}
-                        <div>
-                          <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors leading-tight mb-1">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg md:text-xl font-bold text-neutral-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors leading-tight mb-1 truncate">
                             {job.title}
                           </h3>
                           <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-sm text-neutral-600 dark:text-neutral-400 font-medium">
-                            <span className="flex items-center gap-1">
-                              {job.companyName}
-                              {job.companyIsVerified && <BadgeCheck size={14} className="text-blue-500" />}
+                            <span className="flex items-center gap-1 truncate max-w-full">
+                              <span className="truncate">{job.companyName}</span>
+                              {job.companyIsVerified && <BadgeCheck size={14} className="text-blue-500 shrink-0" />}
                             </span>
-                            <span className="hidden md:inline text-neutral-300 dark:text-neutral-600">•</span>
-                            <span className="text-neutral-500 text-xs md:text-sm flex items-center gap-1">
+                            <span className="hidden md:inline text-neutral-300 dark:text-neutral-600 shrink-0">•</span>
+                            <span className="text-neutral-500 text-xs md:text-sm flex items-center gap-1 shrink-0">
                               <MapPin size={14} /> {job.location || 'Flexible'}
                             </span>
                           </div>

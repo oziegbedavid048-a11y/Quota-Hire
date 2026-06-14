@@ -85,14 +85,14 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(EmployeeProfile)
 class EmployeeProfileAdmin(admin.ModelAdmin):
-    list_display    = ('user', 'title', 'experience_years', 'has_cv', 'updated_at')
+    list_display    = ('user', 'title', 'experience_years', 'has_resume', 'updated_at')
     list_filter     = ('experience_years', 'updated_at')
     search_fields   = ('user__email', 'user__first_name', 'title', 'bio')
     readonly_fields = ('updated_at',)
 
-    @admin.display(description='Has Generated CV', boolean=True)
-    def has_cv(self, obj):
-        return bool(obj.generated_cv)
+    @admin.display(description='Has Resume', boolean=True)
+    def has_resume(self, obj):
+        return bool(obj.resume_url or obj.resume_file)
 
 
 # ── Company Profile Admin ─────────────────────────────────────────────────────
@@ -174,7 +174,8 @@ class JobAdmin(admin.ModelAdmin):
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display    = ('employee', 'job', 'status', 'status_badge', 'applied_at')
+    list_display    = ('employee', 'job', 'status', 'status_badge', 'applied_at', 'edit_button')
+    list_display_links = ('employee', 'edit_button')
     list_editable   = ('status',)
     list_filter     = ('status', 'applied_at')
     search_fields   = ('employee__email', 'job__title', 'cover_letter')
@@ -197,6 +198,11 @@ class ApplicationAdmin(admin.ModelAdmin):
             '<span style="background:{};color:#fff;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">{}</span>',
             colour, obj.status.replace('_', ' ').upper()
         )
+
+    @admin.display(description='Actions')
+    def edit_button(self, obj):
+        url = reverse('admin:api_application_change', args=[obj.id])
+        return format_html('<a class="button" style="background-color:#417690;color:white;padding:5px 10px;border-radius:4px;font-weight:bold;text-decoration:none;" href="{}">Edit</a>', url)
 
     @admin.action(description='👀 Mark as Under Review')
     def mark_under_review(self, request, queryset):

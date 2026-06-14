@@ -318,16 +318,7 @@ export const PostJob = () => {
                       className="input-soft"
                     />
 
-                    <GlassInput
-                      icon={<MapPin size={18} />}
-                      label="Location"
-                      placeholder="e.g. New York, NY"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      disabled={formData.isRemote}
-                      required={!formData.isRemote}
-                      className="input-soft"
-                    />
+
 
                     <label className="flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 cursor-pointer w-fit p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl shadow-inner-soft hover:bg-neutral-100 transition-colors">
                       <input
