@@ -460,7 +460,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       if (Object.keys(userPayload).length > 0) {
           await apiFetch('/auth/me/', {
-              method: 'PUT',
+              method: 'PATCH',
               body: JSON.stringify(userPayload)
           });
       }
@@ -483,7 +483,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         body: formData,
       });
 
-      await fetchData();
+      // Do NOT call fetchData() here — it resets global loading state which
+      // causes UnifiedDashboardLayout to flash PageSkeleton and wipe local
+      // parsedData state before the user can review it.
+      // fetchData() is called automatically by updateProfile when user saves.
       return { parsed: res?.parsed };
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to upload resume'}.`);

@@ -149,7 +149,47 @@ export const Home = () => {
         </div>
       </section>
 
+      {/* The Revenue Reality Section */}
+      <section className="py-20 relative overflow-hidden bg-neutral-50 dark:bg-neutral-900/30 border-y border-neutral-100 dark:border-neutral-800/50">
+        {/* Abstract background elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+          <div className="absolute -left-[10%] -top-[50%] w-[50%] h-[200%] bg-gradient-to-r from-accent-500/5 to-transparent -rotate-12 blur-3xl"></div>
+          <div className="absolute -right-[10%] -bottom-[50%] w-[50%] h-[200%] bg-gradient-to-l from-warm-500/5 to-transparent rotate-12 blur-3xl"></div>
+        </div>
 
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="max-w-4xl mx-auto text-center"
+          >
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-400 text-xs font-bold uppercase tracking-widest mb-8 border border-accent-200 dark:border-accent-800/50">
+              <BarChart3 size={14} /> The Revenue Reality
+            </span>
+            
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-neutral-900 dark:text-white mb-8 leading-tight tracking-tight">
+              Inadequate revenue generation often stems from <span className="text-accent-600 dark:text-accent-400">gaps in sales structure.</span>
+            </h2>
+            
+            <div className="bg-white dark:bg-neutral-900 p-8 md:p-10 rounded-3xl shadow-elevated border border-neutral-100 dark:border-neutral-800 text-left relative">
+              <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-accent-500 to-warm-500 rounded-l-3xl"></div>
+              <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">
+                Without a defined process for lead generation, qualification, conversion, and follow-up, even strong products struggle to convert interest into consistent income.
+              </p>
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-accent-50 dark:bg-accent-900/20 border border-accent-100 dark:border-accent-900/30">
+                <div className="w-12 h-12 rounded-full bg-accent-100 dark:bg-accent-900/50 flex flex-shrink-0 items-center justify-center text-accent-600 dark:text-accent-400">
+                  <TrendingUp size={24} />
+                </div>
+                <p className="text-lg font-bold text-neutral-900 dark:text-white leading-tight">
+                  Strengthening the sales framework is the most direct path to revenue stability.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
       {/* Dual Block Section */}
       <section className="py-24 relative">

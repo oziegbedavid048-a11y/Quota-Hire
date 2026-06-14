@@ -1,7 +1,11 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, UploadCloud, FileText, CheckCircle2, AlertCircle, X, ChevronRight, Briefcase, GraduationCap, MapPin, Mail, Phone, Code2 } from 'lucide-react';
+import {
+  ArrowLeft, UploadCloud, FileText, CheckCircle2, X,
+  ChevronRight, Briefcase, GraduationCap, MapPin, Phone,
+  Sparkles, RefreshCw, User, Clock
+} from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { toast } from 'sonner';
 
@@ -13,18 +17,26 @@ export default function ResumeUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [parsedData, setParsedData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (selectedFile: File) => {
     if (!selectedFile) return;
 
-    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!validTypes.includes(selectedFile.type) && !selectedFile.name.endsWith('.docx') && !selectedFile.name.endsWith('.doc')) {
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (
+      !validTypes.includes(selectedFile.type) &&
+      !selectedFile.name.endsWith('.docx') &&
+      !selectedFile.name.endsWith('.doc')
+    ) {
       setError('Please upload a PDF or Word document (.doc, .docx).');
       return;
     }
-
     if (selectedFile.size > 5 * 1024 * 1024) {
       setError('File size must be less than 5MB.');
       return;
@@ -49,23 +61,19 @@ export default function ResumeUpload() {
     e.preventDefault();
     setIsDragging(true);
   };
-
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
   };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFileChange(e.dataTransfer.files[0]);
-    }
+    if (e.dataTransfer.files?.length > 0) handleFileChange(e.dataTransfer.files[0]);
   };
 
   const handleSaveToProfile = async () => {
     if (!parsedData) return;
-
+    setIsSaving(true);
     try {
       await updateProfile({
         title: parsedData.title || undefined,
@@ -76,212 +84,265 @@ export default function ResumeUpload() {
         phoneNumber: parsedData.phone_number || undefined,
         location: parsedData.location || undefined,
       });
-      
       toast.success('Profile updated successfully from resume!');
       navigate('/employee/profile');
-    } catch (err) {
+    } catch {
       toast.error('Failed to save parsed data to profile.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  // ── helpers ──
+  const Field = ({ label, value }: { label: string; value?: string | number | null }) => (
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 shrink-0">
+        {label}
+      </span>
+      <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 break-words leading-snug">
+        {value || <span className="text-neutral-400 dark:text-neutral-600 font-normal italic text-xs">Not found</span>}
+      </span>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen py-6 sm:py-10 relative overflow-hidden bg-neutral-50 dark:bg-neutral-950">
-      <div className="w-full mx-auto px-4 max-w-2xl relative z-10">
-        
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 py-6 px-4">
+      <div className="max-w-2xl mx-auto space-y-5">
+
+        {/* ── Header ── */}
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/employee/profile')}
-            className="p-2.5 rounded-full bg-white dark:bg-neutral-900 shadow-soft text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
+            className="shrink-0 p-2.5 rounded-full bg-white dark:bg-neutral-900 shadow-sm border border-neutral-100 dark:border-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
           >
             <ArrowLeft size={18} />
           </button>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white">Smart Resume Upload</h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">Upload your CV to automatically fill your profile</p>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white truncate">
+              Smart Resume Upload
+            </h1>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+              Upload your CV to auto-fill your profile
+            </p>
           </div>
         </div>
 
         <AnimatePresence mode="wait">
+
+          {/* ── Upload dropzone ── */}
           {!parsedData && !isParsing && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              key="dropzone"
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="card-soft p-6 sm:p-10"
+              exit={{ opacity: 0, scale: 0.97 }}
+              className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-sm overflow-hidden"
             >
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center cursor-pointer transition-all ${
+                className={`m-4 border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
                   isDragging
-                    ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20 scale-[1.02]'
-                    : 'border-neutral-200 dark:border-neutral-800 hover:border-accent-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
+                    ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20 scale-[1.01]'
+                    : 'border-neutral-200 dark:border-neutral-700 hover:border-accent-400 hover:bg-neutral-50 dark:hover:bg-neutral-800/60'
                 }`}
               >
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={(e) => e.target.files && handleFileChange(e.target.files[0])}
+                  onChange={e => e.target.files && handleFileChange(e.target.files[0])}
                   accept=".pdf,.doc,.docx"
                   className="hidden"
                 />
-                
-                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <UploadCloud size={32} className="text-accent-500" />
+                <div className="w-14 h-14 bg-accent-50 dark:bg-accent-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <UploadCloud size={28} className="text-accent-500" />
                 </div>
-                
-                <h3 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mb-2">
-                  Click to upload or drag & drop
-                </h3>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6 max-w-sm mx-auto">
-                  PDF, DOC, or DOCX (Max 5MB). We'll extract your details and prepopulate your profile.
+                <p className="font-extrabold text-base text-neutral-900 dark:text-white mb-1">
+                  Click or drag & drop
                 </p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  PDF, DOC or DOCX · max 5 MB
+                </p>
+              </div>
 
-                {error && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 px-4 py-3 rounded-xl">
-                    <AlertCircle size={16} /> {error}
+              {error && (
+                <div className="mx-4 mb-4 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 text-sm">
+                  <X size={16} className="shrink-0 mt-0.5" />
+                  <span className="break-words">{error}</span>
+                </div>
+              )}
+
+              <div className="mx-4 mb-4 grid grid-cols-3 gap-2">
+                {[
+                  { icon: FileText, text: 'Text-based PDF' },
+                  { icon: Briefcase, text: 'Word document' },
+                  { icon: Sparkles, text: 'Auto-fills profile' },
+                ].map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex flex-col items-center gap-1.5 p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-2xl">
+                    <Icon size={16} className="text-accent-500" />
+                    <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 text-center leading-tight">{text}</span>
                   </div>
-                )}
+                ))}
               </div>
             </motion.div>
           )}
 
+          {/* ── Parsing loader ── */}
           {isParsing && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="card-soft p-12 flex flex-col items-center justify-center text-center min-h-[400px]"
+              key="parsing"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-sm p-10 flex flex-col items-center gap-4 text-center"
             >
-              <div className="relative w-24 h-24 mb-6">
-                <div className="absolute inset-0 border-4 border-neutral-100 dark:border-neutral-800 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-accent-500 rounded-full border-t-transparent animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center text-accent-500">
-                  <FileText size={24} />
-                </div>
+              <div className="w-16 h-16 rounded-full bg-accent-50 dark:bg-accent-900/30 flex items-center justify-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                >
+                  <RefreshCw size={28} className="text-accent-500" />
+                </motion.div>
               </div>
-              <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white mb-2">Reading your resume...</h2>
-              <p className="text-neutral-500 dark:text-neutral-400">Extracting skills, experience, and contact info.</p>
+              <div>
+                <p className="font-extrabold text-neutral-900 dark:text-white">Reading your CV…</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  Extracting details from <span className="font-semibold">{file?.name}</span>
+                </p>
+              </div>
             </motion.div>
           )}
 
+          {/* ── Parsed results ── */}
           {parsedData && !isParsing && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              key="results"
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
+              className="space-y-4"
             >
-              <div className="card-soft p-5 sm:p-6 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/30 flex items-start gap-4">
-                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-full shrink-0">
-                  <CheckCircle2 size={24} />
+              {/* Success banner */}
+              <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl">
+                <div className="shrink-0 w-8 h-8 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 size={18} />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-emerald-900 dark:text-emerald-100 mb-1">Extraction Complete</h3>
-                  <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                    Review the details we found below. You can confirm and save this to your profile, and then edit anything that isn't quite right.
+                <div className="min-w-0">
+                  <p className="font-extrabold text-emerald-900 dark:text-emerald-100 text-sm">Extraction Complete</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed mt-0.5">
+                    Review the details below, then tap "Save to Profile" to fill all your profile sections automatically.
                   </p>
                 </div>
               </div>
 
-              <div className="card-soft p-6 space-y-6">
-                
-                {/* Basic Info */}
-                <div>
-                  <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Briefcase size={14} /> Professional Identity
-                  </h4>
-                  <div className="space-y-4">
-                    <div className="bg-neutral-50 dark:bg-neutral-900/50 p-3 sm:p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                      <div className="text-xs text-neutral-500 mb-1">Job Title</div>
-                      <div className="font-bold text-neutral-900 dark:text-white">{parsedData.title || <span className="text-neutral-400 font-normal italic">Not found</span>}</div>
-                    </div>
-                    
-                    <div className="bg-neutral-50 dark:bg-neutral-900/50 p-3 sm:p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                      <div className="text-xs text-neutral-500 mb-1">Professional Summary</div>
-                      <div className="text-sm text-neutral-900 dark:text-white leading-relaxed">{parsedData.bio || <span className="text-neutral-400 italic">Not found</span>}</div>
-                    </div>
-                  </div>
+              {/* Professional identity */}
+              <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-neutral-50 dark:border-neutral-800">
+                  <User size={14} className="text-accent-500 shrink-0" />
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-500">
+                    Professional Identity
+                  </span>
                 </div>
-
-                <hr className="border-neutral-100 dark:border-neutral-800" />
-
-                {/* Contact & Meta */}
-                <div>
-                  <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <MapPin size={14} /> Contact & Details
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-neutral-50 dark:bg-neutral-900/50 p-3 sm:p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
-                      <Phone size={16} className="text-neutral-400 shrink-0" />
-                      <div className="truncate text-sm font-medium text-neutral-900 dark:text-white">{parsedData.phone_number || <span className="text-neutral-400 font-normal italic">Not found</span>}</div>
-                    </div>
-                    <div className="bg-neutral-50 dark:bg-neutral-900/50 p-3 sm:p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
-                      <MapPin size={16} className="text-neutral-400 shrink-0" />
-                      <div className="truncate text-sm font-medium text-neutral-900 dark:text-white">{parsedData.location || <span className="text-neutral-400 font-normal italic">Not found</span>}</div>
-                    </div>
-                    <div className="bg-neutral-50 dark:bg-neutral-900/50 p-3 sm:p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
-                      <Briefcase size={16} className="text-neutral-400 shrink-0" />
-                      <div className="truncate text-sm font-medium text-neutral-900 dark:text-white">
-                        {parsedData.experience_years ? `${parsedData.experience_years} Years Exp` : <span className="text-neutral-400 font-normal italic">Exp not found</span>}
-                      </div>
-                    </div>
-                  </div>
+                <div className="p-5 space-y-4">
+                  <Field label="Job Title" value={parsedData.title} />
+                  <div className="h-px bg-neutral-50 dark:bg-neutral-800" />
+                  <Field label="Professional Summary" value={parsedData.bio} />
                 </div>
-
-                <hr className="border-neutral-100 dark:border-neutral-800" />
-
-                {/* Education & Skills */}
-                <div>
-                  <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <GraduationCap size={14} /> Qualifications
-                  </h4>
-                  <div className="space-y-4">
-                    <div className="bg-neutral-50 dark:bg-neutral-900/50 p-3 sm:p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                      <div className="text-xs text-neutral-500 mb-2">Education</div>
-                      <div className="text-sm text-neutral-900 dark:text-white whitespace-pre-wrap">{parsedData.education || <span className="text-neutral-400 italic">Not found</span>}</div>
-                    </div>
-
-                    <div className="bg-neutral-50 dark:bg-neutral-900/50 p-3 sm:p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800">
-                      <div className="text-xs text-neutral-500 mb-2">Detected Skills</div>
-                      <div className="flex flex-wrap gap-2">
-                        {parsedData.skills && parsedData.skills.length > 0 ? (
-                          parsedData.skills.map((skill: string) => (
-                            <span key={skill} className="px-2.5 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                              {skill}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-sm text-neutral-400 italic">No exact skill matches found</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              {/* Contact & meta */}
+              <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-neutral-50 dark:border-neutral-800">
+                  <MapPin size={14} className="text-accent-500 shrink-0" />
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-500">
+                    Contact & Details
+                  </span>
+                </div>
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <Phone size={16} className="text-neutral-400 dark:text-neutral-500 shrink-0 mt-0.5" />
+                    <Field label="Phone" value={parsedData.phone_number} />
+                  </div>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <MapPin size={16} className="text-neutral-400 dark:text-neutral-500 shrink-0 mt-0.5" />
+                    <Field label="Location" value={parsedData.location} />
+                  </div>
+                  <div className="flex items-start gap-3 min-w-0">
+                    <Clock size={16} className="text-neutral-400 dark:text-neutral-500 shrink-0 mt-0.5" />
+                    <Field
+                      label="Experience"
+                      value={parsedData.experience_years ? `${parsedData.experience_years} year${parsedData.experience_years !== 1 ? 's' : ''}` : null}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Qualifications */}
+              <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800 shadow-sm overflow-hidden">
+                <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-neutral-50 dark:border-neutral-800">
+                  <GraduationCap size={14} className="text-accent-500 shrink-0" />
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-neutral-500">
+                    Qualifications
+                  </span>
+                </div>
+                <div className="p-5 space-y-4">
+                  <Field label="Education" value={parsedData.education} />
+                  <div className="h-px bg-neutral-50 dark:bg-neutral-800" />
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-500 block mb-2">
+                      Detected Skills
+                    </span>
+                    {parsedData.skills?.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {parsedData.skills.map((skill: string) => (
+                          <span
+                            key={skill}
+                            className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-accent-50 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300 border border-accent-100 dark:border-accent-900/40"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-neutral-400 italic">No skill matches found</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pb-6">
                 <button
-                  onClick={() => { setParsedData(null); setFile(null); }}
-                  className="flex-1 px-6 py-3.5 sm:py-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-extrabold hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
+                  onClick={() => { setParsedData(null); setFile(null); setError(null); }}
+                  className="flex-1 px-5 py-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-extrabold text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                 >
                   Upload Different File
                 </button>
                 <button
                   onClick={handleSaveToProfile}
-                  className="flex-1 px-6 py-3.5 sm:py-4 rounded-2xl bg-accent-600 hover:bg-accent-700 text-white font-extrabold shadow-lg shadow-accent-500/25 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                  disabled={isSaving}
+                  className="flex-1 px-5 py-3.5 rounded-2xl bg-accent-600 hover:bg-accent-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-sm shadow-lg shadow-accent-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                 >
-                  Confirm & Save to Profile <ChevronRight size={18} />
+                  {isSaving ? (
+                    <>
+                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+                        <RefreshCw size={16} />
+                      </motion.div>
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      Confirm & Save to Profile
+                      <ChevronRight size={16} />
+                    </>
+                  )}
                 </button>
               </div>
-
             </motion.div>
           )}
-        </AnimatePresence>
 
+        </AnimatePresence>
       </div>
     </div>
   );
