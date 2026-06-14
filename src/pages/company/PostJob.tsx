@@ -112,7 +112,7 @@ export const PostJob = () => {
   const [formData, setFormData] = useState({
     title: '',
     location: '',
-    isRemote: false,
+    isRemote: true,
     currency: 'USD',
     salaryRange: '',
     commissionRange: '',

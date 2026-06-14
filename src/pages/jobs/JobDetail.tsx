@@ -23,7 +23,7 @@ export const JobDetail = () => {
   // Sync saved state from current user's saved jobs
   useEffect(() => {
     if (currentUser && id) {
-      setIsSaved(currentUser.savedJobs?.includes(Number(id)) ?? false);
+      setIsSaved(currentUser.savedJobs?.map(String).includes(String(id)) ?? false);
     }
   }, [currentUser, id]);
 
@@ -140,16 +140,11 @@ export const JobDetail = () => {
                 <MapPin size={13} className="text-neutral-400 shrink-0" /> {job.location}
               </span>
             )}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-400 text-xs sm:text-sm font-bold rounded-xl">
-              <Briefcase size={13} className="shrink-0" /> {job.employment_type || 'Full-time'}
-            </span>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-bold rounded-xl ${
-              job.isRemote
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
-                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
-            }`}>
-              <Globe size={13} className="shrink-0" /> {job.isRemote ? 'Remote' : 'On-site'}
-            </span>
+            {job.isRemote && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-bold rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400">
+                <Globe size={13} className="shrink-0" /> Remote
+              </span>
+            )}
             {job.salaryRange && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs sm:text-sm font-bold rounded-xl">
                 <DollarSign size={13} className="shrink-0" /> {job.currency || 'USD'} {job.salaryRange}

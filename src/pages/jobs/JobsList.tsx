@@ -171,12 +171,11 @@ export const JobsList = () => {
                           <DollarSign size={14} /> Competitive
                         </span>
                       )}
-                      <span className={`inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-lg ${job.isRemote ? 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-neutral-700 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800'}`}>
-                        {job.isRemote ? 'Remote' : 'On-site'}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 text-sm font-bold text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-3 py-1 rounded-lg">
-                        <Briefcase size={14} /> Full-time
-                      </span>
+                      {job.isRemote && (
+                        <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-lg text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20">
+                          Remote
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
