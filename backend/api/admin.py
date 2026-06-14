@@ -126,6 +126,7 @@ class JobAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Job Details', {'fields': ('company', 'title', 'description', 'requirements')}),
         ('Location & Pay', {'fields': ('is_remote', 'location', 'currency', 'salary_range', 'commission_range')}),
+        ('Contact Info (Hidden from users)', {'fields': ('custom_company_name', 'company_address', 'contact_email', 'contact_phone', 'whatsapp_number')}),
         ('Status',      {'fields': ('status',)}),
         ('Timestamps',  {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )

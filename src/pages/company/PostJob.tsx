@@ -156,14 +156,6 @@ export const PostJob = () => {
 
     setIsLoading(true);
     let finalDescription = formData.description;
-    if (formData.companyName || formData.companyAddress || formData.contactEmail || formData.contactPhone || formData.whatsappNumber) {
-      finalDescription += `\n\n### Company & Contact Information\n`;
-      if (formData.companyName) finalDescription += `- Company: ${formData.companyName}\n`;
-      if (formData.companyAddress) finalDescription += `- Address: ${formData.companyAddress}\n`;
-      if (formData.contactEmail) finalDescription += `- Email: ${formData.contactEmail}\n`;
-      if (formData.contactPhone) finalDescription += `- Phone: ${formData.contactPhone}\n`;
-      if (formData.whatsappNumber) finalDescription += `- WhatsApp: ${formData.whatsappNumber}\n`;
-    }
 
     setTimeout(() => {
       postJob({
@@ -174,7 +166,12 @@ export const PostJob = () => {
         salaryRange: formData.salaryRange,
         commissionRange: formData.commissionRange,
         description: finalDescription,
-        requirements: formData.requirements.split('\n').filter((r) => r.trim() !== '')
+        requirements: formData.requirements.split('\n').filter((r) => r.trim() !== ''),
+        contactEmail: formData.contactEmail,
+        contactPhone: formData.contactPhone,
+        whatsappNumber: formData.whatsappNumber,
+        companyAddress: formData.companyAddress,
+        companyName: formData.companyName
       });
       setIsLoading(false);
       navigate('/dashboard');

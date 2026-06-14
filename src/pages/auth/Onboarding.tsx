@@ -51,7 +51,7 @@ export const Onboarding = () => {
         await updateProfileImage(avatarFile);
       }
 
-      await fetchData();
+      await fetchData(false);
       toast.success('Profile setup complete!');
       navigate('/dashboard');
     } catch (err: any) {

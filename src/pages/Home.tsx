@@ -150,7 +150,7 @@ export const Home = () => {
       </section>
 
       {/* The Revenue Reality Section - Polished Redesign */}
-      <section className="py-24 relative bg-white dark:bg-neutral-950 border-y border-neutral-100 dark:border-neutral-900 overflow-hidden">
+      <section className="py-24 relative overflow-hidden">
         {/* Subtle background glow */}
         <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-30 dark:opacity-20 pointer-events-none">
           <div className="w-full max-w-4xl h-[400px] bg-accent-500/10 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen" />
@@ -171,7 +171,7 @@ export const Home = () => {
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Card 1: Consultant */}
-            <div className="bg-white/60 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 shadow-sm hover:shadow-elevated hover:border-accent-200 dark:hover:border-accent-800/60 transition-all">
+            <div className="bg-white/10 dark:bg-neutral-900/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-elevated hover:border-accent-200/50 dark:hover:border-accent-800/50 transition-all duration-300">
               <div className="w-12 h-12 bg-accent-50 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 rounded-xl flex items-center justify-center mb-6">
                 <TrendingUp size={24} />
               </div>
@@ -187,7 +187,7 @@ export const Home = () => {
             </div>
 
             {/* Card 2: Client-Facing */}
-            <div className="bg-white/60 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 shadow-sm hover:shadow-elevated hover:border-accent-200 dark:hover:border-accent-800/60 transition-all">
+            <div className="bg-white/10 dark:bg-neutral-900/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-elevated hover:border-accent-200/50 dark:hover:border-accent-800/50 transition-all duration-300">
               <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center mb-6">
                 <Users size={24} />
               </div>
@@ -203,7 +203,7 @@ export const Home = () => {
             </div>
 
             {/* Card 3: Executive */}
-            <div className="bg-white/60 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 shadow-sm hover:shadow-elevated hover:border-accent-200 dark:hover:border-accent-800/60 transition-all">
+            <div className="bg-white/10 dark:bg-neutral-900/20 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-elevated hover:border-accent-200/50 dark:hover:border-accent-800/50 transition-all duration-300">
               <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center mb-6">
                 <Shield size={24} />
               </div>

@@ -89,7 +89,7 @@ interface AppContextType extends AppState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (user: any) => Promise<void>;
-  fetchData: () => Promise<void>;
+  fetchData: (showLoading?: boolean) => Promise<void>;
   postJob: (job: any) => Promise<void>;
   applyForJob: (jobId: string, coverLetter?: string) => Promise<void>;
   updateJobStatus: (jobId: string, status: Job['status']) => Promise<void>;
@@ -140,9 +140,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     init();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (showLoading: boolean = true) => {
     try {
-      setState(prev => ({ ...prev, loading: true }));
+      if (showLoading) {
+        setState(prev => ({ ...prev, loading: true }));
+      }
       
       // Fetch public jobs
       const jobsData = await apiFetch('/jobs/');
@@ -324,6 +326,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         salary_range: jobData.salaryRange || '',
         commission_range: jobData.commissionRange || '',
         currency: jobData.currency || 'USD',
+        contact_email: jobData.contactEmail || '',
+        contact_phone: jobData.contactPhone || '',
+        whatsapp_number: jobData.whatsappNumber || '',
+        company_address: jobData.companyAddress || '',
+        custom_company_name: jobData.companyName || '',
       };
 
       await apiFetch('/jobs/', {
@@ -332,7 +339,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
       
       // Fetch data to refresh job list
-      await fetchData();
+      await fetchData(false);
       toast.success('Job posted successfully!', { description: 'You will be notified once the job listing is approved.' });
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to post job'}. Please try again.`);
@@ -345,7 +352,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           method: 'POST',
           body: JSON.stringify({ cover_letter: coverLetter || '' })
       });
-      await fetchData();
+      await fetchData(false);
       toast.success('Application submitted successfully');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to apply'}. Please try again.`);
@@ -358,7 +365,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           method: 'PUT',
           body: JSON.stringify({ status })
       });
-      await fetchData();
+      await fetchData(false);
       toast.success(`Job ${status}`);
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to update status'}. Please try again.`);
@@ -371,7 +378,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           method: 'PUT',
           body: JSON.stringify({ status })
       });
-      await fetchData();
+      await fetchData(false);
       toast.success(`Application ${status}`);
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to update application'}. Please try again.`);
@@ -410,7 +417,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           body: formData
       });
 
-      await fetchData();
+      await fetchData(false);
       toast.success('Profile picture updated!');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to upload profile picture'}. Please try again.`);
@@ -465,7 +472,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           });
       }
 
-      await fetchData();
+      await fetchData(false);
       toast.success('Profile updated successfully');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to update profile'}. Please try again.`);
@@ -536,7 +543,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const toggleSavedJob = async (jobId: string) => {
     try {
       await apiFetch(`/jobs/${jobId}/save/`, { method: 'POST' });
-      await fetchData();
+      await fetchData(false);
       toast.success('Job saved status updated');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to save job'}. Please try again.`);

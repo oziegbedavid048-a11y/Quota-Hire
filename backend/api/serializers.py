@@ -170,6 +170,7 @@ class JobSerializer(serializers.ModelSerializer):
             'id', 'company_id', 'company_name', 'company_is_verified', 'company_logo_url',
             'title', 'description', 'requirements', 'employment_type',
             'is_remote', 'location', 'salary_range', 'commission_range', 'currency',
+            'contact_email', 'contact_phone', 'whatsapp_number', 'company_address', 'custom_company_name',
             'status', 'created_at',
         )
         read_only_fields = ('id', 'status', 'created_at')
