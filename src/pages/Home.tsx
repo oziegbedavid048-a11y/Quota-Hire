@@ -149,45 +149,42 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* The Revenue Reality Section */}
-      <section className="py-20 relative overflow-hidden bg-neutral-50 dark:bg-neutral-900/30 border-y border-neutral-100 dark:border-neutral-800/50">
-        {/* Abstract background elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
-          <div className="absolute -left-[10%] -top-[50%] w-[50%] h-[200%] bg-gradient-to-r from-accent-500/5 to-transparent -rotate-12 blur-3xl"></div>
-          <div className="absolute -right-[10%] -bottom-[50%] w-[50%] h-[200%] bg-gradient-to-l from-warm-500/5 to-transparent rotate-12 blur-3xl"></div>
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="max-w-4xl mx-auto text-center"
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-400 text-xs font-bold uppercase tracking-widest mb-8 border border-accent-200 dark:border-accent-800/50">
-              <BarChart3 size={14} /> The Revenue Reality
-            </span>
+      {/* The Revenue Reality Section - Simple Text */}
+      <section className="py-24 bg-white dark:bg-neutral-950 border-y border-neutral-100 dark:border-neutral-900">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="space-y-12 text-neutral-900 dark:text-neutral-100 font-medium">
             
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-neutral-900 dark:text-white mb-8 leading-tight tracking-tight">
-              Inadequate revenue generation often stems from <span className="text-accent-600 dark:text-accent-400">gaps in sales structure.</span>
-            </h2>
-            
-            <div className="bg-white dark:bg-neutral-900 p-8 md:p-10 rounded-3xl shadow-elevated border border-neutral-100 dark:border-neutral-800 text-left relative">
-              <div className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-accent-500 to-warm-500 rounded-l-3xl"></div>
-              <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">
-                Without a defined process for lead generation, qualification, conversion, and follow-up, even strong products struggle to convert interest into consistent income.
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-neutral-900 dark:text-white">
+                1. Consultant/Advisor Tone – Direct but Professional*
+              </h3>
+              <p className="mb-2 italic text-neutral-600 dark:text-neutral-400">*Statement:*</p>
+              <p className="text-lg leading-relaxed">
+                Inadequate revenue generation often stems from gaps in sales structure. Without a defined process for lead generation, qualification, conversion, and follow-up, even strong products struggle to convert interest into consistent income. Strengthening the sales framework is the most direct path to revenue stability.
               </p>
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-accent-50 dark:bg-accent-900/20 border border-accent-100 dark:border-accent-900/30">
-                <div className="w-12 h-12 rounded-full bg-accent-100 dark:bg-accent-900/50 flex flex-shrink-0 items-center justify-center text-accent-600 dark:text-accent-400">
-                  <TrendingUp size={24} />
-                </div>
-                <p className="text-lg font-bold text-neutral-900 dark:text-white leading-tight">
-                  Strengthening the sales framework is the most direct path to revenue stability.
-                </p>
-              </div>
             </div>
-          </motion.div>
+
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-neutral-900 dark:text-white">
+                2. Client-Facing/Proposal Tone – Softened, Solution-Oriented*
+              </h3>
+              <p className="mb-2 italic text-neutral-600 dark:text-neutral-400">*Statement:*</p>
+              <p className="text-lg leading-relaxed">
+                Based on current performance, the primary constraint to revenue growth appears to be sales structure. Optimizing the sales system — from pipeline management to closing and retention — typically unlocks immediate revenue gains without increasing marketing spend. I recommend we audit and rebuild this structure to align with your revenue targets.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold mb-4 text-neutral-900 dark:text-white">
+                3. Executive/Board Report Tone – Data-driven, Concise*
+              </h3>
+              <p className="mb-2 italic text-neutral-600 dark:text-neutral-400">*Statement:*</p>
+              <p className="text-lg leading-relaxed">
+                Revenue underperformance is attributable to structural deficiencies in the sales process. Key areas requiring intervention include lead flow, conversion benchmarks, and account management. Establishing a scalable sales structure will directly impact top-line revenue and forecast accuracy.
+              </p>
+            </div>
+
+          </div>
         </div>
       </section>
 
