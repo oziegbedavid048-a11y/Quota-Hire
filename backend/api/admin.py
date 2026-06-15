@@ -17,6 +17,7 @@ from .models import (
     Job,
     Application,
     Notification,
+    ShortlistedApplicant,
 )
 
 
@@ -245,3 +246,41 @@ class NotificationAdmin(admin.ModelAdmin):
     def mark_as_read(self, request, queryset):
         updated = queryset.update(read=True)
         self.message_user(request, f'{updated} notification(s) marked as read.')
+
+
+# ── Shortlisted Applicant Admin ───────────────────────────────────────────────
+
+@admin.register(ShortlistedApplicant)
+class ShortlistedApplicantAdmin(admin.ModelAdmin):
+    list_display    = ('application', 'get_job', 'status', 'status_badge', 'shortlisted_at', 'edit_button')
+    list_display_links = ('application', 'edit_button')
+    list_editable   = ('status',)
+    list_filter     = ('status', 'shortlisted_at')
+    search_fields   = ('application__employee__email', 'application__job__title')
+    ordering        = ('-shortlisted_at',)
+    readonly_fields = ('shortlisted_at', 'updated_at')
+
+    @admin.display(description='Job')
+    def get_job(self, obj):
+        return obj.application.job.title
+
+    @admin.display(description='Status')
+    def status_badge(self, obj):
+        colours = {
+            'pending':      '#64748b',
+            'under_review': '#f59e0b',
+            'interview':    '#8b5cf6',
+            'decision':     '#3b82f6',
+            'accepted':     '#10b981',
+            'rejected':     '#ef4444',
+        }
+        colour = colours.get(obj.status, '#64748b')
+        return format_html(
+            '<span style="background:{};color:#fff;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600">{}</span>',
+            colour, obj.status.replace('_', ' ').upper()
+        )
+
+    @admin.display(description='Actions')
+    def edit_button(self, obj):
+        url = reverse('admin:api_shortlistedapplicant_change', args=[obj.id])
+        return format_html('<a class="button" style="background-color:#417690;color:white;padding:5px 10px;border-radius:4px;font-weight:bold;text-decoration:none;" href="{}">Edit</a>', url)

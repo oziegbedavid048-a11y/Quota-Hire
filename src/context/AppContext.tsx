@@ -172,7 +172,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           applications = Array.isArray(appsData) ? appsData : (appsData?.results || []);
           
           user.saved_jobs = user.saved_jobs || [];
-          savedJobs = user.saved_jobs.map((j: any) => j.id || j);
+          savedJobs = user.saved_jobs.map((j: any) => String(j.id || j));
+          user.saved_jobs.forEach((j: any) => {
+              if (j.id && j.saved_at) {
+                  savedJobDates[String(j.id)] = j.saved_at;
+              }
+          });
           
       } else if (user.role === 'company') {
           profileData = await apiFetch('/profile/company/');

@@ -158,9 +158,9 @@ export const MyJobs = () => {
                         </td>
                         <td className="py-4 px-6 text-right">
                           <Link 
-                            to={`/jobs/${job.id}`}
+                            to={`/company/jobs/${job.id}/applicants`}
                             className="inline-flex items-center justify-center w-8 h-8 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-accent-500 hover:text-accent-600 text-neutral-400 rounded-lg transition-all shadow-sm hover:shadow-soft"
-                            title="View Job Details"
+                            title="View Applicants"
                           >
                             <ArrowRight size={16} />
                           </Link>

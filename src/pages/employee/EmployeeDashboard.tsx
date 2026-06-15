@@ -10,8 +10,6 @@ import {
   Sparkles,
   TrendingUp,
   CheckCircle2,
-  Clock,
-  XCircle,
   Target,
   Zap,
   Activity,
@@ -37,7 +35,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
 };
 
-const PIE_COLORS = ['#f59e0b', '#10b981', '#ef4444'];
+// Removed PIE_COLORS constant
 
 const StatCard = ({ label, value, icon: Icon, color, sub, onClick }: any) => (
   <motion.div
@@ -76,14 +74,20 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
   const marketInsightsData: any[] = analytics?.marketInsightsData || [];
   const activeApps: number = analytics?.activeApps ?? applications.length;
 
-  // Derive app status breakdown from real applications
   const pendingApps = applications.filter(a => a.status === 'pending').length;
+  const underReviewApps = applications.filter(a => a.status === 'under_review').length;
+  const interviewApps = applications.filter(a => a.status === 'interview').length;
+  const decisionApps = applications.filter(a => a.status === 'decision').length;
   const acceptedApps = applications.filter(a => a.status === 'accepted').length;
   const rejectedApps = applications.filter(a => a.status === 'rejected').length;
+
   const appStatusPie = [
-    { name: 'Pending', value: pendingApps },
-    { name: 'Accepted', value: acceptedApps },
-    { name: 'Rejected', value: rejectedApps },
+    { name: 'Applied', value: pendingApps, color: '#9ca3af' },
+    { name: 'Under Review', value: underReviewApps, color: '#f59e0b' },
+    { name: 'Interview', value: interviewApps, color: '#a855f7' },
+    { name: 'Decision', value: decisionApps, color: '#3b82f6' },
+    { name: 'Offer', value: acceptedApps, color: '#10b981' },
+    { name: 'Rejected', value: rejectedApps, color: '#ef4444' },
   ].filter(d => d.value > 0);
 
   const profileItems = [
@@ -262,8 +266,8 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie data={appStatusPie} cx="50%" cy="50%" innerRadius={50} outerRadius={78} paddingAngle={3} dataKey="value">
-                  {appStatusPie.map((_: any, i: number) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  {appStatusPie.map((entry: any, i: number) => (
+                    <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.1)', fontSize: 12 }} />

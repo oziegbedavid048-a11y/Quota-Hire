@@ -1007,3 +1007,38 @@ class ResumeUploadView(APIView):
             'resume_file_url': resume_file_url,
             'parsed': parsed,
         }, status=status.HTTP_200_OK)
+
+
+# ── Company Applicant Review Views ────────────────────────────────────────────
+
+class CompanyJobApplicantsView(generics.ListAPIView):
+    """GET /api/company/jobs/<int:job_id>/applicants/"""
+    from .serializers import CompanyApplicantSerializer
+    serializer_class = CompanyApplicantSerializer
+    permission_classes = [IsCompany]
+
+    def get_queryset(self):
+        job_id = self.kwargs.get('job_id')
+        return Application.objects.filter(job_id=job_id, job__company=self.request.user).select_related('employee', 'job')
+
+class ShortlistApplicantView(APIView):
+    """POST /api/company/applications/<int:pk>/shortlist/"""
+    permission_classes = [IsCompany]
+
+    def post(self, request, pk):
+        try:
+            app = Application.objects.get(pk=pk, job__company=request.user)
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if hasattr(app, 'shortlist'):
+            return Response({'error': 'Applicant is already shortlisted.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from .models import ShortlistedApplicant
+        shortlist = ShortlistedApplicant.objects.create(application=app)
+
+        return Response({
+            'message': 'Applicant successfully shortlisted.',
+            'shortlist_id': shortlist.id
+        }, status=status.HTTP_201_CREATED)
+

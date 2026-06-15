@@ -285,3 +285,32 @@ class SavedJob(models.Model):
 
     def __str__(self):
         return f'{self.user} saved "{self.job.title}" on {self.saved_at:%Y-%m-%d}'
+
+
+# ── Shortlisted Applicant ────────────────────────────────────────────────────
+
+class ShortlistedApplicant(models.Model):
+    """
+    Tracks applicants that have been shortlisted by a company.
+    Admin manages the status of this shortlist.
+    """
+    application = models.OneToOneField(
+        Application, 
+        on_delete=models.CASCADE, 
+        related_name='shortlist'
+    )
+    status = models.CharField(
+        max_length=20, 
+        choices=ApplicationStatus.choices, 
+        default=ApplicationStatus.PENDING
+    )
+    shortlisted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Shortlisted Applicant'
+        verbose_name_plural = 'Shortlisted Applicants'
+        ordering = ['-shortlisted_at']
+
+    def __str__(self):
+        return f"Shortlisted: {self.application.employee.get_full_name()} for {self.application.job.title}"

@@ -240,3 +240,54 @@ class NotificationSerializer(serializers.ModelSerializer):
         model  = Notification
         fields = ('id', 'title', 'message', 'read', 'created_at')
         read_only_fields = ('id', 'created_at')
+
+
+# ── Company Applicant Review Serializers ──────────────────────────────────────
+
+class SafeEmployeeProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployeeProfile
+        fields = ('title', 'bio', 'linkedin_url', 'resume_url', 'resume_file', 'education', 'skills', 'experience_years')
+        read_only_fields = fields
+
+class CompanyApplicantSerializer(serializers.ModelSerializer):
+    """
+    Serializes application for company view, ensuring NO contact info is leaked.
+    """
+    job_title = serializers.CharField(source='job.title', read_only=True)
+    employee_name = serializers.SerializerMethodField()
+    employee_profile = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+    is_shortlisted = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Application
+        fields = ('id', 'job', 'job_title', 'employee_name', 'status', 'cover_letter', 'applied_at', 'employee_profile', 'avatar_url', 'is_shortlisted')
+        read_only_fields = fields
+
+    def get_employee_name(self, obj):
+        return obj.employee.get_full_name() or obj.employee.username
+
+    def get_employee_profile(self, obj):
+        try:
+            return SafeEmployeeProfileSerializer(obj.employee.employee_profile).data
+        except EmployeeProfile.DoesNotExist:
+            return None
+
+    def get_avatar_url(self, obj):
+        request = self.context.get('request')
+        if obj.employee.avatar:
+            if request:
+                return request.build_absolute_uri(obj.employee.avatar.url)
+            return obj.employee.avatar.url
+        return None
+
+    def get_is_shortlisted(self, obj):
+        return hasattr(obj, 'shortlist')
+
+class ShortlistedApplicantSerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import ShortlistedApplicant
+        model = ShortlistedApplicant
+        fields = ('id', 'application', 'status', 'shortlisted_at', 'updated_at')
+        read_only_fields = ('id', 'shortlisted_at', 'updated_at')

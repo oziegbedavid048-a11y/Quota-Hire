@@ -46,6 +46,10 @@ urlpatterns = [
     path('applications/',                       views.MyApplicationsView.as_view(),          name='my-applications'),
     path('applications/<int:pk>/status/',       views.ApplicationStatusUpdateView.as_view(), name='application-status'),
 
+    # ── Company Applicant Review ──────────────────────────────────────────────
+    path('company/jobs/<int:job_id>/applicants/', views.CompanyJobApplicantsView.as_view(), name='company-job-applicants'),
+    path('company/applications/<int:pk>/shortlist/', views.ShortlistApplicantView.as_view(), name='company-shortlist-applicant'),
+
     # ── Notifications ─────────────────────────────────────────────────────────
     path('notifications/',                  views.NotificationListView.as_view(),      name='notifications'),
     path('notifications/<int:pk>/read/',    views.MarkNotificationReadView.as_view(),  name='notification-read'),
