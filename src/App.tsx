@@ -26,6 +26,7 @@ import { Dashboard } from './pages/Dashboard';
 import { CompanyProfilePage } from './pages/company/Profile';
 import { PostJob } from './pages/company/PostJob';
 import { JobApplicants } from './pages/company/JobApplicants';
+import { ApplicantProfilePage } from './pages/company/ApplicantProfilePage';
 import { JobsList } from './pages/jobs/JobsList';
 import { JobDetail } from './pages/jobs/JobDetail';
 import { ApplyJobPage } from './pages/jobs/ApplyJobPage';
@@ -213,6 +214,14 @@ const AppRoutes = () => {
             element={
             <ProtectedRoute allowedRoles={['company']}>
                 <UnifiedDashboardLayout><JobApplicants /></UnifiedDashboardLayout>
+              </ProtectedRoute>
+            } />
+
+          <Route
+            path="/company/jobs/:jobId/applicants/:appId"
+            element={
+            <ProtectedRoute allowedRoles={['company']}>
+                <UnifiedDashboardLayout><ApplicantProfilePage /></UnifiedDashboardLayout>
               </ProtectedRoute>
             } />
           

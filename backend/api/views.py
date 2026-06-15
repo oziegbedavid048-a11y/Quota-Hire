@@ -1042,3 +1042,13 @@ class ShortlistApplicantView(APIView):
             'shortlist_id': shortlist.id
         }, status=status.HTTP_201_CREATED)
 
+class CompanyApplicationDetailView(generics.RetrieveAPIView):
+    """GET /api/company/applications/<int:pk>/"""
+    from .serializers import CompanyApplicantSerializer
+    serializer_class = CompanyApplicantSerializer
+    permission_classes = [IsCompany]
+
+    def get_queryset(self):
+        # Ensure company can only view applications for their own jobs
+        return Application.objects.filter(job__company=self.request.user).select_related('employee', 'job')
+

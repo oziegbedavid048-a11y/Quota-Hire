@@ -48,6 +48,7 @@ urlpatterns = [
 
     # ── Company Applicant Review ──────────────────────────────────────────────
     path('company/jobs/<int:job_id>/applicants/', views.CompanyJobApplicantsView.as_view(), name='company-job-applicants'),
+    path('company/applications/<int:pk>/', views.CompanyApplicationDetailView.as_view(), name='company-application-detail'),
     path('company/applications/<int:pk>/shortlist/', views.ShortlistApplicantView.as_view(), name='company-shortlist-applicant'),
 
     # ── Notifications ─────────────────────────────────────────────────────────

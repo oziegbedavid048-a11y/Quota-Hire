@@ -112,63 +112,97 @@ export const MyJobs = () => {
             </motion.div>
           ) : (
             <motion.div variants={itemVariants} className="card-soft overflow-hidden p-0 border border-neutral-100 dark:border-neutral-800">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-900/50">
-                      <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Role Title</th>
-                      <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Location</th>
-                      <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Salary</th>
-                      <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Status</th>
-                      <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Applicants</th>
-                      <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider text-right whitespace-nowrap">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                    {jobs.map((job) => (
-                      <tr key={job.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors group">
-                        <td className="py-4 px-6">
-                          <p className="font-extrabold text-neutral-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">{job.title}</p>
-                          <p className="text-xs text-neutral-400 mt-1 font-semibold">{job.employment_type || 'Full-time'}</p>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-1.5 text-sm font-bold text-neutral-600 dark:text-neutral-300">
-                            <MapPin size={14} className="text-neutral-400" />
-                            {job.is_remote ? 'Remote' : job.location || 'Not specified'}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          {job.salary_range ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-xs font-bold border border-green-100 dark:border-green-800/30">
-                              <span className="font-black bg-green-200/50 dark:bg-green-800/50 px-1.5 rounded">{job.currency || 'USD'}</span>
-                              {job.salary_range}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-neutral-400 font-medium">—</span>
-                          )}
-                        </td>
-                        <td className="py-4 px-6">
-                          {getStatusBadge(job.status)}
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="flex items-center gap-2">
-                            <Users size={16} className="text-neutral-400" />
-                            <span className="font-extrabold text-neutral-900 dark:text-white">{job.applicants_count || 0}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <Link 
-                            to={`/company/jobs/${job.id}/applicants`}
-                            className="inline-flex items-center justify-center w-8 h-8 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-accent-500 hover:text-accent-600 text-neutral-400 rounded-lg transition-all shadow-sm hover:shadow-soft"
-                            title="View Applicants"
-                          >
-                            <ArrowRight size={16} />
-                          </Link>
-                        </td>
+              <div>
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4 p-4">
+                  {jobs.map((job) => (
+                    <div key={job.id} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-5 shadow-sm">
+                      <div className="flex justify-between items-start mb-3 gap-2">
+                        <div>
+                          <h3 className="font-extrabold text-neutral-900 dark:text-white text-lg">{job.title}</h3>
+                          <p className="text-sm text-neutral-500">{job.employment_type || 'Full-time'}</p>
+                        </div>
+                        <div className="shrink-0">{getStatusBadge(job.status)}</div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
+                        <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
+                          <MapPin size={14} className="shrink-0" /> <span className="truncate">{job.is_remote ? 'Remote' : job.location || 'Not specified'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-neutral-900 dark:text-white font-extrabold">
+                          <Users size={14} className="text-neutral-400 shrink-0" /> {job.applicants_count || 0} <span className="font-normal text-neutral-500">Applicants</span>
+                        </div>
+                      </div>
+                      
+                      <Link 
+                        to={`/company/jobs/${job.id}/applicants`}
+                        className="w-full flex items-center justify-center gap-2 bg-accent-50 hover:bg-accent-100 dark:bg-accent-900/20 dark:hover:bg-accent-900/40 text-accent-600 dark:text-accent-400 py-3 font-bold rounded-xl border border-accent-200 dark:border-accent-800/50 transition-colors"
+                      >
+                        View Applicants <ArrowRight size={16} />
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-100 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-900/50">
+                        <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Role Title</th>
+                        <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Location</th>
+                        <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Salary</th>
+                        <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                        <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider whitespace-nowrap">Applicants</th>
+                        <th className="py-4 px-6 text-xs font-bold text-neutral-400 uppercase tracking-wider text-right whitespace-nowrap">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                      {jobs.map((job) => (
+                        <tr key={job.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors group">
+                          <td className="py-4 px-6">
+                            <p className="font-extrabold text-neutral-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">{job.title}</p>
+                            <p className="text-xs text-neutral-400 mt-1 font-semibold">{job.employment_type || 'Full-time'}</p>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-1.5 text-sm font-bold text-neutral-600 dark:text-neutral-300">
+                              <MapPin size={14} className="text-neutral-400" />
+                              {job.is_remote ? 'Remote' : job.location || 'Not specified'}
+                            </div>
+                          </td>
+                          <td className="py-4 px-6">
+                            {job.salary_range ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg text-xs font-bold border border-green-100 dark:border-green-800/30">
+                                <span className="font-black bg-green-200/50 dark:bg-green-800/50 px-1.5 rounded">{job.currency || 'USD'}</span>
+                                {job.salary_range}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-neutral-400 font-medium">—</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6">
+                            {getStatusBadge(job.status)}
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center gap-2">
+                              <Users size={16} className="text-neutral-400" />
+                              <span className="font-extrabold text-neutral-900 dark:text-white">{job.applicants_count || 0}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <Link 
+                              to={`/company/jobs/${job.id}/applicants`}
+                              className="inline-flex items-center justify-center w-8 h-8 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-accent-500 hover:text-accent-600 text-neutral-400 rounded-lg transition-all shadow-sm hover:shadow-soft"
+                              title="View Applicants"
+                            >
+                              <ArrowRight size={16} />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </motion.div>
           )}
