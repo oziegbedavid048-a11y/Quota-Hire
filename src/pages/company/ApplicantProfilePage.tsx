@@ -170,11 +170,26 @@ export const ApplicantProfilePage = () => {
                   </div>
                 </div>
                 <div className="flex-1 w-full bg-neutral-100 dark:bg-neutral-950 overflow-hidden relative">
-                  <iframe 
-                    src={getResumeEmbedUrl(applicant.employee_profile.resume_file)} 
-                    className="w-full h-full absolute inset-0 border-none"
-                    title="Resume Document Viewer"
-                  />
+                  {applicant.employee_profile.resume_file?.includes('appwrite.io') ? (
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                      <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+                        <FileText size={32} className="text-red-500" />
+                      </div>
+                      <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Legacy Resume Requires Update</h3>
+                      <p className="text-neutral-500 dark:text-neutral-400 max-w-md mb-6">
+                        This resume was uploaded using the older Appwrite storage system and cannot be viewed due to expired permissions. The applicant needs to re-upload their resume using the new system.
+                      </p>
+                      <a href={applicant.employee_profile.resume_file} target="_blank" rel="noreferrer" className="px-6 py-3 font-bold text-accent-600 bg-accent-50 hover:bg-accent-100 dark:bg-accent-900/20 dark:hover:bg-accent-900/40 rounded-xl transition-colors">
+                        Try Opening Externally
+                      </a>
+                    </div>
+                  ) : (
+                    <iframe 
+                      src={getResumeEmbedUrl(applicant.employee_profile.resume_file)} 
+                      className="w-full h-full absolute inset-0 border-none"
+                      title="Resume Document Viewer"
+                    />
+                  )}
                 </div>
               </motion.div>
             </motion.div>
