@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, ChevronRight, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ChevronRight, User, Star } from 'lucide-react';
 import { apiFetch } from '../../context/AppContext';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 import { toast } from 'sonner';
@@ -102,27 +102,25 @@ export const JobApplicants = () => {
                   ))}
                   {(app.employee_profile?.skills?.length > 3) && <span className="text-xs text-neutral-400 font-medium self-center">+{app.employee_profile.skills.length - 3}</span>}
                 </div>
-                <div className="flex justify-between items-center mt-auto border-t border-neutral-100 dark:border-neutral-800 pt-4">
-                  <span className="text-xs font-medium text-neutral-400 shrink-0">Applied {new Date(app.applied_at).toLocaleDateString()}</span>
-                  <div className="flex items-center gap-2">
-                    {app.is_shortlisted ? (
-                      <span className="text-xs font-bold text-green-600 flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded"><CheckCircle size={14}/> Shortlisted</span>
-                    ) : (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleShortlist(app.id); }}
-                        className="text-xs font-bold text-white flex items-center gap-1 bg-accent-600 hover:bg-accent-700 px-2 py-1 rounded transition-colors"
-                      >
-                        <CheckCircle size={14} className="opacity-0 w-0 h-0 absolute" /> {/* For alignment/sizing match */}
-                        Shortlist
-                      </button>
-                    )}
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); navigate(`/company/jobs/${id}/applicants/${app.id}`); }}
-                      className="text-xs font-bold text-neutral-600 dark:text-neutral-300 flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 px-2 py-1 rounded transition-colors"
-                    >
-                      Profile <ChevronRight size={14}/>
+                <div className="flex flex-col sm:flex-row gap-3 mt-auto border-t border-neutral-100 dark:border-neutral-800 pt-5">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); navigate(`/company/jobs/${id}/applicants/${app.id}`); }}
+                    className="flex-1 py-3 text-sm font-extrabold text-neutral-600 dark:text-neutral-300 flex items-center justify-center gap-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-colors"
+                  >
+                    <User size={16}/> View Profile
+                  </button>
+                  {app.is_shortlisted ? (
+                    <button disabled className="flex-[1.5] py-3 text-sm font-extrabold text-green-600 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl">
+                      <CheckCircle size={16}/> Shortlisted
                     </button>
-                  </div>
+                  ) : (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleShortlist(app.id); }}
+                      className="flex-[1.5] py-3 text-sm font-extrabold text-white flex items-center justify-center gap-2 bg-accent-600 hover:bg-accent-700 rounded-xl transition-colors shadow-soft"
+                    >
+                      <Star size={16} className="fill-current" /> Shortlist
+                    </button>
+                  )}
                 </div>
               </motion.div>
             ))}
