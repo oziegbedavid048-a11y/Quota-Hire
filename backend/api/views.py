@@ -37,8 +37,9 @@ import jwt
 import re
 import io
 import logging
-from collections import Counter
+from django.contrib.auth.hashers import make_password
 from django.utils import timezone
+from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 
@@ -1051,4 +1052,51 @@ class CompanyApplicationDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         # Ensure company can only view applications for their own jobs
         return Application.objects.filter(job__company=self.request.user).select_related('employee', 'job')
+
+
+class ResumeProxyView(APIView):
+    """
+    GET /api/company/applications/<int:pk>/resume/
+    Fetches the applicant's resume file from Cloudinary server-side
+    and streams it back to the authenticated company user.
+    This bypasses Cloudinary's authenticated delivery restrictions.
+    """
+    permission_classes = [IsCompany]
+
+    def get(self, request, pk):
+        import urllib.request as url_req
+        import urllib.error
+
+        try:
+            app = Application.objects.get(pk=pk, job__company=request.user)
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            profile = app.employee.employee_profile
+        except EmployeeProfile.DoesNotExist:
+            return Response({'error': 'No profile found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not profile.resume_file:
+            return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            resume_url = profile.resume_file.url
+        except Exception:
+            return Response({'error': 'Could not resolve resume URL.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            with url_req.urlopen(resume_url, timeout=30) as res:
+                content = res.read()
+                content_type = res.headers.get('Content-Type', 'application/pdf')
+        except urllib.error.HTTPError as e:
+            return Response({'error': f'Resume fetch failed: {e.code}'}, status=status.HTTP_502_BAD_GATEWAY)
+        except Exception as e:
+            return Response({'error': 'Could not fetch resume.'}, status=status.HTTP_502_BAD_GATEWAY)
+
+        response = HttpResponse(content, content_type=content_type)
+        response['Content-Disposition'] = 'inline; filename="resume.pdf"'
+        response['X-Frame-Options'] = 'ALLOWALL'
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
 

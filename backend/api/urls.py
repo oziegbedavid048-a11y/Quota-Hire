@@ -50,6 +50,7 @@ urlpatterns = [
     path('company/jobs/<int:job_id>/applicants/', views.CompanyJobApplicantsView.as_view(), name='company-job-applicants'),
     path('company/applications/<int:pk>/', views.CompanyApplicationDetailView.as_view(), name='company-application-detail'),
     path('company/applications/<int:pk>/shortlist/', views.ShortlistApplicantView.as_view(), name='company-shortlist-applicant'),
+    path('company/applications/<int:pk>/resume/', views.ResumeProxyView.as_view(), name='company-resume-proxy'),
 
     # ── Notifications ─────────────────────────────────────────────────────────
     path('notifications/',                  views.NotificationListView.as_view(),      name='notifications'),

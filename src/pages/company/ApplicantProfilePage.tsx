@@ -12,6 +12,9 @@ export const ApplicantProfilePage = () => {
   const [applicant, setApplicant] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
+  const [resumeBlobUrl, setResumeBlobUrl] = useState<string | null>(null);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeError, setResumeError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchApplicant = async () => {
@@ -38,11 +41,26 @@ export const ApplicantProfilePage = () => {
     }
   };
 
-  const getResumeEmbedUrl = (url: string) => {
-    if (!url) return '';
-    // Return the URL directly to let the browser natively render the PDF.
-    // This avoids Google Docs Viewer failing with "No preview available" for raw Cloudinary PDFs.
-    return url;
+  const openResumeModal = async () => {
+    setIsResumeModalOpen(true);
+    if (resumeBlobUrl) return; // already loaded
+    setResumeLoading(true);
+    setResumeError(null);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const apiBase = import.meta.env.VITE_API_URL || 'https://quotahire-backend.onrender.com/api';
+      const response = await fetch(`${apiBase}/company/applications/${appId}/resume/`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(`${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setResumeBlobUrl(url);
+    } catch (err: any) {
+      setResumeError('Could not load resume. The file may be unavailable.');
+    } finally {
+      setResumeLoading(false);
+    }
   };
 
   const cleanText = (text: string) => {
@@ -169,7 +187,7 @@ export const ApplicantProfilePage = () => {
             {applicant.employee_profile?.resume_file && (
               <div>
                 <h4 className="text-sm font-bold uppercase tracking-wider mb-3 text-neutral-400">Documents</h4>
-                <button onClick={() => setIsResumeModalOpen(true)} className="inline-flex items-center gap-3 text-accent-600 hover:text-accent-700 font-bold bg-white dark:bg-neutral-800 border-2 border-accent-100 dark:border-accent-900/50 hover:border-accent-300 dark:hover:border-accent-700 px-6 py-3 rounded-xl transition-all shadow-sm hover:shadow-soft group">
+                <button onClick={openResumeModal} className="inline-flex items-center gap-3 text-accent-600 hover:text-accent-700 font-bold bg-white dark:bg-neutral-800 border-2 border-accent-100 dark:border-accent-900/50 hover:border-accent-300 dark:hover:border-accent-700 px-6 py-3 rounded-xl transition-all shadow-sm hover:shadow-soft group">
                   <FileText size={22} className="group-hover:scale-110 transition-transform" /> View Attached Resume
                 </button>
               </div>
@@ -201,27 +219,29 @@ export const ApplicantProfilePage = () => {
                     <FileText className="text-accent-500" /> Resume Document
                   </h2>
                   <div className="flex items-center gap-2">
-                    <a href={applicant.employee_profile.resume_file} target="_blank" rel="noreferrer" className="px-4 py-2 text-sm font-bold text-accent-600 bg-accent-50 hover:bg-accent-100 dark:bg-accent-900/20 dark:hover:bg-accent-900/40 rounded-xl transition-colors">Open in New Tab</a>
+                    {resumeBlobUrl && <a href={resumeBlobUrl} target="_blank" rel="noreferrer" download="resume.pdf" className="px-4 py-2 text-sm font-bold text-accent-600 bg-accent-50 hover:bg-accent-100 dark:bg-accent-900/20 dark:hover:bg-accent-900/40 rounded-xl transition-colors">Open in New Tab</a>}
                     <button onClick={() => setIsResumeModalOpen(false)} className="p-2 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-xl transition-colors"><X size={20} className="text-neutral-600 dark:text-neutral-300" /></button>
                   </div>
                 </div>
                 <div className="flex-1 w-full bg-neutral-100 dark:bg-neutral-950 overflow-hidden relative">
-                  {applicant.employee_profile.resume_file?.includes('appwrite.io') ? (
+                  {resumeLoading && (
+                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500" />
+                      <p className="text-neutral-500 font-medium">Loading resume...</p>
+                    </div>
+                  )}
+                  {resumeError && !resumeLoading && (
                     <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                       <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
                         <FileText size={32} className="text-red-500" />
                       </div>
-                      <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Legacy Resume Requires Update</h3>
-                      <p className="text-neutral-500 dark:text-neutral-400 max-w-md mb-6">
-                        This resume was uploaded using the older Appwrite storage system and cannot be viewed due to expired permissions. The applicant needs to re-upload their resume using the new system.
-                      </p>
-                      <a href={applicant.employee_profile.resume_file} target="_blank" rel="noreferrer" className="px-6 py-3 font-bold text-accent-600 bg-accent-50 hover:bg-accent-100 dark:bg-accent-900/20 dark:hover:bg-accent-900/40 rounded-xl transition-colors">
-                        Try Opening Externally
-                      </a>
+                      <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Resume Unavailable</h3>
+                      <p className="text-neutral-500 dark:text-neutral-400 max-w-md">{resumeError}</p>
                     </div>
-                  ) : (
-                    <iframe 
-                      src={getResumeEmbedUrl(applicant.employee_profile.resume_file)} 
+                  )}
+                  {resumeBlobUrl && !resumeLoading && (
+                    <iframe
+                      src={resumeBlobUrl}
                       className="w-full h-full absolute inset-0 border-none"
                       title="Resume Document Viewer"
                     />
