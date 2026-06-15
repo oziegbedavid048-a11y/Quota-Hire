@@ -26,6 +26,16 @@ export const JobApplicants = () => {
     if (id) fetchApplicants();
   }, [id]);
 
+  const handleShortlist = async (appId: number) => {
+    try {
+      await apiFetch(`/company/applications/${appId}/shortlist/`, { method: 'POST' });
+      toast.success('Applicant successfully shortlisted!');
+      setApplicants(applicants.map(app => app.id === appId ? { ...app, is_shortlisted: true } : app));
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to shortlist applicant.');
+    }
+  };
+
   return (
     <div className="min-h-screen py-12 px-4 relative overflow-hidden font-sans">
       <AnimatedBackground />
@@ -70,20 +80,20 @@ export const JobApplicants = () => {
               <motion.div 
                 key={app.id} 
                 whileHover={{ y: -5 }} 
-                className="card-soft cursor-pointer hover:border-accent-500/30 transition-all p-6 group" 
+                className="card-soft cursor-pointer hover:border-accent-500/30 transition-all p-6 group flex flex-col" 
                 onClick={() => navigate(`/company/jobs/${id}/applicants/${app.id}`)}
               >
                 <div className="flex items-center gap-4 mb-4">
                   {app.avatar_url ? (
-                    <img src={app.avatar_url} alt={app.employee_name} className="w-16 h-16 rounded-full object-cover border-2 border-accent-100 dark:border-accent-900/50 shadow-inner-soft" />
+                    <img src={app.avatar_url} alt={app.employee_name} className="w-16 h-16 rounded-full object-cover border-2 border-accent-100 dark:border-accent-900/50 shadow-inner-soft shrink-0" />
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 text-2xl font-bold shadow-inner-soft">
+                    <div className="w-16 h-16 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 text-2xl font-bold shadow-inner-soft shrink-0">
                       {app.employee_name[0]}
                     </div>
                   )}
-                  <div>
-                    <h3 className="font-extrabold text-lg text-neutral-900 dark:text-white group-hover:text-accent-600 transition-colors">{app.employee_name}</h3>
-                    <p className="text-sm text-neutral-500 font-medium">{app.employee_profile?.title || 'Applicant'}</p>
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-lg text-neutral-900 dark:text-white group-hover:text-accent-600 transition-colors truncate">{app.employee_name}</h3>
+                    <p className="text-sm text-neutral-500 font-medium truncate">{app.employee_profile?.title || 'Applicant'}</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-6 h-[60px] overflow-hidden">
@@ -93,12 +103,26 @@ export const JobApplicants = () => {
                   {(app.employee_profile?.skills?.length > 3) && <span className="text-xs text-neutral-400 font-medium self-center">+{app.employee_profile.skills.length - 3}</span>}
                 </div>
                 <div className="flex justify-between items-center mt-auto border-t border-neutral-100 dark:border-neutral-800 pt-4">
-                  <span className="text-xs font-medium text-neutral-400">Applied {new Date(app.applied_at).toLocaleDateString()}</span>
-                  {app.is_shortlisted ? (
-                    <span className="text-xs font-bold text-green-600 flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded"><CheckCircle size={14}/> Shortlisted</span>
-                  ) : (
-                    <span className="text-xs font-bold text-accent-600 flex items-center gap-1 bg-accent-50 dark:bg-accent-900/20 px-2 py-1 rounded">View Profile <ChevronRight size={14}/></span>
-                  )}
+                  <span className="text-xs font-medium text-neutral-400 shrink-0">Applied {new Date(app.applied_at).toLocaleDateString()}</span>
+                  <div className="flex items-center gap-2">
+                    {app.is_shortlisted ? (
+                      <span className="text-xs font-bold text-green-600 flex items-center gap-1 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded"><CheckCircle size={14}/> Shortlisted</span>
+                    ) : (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleShortlist(app.id); }}
+                        className="text-xs font-bold text-white flex items-center gap-1 bg-accent-600 hover:bg-accent-700 px-2 py-1 rounded transition-colors"
+                      >
+                        <CheckCircle size={14} className="opacity-0 w-0 h-0 absolute" /> {/* For alignment/sizing match */}
+                        Shortlist
+                      </button>
+                    )}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); navigate(`/company/jobs/${id}/applicants/${app.id}`); }}
+                      className="text-xs font-bold text-neutral-600 dark:text-neutral-300 flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 px-2 py-1 rounded transition-colors"
+                    >
+                      Profile <ChevronRight size={14}/>
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             ))}
