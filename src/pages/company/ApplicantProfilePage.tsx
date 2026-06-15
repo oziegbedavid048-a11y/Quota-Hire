@@ -47,13 +47,49 @@ export const ApplicantProfilePage = () => {
 
   const cleanText = (text: string) => {
     if (!text) return text;
-    // Strip out common contact info lines (Email, Address, LinkedIn, Phone, Contact, Website)
-    let cleaned = text.replace(/^(Email|Address|LinkedIn|Phone|Contact|Mobile|Website|Portfolio).*$/gmi, '');
-    // Regex for basic email addresses
-    cleaned = cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[Hidden]');
-    // Regex for URLs that might be LinkedIn/Portfolios
-    cleaned = cleaned.replace(/(https?:\/\/)?(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?/gi, '[Hidden]');
-    return cleaned.trim();
+    let cleaned = text;
+    
+    // 1. Strip out lines explicitly labeled as contact info
+    cleaned = cleaned.replace(/^(Email|Address|Location|LinkedIn|Phone|Contact|Mobile|Website|Portfolio)[\s:]*.*$/gmi, '');
+    
+    // 2. Hide basic email addresses
+    cleaned = cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[Email Hidden]');
+    
+    // 3. Hide LinkedIn/Portfolio URLs
+    cleaned = cleaned.replace(/(https?:\/\/)?(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?/gi, '[LinkedIn Hidden]');
+    
+    // 4. Hide phone numbers (basic international/national formats)
+    cleaned = cleaned.replace(/(?:(?:\+?\d{1,3}[-.\s]?\(?\d{2,4}\)?)|(?:\(\d{2,4}\)))[-.\s]?\d{3,4}[-.\s]?\d{3,4}/g, '[Phone Hidden]');
+    
+    // 5. Hide typical Street Addresses and PO Boxes
+    cleaned = cleaned.replace(/\b\d{1,5}\s+[a-zA-Z0-9\s.,-]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way|Plaza|Plz|Square|Sq|Close|Crescent|Estate)\b/gi, '[Address Hidden]');
+    cleaned = cleaned.replace(/\b(?:P\.?O\.?\s*Box|Post\s*Office\s*Box)\s*\d+\b/gi, '[Address Hidden]');
+
+    // 6. Handle cover letter header blocks
+    const lines = cleaned.split('\n');
+    let contentStarted = false;
+    
+    const processedLines = lines.map((line, index) => {
+      if (contentStarted) return line;
+      
+      const trimmed = line.trim();
+      if (trimmed.toLowerCase().startsWith('dear') || trimmed.toLowerCase().startsWith('to whom') || trimmed.split(' ').length > 15) {
+        contentStarted = true;
+        return line;
+      }
+      
+      if (index < 10 && trimmed.length > 0 && trimmed.length < 50) {
+        if (/^[A-Z][a-zA-Z\s.-]+,\s*[A-Z][a-zA-Z\s.-]+(?:\s*\d{4,6})?$/.test(trimmed)) {
+          return '[Location Hidden]';
+        }
+        if (/^\d{1,5}\s+[A-Z]/.test(trimmed)) {
+          return '[Address Hidden]';
+        }
+      }
+      return line;
+    });
+    
+    return processedLines.join('\n').trim();
   };
 
   if (loading) {
