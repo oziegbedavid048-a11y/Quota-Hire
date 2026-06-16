@@ -1057,16 +1057,12 @@ class CompanyApplicationDetailView(generics.RetrieveAPIView):
 class ResumeProxyView(APIView):
     """
     GET /api/company/applications/<int:pk>/resume/
-    Fetches the applicant's resume file from Cloudinary server-side
-    and streams it back to the authenticated company user.
-    This bypasses Cloudinary's authenticated delivery restrictions.
+    Returns a short-lived signed Cloudinary URL for the applicant's resume.
+    The frontend uses this URL directly instead of proxying through Django.
     """
     permission_classes = [IsCompany]
 
     def get(self, request, pk):
-        import urllib.request as url_req
-        import urllib.error
-
         try:
             app = Application.objects.get(pk=pk, job__company=request.user)
         except Application.DoesNotExist:
@@ -1081,22 +1077,28 @@ class ResumeProxyView(APIView):
             return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            resume_url = profile.resume_file.url
-        except Exception:
-            return Response({'error': 'Could not resolve resume URL.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Get the raw Cloudinary public_id from the file field
+            resume_field = profile.resume_file
+            
+            # Try to get a signed URL via Cloudinary SDK
+            try:
+                import cloudinary
+                import cloudinary.utils
 
-        try:
-            with url_req.urlopen(resume_url, timeout=30) as res:
-                content = res.read()
-                content_type = res.headers.get('Content-Type', 'application/pdf')
-        except urllib.error.HTTPError as e:
-            return Response({'error': f'Resume fetch failed: {e.code}'}, status=status.HTTP_502_BAD_GATEWAY)
+                public_id = resume_field.name  # e.g. "media/resumes/OZIEGBE_sttzio"
+                
+                # Generate a signed URL valid for 1 hour (3600 seconds)
+                signed_url = cloudinary.utils.private_download_url(
+                    public_id,
+                    resource_type="raw",
+                    expires_at=3600,
+                )
+                return Response({'url': signed_url}, status=status.HTTP_200_OK)
+            except Exception:
+                # Fallback: try the direct .url property (works if already public)
+                direct_url = resume_field.url
+                return Response({'url': direct_url}, status=status.HTTP_200_OK)
+
         except Exception as e:
-            return Response({'error': 'Could not fetch resume.'}, status=status.HTTP_502_BAD_GATEWAY)
-
-        response = HttpResponse(content, content_type=content_type)
-        response['Content-Disposition'] = 'inline; filename="resume.pdf"'
-        response['X-Frame-Options'] = 'ALLOWALL'
-        response['Access-Control-Allow-Origin'] = '*'
-        return response
+            return Response({'error': 'Could not resolve resume URL.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
