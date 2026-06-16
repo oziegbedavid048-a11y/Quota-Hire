@@ -85,6 +85,8 @@ class EmployeeProfile(models.Model):
     linkedin_url     = models.URLField(blank=True)
     resume_url       = models.URLField(blank=True)
     resume_file      = models.FileField(upload_to='resumes/', null=True, blank=True)
+    resume_binary    = models.BinaryField(null=True, blank=True, editable=True)
+    resume_filename  = models.CharField(max_length=255, null=True, blank=True)
     education        = models.TextField(blank=True)
     skills           = models.JSONField(default=list, blank=True)   # ["Python", "Sales", ...]
     experience_years = models.PositiveIntegerField(default=0)

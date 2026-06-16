@@ -993,8 +993,11 @@ class ResumeUploadView(APIView):
         # Save file to profile
         profile, _ = EmployeeProfile.objects.get_or_create(user=request.user)
         resume_file.seek(0)  # Reset after reading
+        profile.resume_binary = resume_file.read()
+        profile.resume_filename = resume_file.name
+        resume_file.seek(0)
         profile.resume_file = resume_file
-        profile.save(update_fields=['resume_file'])
+        profile.save(update_fields=['resume_file', 'resume_binary', 'resume_filename'])
 
         resume_file_url = None
         if profile.resume_file:
@@ -1077,27 +1080,39 @@ class ResumeProxyView(APIView):
             return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
+            # First check if we have the binary data in the database (Option 2)
+            if profile.resume_binary:
+                file_data = profile.resume_binary
+                filename = profile.resume_filename or 'resume.pdf'
+                
+                from django.http import HttpResponse
+                response = HttpResponse(file_data, content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename="{filename}"'
+                return response
+            
+            # Fallback for old resumes that don't have binary data yet:
+            # Attempt to fetch from Cloudinary as a fallback
             import cloudinary
             import cloudinary.utils
             import urllib.request
             from django.conf import settings
 
-            # Force cloudinary config to load from settings to ensure signatures work
             if hasattr(settings, 'CLOUDINARY_URL') and settings.CLOUDINARY_URL:
                 cloudinary.config(cloudinary_url=settings.CLOUDINARY_URL)
 
             resume_field = profile.resume_file
-            public_id = resume_field.name  # e.g. "media/resumes/OZIEGBE_sttzio"
+            if not resume_field:
+                return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Use the Cloudinary API download URL to completely bypass CDN delivery rules
+            public_id = resume_field.name
+
             signed_url = cloudinary.utils.private_download_url(
                 public_id,
-                'pdf', # format must be provided
+                'pdf',
                 resource_type="image",
                 expires_at=3600
             )
 
-            # Securely download the file from the signed URL
             req = urllib.request.Request(signed_url, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req) as file_resp:
                 file_data = file_resp.read()
