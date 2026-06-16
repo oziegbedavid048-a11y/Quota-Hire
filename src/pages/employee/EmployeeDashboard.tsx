@@ -461,27 +461,7 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
             )}
           </motion.div>
 
-          {/* Quick Tips */}
-          <motion.div variants={itemVariants} className="bg-gradient-to-br from-warm-50 to-accent-50 dark:from-warm-900/20 dark:to-accent-900/20 rounded-2xl border border-warm-100 dark:border-warm-900/30 p-5 shadow-sm">
-            <h2 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2 mb-4">
-              <Zap size={16} className="text-warm-500" /> Tips to Land Faster
-            </h2>
-            <div className="space-y-3">
-              {[
-                { tip: 'Add your LinkedIn to increase views 3x', done: !!user?.linkedinUrl },
-                { tip: 'Upload your CV for instant applications', done: !!user?.resumeUrl },
-                { tip: 'Complete your profile to get verified', done: !!user?.isVerified },
-                { tip: 'Use AI Coach to perfect your pitch', done: false },
-              ].map((t, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <div className={`p-1.5 rounded-lg shrink-0 ${t.done ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-accent-500'} shadow-sm`}>
-                    <CheckCircle2 size={13} />
-                  </div>
-                  <p className={`text-xs font-medium leading-snug ${t.done ? 'line-through text-neutral-400' : 'text-neutral-600 dark:text-neutral-300'}`}>{t.tip}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+
         </div>
       </div>
 

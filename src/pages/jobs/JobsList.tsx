@@ -168,22 +168,7 @@ export const JobsList = () => {
                       </div>
                     </div>
 
-                    <div className="mb-5 mt-1 space-y-2">
-                      {job.description && (
-                        <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
-                          <strong className="text-neutral-900 dark:text-neutral-200 font-semibold">Role: </strong>
-                          {job.description.replace(/<[^>]+>/g, '')}
-                        </p>
-                      )}
-                      {job.requirements && job.requirements.length > 0 && (
-                        <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
-                          <strong className="text-neutral-900 dark:text-neutral-200 font-semibold">Requirements: </strong>
-                          {job.requirements.join(' • ')}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 mb-5">
+                    <div className="flex flex-wrap items-center gap-3 mb-4 mt-2">
                       {job.salaryRange && (
                         <span className="inline-flex items-center gap-1.5 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-lg">
                           <DollarSign size={14} /> {job.salaryRange}
@@ -206,33 +191,32 @@ export const JobsList = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-2 md:mt-0 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
-                      <div className="flex flex-wrap gap-2 flex-1">
-                        {job.requirements?.slice(0, 4).map((req: any, i: number) => (
-                          <span
-                            key={i}
-                            className="px-3 py-1 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 text-xs font-medium rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
-                            {req}
-                          </span>
-                        ))}
-                        {job.requirements && job.requirements.length > 4 && (
-                          <span className="px-3 py-1 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 dark:text-neutral-400 text-xs font-medium rounded-full border border-neutral-200 dark:border-neutral-700">
-                            +{job.requirements.length - 4}
-                          </span>
-                        )}
-                      </div>
+                    <div className="mb-5 space-y-2">
+                      {job.description && (
+                        <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                          <strong className="text-neutral-900 dark:text-neutral-200 font-semibold">Role: </strong>
+                          {job.description.replace(/<[^>]+>/g, '')}
+                        </p>
+                      )}
+                      {job.requirements && job.requirements.length > 0 && (
+                        <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                          <strong className="text-neutral-900 dark:text-neutral-200 font-semibold">Requirements: </strong>
+                          {job.requirements.join(' • ')}
+                        </p>
+                      )}
+                    </div>
 
-                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto mt-2 sm:mt-0">
-                        <span className="md:hidden text-xs font-medium text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50 px-2.5 py-1 rounded-md">
-                          {formatRelativeTime(job.createdAt || (job as any).created_at)}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-auto group-hover:bg-accent-600 group-hover:text-white group-hover:border-accent-600 transition-colors shadow-sm">
-                          View Details
-                        </Button>
-                      </div>
+                    <div className="flex items-center justify-between mt-2 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
+                      <span className="md:hidden text-xs font-medium text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50 px-2.5 py-1 rounded-md">
+                        {formatRelativeTime(job.createdAt || (job as any).created_at)}
+                      </span>
+                      <div className="hidden md:block flex-1"></div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-auto w-auto group-hover:bg-accent-600 group-hover:text-white group-hover:border-accent-600 transition-colors shadow-sm">
+                        View Details
+                      </Button>
                     </div>
                     
                   </div>

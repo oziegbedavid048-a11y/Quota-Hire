@@ -410,26 +410,7 @@ export const CompanyDashboardPage = () => {
             )}
           </motion.div>
 
-          {/* Quick Tips */}
-          <motion.div variants={itemVariants} className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30 p-5 shadow-sm">
-            <h2 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2 mb-4">
-              <Zap size={16} className="text-amber-500" /> Quick Tips
-            </h2>
-            <div className="space-y-3">
-              {[
-                { tip: 'Add a company description to get verified', icon: Building2, done: !!company?.industry },
-                { tip: 'Post jobs with salary range for 3x more views', icon: TrendingUp, done: false },
-                { tip: 'Reply to applicants within 48hrs', icon: Users, done: false },
-              ].map((t, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <div className={`p-1.5 rounded-lg shrink-0 ${t.done ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-blue-500'} shadow-sm`}>
-                    <t.icon size={13} />
-                  </div>
-                  <p className={`text-xs font-medium leading-snug ${t.done ? 'line-through text-neutral-400' : 'text-neutral-600 dark:text-neutral-300'}`}>{t.tip}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+
         </div>
       </div>
 
