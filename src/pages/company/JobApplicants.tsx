@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, ChevronRight, User, Star } from 'lucide-react';
+import { ArrowLeft, CheckCircle, User, Star } from 'lucide-react';
 import { apiFetch } from '../../context/AppContext';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 import { toast } from 'sonner';
@@ -96,11 +96,16 @@ export const JobApplicants = () => {
                     <p className="text-sm text-neutral-500 font-medium truncate">{app.employee_profile?.title || 'Applicant'}</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-6 h-[60px] overflow-hidden">
-                  {(app.employee_profile?.skills || []).slice(0, 3).map((skill: string, i: number) => (
-                    <span key={i} className="text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-1 rounded-md border border-neutral-200 dark:border-neutral-700">{skill}</span>
+                <div className="mb-4">
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-3 leading-relaxed">
+                    {app.employee_profile?.bio || 'No bio available.'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-6 mt-auto">
+                  {(app.employee_profile?.skills || []).slice(0, 4).map((skill: string, i: number) => (
+                    <span key={i} className="text-[11px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-1 rounded border border-neutral-200 dark:border-neutral-700 shadow-sm">{skill}</span>
                   ))}
-                  {(app.employee_profile?.skills?.length > 3) && <span className="text-xs text-neutral-400 font-medium self-center">+{app.employee_profile.skills.length - 3}</span>}
+                  {(app.employee_profile?.skills?.length > 4) && <span className="text-[11px] text-neutral-400 font-bold self-center">+{app.employee_profile.skills.length - 4}</span>}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 mt-auto border-t border-neutral-100 dark:border-neutral-800 pt-5">
                   <button 
