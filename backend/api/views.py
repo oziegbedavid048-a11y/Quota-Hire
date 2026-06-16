@@ -1077,21 +1077,19 @@ class ResumeProxyView(APIView):
             return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            # Get the raw Cloudinary public_id from the file field
+            # Securely download the file from Cloudinary and stream it back
             resume_field = profile.resume_file
-            
-            # Use the direct .url property (works if already public)
-            direct_url = resume_field.url
-            # Cloudinary requires .pdf extension to serve PDF files correctly without 401 error
-            if 'cloudinary.com' in direct_url and not direct_url.lower().endswith('.pdf'):
-                # Sometimes the url might have query params, but usually resume_field.url does not.
-                if '?' in direct_url:
-                    parts = direct_url.split('?', 1)
-                    direct_url = parts[0] + '.pdf?' + parts[1]
-                else:
-                    direct_url += '.pdf'
-            return Response({'url': direct_url}, status=status.HTTP_200_OK)
+            resume_field.open('rb')
+            file_data = resume_field.read()
+            resume_field.close()
+
+            from django.http import HttpResponse
+            response = HttpResponse(file_data, content_type='application/pdf')
+            response['Content-Disposition'] = 'inline; filename="resume.pdf"'
+            return response
 
         except Exception as e:
-            return Response({'error': 'Could not resolve resume URL.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            import logging
+            logging.error(f"Error reading resume: {e}")
+            return Response({'error': 'Could not read resume file.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

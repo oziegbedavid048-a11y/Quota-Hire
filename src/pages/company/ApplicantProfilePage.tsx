@@ -52,9 +52,12 @@ export const ApplicantProfilePage = () => {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) throw new Error(`${response.status}`);
-      const data = await response.json();
-      if (!data.url) throw new Error('No URL returned');
-      setResumeBlobUrl(data.url);
+      
+      const blob = await response.blob();
+      if (blob.size === 0) throw new Error('Empty file returned');
+      
+      const localUrl = URL.createObjectURL(blob);
+      setResumeBlobUrl(localUrl);
     } catch (err: any) {
       setResumeError('Could not load resume. The file may be unavailable.');
     } finally {
