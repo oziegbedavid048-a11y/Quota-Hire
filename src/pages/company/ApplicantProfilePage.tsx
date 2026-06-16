@@ -47,7 +47,7 @@ export const ApplicantProfilePage = () => {
     setResumeLoading(true);
     setResumeError(null);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem('access_token');
       const apiBase = import.meta.env.VITE_API_URL || 'https://quotahire-backend.onrender.com/api';
       const response = await fetch(`${apiBase}/company/applications/${appId}/resume/`, {
         headers: { 'Authorization': `Bearer ${token}` },
