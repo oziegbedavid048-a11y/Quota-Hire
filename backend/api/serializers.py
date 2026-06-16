@@ -251,14 +251,14 @@ def scrub_contact_info(text, user=None, profile=None):
         return text
     
     # Simple regex to remove email
-    text = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '[Email Hidden]', text)
+    text = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '', text)
     
     # Phone numbers
-    text = re.sub(r'(?:\+?\d{1,3}[-.\s]?\(?\d{2,4}\)?|\(\d{2,4}\))[-.\s]?\d{3,4}[-.\s]?\d{3,4}', '[Phone Hidden]', text)
+    text = re.sub(r'(?:\+?\d{1,3}[-.\s]?\(?\d{2,4}\)?|\(\d{2,4}\))[-.\s]?\d{3,4}[-.\s]?\d{3,4}', '', text)
 
     # Street addresses using common keywords
     addr_pattern = r'\b\d{1,5}\s+[a-zA-Z0-9\s.,-]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way|Plaza|Plz|Square|Sq|Close|Crescent|Estate)\b'
-    text = re.sub(addr_pattern, '[Address Hidden]', text, flags=re.IGNORECASE)
+    text = re.sub(addr_pattern, '', text, flags=re.IGNORECASE)
 
     # Specific scrubbing based on actual user data (bulletproof)
     strings_to_hide = []
@@ -285,7 +285,11 @@ def scrub_contact_info(text, user=None, profile=None):
         # Create a regex to match the exact string case-insensitively
         escaped_s = re.escape(s)
         # Use regex to replace without word boundaries to catch variations
-        text = re.sub(escaped_s, '[Location Hidden]', text, flags=re.IGNORECASE)
+        text = re.sub(escaped_s, '', text, flags=re.IGNORECASE)
+
+    # Final cleanup to remove multiple commas or spaces that might be left behind
+    text = re.sub(r'(\s*,\s*)+', ', ', text)
+    text = re.sub(r'^\s*,\s*', '', text)
 
     return text
 
