@@ -1077,8 +1077,14 @@ class ResumeProxyView(APIView):
             return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
+            import cloudinary
             import cloudinary.utils
             import urllib.request
+            from django.conf import settings
+
+            # Force cloudinary config to load from settings to ensure signatures work
+            if hasattr(settings, 'CLOUDINARY_URL') and settings.CLOUDINARY_URL:
+                cloudinary.config(cloudinary_url=settings.CLOUDINARY_URL)
 
             resume_field = profile.resume_file
             public_id = resume_field.name  # e.g. "media/resumes/OZIEGBE_sttzio"
@@ -1102,7 +1108,9 @@ class ResumeProxyView(APIView):
             return response
 
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
             import logging
-            logging.error(f"Error reading resume: {e}")
-            return Response({'error': 'Could not read resume file.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logging.error(f"Error reading resume: {error_details}")
+            return Response({'error': str(e), 'details': error_details}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
