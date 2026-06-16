@@ -1089,12 +1089,12 @@ class ResumeProxyView(APIView):
             resume_field = profile.resume_file
             public_id = resume_field.name  # e.g. "media/resumes/OZIEGBE_sttzio"
 
-            # Generate a signed URL for the PDF
-            signed_url, options = cloudinary.utils.cloudinary_url(
+            # Use the Cloudinary API download URL to completely bypass CDN delivery rules
+            signed_url = cloudinary.utils.private_download_url(
                 public_id,
+                'pdf', # format must be provided
                 resource_type="image",
-                format="pdf",
-                sign_url=True
+                expires_at=3600
             )
 
             # Securely download the file from the signed URL
