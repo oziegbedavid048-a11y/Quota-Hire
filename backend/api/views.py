@@ -1080,32 +1080,17 @@ class ResumeProxyView(APIView):
             # Get the raw Cloudinary public_id from the file field
             resume_field = profile.resume_file
             
-            # Try to get a signed URL via Cloudinary SDK
-            try:
-                import cloudinary
-                import cloudinary.utils
-
-                public_id = resume_field.name  # e.g. "media/resumes/OZIEGBE_sttzio"
-                
-                # Generate a signed URL valid for 1 hour (3600 seconds)
-                signed_url = cloudinary.utils.private_download_url(
-                    public_id,
-                    resource_type="raw",
-                    expires_at=3600,
-                )
-                return Response({'url': signed_url}, status=status.HTTP_200_OK)
-            except Exception:
-                # Fallback: try the direct .url property (works if already public)
-                direct_url = resume_field.url
-                # Cloudinary requires .pdf extension to serve PDF files correctly without 401 error
-                if 'cloudinary.com' in direct_url and not direct_url.lower().endswith('.pdf'):
-                    # Sometimes the url might have query params, but usually resume_field.url does not.
-                    if '?' in direct_url:
-                        parts = direct_url.split('?', 1)
-                        direct_url = parts[0] + '.pdf?' + parts[1]
-                    else:
-                        direct_url += '.pdf'
-                return Response({'url': direct_url}, status=status.HTTP_200_OK)
+            # Use the direct .url property (works if already public)
+            direct_url = resume_field.url
+            # Cloudinary requires .pdf extension to serve PDF files correctly without 401 error
+            if 'cloudinary.com' in direct_url and not direct_url.lower().endswith('.pdf'):
+                # Sometimes the url might have query params, but usually resume_field.url does not.
+                if '?' in direct_url:
+                    parts = direct_url.split('?', 1)
+                    direct_url = parts[0] + '.pdf?' + parts[1]
+                else:
+                    direct_url += '.pdf'
+            return Response({'url': direct_url}, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': 'Could not resolve resume URL.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
