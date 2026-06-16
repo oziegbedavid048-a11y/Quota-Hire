@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 type SectionKey =
   | 'contact'
   | 'resume'
+  | 'bio'
   | 'qualifications'
   | 'experience'
   | 'education'
@@ -37,7 +38,8 @@ type SectionKey =
 const SECTION_LABELS: Record<SectionKey, string> = {
   contact: 'Contact & Location',
   resume: 'Resume / CV',
-  qualifications: 'Qualifications & Skills',
+  bio: 'About You (Bio)',
+  qualifications: 'Skills & Expertise',
   experience: 'Work Experience',
   education: 'Education',
   password: 'Change Password',
@@ -154,9 +156,16 @@ export const EmployeeProfilePage = () => {
       group: 'Improve your job matches',
       items: [
         {
+          key: 'bio' as SectionKey,
+          icon: FileText,
+          label: 'About You (Bio)',
+          subtitle: profile.bio ? 'Bio added' : 'Tell employers about yourself.',
+          filled: !!profile.bio,
+        },
+        {
           key: 'qualifications' as SectionKey,
           icon: Star,
-          label: 'Qualifications & Skills',
+          label: 'Skills & Expertise',
           subtitle: profile.skills?.length ? `${profile.skills.length} skill${profile.skills.length > 1 ? 's' : ''} added` : 'Highlight your skills and expertise.',
           filled: !!(profile.skills && profile.skills.length > 0),
         },
@@ -231,6 +240,18 @@ export const EmployeeProfilePage = () => {
           </div>
         );
 
+      case 'bio':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className={labelClass}>Professional Summary (Bio)</label>
+              <textarea rows={6} className={`${inputClass} resize-none`} placeholder="Tell employers about your key achievements, career goals, and expertise…"
+                value={formData.bio || ''}
+                onChange={e => setFormData({ ...formData, bio: e.target.value })} />
+            </div>
+          </div>
+        );
+
       case 'qualifications':
         return (
           <div className="space-y-4">
@@ -239,12 +260,6 @@ export const EmployeeProfilePage = () => {
               <input type="text" className={inputClass} placeholder="Sales, CRM, B2B, Negotiation"
                 value={Array.isArray(formData.skills) ? formData.skills.join(', ') : (formData.skills || '')}
                 onChange={e => setFormData({ ...formData, skills: e.target.value.split(',').map(s => s.trim()) })} />
-            </div>
-            <div>
-              <label className={labelClass}>Professional Summary</label>
-              <textarea rows={5} className={`${inputClass} resize-none`} placeholder="Tell employers about your key achievements and expertise…"
-                value={formData.bio || ''}
-                onChange={e => setFormData({ ...formData, bio: e.target.value })} />
             </div>
           </div>
         );
