@@ -175,7 +175,7 @@ class JobAdmin(admin.ModelAdmin):
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display    = ('employee', 'job', 'status', 'status_badge', 'applied_at', 'edit_button')
+    list_display    = ('employee', 'job', 'status', 'status_badge', 'applied_at', 'edit_button', 'resume_link')
     list_display_links = ('employee', 'edit_button')
     list_editable   = ('status',)
     list_filter     = ('status', 'applied_at')
@@ -204,6 +204,64 @@ class ApplicationAdmin(admin.ModelAdmin):
     def edit_button(self, obj):
         url = reverse('admin:api_application_change', args=[obj.id])
         return format_html('<a class="button" style="background-color:#417690;color:white;padding:5px 10px;border-radius:4px;font-weight:bold;text-decoration:none;" href="{}">Edit</a>', url)
+
+    @admin.display(description='Resume')
+    def resume_link(self, obj):
+        try:
+            profile = obj.employee.employee_profile
+            if profile.resume_binary or profile.resume_file:
+                url = reverse('admin:api_application_resume', args=[obj.id])
+                return format_html('<a class="button" style="background-color:#10b981;color:white;padding:5px 10px;border-radius:4px;font-weight:bold;text-decoration:none;" href="{}" target="_blank">View Resume</a>', url)
+        except Exception:
+            pass
+        return 'No Resume'
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:pk>/resume/', self.admin_site.admin_view(self.view_resume), name='api_application_resume'),
+        ]
+        return custom_urls + urls
+
+    def view_resume(self, request, pk):
+        from django.http import HttpResponse, Http404
+        app = self.get_object(request, pk)
+        if not app:
+            raise Http404("Application not found")
+        try:
+            profile = app.employee.employee_profile
+        except Exception:
+            raise Http404("Profile not found")
+        
+        if profile.resume_binary:
+            response = HttpResponse(profile.resume_binary, content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="{profile.resume_filename or "resume.pdf"}"'
+            return response
+        elif profile.resume_file:
+            import urllib.request
+            import cloudinary
+            import cloudinary.utils
+            from django.conf import settings
+            if hasattr(settings, 'CLOUDINARY_URL') and settings.CLOUDINARY_URL:
+                cloudinary.config(cloudinary_url=settings.CLOUDINARY_URL)
+            public_id = profile.resume_file.name
+            signed_url = cloudinary.utils.private_download_url(
+                public_id,
+                'pdf',
+                resource_type="image",
+                expires_at=3600
+            )
+            req = urllib.request.Request(signed_url, headers={'User-Agent': 'Mozilla/5.0'})
+            try:
+                with urllib.request.urlopen(req) as file_resp:
+                    file_data = file_resp.read()
+                response = HttpResponse(file_data, content_type='application/pdf')
+                response['Content-Disposition'] = 'inline; filename="resume.pdf"'
+                return response
+            except Exception:
+                pass
+        raise Http404("Resume not found")
 
     @admin.action(description='👀 Mark as Under Review')
     def mark_under_review(self, request, queryset):

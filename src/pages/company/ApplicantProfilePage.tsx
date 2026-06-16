@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, FileText, Briefcase, X, Star, ArrowLeft } from 'lucide-react';
+import { Briefcase, ArrowLeft } from 'lucide-react';
 import { apiFetch } from '../../context/AppContext';
 import { toast } from 'sonner';
 
@@ -10,10 +9,6 @@ export const ApplicantProfilePage = () => {
   const navigate = useNavigate();
   const [applicant, setApplicant] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
-  const [resumeBlobUrl, setResumeBlobUrl] = useState<string | null>(null);
-  const [resumeLoading, setResumeLoading] = useState(false);
-  const [resumeError, setResumeError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchApplicant = async () => {
@@ -29,41 +24,6 @@ export const ApplicantProfilePage = () => {
     };
     if (appId) fetchApplicant();
   }, [appId, jobId, navigate]);
-
-  const handleShortlist = async () => {
-    try {
-      await apiFetch(`/company/applications/${appId}/shortlist/`, { method: 'POST' });
-      toast.success('Applicant successfully shortlisted!');
-      setApplicant({ ...applicant, is_shortlisted: true });
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to shortlist applicant.');
-    }
-  };
-
-  const openResumeModal = async () => {
-    setIsResumeModalOpen(true);
-    if (resumeBlobUrl) return; // already loaded
-    setResumeLoading(true);
-    setResumeError(null);
-    try {
-      const token = localStorage.getItem('access_token');
-      const apiBase = import.meta.env.VITE_API_URL || 'https://quotahire-backend.onrender.com/api';
-      const response = await fetch(`${apiBase}/company/applications/${appId}/resume/`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error(`${response.status}`);
-      
-      const blob = await response.blob();
-      if (blob.size === 0) throw new Error('Empty file returned');
-      
-      const localUrl = URL.createObjectURL(blob);
-      setResumeBlobUrl(localUrl);
-    } catch (err: any) {
-      setResumeError('Could not load resume. The file may be unavailable.');
-    } finally {
-      setResumeLoading(false);
-    }
-  };
 
   const cleanText = (text: string) => {
     if (!text) return text;
@@ -135,17 +95,7 @@ export const ApplicantProfilePage = () => {
               Applicant Profile
             </h2>
           </div>
-          <div className="flex gap-3">
-            {applicant.is_shortlisted ? (
-              <span className="px-6 py-2.5 rounded-lg font-semibold bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 flex items-center gap-2">
-                <CheckCircle size={18} /> Shortlisted
-              </span>
-            ) : (
-              <button onClick={handleShortlist} className="px-6 py-2.5 rounded-lg font-semibold bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-white transition-colors flex items-center gap-2 shadow-sm">
-                <Star size={18} /> Shortlist
-              </button>
-            )}
-          </div>
+
         </div>
 
         {/* Main Content Grid */}
@@ -171,14 +121,6 @@ export const ApplicantProfilePage = () => {
               </div>
             </div>
 
-            {applicant.employee_profile?.resume_file && (
-              <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 shadow-sm border border-neutral-200 dark:border-neutral-800">
-                <h4 className="text-xs font-bold uppercase tracking-wider mb-4 text-neutral-500">Documents</h4>
-                <button onClick={openResumeModal} className="w-full inline-flex items-center justify-center gap-2 text-neutral-700 dark:text-neutral-200 font-semibold bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 px-4 py-3 rounded-xl transition-colors">
-                  <FileText size={18} /> View Attached Resume
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Right Column: Details */}
@@ -221,48 +163,6 @@ export const ApplicantProfilePage = () => {
           </div>
         </div>
 
-        {/* Resume Modal */}
-        <AnimatePresence>
-          {isResumeModalOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-neutral-900/80 backdrop-blur-sm" onClick={() => setIsResumeModalOpen(false)}>
-              <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="bg-white dark:bg-neutral-900 rounded-[24px] w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-neutral-200 dark:border-neutral-800" onClick={e => e.stopPropagation()}>
-                <div className="bg-white dark:bg-neutral-900 border-b border-neutral-100 dark:border-neutral-800 p-4 flex justify-between items-center z-10 shrink-0">
-                  <h2 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                    <FileText size={20} className="text-neutral-400" /> Resume Document
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    {resumeBlobUrl && <a href={resumeBlobUrl} target="_blank" rel="noreferrer" download="resume.pdf" className="px-4 py-2 text-sm font-semibold text-neutral-700 bg-neutral-100 hover:bg-neutral-200 dark:text-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-colors">Open in New Tab</a>}
-                    <button onClick={() => setIsResumeModalOpen(false)} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"><X size={20} className="text-neutral-500" /></button>
-                  </div>
-                </div>
-                <div className="flex-1 w-full bg-neutral-100 dark:bg-neutral-950 overflow-hidden relative">
-                  {resumeLoading && (
-                    <div className="flex flex-col items-center justify-center h-full gap-4">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-neutral-900 dark:border-white" />
-                      <p className="text-neutral-500 font-medium">Loading resume...</p>
-                    </div>
-                  )}
-                  {resumeError && !resumeLoading && (
-                    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                      <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
-                        <FileText size={32} className="text-red-500" />
-                      </div>
-                      <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Resume Unavailable</h3>
-                      <p className="text-neutral-500 dark:text-neutral-400 max-w-md">{resumeError}</p>
-                    </div>
-                  )}
-                  {resumeBlobUrl && !resumeLoading && (
-                    <iframe
-                      src={resumeBlobUrl}
-                      className="w-full h-full absolute inset-0 border-none"
-                      title="Resume Document Viewer"
-                    />
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
       </div>
     </div>
