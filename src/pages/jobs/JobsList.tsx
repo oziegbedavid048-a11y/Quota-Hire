@@ -8,6 +8,19 @@ export const JobsList = () => {
   const { jobs } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRemote, setFilterRemote] = useState(false);
+  const formatRelativeTime = (dateString?: string) => {
+    if (!dateString) return 'Recent';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 1) return 'Recent';
+    if (diffDays <= 30) return `Past ${diffDays} days`;
+    const diffMonths = Math.ceil(diffDays / 30);
+    return `Past ${diffMonths} month${diffMonths > 1 ? 's' : ''}`;
+  };
+
   // Only show approved jobs
   const approvedJobs = jobs.filter((j) => j.status === 'approved');
   const filteredJobs = approvedJobs.filter((job) => {
@@ -150,9 +163,24 @@ export const JobsList = () => {
                       
                       <div className="hidden md:flex flex-col items-end shrink-0">
                         <span className="text-xs font-medium text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50 px-2.5 py-1 rounded-md">
-                          {job.createdAt || (job as any).created_at ? new Date(job.createdAt || (job as any).created_at).toLocaleDateString() : 'New'}
+                          {formatRelativeTime(job.createdAt || (job as any).created_at)}
                         </span>
                       </div>
+                    </div>
+
+                    <div className="mb-5 mt-1 space-y-2">
+                      {job.description && (
+                        <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                          <strong className="text-neutral-900 dark:text-neutral-200 font-semibold">Role: </strong>
+                          {job.description.replace(/<[^>]+>/g, '')}
+                        </p>
+                      )}
+                      {job.requirements && job.requirements.length > 0 && (
+                        <p className="text-sm text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                          <strong className="text-neutral-900 dark:text-neutral-200 font-semibold">Requirements: </strong>
+                          {job.requirements.join(' • ')}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -178,7 +206,7 @@ export const JobsList = () => {
                       )}
                     </div>
 
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-2 md:mt-0 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
                       <div className="flex flex-wrap gap-2 flex-1">
                         {job.requirements?.slice(0, 4).map((req: any, i: number) => (
                           <span
@@ -194,9 +222,9 @@ export const JobsList = () => {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between md:justify-end w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t border-neutral-100 md:border-none dark:border-neutral-800">
-                        <span className="md:hidden text-xs font-medium text-neutral-400">
-                          {job.createdAt || (job as any).created_at ? new Date(job.createdAt || (job as any).created_at).toLocaleDateString() : 'New'}
+                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto mt-2 sm:mt-0">
+                        <span className="md:hidden text-xs font-medium text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50 px-2.5 py-1 rounded-md">
+                          {formatRelativeTime(job.createdAt || (job as any).created_at)}
                         </span>
                         <Button
                           variant="outline"
