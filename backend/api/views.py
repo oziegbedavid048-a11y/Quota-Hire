@@ -1077,11 +1077,24 @@ class ResumeProxyView(APIView):
             return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            # Securely download the file from Cloudinary and stream it back
+            import cloudinary.utils
+            import urllib.request
+
             resume_field = profile.resume_file
-            resume_field.open('rb')
-            file_data = resume_field.read()
-            resume_field.close()
+            public_id = resume_field.name  # e.g. "media/resumes/OZIEGBE_sttzio"
+
+            # Generate a signed URL for the PDF
+            signed_url, options = cloudinary.utils.cloudinary_url(
+                public_id,
+                resource_type="image",
+                format="pdf",
+                sign_url=True
+            )
+
+            # Securely download the file from the signed URL
+            req = urllib.request.Request(signed_url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req) as file_resp:
+                file_data = file_resp.read()
 
             from django.http import HttpResponse
             response = HttpResponse(file_data, content_type='application/pdf')
