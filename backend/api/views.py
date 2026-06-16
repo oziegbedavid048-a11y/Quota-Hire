@@ -1097,6 +1097,14 @@ class ResumeProxyView(APIView):
             except Exception:
                 # Fallback: try the direct .url property (works if already public)
                 direct_url = resume_field.url
+                # Cloudinary requires .pdf extension to serve PDF files correctly without 401 error
+                if 'cloudinary.com' in direct_url and not direct_url.lower().endswith('.pdf'):
+                    # Sometimes the url might have query params, but usually resume_field.url does not.
+                    if '?' in direct_url:
+                        parts = direct_url.split('?', 1)
+                        direct_url = parts[0] + '.pdf?' + parts[1]
+                    else:
+                        direct_url += '.pdf'
                 return Response({'url': direct_url}, status=status.HTTP_200_OK)
 
         except Exception as e:
