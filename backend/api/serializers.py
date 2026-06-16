@@ -244,6 +244,51 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 # ── Company Applicant Review Serializers ──────────────────────────────────────
 
+import re
+
+def scrub_contact_info(text, user=None, profile=None):
+    if not text:
+        return text
+    
+    # Simple regex to remove email
+    text = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '[Email Hidden]', text)
+    
+    # Phone numbers
+    text = re.sub(r'(?:\+?\d{1,3}[-.\s]?\(?\d{2,4}\)?|\(\d{2,4}\))[-.\s]?\d{3,4}[-.\s]?\d{3,4}', '[Phone Hidden]', text)
+
+    # Street addresses using common keywords
+    addr_pattern = r'\b\d{1,5}\s+[a-zA-Z0-9\s.,-]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way|Plaza|Plz|Square|Sq|Close|Crescent|Estate)\b'
+    text = re.sub(addr_pattern, '[Address Hidden]', text, flags=re.IGNORECASE)
+
+    # Specific scrubbing based on actual user data (bulletproof)
+    strings_to_hide = []
+    if user and user.location:
+        strings_to_hide.append(user.location)
+    if profile:
+        for field in ['street_address', 'city', 'country', 'postal_code', 'phone_number']:
+            val = getattr(profile, field, None)
+            if val and len(val) > 2:
+                strings_to_hide.append(val)
+                
+    # Also grab parts of the address (like hiding 'Lagos' if 'Lagos, Nigeria' was extracted)
+    for val in list(strings_to_hide):
+        if ',' in val:
+            parts = [p.strip() for p in val.split(',')]
+            for p in parts:
+                if len(p) > 3 and p not in strings_to_hide:
+                    strings_to_hide.append(p)
+                    
+    # Sort strings by length descending to replace the longest matching strings first
+    strings_to_hide.sort(key=len, reverse=True)
+    
+    for s in strings_to_hide:
+        # Create a regex to match the exact string case-insensitively
+        escaped_s = re.escape(s)
+        # Use regex to replace without word boundaries to catch variations
+        text = re.sub(escaped_s, '[Location Hidden]', text, flags=re.IGNORECASE)
+
+    return text
+
 class SafeEmployeeProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployeeProfile
@@ -270,9 +315,24 @@ class CompanyApplicantSerializer(serializers.ModelSerializer):
 
     def get_employee_profile(self, obj):
         try:
-            return SafeEmployeeProfileSerializer(obj.employee.employee_profile).data
+            profile = obj.employee.employee_profile
+            data = SafeEmployeeProfileSerializer(profile).data
+            
+            # Scrub bio using exact profile data
+            if data.get('bio'):
+                data['bio'] = scrub_contact_info(data['bio'], user=obj.employee, profile=profile)
+                
+            return data
         except EmployeeProfile.DoesNotExist:
             return None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Scrub cover letter
+        if data.get('cover_letter'):
+            profile = getattr(instance.employee, 'employee_profile', None)
+            data['cover_letter'] = scrub_contact_info(data['cover_letter'], user=instance.employee, profile=profile)
+        return data
 
     def get_avatar_url(self, obj):
         request = self.context.get('request')
