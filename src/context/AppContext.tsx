@@ -138,6 +138,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     init();
+
+    // Background polling for real-time notifications
+    const pollInterval = setInterval(async () => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        try {
+          const notifData = await apiFetch('/notifications/') || [];
+          const notifs = Array.isArray(notifData) ? notifData : (notifData?.results || []);
+          setState(prev => ({
+            ...prev,
+            notifications: notifs.map((n: any) => ({ ...n, id: n.id.toString(), createdAt: n.created_at })) as any
+          }));
+        } catch (e) {
+          // silently ignore polling errors
+        }
+      }
+    }, 15000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   const fetchData = async (showLoading: boolean = true) => {
@@ -251,7 +270,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         savedJobDates,
         jobs: normalizedJobs,
         applications: applications.map(a => ({ id: a.id.toString(), ...a })) as any,
-        notifications: notifications.map((n: any) => ({ id: n.id.toString(), ...n })) as any,
+        notifications: notifications.map((n: any) => ({ ...n, id: n.id.toString(), createdAt: n.created_at })) as any,
         loading: false,
         appError: null
       }));

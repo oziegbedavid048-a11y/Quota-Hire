@@ -56,7 +56,9 @@ export const DashboardHeader = () => {
           <Link to="/notifications" className="relative p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-500 rounded-full border-2 border-white dark:border-black/30"></span>
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-neutral-950">
+                {unreadCount}
+              </span>
             )}
           </Link>
           
