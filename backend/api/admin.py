@@ -157,18 +157,30 @@ class JobAdmin(admin.ModelAdmin):
 
     @admin.action(description='✅ Approve selected jobs')
     def approve_jobs(self, request, queryset):
-        updated = queryset.update(status='approved')
-        self.message_user(request, f'{updated} job(s) approved.')
+        count = 0
+        for job in queryset:
+            job.status = 'approved'
+            job.save()
+            count += 1
+        self.message_user(request, f'{count} job(s) approved.')
 
     @admin.action(description='❌ Reject selected jobs')
     def reject_jobs(self, request, queryset):
-        updated = queryset.update(status='rejected')
-        self.message_user(request, f'{updated} job(s) rejected.')
+        count = 0
+        for job in queryset:
+            job.status = 'rejected'
+            job.save()
+            count += 1
+        self.message_user(request, f'{count} job(s) rejected.')
 
     @admin.action(description='🔒 Close selected jobs')
     def close_jobs(self, request, queryset):
-        updated = queryset.update(status='closed')
-        self.message_user(request, f'{updated} job(s) closed.')
+        count = 0
+        for job in queryset:
+            job.status = 'closed'
+            job.save()
+            count += 1
+        self.message_user(request, f'{count} job(s) closed.')
 
 
 # ── Application Admin ─────────────────────────────────────────────────────────
@@ -265,28 +277,48 @@ class ApplicationAdmin(admin.ModelAdmin):
 
     @admin.action(description='👀 Mark as Under Review')
     def mark_under_review(self, request, queryset):
-        updated = queryset.update(status='under_review')
-        self.message_user(request, f'{updated} application(s) marked as Under Review.')
+        count = 0
+        for app in queryset:
+            app.status = 'under_review'
+            app.save()
+            count += 1
+        self.message_user(request, f'{count} application(s) marked as Under Review.')
 
     @admin.action(description='📅 Mark for Interview')
     def mark_interview(self, request, queryset):
-        updated = queryset.update(status='interview')
-        self.message_user(request, f'{updated} application(s) marked for Interview.')
+        count = 0
+        for app in queryset:
+            app.status = 'interview'
+            app.save()
+            count += 1
+        self.message_user(request, f'{count} application(s) marked for Interview.')
 
     @admin.action(description='🤔 Mark as Decision Pending')
     def mark_decision(self, request, queryset):
-        updated = queryset.update(status='decision')
-        self.message_user(request, f'{updated} application(s) marked as Decision Pending.')
+        count = 0
+        for app in queryset:
+            app.status = 'decision'
+            app.save()
+            count += 1
+        self.message_user(request, f'{count} application(s) marked as Decision Pending.')
 
     @admin.action(description='✅ Accept selected applications')
     def accept_applications(self, request, queryset):
-        updated = queryset.update(status='accepted')
-        self.message_user(request, f'{updated} application(s) accepted.')
+        count = 0
+        for app in queryset:
+            app.status = 'accepted'
+            app.save()
+            count += 1
+        self.message_user(request, f'{count} application(s) accepted.')
 
     @admin.action(description='❌ Reject selected applications')
     def reject_applications(self, request, queryset):
-        updated = queryset.update(status='rejected')
-        self.message_user(request, f'{updated} application(s) rejected.')
+        count = 0
+        for app in queryset:
+            app.status = 'rejected'
+            app.save()
+            count += 1
+        self.message_user(request, f'{count} application(s) rejected.')
 
 
 # ── Notification Admin ────────────────────────────────────────────────────────
