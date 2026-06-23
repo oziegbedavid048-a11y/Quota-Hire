@@ -31,7 +31,26 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
-        data = super().validate(attrs)
+        from rest_framework.exceptions import AuthenticationFailed
+        
+        email = attrs.get(self.username_field)
+        password = attrs.get('password')
+
+        if email and password:
+            user = CustomUser.objects.filter(**{self.username_field: email}).first()
+            if not user:
+                raise AuthenticationFailed('No account found please sign up')
+            if not user.check_password(password):
+                raise AuthenticationFailed('Password incorrect')
+
+        try:
+            data = super().validate(attrs)
+        except AuthenticationFailed as e:
+            # Re-raise if we raised it, or if it's from super
+            raise e
+        except Exception:
+            raise AuthenticationFailed('An unexpected error occurred during login. Please try again.')
+
         saved_entries = SavedJob.objects.filter(user=self.user).select_related('job').order_by('-saved_at')
         data['user'] = {
             'id':              self.user.id,

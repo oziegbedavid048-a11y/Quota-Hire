@@ -62,7 +62,12 @@ export const Login = () => {
         setLockoutTime(30);
         setGlobalError('Too many failed attempts. Please wait 30 seconds.');
       } else {
-        setGlobalError(error.message || 'Invalid credentials. Please try again.');
+        const msg = error.message || '';
+        if (msg === 'No account found please sign up' || msg === 'Password incorrect') {
+          setGlobalError(msg);
+        } else {
+          setGlobalError('An unexpected error occurred. Please try again.');
+        }
       }
     }
   };

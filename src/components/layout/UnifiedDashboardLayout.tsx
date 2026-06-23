@@ -116,7 +116,7 @@ function PillSidebar({ isOpen, closeSidebar, user }: { isOpen: boolean; closeSid
     { name: 'My Profile', href: getProfileLink(), icon: UserIcon },
     ...(user?.role === 'employee' ? [
       { name: 'App Tracker', href: '/employee/tracker', icon: LayoutList },
-      { name: 'AI Coach', href: '/employee/ai-coach', icon: Sparkles }
+      { name: 'CV Generator', href: '/employee/cv-generator', icon: Sparkles }
     ] : []),
     ...(user?.role === 'company' ? [
       { name: 'Post Job', href: '/company/post-job', icon: Briefcase },
@@ -150,15 +150,15 @@ function PillSidebar({ isOpen, closeSidebar, user }: { isOpen: boolean; closeSid
         <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-1.5 custom-scrollbar">
           {links.map((link) => {
             const isActive = location.pathname === link.href || (link.href !== '/dashboard' && location.pathname.startsWith(link.href));
-            const isAICoach = link.name === 'AI Coach';
+            const isCVGenerator = link.name === 'CV Generator';
 
-            if (isAICoach) {
+            if (isCVGenerator) {
               return (
                 <button
                   key={link.name}
                   onClick={() => {
                     closeSidebar();
-                    toast('🚀 AI Coach is coming soon!', {
+                    toast('🚀 CV Generator is coming soon!', {
                       description: 'This feature will be available very soon. Stay tuned!',
                       duration: 4000,
                     });
