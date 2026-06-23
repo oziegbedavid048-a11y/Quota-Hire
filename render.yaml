@@ -16,10 +16,6 @@ services:
         value: "*"
       - key: SECRET_KEY
         generateValue: true
-      - key: APPWRITE_ENDPOINT
-        value: "https://nyc.cloud.appwrite.io/v1"
-      - key: APPWRITE_PROJECT_ID
-        value: "6a228524002b449caeac"
       - key: EMAIL_HOST
         value: "smtp.gmail.com"
       - key: EMAIL_PORT

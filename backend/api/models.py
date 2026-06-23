@@ -25,7 +25,6 @@ class CustomUser(AbstractUser):
     Adds role (employee / company / admin) and setup_completed flag.
     """
     role             = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.EMPLOYEE)
-    appwrite_id      = models.CharField(max_length=100, unique=True, null=True, blank=True)
     avatar           = models.ImageField(upload_to='avatars/', null=True, blank=True)
     setup_completed  = models.BooleanField(default=False)
     location         = models.CharField(max_length=200, blank=True)
@@ -161,7 +160,6 @@ class Job(models.Model):
         related_name='posted_jobs',
         limit_choices_to={'role': UserRole.COMPANY},
     )
-    appwrite_id      = models.CharField(max_length=100, unique=True, null=True, blank=True)
     title            = models.CharField(max_length=300)
     description      = models.TextField()
     requirements     = models.JSONField(default=list)   # ["5+ years SaaS", ...]
@@ -227,7 +225,6 @@ class Application(models.Model):
         related_name='applications',
         limit_choices_to={'role': UserRole.EMPLOYEE},
     )
-    appwrite_id  = models.CharField(max_length=100, unique=True, null=True, blank=True)
     status       = models.CharField(max_length=20, choices=ApplicationStatus.choices, default=ApplicationStatus.PENDING)
     cover_letter = models.TextField(blank=True)
     applied_at   = models.DateTimeField(auto_now_add=True)
@@ -252,7 +249,6 @@ class Notification(models.Model):
     Mirrors: Notification in types.ts
     """
     user       = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications')
-    appwrite_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     title      = models.CharField(max_length=300)
     message    = models.TextField()
     read       = models.BooleanField(default=False)
