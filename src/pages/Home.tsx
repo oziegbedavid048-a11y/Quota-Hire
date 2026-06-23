@@ -84,9 +84,9 @@ export const Home = () => {
               The Future Of Sales Recruting Globally
             </motion.span>
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-8 tracking-tighter text-neutral-900 dark:text-white drop-shadow-sm leading-tight">
-              Hire the closers. <br />
-              <span className="text-accent-600 dark:text-accent-400">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[6rem] xl:text-[7rem] font-serif font-extrabold mb-8 tracking-[0.05em] xl:tracking-[0.08em] text-neutral-900 dark:text-white drop-shadow-lg leading-[1.1] transform scale-y-110 origin-bottom">
+              <span className="inline-block hover:scale-105 transition-transform duration-500">Hire the closers.</span> <br />
+              <span className="text-accent-600 dark:text-accent-400 inline-block hover:scale-105 transition-transform duration-500">
                 Land the quota.
               </span>
             </h1>
