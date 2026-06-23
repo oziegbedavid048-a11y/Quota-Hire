@@ -20,9 +20,6 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
-APPWRITE_ENDPOINT = config('APPWRITE_ENDPOINT', default='https://nyc.cloud.appwrite.io/v1')
-APPWRITE_PROJECT_ID = config('APPWRITE_PROJECT_ID', default='6a228524002b449caeac')
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

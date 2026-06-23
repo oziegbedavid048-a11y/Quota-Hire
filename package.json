@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "homepage": "https://oziegbedavid048-a11y.github.io/Quota-Hire",
   "scripts": {
     "dev": "npx vite",
     "build": "npx vite build",
