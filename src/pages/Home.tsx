@@ -47,10 +47,12 @@ export const Home = () => {
 
   const readyToCrushRef = useRef<HTMLElement>(null);
   const isReadyToCrushInView = useInView(readyToCrushRef, { amount: 0.3 });
+  const revenueRealityRef = useRef<HTMLElement>(null);
+  const isRevenueRealityInView = useInView(revenueRealityRef, { amount: 0.3 });
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-neutral-950 relative">
-      <ShaderAnimation isPaused={isWhyQuotaHireInView || isGetInTouchInView || isHowItWorksInView || isReadyToCrushInView} />
+      <ShaderAnimation isPaused={isWhyQuotaHireInView || isGetInTouchInView || isHowItWorksInView || isReadyToCrushInView || isRevenueRealityInView} />
 
       {/* Shader Animation Hero */}
       <section className="relative z-10 min-h-[90vh] flex items-center justify-center overflow-hidden">
@@ -150,7 +152,7 @@ export const Home = () => {
       </section>
 
       {/* The Revenue Reality Section - Polished Redesign */}
-      <section className="py-24 relative overflow-hidden">
+      <section ref={revenueRealityRef} className="py-24 relative overflow-hidden">
         {/* Subtle background glow */}
         <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-30 dark:opacity-20 pointer-events-none">
           <div className="w-full max-w-4xl h-[400px] bg-accent-500/10 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-screen" />
@@ -158,10 +160,10 @@ export const Home = () => {
 
         <div className="container mx-auto px-4 max-w-5xl relative z-10">
           <div className="text-center mb-16">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400 text-xs font-bold uppercase tracking-widest mb-6 border border-accent-100 dark:border-accent-800/30">
-              <BarChart3 size={14} /> The Revenue Reality
+            <span className="block text-accent-600 dark:text-accent-400 text-sm font-semibold uppercase tracking-[0.2em] mb-4">
+              The Revenue Reality
             </span>
-            <h2 className="text-3xl md:text-4xl font-display font-extrabold text-neutral-900 dark:text-white mb-6">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-medium text-neutral-900 dark:text-white mb-6 tracking-tight">
               Aligning Sales Structure with Revenue Targets
             </h2>
             <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
