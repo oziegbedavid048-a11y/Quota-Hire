@@ -6,7 +6,7 @@
   <script type="text/javascript">
     // GitHub Pages SPA redirect trick
     // Preserves the path and query string, redirects to index.html
-    var segmentCount = 1; // number of path segments in the repo name (Quota-Hire = 1)
+    var segmentCount = 0; // number of path segments in the repo name (0 for custom domain)
     var l = window.location;
     l.replace(
       l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
