@@ -13,18 +13,24 @@ services:
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        value: "*"
+        value: "quotahire-backend.onrender.com,localhost"
       - key: SECRET_KEY
         generateValue: true
+      - key: FRONTEND_URL
+        value: "https://quotahire.org"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://quotahire.org,http://quotahire.org,http://localhost:5173"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://quotahire-backend.onrender.com,https://quotahire.org"
       - key: EMAIL_HOST
         value: "smtp.gmail.com"
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
         value: "True"
-      # - EMAIL_HOST_USER
-      # - EMAIL_HOST_PASSWORD
-      # - APPWRITE_API_KEY
+      # DATABASE_URL must be set manually in Render Dashboard (contains secret credentials)
+      # COURIER_AUTH_TOKEN must be set manually in Render Dashboard
+      # CLOUDINARY_URL must be set manually in Render Dashboard (if using file uploads)
 
   - type: web
     name: quotahire-frontend
