@@ -54,6 +54,9 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   }
 
   if (!response.ok) {
+    if (response.status >= 500) {
+      throw new ApiError('An unexpected server error occurred. Please try again later.', response.status);
+    }
     let errorMessage = 'An unexpected error occurred.';
     try {
       const errorData = await response.json();

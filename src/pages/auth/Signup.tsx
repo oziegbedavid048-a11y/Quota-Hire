@@ -120,7 +120,12 @@ export const Signup = () => {
       setShowVerificationModal(true);
     } catch (error: any) {
       console.error(error);
-      setGlobalError(error.message || 'An error occurred during registration.');
+      const msg = error.message || '';
+      if (msg.toLowerCase().includes('already exists')) {
+        setGlobalError('An account with this email already exists.');
+      } else {
+        setGlobalError('Registration failed. Please try again.');
+      }
     }
   };
 
