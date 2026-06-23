@@ -1,9 +1,9 @@
-name: Deploy Frontend to cPanel
+name: Deploy Frontend to GitHub Pages
 
 on:
   push:
     branches:
-      - main # Change this if your main branch is named differently (e.g., master)
+      - main
     paths:
       - 'src/**'
       - 'public/**'
@@ -11,11 +11,12 @@ on:
       - 'vite.config.ts'
       - 'index.html'
 
-jobs:
-  web-deploy:
-    name: Build and Deploy
-    runs-on: ubuntu-latest
+permissions:
+  contents: write
 
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
     steps:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
@@ -37,14 +38,9 @@ jobs:
           VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
 
-      - name: 📂 Sync files to cPanel
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: 🚀 Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftp
-          port: 21
-          local-dir: ./dist/
-          server-dir: /public_html/
-          dangerous-clean-slate: false # Will not wipe the whole directory, just overwrite/update files safely
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          cname: quotahire.org
