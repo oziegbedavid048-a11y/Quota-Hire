@@ -126,7 +126,7 @@ STORAGES = {
 }
 
 # CSRF Trusted Origins for Render (needed for admin login)
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost,http://127.0.0.1').split(',')
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://quotahire-backend.onrender.com,https://quotahire.org,http://localhost,http://127.0.0.1').split(',')
 
 # Media files (uploads)
 MEDIA_URL = '/media/'
@@ -166,7 +166,7 @@ SIMPLE_JWT = {
 }
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://quotahire.org,http://quotahire.org,https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Courier API Settings ──────────────────────────────────────────────────────
