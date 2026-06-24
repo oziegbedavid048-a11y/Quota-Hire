@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { PasswordStrengthMeter } from '../../components/ui/PasswordStrengthMeter';
 import { ShaderAnimation } from '../../components/ui/ShaderAnimation';
+import { Logo } from '../../components/ui/Logo';
 import { useAppContext } from '../../context/AppContext';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -174,7 +175,7 @@ export const Signup = () => {
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
                 className="w-14 h-14 sm:w-16 sm:h-16 mx-auto flex items-center justify-center mb-4 sm:mb-6 drop-shadow-md"
               >
-                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-full h-full object-contain" />
+                <Logo size={60} />
               </motion.div>
               <h1 className="text-xl sm:text-2xl font-display font-bold text-neutral-900 dark:text-white mb-1 sm:mb-2 tracking-tight">
                 Create an account

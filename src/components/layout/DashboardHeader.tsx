@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Briefcase, Menu, LogOut, Search, User as UserIcon, Bell } from 'lucide-react';
+import { Menu, LogOut, Search, User as UserIcon, Bell } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { ThemeToggle } from '../ui/ThemeToggle';
+import { Logo } from '../ui/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const DashboardHeader = () => {
@@ -28,8 +28,9 @@ export const DashboardHeader = () => {
   const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-[15px] bg-white/30 dark:bg-black/30 border-b border-white/20 dark:border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
-      <div className="px-4 md:px-6 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-50 w-full px-4 pt-4">
+      <div className="max-w-7xl mx-auto rounded-[32px] border border-white/50 dark:border-white/10 bg-white/30 dark:bg-neutral-950/30 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+      <div className="px-5 h-16 flex items-center justify-between">
         
         {/* Left Side: Mobile Menu Button + Logo */}
         <div className="flex items-center gap-4">
@@ -40,18 +41,15 @@ export const DashboardHeader = () => {
           </button>
           
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="bg-accent-600 text-white p-2 rounded-xl">
-              <Briefcase size={22} />
-            </div>
+            <Logo size={36} />
             <span className="font-display font-bold text-xl tracking-tight text-neutral-900 dark:text-white hidden sm:block">
               Quota Hire
             </span>
           </Link>
         </div>
 
-        {/* Right Side: Profile Photo */}
+        {/* Right Side: Profile & Actions */}
         <div className="flex items-center gap-3">
-          <ThemeToggle />
           
           <Link to="/notifications" className="relative p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
             <Bell size={20} />
@@ -130,6 +128,7 @@ export const DashboardHeader = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </header>
   );
 };

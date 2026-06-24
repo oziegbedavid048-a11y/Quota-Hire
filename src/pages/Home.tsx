@@ -48,7 +48,7 @@ export const Home = () => {
   const readyToCrushRef = useRef<HTMLElement>(null);
   const isReadyToCrushInView = useInView(readyToCrushRef, { amount: 0.3 });
   const revenueRealityRef = useRef<HTMLElement>(null);
-  const isRevenueRealityInView = useInView(revenueRealityRef, { amount: 0.3 });
+  const isRevenueRealityInView = useInView(revenueRealityRef, { amount: 0.1 });
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-neutral-950 relative">
