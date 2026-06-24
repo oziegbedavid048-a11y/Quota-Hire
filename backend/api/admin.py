@@ -186,18 +186,6 @@ class JobAdmin(admin.ModelAdmin):
 
 # ── Application Admin ─────────────────────────────────────────────────────────
 
-@admin.register(Application)
-class ApplicationAdmin(admin.ModelAdmin):
-    list_display    = ('employee', 'job', 'status', 'status_badge', 'applied_at', 'edit_button', 'resume_link', 'cv_link')
-    list_display_links = ('employee', 'edit_button')
-    list_editable   = ('status',)
-    list_filter     = ('status', 'applied_at')
-    search_fields   = ('employee__email', 'job__title', 'cover_letter')
-    ordering        = ('-applied_at',)
-    readonly_fields = ('applied_at', 'updated_at')
-    actions         = ['mark_under_review', 'mark_interview', 'mark_decision', 'accept_applications', 'reject_applications']
-
-
 class GeneratedCVInline(admin.StackedInline):
     """Inline to show the generated CV on each Application change page."""
     model        = GeneratedCV
@@ -230,6 +218,24 @@ class GeneratedCVInline(admin.StackedInline):
                 'line-height:1.6;">{}</div>', obj.cover_letter_text
             )
         return format_html('<span style="color:#94a3b8;">No cover letter</span>')
+
+@admin.register(Application)
+class ApplicationAdmin(admin.ModelAdmin):
+    list_display    = ('employee', 'job', 'status', 'status_badge', 'applied_at', 'edit_button', 'resume_link', 'cv_link')
+    list_display_links = ('employee', 'edit_button')
+    list_editable   = ('status',)
+    list_filter     = ('status', 'applied_at')
+    search_fields   = ('employee__email', 'job__title', 'cover_letter')
+    ordering        = ('-applied_at',)
+    readonly_fields = ('applied_at', 'updated_at')
+    actions         = ['mark_under_review', 'mark_interview', 'mark_decision', 'accept_applications', 'reject_applications']
+    inlines         = [GeneratedCVInline]
+
+    @admin.display(description='CV')
+    def cv_link(self, obj):
+        if hasattr(obj, 'generatedcv'):
+            return format_html('<span style="color:#10b981;font-weight:bold;">✅ Attached</span>')
+        return format_html('<span style="color:#94a3b8;">—</span>')
 
     @admin.display(description='Status')
     def status_badge(self, obj):
