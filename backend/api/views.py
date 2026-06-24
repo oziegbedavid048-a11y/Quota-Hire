@@ -234,7 +234,7 @@ class RegisterView(generics.CreateAPIView):
                     'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
                 }, settings.SECRET_KEY, algorithm='HS256')
                 
-                frontend_url = settings.FRONTEND_URL
+                frontend_url = settings.FRONTEND_URL.strip()
                 verify_link = f"{frontend_url}/verify-email?token={token}"
                 display_name = user.get_full_name() or user.username
                 
@@ -554,7 +554,7 @@ class SendVerificationEmailView(APIView):
             'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
         }, settings.SECRET_KEY, algorithm='HS256')
         
-        frontend_url = settings.FRONTEND_URL
+        frontend_url = settings.FRONTEND_URL.strip()
         verify_link = f"{frontend_url}/verify-email?token={token}"
         display_name = name or email.split('@')[0]
         
@@ -592,7 +592,7 @@ class ForgotPasswordView(APIView):
             'exp': timezone.now() + timedelta(hours=1)
         }, settings.SECRET_KEY, algorithm='HS256')
 
-        frontend_url = settings.FRONTEND_URL
+        frontend_url = settings.FRONTEND_URL.strip()
         reset_link = f"{frontend_url}/reset-password?token={token}"
 
         from .email_templates import get_recovery_email_html, send_courier_email

@@ -5,6 +5,7 @@ import { ArrowLeft, Mail, Lock, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { ShaderAnimation } from '../../components/ui/ShaderAnimation';
+import { Logo } from '../../components/ui/Logo';
 import { useAppContext } from '../../context/AppContext';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -121,7 +122,7 @@ export const Login = () => {
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
                 className="w-16 h-16 mx-auto flex items-center justify-center mb-6 drop-shadow-md"
               >
-                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-full h-full object-contain" />
+                <Logo size={64} />
               </motion.div>
               <h1 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-2 tracking-tight">
                 Secure Login

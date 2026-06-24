@@ -12,7 +12,7 @@ import {
 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { Button } from '../ui/Button';
-import { ThemeToggle } from '../ui/ThemeToggle';
+import { Logo } from '../ui/Logo';
 export const Navbar = () => {
   const { currentUser, logout, notifications, markNotificationRead } =
   useAppContext();
@@ -49,7 +49,7 @@ export const Navbar = () => {
       <div className="max-w-6xl mx-auto rounded-[32px] border border-white/50 dark:border-white/10 bg-white/30 dark:bg-neutral-950/30 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
       <div className="px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Quota Hire Logo" className="w-10 h-10 object-contain" />
+          <Logo size={38} />
           <span className="font-display font-bold text-xl tracking-tight text-neutral-900 dark:text-white">
             Quota Hire
           </span>
@@ -69,7 +69,6 @@ export const Navbar = () => {
 
               <Link to="/contact" className="text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Contact</Link>
               <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-700"></div>
-              <ThemeToggle />
               <Link to="/login">
                 <Button variant="ghost" size="sm">
                   Log in
@@ -96,8 +95,6 @@ export const Navbar = () => {
               </Link>
 
               <div className="flex items-center gap-2 ml-4 border-l border-neutral-200 dark:border-neutral-800 pl-4 relative">
-                <ThemeToggle />
-
                 <button
                 className="relative p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}>
@@ -198,11 +195,9 @@ export const Navbar = () => {
 
         {/* Mobile Menu Toggle */}
         <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle />
           <button
             className="p-2 text-neutral-900 dark:text-white"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>

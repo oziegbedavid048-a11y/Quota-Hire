@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, AlertTriangle, Loader2, Mail, ArrowRight, RefreshCw } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Mail, ArrowRight, RefreshCw } from 'lucide-react';
+import { Logo } from '../../components/ui/Logo';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://quotahire-backend.onrender.com/api';
 
@@ -102,11 +103,7 @@ export const VerifyEmail = () => {
               transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
               className="w-14 h-14 mx-auto mb-6"
             >
-              <img
-                src={`${import.meta.env.BASE_URL}logo.png`}
-                alt="Quota Hire"
-                className="w-full h-full object-contain drop-shadow-sm"
-              />
+              <Logo size={56} />
             </motion.div>
 
             <AnimatePresence mode="wait">

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Quota Hire – Logo Final</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #e8e8e8;
+    font-family: system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 32px;
+    gap: 40px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 22px; font-weight: 800; color: #111; }
+  h2 { font-size: 15px; font-weight: 700; color: #444; margin-bottom: -24px; }
+  .row { display: flex; gap: 20px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .card {
+    background: white;
+    border-radius: 20px;
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  }
+  .card label { font-size: 12px; font-weight: 600; color: #777; text-align: center; }
+  .dark { background: #111; }
+  .dark label { color: #888; }
+  .nav-demo {
+    background: rgba(255,255,255,0.35);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 32px;
+    border: 1px solid rgba(255,255,255,0.6);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  }
+  .nav-demo span { font-size: 19px; font-weight: 800; color: #111; letter-spacing: -0.4px; }
+  .auth-card {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 24px;
+    padding: 32px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+</style>
+</head>
+<body>
+
+  <h1>✅ Quota Hire — Logo (Briefcase Perfectly Centred)</h1>
+
+  <!--
+    MATH:
+    SVG canvas: 100×100. Centre point: (50, 50).
+
+    Briefcase:
+      – Body:   width=22, height=14  → x = 50-11 = 39,  y = 50-7  = 43  (bottom = 57)
+      – Handle: height=7 above body  → handle top y = 43-7 = 36
+      – Total height = 7 + 14 = 21
+      – Vertical centre = 36 + 21/2 = 36 + 10.5 = 46.5  … close but let's shift:
+
+    Revised (body + handle centred so midpoint = 50):
+      – Total height = 20  → top = 40, bottom = 60
+      – Handle occupies top 6px: y=40 to y=46
+      – Body occupies bottom 14px: y=46 to y=60
+      – Horizontal: width=22, x=39 to x=61  (centre = 50 ✓)
+
+    Inner circle r=21 → max reach from centre = 21.
+    Furthest corner of body: (39, 60) → dist = √(11²+10²) = √(121+100) = √221 ≈ 14.9  ✓ safe
+    Handle top: (50, 40) → dist = 10  ✓ safe
+  -->
+
+  <!-- ── REUSABLE LOGO SYMBOL ── define once, use everywhere via <use> -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <g id="qh-logo">
+        <!-- Outer dark green ring -->
+        <circle cx="50" cy="50" r="48" fill="#1A6515"/>
+        <!-- Lime green ring -->
+        <circle cx="50" cy="50" r="35" fill="#5DDE2A"/>
+        <!-- Centre dark green disc -->
+        <circle cx="50" cy="50" r="21" fill="#1A6515"/>
+
+        <!-- BRIEFCASE — perfectly centred at (50, 50) -->
+        <!-- Body: x=39→61, y=46→60 — centred horizontally & vertically -->
+        <rect x="39" y="46" width="22" height="14" rx="2.5" fill="white"/>
+        <!-- Handle arch: from (43,46) curves up to y=40 and back to (57,46) -->
+        <path d="M43.5 46 L43.5 42 Q43.5 40 50 40 Q56.5 40 56.5 42 L56.5 46"
+              stroke="white" stroke-width="2.8" fill="none"
+              stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Horizontal divider at vertical midpoint of body: y=53 -->
+        <rect x="39" y="52.5" width="22" height="2" rx="1" fill="#1A6515"/>
+        <!-- Centre clasp: x=47→55, y=51→56 -->
+        <rect x="47" y="51" width="6" height="5.5" rx="1.5" fill="#1A6515"/>
+      </g>
+    </defs>
+  </svg>
+
+  <div class="row">
+
+    <!-- Large -->
+    <div class="card">
+      <label>120 px — Light BG</label>
+      <svg width="120" height="120" viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+    </div>
+
+    <!-- Sizes -->
+    <div class="card">
+      <label>64 / 40 / 32 / 20 px</label>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <svg width="64"  height="64"  viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+        <svg width="40"  height="40"  viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+        <svg width="32"  height="32"  viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+        <svg width="20"  height="20"  viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+      </div>
+    </div>
+
+    <!-- Dark -->
+    <div class="card dark">
+      <label>On dark background</label>
+      <svg width="80" height="80" viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+    </div>
+
+  </div>
+
+  <!-- NAVBAR -->
+  <h2>In the navigation bar</h2>
+  <div style="background:linear-gradient(120deg,#d8f5d0,#dff0ff);padding:28px 48px;border-radius:24px;width:100%;max-width:680px;">
+    <div class="nav-demo">
+      <svg width="38" height="38" viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+      <span>Quota Hire</span>
+    </div>
+  </div>
+
+  <!-- AUTH PAGE -->
+  <h2>On Login / Signup page</h2>
+  <div style="background:linear-gradient(135deg,#0a1f12,#0e2a1a);border-radius:24px;padding:32px 40px;width:100%;max-width:380px;">
+    <div class="auth-card">
+      <svg width="72" height="72" viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+      <span style="color:white;font-weight:800;font-size:20px;margin-top:6px;">Secure Login</span>
+      <span style="color:rgba(255,255,255,0.5);font-size:13px;">Access your Quota Hire portal</span>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <h2>In the footer</h2>
+  <div style="background:#f9f9f9;border-top:1px solid #e0e0e0;width:100%;max-width:680px;padding:28px 40px;border-radius:20px;display:flex;align-items:center;gap:10px;">
+    <svg width="32" height="32" viewBox="0 0 100 100"><use href="#qh-logo"/></svg>
+    <span style="font-size:18px;font-weight:800;color:#111;">Quota Hire</span>
+  </div>
+
+  <p style="color:#999;font-size:13px;margin-top:8px;">
+    Happy with this? Say <strong>"use this logo"</strong> and I'll apply it everywhere on the site. 🚀
+  </p>
+
+</body>
+</html>

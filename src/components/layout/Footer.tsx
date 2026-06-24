@@ -2,7 +2,8 @@ import React from 'react';
 import type { ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Facebook, Twitter, Instagram, Linkedin, Briefcase } from 'lucide-react';
+import { Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Logo } from '../ui/Logo';
 
 interface FooterLink {
 	title: string;
@@ -62,9 +63,7 @@ export const Footer = () => {
 			<div className="grid w-full max-w-6xl gap-8 xl:grid-cols-3 xl:gap-8 mx-auto">
 				<AnimatedContainer className="space-y-4">
 					<Link className="flex items-center gap-2 mb-4" to="/">
-            <div className="bg-accent-600 text-white p-1.5 rounded-md">
-              <Briefcase size={20} />
-            </div>
+            <Logo size={30} />
             <span className="font-display font-bold text-xl tracking-tight text-neutral-900 dark:text-white">
               Quota Hire
             </span>
