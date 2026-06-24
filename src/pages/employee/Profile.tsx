@@ -19,7 +19,7 @@ import {
   User,
   CheckCircle2
 } from 'lucide-react';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
 import { calculateProfileStrength } from '../../utils/profile';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
@@ -33,7 +33,8 @@ type SectionKey =
   | 'qualifications'
   | 'experience'
   | 'education'
-  | 'password';
+  | 'password'
+  | 'generated-cvs';
 
 const SECTION_LABELS: Record<SectionKey, string> = {
   contact: 'Contact & Location',
@@ -43,6 +44,7 @@ const SECTION_LABELS: Record<SectionKey, string> = {
   experience: 'Work Experience',
   education: 'Education',
   password: 'Change Password',
+  'generated-cvs': 'My Tailored CVs',
 };
 
 export const EmployeeProfilePage = () => {
@@ -55,6 +57,7 @@ export const EmployeeProfilePage = () => {
   const [formData, setFormData] = useState<Partial<EmployeeProfile>>({});
   const [passwordData, setPasswordData] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [saving, setSaving] = useState(false);
+  const [generatedCVs, setGeneratedCVs] = useState<any[]>([]);
 
   useEffect(() => {
     if (profile) {
@@ -70,6 +73,7 @@ export const EmployeeProfilePage = () => {
         phoneNumber: profile.phoneNumber || '',
         location: (profile as any).location || '',
       });
+      apiFetch('/cv/my-cvs/').then(res => setGeneratedCVs(res)).catch(() => {});
     }
   }, [profile]);
 
@@ -108,6 +112,25 @@ export const EmployeeProfilePage = () => {
       setPasswordData({ old_password: '', new_password: '', confirm_password: '' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDownloadCV = async (cvId: number) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${API_BASE_URL}/cv/${cvId}/download/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Tailored_CV_${cvId}.pdf`;
+      a.click();
+    } catch (e) {
+      toast.error('Failed to download CV');
     }
   };
 
@@ -185,6 +208,20 @@ export const EmployeeProfilePage = () => {
         },
       ],
     },
+    {
+      group: 'Generated Documents',
+      items: [
+        {
+          key: 'generated-cvs' as SectionKey,
+          icon: FileText,
+          label: 'My Tailored CVs',
+          subtitle: generatedCVs.length ? `${generatedCVs.length} generated CVs` : 'No tailored CVs generated yet.',
+          filled: generatedCVs.length > 0,
+          actionText: 'View',
+          actionColor: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400'
+        }
+      ]
+    }
   ];
 
   /* ── Section modal content ── */
@@ -316,6 +353,27 @@ export const EmployeeProfilePage = () => {
                 value={passwordData.confirm_password}
                 onChange={e => setPasswordData({ ...passwordData, confirm_password: e.target.value })} />
             </div>
+          </div>
+        );
+
+      case 'generated-cvs':
+        return (
+          <div className="space-y-4">
+            {generatedCVs.length === 0 ? (
+              <p className="text-sm text-neutral-500 text-center py-4">You haven't generated any tailored CVs yet. Apply to a job to create one!</p>
+            ) : (
+              generatedCVs.map(cv => (
+                <div key={cv.id} className="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-neutral-900 dark:text-white mb-0.5">{cv.target_role}</p>
+                    <p className="text-xs text-neutral-500">{cv.target_company} • {new Date(cv.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <button onClick={() => handleDownloadCV(cv.id)} className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                    Download PDF
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         );
 
@@ -527,17 +585,19 @@ export const EmployeeProfilePage = () => {
                 {renderSectionContent()}
 
                 {/* Save button */}
-                <button
-                  onClick={isPasswordSection ? handleChangePassword : handleSave}
-                  disabled={saving}
-                  className="mt-5 w-full flex items-center justify-center gap-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-extrabold py-3 sm:py-3.5 rounded-2xl text-sm sm:text-base hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
-                  {saving
-                    ? <span className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    : <Save size={15} />
-                  }
-                  {saving ? 'Saving…' : isPasswordSection ? 'Update Password' : 'Save Changes'}
-                </button>
+                {activeSection !== 'generated-cvs' && (
+                  <button
+                    onClick={isPasswordSection ? handleChangePassword : handleSave}
+                    disabled={saving}
+                    className="mt-5 w-full flex items-center justify-center gap-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-extrabold py-3 sm:py-3.5 rounded-2xl text-sm sm:text-base hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    {saving
+                      ? <span className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      : <Save size={15} />
+                    }
+                    {saving ? 'Saving…' : isPasswordSection ? 'Update Password' : 'Save Changes'}
+                  </button>
+                )}
               </div>
             </motion.div>
           </>

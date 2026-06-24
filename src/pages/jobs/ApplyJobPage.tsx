@@ -8,6 +8,7 @@ import {
 import { EmployeeProfile } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { toast } from 'sonner';
+import { ApplyJobCVWizard } from '../../components/cv/ApplyJobCVWizard';
 
 type FlowState = 'step1' | 'transition' | 'step2' | 'submitting' | 'success';
 
@@ -23,6 +24,10 @@ export const ApplyJobPage = () => {
   const [flowState, setFlowState] = useState<FlowState>('step1');
   const [progress, setProgress] = useState(0);
   const [isContinuing, setIsContinuing] = useState(false);
+
+  // CV Wizard State
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [generatedCvId, setGeneratedCvId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -127,7 +132,7 @@ export const ApplyJobPage = () => {
         skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
       });
 
-      await applyForJob(job.id, '');
+      await applyForJob(job.id, '', generatedCvId || undefined);
       setFlowState('success');
     } catch {
       toast.error('Application failed. Please try again.');
@@ -360,6 +365,34 @@ export const ApplyJobPage = () => {
                     </div>
 
                     <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5 block">
+                          <FileText size={12} /> Tailored CV & Cover Letter
+                        </label>
+                      </div>
+                      
+                      {generatedCvId ? (
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/30 text-sm font-medium flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          Tailored CV and Cover Letter generated and attached!
+                        </div>
+                      ) : (
+                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-3">
+                          <p className="text-xs font-medium text-blue-800 dark:text-blue-300 leading-relaxed">
+                            Stand out by auto-generating a customized CV and Cover Letter tailored specifically to this job description.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setIsWizardOpen(true)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-sm transition flex justify-center items-center gap-2"
+                          >
+                            <PenTool size={14} /> Auto-Generate Tailored Application
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700">
                       <label className="text-xs font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5 mb-1 block">
                         <GraduationCap size={12} /> Education
                       </label>
@@ -472,6 +505,17 @@ export const ApplyJobPage = () => {
           )}
         </motion.div>
       </AnimatePresence>
+
+      <ApplyJobCVWizard
+        job={job}
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        onComplete={(cvId) => {
+          setGeneratedCvId(cvId);
+          setIsWizardOpen(false);
+          toast.success("CV generated successfully. Don't forget to submit your application!");
+        }}
+      />
     </div>
   );
 };

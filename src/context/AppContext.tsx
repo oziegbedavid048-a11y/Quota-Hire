@@ -94,7 +94,7 @@ interface AppContextType extends AppState {
   register: (user: any) => Promise<void>;
   fetchData: (showLoading?: boolean) => Promise<void>;
   postJob: (job: any) => Promise<void>;
-  applyForJob: (jobId: string, coverLetter?: string) => Promise<void>;
+  applyForJob: (jobId: string, coverLetter?: string, generatedCvId?: number) => Promise<void>;
   updateJobStatus: (jobId: string, status: Job['status']) => Promise<void>;
   updateApplicationStatus: (appId: string, status: Application['status']) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
@@ -374,11 +374,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const applyForJob = async (jobId: string, coverLetter?: string) => {
+  const applyForJob = async (jobId: string, coverLetter?: string, generatedCvId?: number) => {
     try {
       await apiFetch(`/jobs/${jobId}/apply/`, {
           method: 'POST',
-          body: JSON.stringify({ cover_letter: coverLetter || '' })
+          body: JSON.stringify({ cover_letter: coverLetter || '', generated_cv_id: generatedCvId })
       });
       await fetchData(false);
       toast.success('Application submitted successfully');

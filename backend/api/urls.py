@@ -28,8 +28,9 @@ urlpatterns = [
 
     # ── CV & Resume ───────────────────────────────────────────────────────────
     path('profile/resume/upload/',  views.ResumeUploadView.as_view(),            name='resume-upload'),
-
-
+    path('cv/save/',                views.SaveGeneratedCVView.as_view(),          name='cv-save'),
+    path('cv/my-cvs/',              views.MyGeneratedCVsView.as_view(),           name='cv-my-list'),
+    path('cv/<int:pk>/download/',   views.DownloadGeneratedCVView.as_view(),      name='cv-download'),
 
     # ── Analytics ─────────────────────────────────────────────────────────────
     path('dashboard/analytics/',    views.DashboardAnalyticsView.as_view(),      name='dashboard-analytics'),

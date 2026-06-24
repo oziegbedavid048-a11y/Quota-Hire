@@ -14,6 +14,7 @@ from .models import (
     Application,
     Notification,
     SavedJob,
+    GeneratedCV,
 )
 
 
@@ -374,3 +375,26 @@ class ShortlistedApplicantSerializer(serializers.ModelSerializer):
         model = ShortlistedApplicant
         fields = ('id', 'application', 'status', 'shortlisted_at', 'updated_at')
         read_only_fields = ('id', 'shortlisted_at', 'updated_at')
+
+
+# ── Generated CV Serializer ───────────────────────────────────────────────────
+
+class GeneratedCVSerializer(serializers.ModelSerializer):
+    download_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = GeneratedCV
+        fields = (
+            'id', 'template_id', 'template_name', 'target_role',
+            'target_company', 'cover_letter_text', 'generated_at',
+            'download_url', 'application', 'work_experience_json',
+        )
+        read_only_fields = ('id', 'generated_at', 'download_url')
+
+    def get_download_url(self, obj):
+        request = self.context.get('request')
+        url = f'/api/cv/{obj.id}/download/'
+        if request:
+            return request.build_absolute_uri(url)
+        return url
+
