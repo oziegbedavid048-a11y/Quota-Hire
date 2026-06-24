@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Outer ring: dark green -->
+  <circle cx="50" cy="50" r="46" fill="#1A6515" />
+
+  <!-- Inner ring: light green -->
+  <circle cx="50" cy="50" r="36" fill="#5DDE2A" />
+
+  <!-- Cut out middle: dark green circle -->
+  <circle cx="50" cy="50" r="24" fill="#1A6515" />
+
+  <!-- Upward arrow shaft (white) -->
+  <rect x="46" y="18" width="8" height="40" rx="3" fill="white" />
+
+  <!-- Arrow head (white triangle pointing up) -->
+  <polygon points="50,8 36,30 64,30" fill="white" />
+
+  <!-- Bottom legs (person stance - white) -->
+  <rect x="38" y="56" width="7" height="24" rx="3.5" transform="rotate(-12 41.5 68)" fill="white" />
+  <rect x="55" y="56" width="7" height="24" rx="3.5" transform="rotate(12 58.5 68)" fill="white" />
+</svg>
