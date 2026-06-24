@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { ThemeToggle } from '../ui/ThemeToggle';
+import { Logo } from '../ui/Logo';
 import { toast } from 'sonner';
 
 function FloatingHeader({ toggleSidebar, user }: { toggleSidebar: () => void; user: any }) {
@@ -40,7 +41,7 @@ function FloatingHeader({ toggleSidebar, user }: { toggleSidebar: () => void; us
         {/* LEFT SIDE: Logo */}
         <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center gap-3">
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Quota Hire Logo" className="w-10 h-10 object-contain" />
+            <Logo size={40} />
             <span className="font-display font-bold text-lg md:text-xl tracking-tight text-neutral-900 dark:text-white hidden sm:block">
               Quota Hire
             </span>
@@ -139,7 +140,7 @@ function PillSidebar({ isOpen, closeSidebar, user }: { isOpen: boolean; closeSid
       >
         <div className="flex items-center justify-between p-5 shrink-0 border-b border-neutral-100 dark:border-neutral-800">
           <Link to="/" className="flex items-center gap-3">
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Quota Hire Logo" className="w-10 h-10 object-contain" />
+            <Logo size={40} />
             <span className="font-display font-bold text-lg text-neutral-900 dark:text-white tracking-tight">Quota Hire</span>
           </Link>
           <button onClick={closeSidebar} className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-500 hover:text-neutral-900 dark:hover:text-white md:hidden">
