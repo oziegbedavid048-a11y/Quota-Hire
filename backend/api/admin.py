@@ -18,6 +18,7 @@ from .models import (
     Application,
     Notification,
     ShortlistedApplicant,
+    GeneratedCV,
 )
 
 
@@ -187,7 +188,7 @@ class JobAdmin(admin.ModelAdmin):
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display    = ('employee', 'job', 'status', 'status_badge', 'applied_at', 'edit_button', 'resume_link')
+    list_display    = ('employee', 'job', 'status', 'status_badge', 'applied_at', 'edit_button', 'resume_link', 'cv_link')
     list_display_links = ('employee', 'edit_button')
     list_editable   = ('status',)
     list_filter     = ('status', 'applied_at')
@@ -195,6 +196,40 @@ class ApplicationAdmin(admin.ModelAdmin):
     ordering        = ('-applied_at',)
     readonly_fields = ('applied_at', 'updated_at')
     actions         = ['mark_under_review', 'mark_interview', 'mark_decision', 'accept_applications', 'reject_applications']
+
+
+class GeneratedCVInline(admin.StackedInline):
+    """Inline to show the generated CV on each Application change page."""
+    model        = GeneratedCV
+    can_delete   = False
+    extra        = 0
+    verbose_name = 'Generated CV'
+    verbose_name_plural = 'Generated CV (from wizard)'
+    readonly_fields = ('template_name', 'template_id', 'target_role', 'target_company',
+                       'generated_at', 'view_cv_link', 'cover_letter_display')
+    fields = ('template_name', 'target_role', 'target_company', 'generated_at',
+              'view_cv_link', 'cover_letter_display')
+
+    @admin.display(description='View CV PDF')
+    def view_cv_link(self, obj):
+        if obj.pk and obj.cv_pdf:
+            url = f'/api/cv/{obj.pk}/download/'
+            return format_html(
+                '<a class="button" style="background:#10b981;color:white;padding:5px 12px;'
+                'border-radius:4px;font-weight:bold;text-decoration:none;" '
+                'href="{}" target="_blank">&#128196; Open CV PDF</a>', url
+            )
+        return format_html('<span style="color:#94a3b8;">No PDF stored</span>')
+
+    @admin.display(description='Cover Letter')
+    def cover_letter_display(self, obj):
+        if obj.cover_letter_text:
+            return format_html(
+                '<div style="white-space:pre-wrap;max-width:700px;background:#f8fafc;'
+                'padding:12px;border-radius:6px;border:1px solid #e2e8f0;font-size:13px;'
+                'line-height:1.6;">{}</div>', obj.cover_letter_text
+            )
+        return format_html('<span style="color:#94a3b8;">No cover letter</span>')
 
     @admin.display(description='Status')
     def status_badge(self, obj):
@@ -374,3 +409,87 @@ class ShortlistedApplicantAdmin(admin.ModelAdmin):
     def edit_button(self, obj):
         url = reverse('admin:api_shortlistedapplicant_change', args=[obj.id])
         return format_html('<a class="button" style="background-color:#417690;color:white;padding:5px 10px;border-radius:4px;font-weight:bold;text-decoration:none;" href="{}">Edit</a>', url)
+
+
+# ── Generated CV Admin ─────────────────────────────────────────────────────────
+
+@admin.register(GeneratedCV)
+class GeneratedCVAdmin(admin.ModelAdmin):
+    list_display    = ('employee_name', 'template_name', 'target_role', 'target_company', 'generated_at', 'view_cv_button', 'has_cover_letter')
+    list_filter     = ('template_id', 'generated_at')
+    search_fields   = ('employee__email', 'employee__first_name', 'employee__last_name', 'target_role', 'target_company')
+    ordering        = ('-generated_at',)
+    readonly_fields = ('generated_at', 'employee', 'application', 'template_id', 'template_name',
+                       'target_role', 'target_company', 'generated_at', 'view_cv_button_detail', 'cover_letter_preview')
+
+    fieldsets = (
+        ('CV Info', {
+            'fields': ('employee', 'application', 'template_name', 'template_id', 'target_role', 'target_company', 'generated_at')
+        }),
+        ('Documents', {
+            'fields': ('view_cv_button_detail', 'cover_letter_preview'),
+        }),
+    )
+
+    @admin.display(description='Employee')
+    def employee_name(self, obj):
+        return obj.employee.get_full_name() or obj.employee.email
+
+    @admin.display(description='View CV')
+    def view_cv_button(self, obj):
+        if obj.cv_pdf:
+            url = f'/api/cv/{obj.pk}/download/'
+            return format_html(
+                '<a class="button" style="background:#10b981;color:white;padding:4px 10px;'
+                'border-radius:4px;font-weight:bold;text-decoration:none;font-size:11px;" '
+                'href="{}" target="_blank">&#128196; View PDF</a>', url
+            )
+        return format_html('<span style="color:#94a3b8;font-size:11px;">No PDF</span>')
+
+    @admin.display(description='CV PDF (click to open)')
+    def view_cv_button_detail(self, obj):
+        if obj.cv_pdf:
+            url = f'/api/cv/{obj.pk}/download/'
+            return format_html(
+                '<a class="button" style="background:#10b981;color:white;padding:8px 16px;'
+                'border-radius:6px;font-weight:bold;text-decoration:none;font-size:14px;" '
+                'href="{}" target="_blank">&#128196; Open Full CV PDF in New Tab</a>', url
+            )
+        return format_html('<span style="color:#94a3b8;">No PDF stored yet</span>')
+
+    @admin.display(description='Has Cover Letter', boolean=True)
+    def has_cover_letter(self, obj):
+        return bool(obj.cover_letter_text)
+
+    @admin.display(description='Cover Letter')
+    def cover_letter_preview(self, obj):
+        if obj.cover_letter_text:
+            return format_html(
+                '<div style="white-space:pre-wrap;max-width:720px;background:#f8fafc;'
+                'padding:16px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;'
+                'line-height:1.7;font-family:Georgia,serif;">{}</div>',
+                obj.cover_letter_text
+            )
+        return format_html('<span style="color:#94a3b8;">No cover letter</span>')
+
+
+# Add cv_link display to ApplicationAdmin
+@admin.display(description='Generated CV')
+def application_cv_link(obj):
+    try:
+        cv = obj.generated_cv
+        if cv and cv.cv_pdf:
+            url = f'/api/cv/{cv.pk}/download/'
+            return format_html(
+                '<a class="button" style="background:#8b5cf6;color:white;padding:5px 10px;'
+                'border-radius:4px;font-weight:bold;text-decoration:none;font-size:11px;" '
+                'href="{}" target="_blank">CV PDF</a>', url
+            )
+    except Exception:
+        pass
+    return format_html('<span style="color:#94a3b8;font-size:11px;">No CV</span>')
+
+ApplicationAdmin.cv_link = application_cv_link
+
+# Patch inlines after GeneratedCVInline is defined (avoids forward-reference issue)
+ApplicationAdmin.inlines = [GeneratedCVInline]

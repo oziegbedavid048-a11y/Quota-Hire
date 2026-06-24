@@ -46,7 +46,7 @@ from django.views.decorators.cache import cache_page
 logger = logging.getLogger(__name__)
 
 from datetime import timedelta
-from .models import CustomUser, EmployeeProfile, CompanyProfile, Job, Application, Notification, SavedJob
+from .models import CustomUser, EmployeeProfile, CompanyProfile, Job, Application, Notification, SavedJob, GeneratedCV
 from .serializers import (
     CustomTokenObtainPairSerializer,
     RegisterSerializer,
@@ -56,6 +56,7 @@ from .serializers import (
     JobSerializer,
     ApplicationSerializer,
     NotificationSerializer,
+    GeneratedCVSerializer,
 )
 
 # ── Resume Parsing Helpers ───────────────────────────────────────────────
@@ -1129,3 +1130,109 @@ class ResumeProxyView(APIView):
             logging.error(f"Error reading resume: {error_details}")
             return Response({'error': str(e), 'details': error_details}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# ── Generated CV Views ────────────────────────────────────────────────────────
+
+class SaveGeneratedCVView(APIView):
+    """
+    POST /api/cv/save/
+    Accepts a base64-encoded PDF + cover letter text + metadata.
+    Creates a GeneratedCV record and also saves the cover letter to the Application.
+    """
+    permission_classes = [IsEmployee]
+
+    def post(self, request):
+        import base64
+
+        data = request.data
+        application_id      = data.get('application_id')
+        template_id         = data.get('template_id', 'T1')
+        template_name       = data.get('template_name', 'Classic Split')
+        target_role         = data.get('target_role', '')
+        target_company      = data.get('target_company', '')
+        cover_letter_text   = data.get('cover_letter_text', '')
+        work_experience_json= data.get('work_experience_json', [])
+        cv_pdf_b64          = data.get('cv_pdf_base64', '')
+
+        # Decode PDF binary
+        cv_pdf_bytes = None
+        if cv_pdf_b64:
+            try:
+                cv_pdf_bytes = base64.b64decode(cv_pdf_b64)
+            except Exception as e:
+                logger.warning(f'CV PDF base64 decode failed: {e}')
+
+        # Resolve the Application
+        application = None
+        if application_id:
+            try:
+                application = Application.objects.get(
+                    pk=application_id,
+                    employee=request.user,
+                )
+                # Also store cover letter on the application itself
+                if cover_letter_text:
+                    application.cover_letter = cover_letter_text
+                    application.save(update_fields=['cover_letter'])
+            except Application.DoesNotExist:
+                pass
+
+        # Delete any previous GeneratedCV for this application to avoid duplicates
+        if application:
+            GeneratedCV.objects.filter(application=application).delete()
+
+        cv_obj = GeneratedCV.objects.create(
+            employee            = request.user,
+            application         = application,
+            template_id         = template_id,
+            template_name       = template_name,
+            target_role         = target_role,
+            target_company      = target_company,
+            cv_pdf              = cv_pdf_bytes,
+            cv_filename         = f'cv_{request.user.id}_{template_id}.pdf',
+            cover_letter_text   = cover_letter_text,
+            work_experience_json= work_experience_json if isinstance(work_experience_json, list) else [],
+        )
+
+        serializer = GeneratedCVSerializer(cv_obj, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class MyGeneratedCVsView(generics.ListAPIView):
+    """
+    GET /api/cv/my-cvs/
+    Returns all GeneratedCV records for the authenticated employee.
+    """
+    serializer_class   = GeneratedCVSerializer
+    permission_classes = [IsEmployee]
+
+    def get_queryset(self):
+        return GeneratedCV.objects.filter(employee=self.request.user).order_by('-generated_at')
+
+
+class DownloadGeneratedCVView(APIView):
+    """
+    GET /api/cv/<pk>/download/
+    Returns the binary PDF for a specific GeneratedCV.
+    Accessible only by the owner employee or admin users.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            cv_obj = GeneratedCV.objects.get(pk=pk)
+        except GeneratedCV.DoesNotExist:
+            return Response({'error': 'CV not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission check: owner or admin only
+        if cv_obj.employee != request.user and not request.user.is_staff and request.user.role != 'admin':
+            return Response({'error': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if not cv_obj.cv_pdf:
+            return Response({'error': 'No PDF stored for this CV.'}, status=status.HTTP_404_NOT_FOUND)
+
+        from django.http import HttpResponse
+        response = HttpResponse(bytes(cv_obj.cv_pdf), content_type='application/pdf')
+        filename = cv_obj.cv_filename or 'cv.pdf'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
