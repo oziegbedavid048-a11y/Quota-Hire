@@ -29,6 +29,11 @@ const TEMPLATE_KEYWORDS: Record<TemplateId, string[]> = {
     'human resources', 'recruiter', 'talent', 'project', 'programme',
     'administrator', 'officer', 'coordinator', 'researcher', 'planner',
   ],
+  T6: ['legal', 'lawyer', 'paralegal', 'attorney', 'counsel', 'contract'],
+  T7: ['software', 'developer', 'engineer', 'programmer', 'tech', 'it', 'data', 'analytics'],
+  T8: ['design', 'creative', 'art', 'graphics', 'ui', 'ux', 'marketing', 'media'],
+  T9: ['academic', 'professor', 'teacher', 'research', 'education', 'tutor'],
+  T10: ['brand', 'communications', 'pr', 'public relations', 'writer', 'editor'],
 };
 
 // ── Score a single template against the job text ─────────────────────────────
@@ -54,10 +59,15 @@ export function selectTemplate(job: Job): { templateId: TemplateId; templateName
 
   const TEMPLATE_NAMES: Record<TemplateId, string> = {
     T1: 'Classic Split',
-    T2: 'Executive Dark',
+    T2: 'Executive Blue',
     T3: 'Vivid Sidebar',
     T4: 'Inverse Green',
     T5: 'Corporate Banner',
+    T6: 'Minimalist White',
+    T7: 'Modern Tech',
+    T8: 'Creative Accent',
+    T9: 'Elegant Serif',
+    T10: 'Bold Typography',
   };
 
   let bestId: TemplateId = 'T1';
