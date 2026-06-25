@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PDFViewer, BlobProvider } from '@react-pdf/renderer';
+import { PDFViewer, pdf } from '@react-pdf/renderer';
 import { Loader2, Send, ChevronRight, ChevronLeft, X, Sparkles, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppContext, apiFetch } from '../../context/AppContext';
@@ -24,6 +24,65 @@ interface ApplyJobCVWizardProps {
   onClose: () => void;
   onComplete: (cvId: number) => void;
 }
+
+const PDFPreview = ({ document, onBlobReady }: { document: React.ReactElement, onBlobReady?: (blob: Blob) => void }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const generatePdf = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const blob = await pdf(document).toBlob();
+        if (isMounted) {
+          const objectUrl = URL.createObjectURL(blob);
+          setUrl(objectUrl);
+          setLoading(false);
+          if (onBlobReady) onBlobReady(blob);
+        }
+      } catch (err: any) {
+        console.error("PDF Render Error:", err);
+        if (isMounted) {
+          setError(err?.message || "Unknown error occurred while generating PDF.");
+          setLoading(false);
+        }
+      }
+    };
+    generatePdf();
+    return () => {
+      isMounted = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [document]); // Re-runs when document reference changes
+
+  if (loading) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center overflow-auto z-10">
+        <p className="text-red-600 font-bold mb-2">Error generating PDF</p>
+        <p className="text-red-500 text-sm whitespace-pre-wrap">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <iframe 
+      src={url!} 
+      className="w-full h-full border-none absolute inset-0 z-0"
+      title="Generated CV Preview"
+    />
+  );
+};
 
 export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobCVWizardProps) {
   const { currentUser } = useAppContext();
@@ -323,29 +382,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                     
                     {/* The PDF viewer rendered inside a scrollable container for mobile */}
                     <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative" style={{ height: '60vh' }}>
-                      <BlobProvider document={renderTemplate()}>
-                        {({ url, loading: pdfLoading, error }) => {
-                          if (pdfLoading) return (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-                              <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                            </div>
-                          );
-                          if (error) return (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center">
-                              <p className="text-red-600 font-bold mb-2">Error generating PDF</p>
-                              <p className="text-red-500 text-sm">{error.message}</p>
-                            </div>
-                          );
-                          if (!url) return null;
-                          return (
-                            <iframe 
-                              src={url} 
-                              className="w-full h-full border-none"
-                              title="Generated CV Preview"
-                            />
-                          );
-                        }}
-                      </BlobProvider>
+                      <PDFPreview document={renderTemplate()} />
                     </div>
 
                     {/* Template Selector */}
@@ -385,18 +422,23 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                     </button>
                   </>
                 ) : (
-                  <BlobProvider document={renderTemplate()}>
-                    {({ blob, loading: pdfLoading }) => (
-                      <button 
-                        onClick={() => handleSaveToDjango(blob)} 
-                        disabled={pdfLoading || saving}
-                        className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center text-sm font-bold transition disabled:opacity-50 shadow-lg shadow-emerald-600/30"
-                      >
-                        {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Send className="w-5 h-5 mr-2" />}
-                        {saving ? 'Saving...' : 'Continue Applying'}
-                      </button>
-                    )}
-                  </BlobProvider>
+                  <button 
+                    onClick={async () => {
+                      setSaving(true);
+                      try {
+                        const blob = await pdf(renderTemplate()).toBlob();
+                        await handleSaveToDjango(blob);
+                      } catch (err: any) {
+                        toast.error(err?.message || 'Failed to generate PDF blob');
+                        setSaving(false);
+                      }
+                    }} 
+                    disabled={saving}
+                    className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center text-sm font-bold transition disabled:opacity-50 shadow-lg shadow-emerald-600/30"
+                  >
+                    {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Send className="w-5 h-5 mr-2" />}
+                    {saving ? 'Saving...' : 'Continue Applying'}
+                  </button>
                 )}
               </div>
             )}
