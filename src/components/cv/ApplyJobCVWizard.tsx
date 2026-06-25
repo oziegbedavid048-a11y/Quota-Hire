@@ -198,25 +198,6 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
               </button>
             </div>
 
-            {/* Template Selector (Only visible in Steps 1 & 2 on larger screens, or hidden on mobile to save space) */}
-            {(step === 1 || step === 2) && (
-              <div className="bg-white px-5 sm:px-6 py-2.5 border-b border-gray-100 flex items-center justify-between shrink-0 overflow-x-auto hide-scrollbar">
-                <span className="text-xs font-semibold text-gray-500 mr-4 whitespace-nowrap">CV Style:</span>
-                <div className="flex gap-2">
-                  {['T1', 'T2', 'T3', 'T4', 'T5'].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setSelectedTemplateId(t as TemplateId)}
-                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 text-[10px] sm:text-xs font-bold transition-all shrink-0 ${
-                        selectedTemplateId === t ? 'border-primary bg-primary/10 text-primary scale-110' : 'border-gray-200 text-gray-400 hover:border-gray-300'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Main Body - Scrollable */}
             <div className="flex-1 overflow-y-auto bg-white">
@@ -358,6 +339,24 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                           );
                         }}
                       </BlobProvider>
+                    </div>
+
+                    {/* Template Selector */}
+                    <div className="bg-white p-4 border border-gray-200 rounded-xl flex items-center justify-between overflow-x-auto hide-scrollbar shadow-sm mt-4">
+                      <span className="text-sm font-semibold text-gray-700 mr-4 whitespace-nowrap">Change CV Design:</span>
+                      <div className="flex gap-3">
+                        {['T1', 'T2', 'T3', 'T4', 'T5'].map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => setSelectedTemplateId(t as TemplateId)}
+                            className={`w-9 h-9 rounded-full border-2 text-xs font-bold transition-all shrink-0 ${
+                              selectedTemplateId === t ? 'border-primary bg-primary/10 text-primary scale-110 shadow-md shadow-primary/20' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
