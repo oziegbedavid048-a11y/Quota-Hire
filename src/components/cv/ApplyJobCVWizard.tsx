@@ -324,15 +324,22 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                     {/* The PDF viewer rendered inside a scrollable container for mobile */}
                     <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative" style={{ height: '60vh' }}>
                       <BlobProvider document={renderTemplate()}>
-                        {({ url, loading: pdfLoading }) => {
+                        {({ url, loading: pdfLoading, error }) => {
                           if (pdfLoading) return (
                             <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
                               <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
                             </div>
                           );
+                          if (error) return (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center">
+                              <p className="text-red-600 font-bold mb-2">Error generating PDF</p>
+                              <p className="text-red-500 text-sm">{error.message}</p>
+                            </div>
+                          );
+                          if (!url) return null;
                           return (
                             <iframe 
-                              src={`${url}#toolbar=0&view=FitH`} 
+                              src={url} 
                               className="w-full h-full border-none"
                               title="Generated CV Preview"
                             />
