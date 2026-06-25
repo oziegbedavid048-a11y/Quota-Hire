@@ -127,31 +127,96 @@ export function generateAIAssistedSuggestions(headline: string, profile: Employe
   const t = headline.toLowerCase();
   let achievement = '';
   let extraSkills = '';
-  let duties = '';
+  let workEntries: WorkEntry[] = [];
 
-  if (t.includes('software') || t.includes('developer') || t.includes('engineer')) {
-    achievement = 'Led the refactoring of a legacy monolithic application into microservices, improving system performance by 40% and reducing downtime to zero.';
-    extraSkills = 'React, Node.js, TypeScript, Cloud Architecture, CI/CD';
-    duties = 'Architected and implemented scalable web applications.\nCollaborated with cross-functional teams to define and deliver new features.\nMentored junior developers and established code quality standards.';
-  } else if (t.includes('sales') || t.includes('account')) {
-    achievement = 'Consistently exceeded quarterly sales quotas by 120%, generating over $1.2M in new ARR within the first year.';
-    extraSkills = 'B2B Sales, CRM (Salesforce), Negotiation, Lead Generation';
-    duties = 'Managed the full sales cycle from prospecting to closing.\nDeveloped strategic account plans to expand market share.\nConducted product demonstrations and presentations to C-level executives.';
-  } else if (t.includes('market')) {
-    achievement = 'Spearheaded a multi-channel digital marketing campaign that increased inbound leads by 300% and lowered CPA by 25%.';
-    extraSkills = 'SEO/SEM, Content Strategy, Google Analytics, Social Media Management';
-    duties = 'Designed and executed comprehensive marketing strategies.\nAnalyzed campaign performance data to optimize ROI.\nManaged a team of content creators and digital specialists.';
-  } else if (t.includes('manager') || t.includes('director')) {
-    achievement = 'Successfully led a team of 15+ professionals, reducing operational costs by 20% while increasing overall productivity and employee retention.';
-    extraSkills = 'Strategic Planning, Team Leadership, Budget Management, Process Optimization';
-    duties = 'Directed daily operations and strategic initiatives.\nDeveloped and managed departmental budgets.\nImplemented continuous improvement processes across the organization.';
+  if (t.includes('software') || t.includes('developer') || t.includes('engineer') || t.includes('tech')) {
+    achievement = 'Led the refactoring of a legacy monolithic application into scalable microservices, improving system performance by 40%, reducing deployment time by 50%, and driving a 15% increase in user retention.';
+    extraSkills = 'React, Node.js, TypeScript, Cloud Architecture, CI/CD, Agile/Scrum, System Design';
+    workEntries = [
+      {
+        role: headline,
+        company: 'Innovative Tech Solutions',
+        period: '2021 - Present',
+        duties: 'Architected and implemented scalable web applications serving over 1M monthly active users.\nCollaborated with cross-functional teams to define, design, and ship new features.\nMentored junior developers and established comprehensive code quality standards.\nOptimized backend database queries, reducing response times by 30%.'
+      },
+      {
+        role: `Junior ${headline}`,
+        company: 'Digital Systems Inc.',
+        period: '2018 - 2021',
+        duties: 'Developed responsive user interfaces using modern web frameworks.\nParticipated in daily stand-ups and sprint planning sessions.\nWrote comprehensive unit and integration tests to ensure code reliability.'
+      }
+    ];
+  } else if (t.includes('sales') || t.includes('account') || t.includes('revenue')) {
+    achievement = 'Consistently exceeded quarterly sales quotas by 120%, generating over $2.5M in new Annual Recurring Revenue (ARR) within the first year and winning the "Top Performer" award.';
+    extraSkills = 'B2B Sales, CRM (Salesforce/HubSpot), Negotiation, Lead Generation, Client Relationship Management';
+    workEntries = [
+      {
+        role: headline,
+        company: 'Enterprise Solutions Corp',
+        period: '2020 - Present',
+        duties: 'Managed the full sales cycle from initial prospecting to successful closing for enterprise-level clients.\nDeveloped strategic account plans to expand market share and penetrate new territories.\nConducted high-impact product demonstrations and presentations to C-level executives.\nNegotiated complex contracts resulting in long-term partnerships.'
+      },
+      {
+        role: 'Account Executive',
+        company: 'Growth Dynamics',
+        period: '2017 - 2020',
+        duties: 'Maintained a robust pipeline of qualified leads through targeted outreach.\nExceeded monthly revenue targets consistently for 24 consecutive months.\nCollaborated with marketing to refine lead generation strategies.'
+      }
+    ];
+  } else if (t.includes('market') || t.includes('growth') || t.includes('brand')) {
+    achievement = 'Spearheaded a multi-channel digital marketing campaign that increased inbound leads by 350%, lowered CPA by 25%, and boosted overall brand engagement by 40% year-over-year.';
+    extraSkills = 'SEO/SEM, Content Strategy, Google Analytics, Social Media Management, Growth Hacking, Email Marketing';
+    workEntries = [
+      {
+        role: headline,
+        company: 'Global Brands Agency',
+        period: '2019 - Present',
+        duties: 'Designed and executed comprehensive data-driven marketing strategies.\nAnalyzed campaign performance data to continuously optimize ROI and spend.\nManaged a cross-functional team of content creators, designers, and digital specialists.\nLaunched successful product marketing initiatives that drove record sales.'
+      },
+      {
+        role: 'Marketing Specialist',
+        company: 'Creative Media Ltd',
+        period: '2016 - 2019',
+        duties: 'Managed social media profiles and grew follower base by 200% organically.\nCreated engaging blog posts and newsletters that improved customer retention.\nConducted market research to identify new consumer trends.'
+      }
+    ];
+  } else if (t.includes('manager') || t.includes('director') || t.includes('lead') || t.includes('head')) {
+    achievement = 'Successfully led a department of 25+ professionals, reducing operational costs by 20% while increasing overall productivity and employee retention by implementing agile methodologies.';
+    extraSkills = 'Strategic Planning, Team Leadership, Budget Management, Process Optimization, Change Management';
+    workEntries = [
+      {
+        role: headline,
+        company: 'Corporate Enterprises',
+        period: '2018 - Present',
+        duties: 'Directed daily operations and strategic initiatives across multiple business units.\nDeveloped, negotiated, and managed annual departmental budgets exceeding $5M.\nImplemented continuous improvement processes across the organization.\nFostered a culture of accountability and professional growth among team members.'
+      },
+      {
+        role: 'Operations Manager',
+        company: 'Apex Logistics',
+        period: '2014 - 2018',
+        duties: 'Streamlined supply chain workflows to reduce delivery delays by 15%.\nHired and trained a diverse team of operational staff.\nEnsured full compliance with industry regulations and health standards.'
+      }
+    ];
   } else {
-    achievement = 'Consistently delivered high-quality results ahead of schedule, driving significant improvements in operational efficiency and stakeholder satisfaction.';
-    extraSkills = 'Project Management, Communication, Problem Solving, Adaptability';
-    duties = 'Managed complex projects from initiation to successful completion.\nCollaborated with internal and external stakeholders to meet organizational goals.\nIdentified process bottlenecks and implemented effective solutions.';
+    achievement = 'Consistently delivered high-quality results ahead of schedule, driving significant improvements in operational efficiency and stakeholder satisfaction. Recognized for exceptional problem-solving abilities.';
+    extraSkills = 'Project Management, Cross-functional Communication, Problem Solving, Adaptability, Client Relations';
+    workEntries = [
+      {
+        role: headline,
+        company: 'Professional Services Inc.',
+        period: '2020 - Present',
+        duties: 'Managed complex projects from initiation to successful and timely completion.\nCollaborated with internal and external stakeholders to meet organizational goals.\nIdentified process bottlenecks and implemented effective, sustainable solutions.\nMaintained a high standard of quality assurance across all deliverables.'
+      },
+      {
+        role: 'Associate Consultant',
+        company: 'Business Dynamics',
+        period: '2017 - 2020',
+        duties: 'Assisted in the development of strategic recommendations for key clients.\nConducted thorough data analysis to support business case presentations.\nOrganized and facilitated client workshops and training sessions.'
+      }
+    ];
   }
 
-  return { achievement, extraSkills, workEntries: [{ role: headline, company: 'Previous Company', period: '2020 - Present', duties }] };
+  return { achievement, extraSkills, workEntries };
 }
 
 // ── Main export: build all CV data ───────────────────────────────────────────

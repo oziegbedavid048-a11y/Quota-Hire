@@ -42,7 +42,7 @@ const s = StyleSheet.create({
   
   // Job
   bdJobTitle: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: '#1f2937', marginBottom: 2 },
-  bdJobMeta:  { fontSize: 8.5, color: '#6b7280', marginBottom: 6, fontStyle: 'italic' },
+  bdJobMeta:  { fontSize: 8.5, color: '#6b7280', marginBottom: 6 },
   bdBullet:   { flexDirection: 'row', marginBottom: 4 },
   bdBulletDot:{ fontSize: 9, color: '#4b5563', marginRight: 5, marginTop: 1 },
   bdBulletTxt:{ flex: 1, fontSize: 9, color: '#4b5563', lineHeight: 1.5 },

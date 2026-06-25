@@ -18,7 +18,7 @@ const s = StyleSheet.create({
   avatarArea: { marginBottom: 14 },
   avatar:     { width: 60, height: 60, borderRadius: 30, objectFit: 'cover' },
   nameTxt:    { fontSize: 24, fontFamily: 'Helvetica-Bold', color: WHITE, marginBottom: 4, letterSpacing: 0.5 },
-  roleTxt:    { fontSize: 10, color: WHITE, fontStyle: 'italic' },
+  roleTxt:    { fontSize: 10, color: WHITE },
 
   // Columns
   columns:    { flexDirection: 'row', flex: 1 },
@@ -26,7 +26,7 @@ const s = StyleSheet.create({
   rightCol:   { width: 170, paddingLeft: 20, borderLeftWidth: 1, borderLeftColor: '#e5e7eb' },
 
   // Sections
-  sectionTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: FG_MAIN, textTransform: 'uppercase', marginBottom: 8, fontStyle: 'italic' },
+  sectionTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: FG_MAIN, textTransform: 'uppercase', marginBottom: 8 },
   divider:      { height: 1, backgroundColor: '#e5e7eb', marginBottom: 12 },
   
   // Main blocks
