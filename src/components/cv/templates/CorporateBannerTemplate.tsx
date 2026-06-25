@@ -16,9 +16,6 @@ const s = StyleSheet.create({
   
   // Header section
   headerArea: { backgroundColor: GREEN_BG, padding: 30, paddingHorizontal: 40, flexDirection: 'row', alignItems: 'center' },
-  avatarArea: { width: 80, marginRight: 24 },
-  avatar:     { width: 70, height: 70, objectFit: 'cover', borderWidth: 2, borderColor: WHITE }, // Square-ish or circle depending on style; let's do circle to be safe
-  avatarInit: { width: 70, height: 70, backgroundColor: 'rgba(0,0,0,0.1)', color: WHITE, fontSize: 24, textAlign: 'center', lineHeight: 70 / 12, borderWidth: 2, borderColor: WHITE },
   nameArea:   { flex: 1 },
   nameTxt:    { fontSize: 26, fontFamily: 'Helvetica-Bold', color: '#111827', marginBottom: 4, textTransform: 'uppercase' }, // Dark text in green header
   roleTxt:    { fontSize: 11, color: '#1f2937' },
@@ -56,15 +53,10 @@ const s = StyleSheet.create({
 });
 
 export const CorporateBannerTemplate = ({ data }: { data: CVData }) => {
-  const initials = data.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const skillsWithScores = data.skills.slice(0, 6).map((sk, i) => ({
     name: sk,
     score: Math.min(100, 100 - (i * 5)), // Percentages
   }));
-
-  // Circle avatar
-  const avatarStyle = { ...s.avatar, borderRadius: 35 };
-  const initStyle = { ...s.avatarInit, borderRadius: 35 };
 
   return (
     <Document>
@@ -72,13 +64,6 @@ export const CorporateBannerTemplate = ({ data }: { data: CVData }) => {
         
         {/* Header */}
         <View style={s.headerArea}>
-          <View style={s.avatarArea}>
-            {data.profileImageUrl ? (
-              <Image source={{ uri: data.profileImageUrl }} style={avatarStyle} />
-            ) : (
-              <View style={initStyle}><Text style={{ paddingTop: 20 }}>{initials}</Text></View>
-            )}
-          </View>
           <View style={s.nameArea}>
             <Text style={s.nameTxt}>{data.name}</Text>
             <Text style={s.roleTxt}>{data.headline}</Text>

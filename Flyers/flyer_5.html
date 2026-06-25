@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+  body {
+    width: 1080px; height: 1080px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    background: #15750a;
+    position: relative;
+  }
+
+  .bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 20% 30%, #116108 0%, #15750a 50%, #0e4f06 100%);
+  }
+
+  /* Circles decorations */
+  .circle {
+    position: absolute; border-radius: 50%;
+    background: radial-gradient(circle, #72dd15, #0e4f06);
+    filter: blur(3px); opacity: 0.3;
+  }
+
+  .content {
+    position: relative; z-index: 10;
+    width: 100%; height: 100%;
+    padding: 52px 60px;
+  }
+
+  /* TOP */
+  .top-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 42px;
+  }
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+  .logo-img {
+    width: 48px; height: 48px; object-fit: contain;
+    background: white; border-radius: 12px; padding: 4px;
+  }
+  .brand-name {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 24px; font-weight: 800; color: white;
+  }
+  .social-row {
+    display: flex; align-items: center; gap: 12px;
+    color: rgba(255,255,255,0.7); font-size: 16px;
+  }
+  .soc-icon {
+    width: 32px; height: 32px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: white;
+  }
+
+  /* Headline */
+  .headline {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .hl-1 {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 64px; font-weight: 900; color: white;
+    line-height: 1; margin-bottom: 4px;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+  .hl-2 {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 64px; font-weight: 900; line-height: 1;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+  .hl-2 .white { color: white; }
+  .hl-2 .lime { color: #72dd15; }
+  .hl-sub {
+    font-size: 20px; color: rgba(255,255,255,0.8);
+    margin-top: 14px; line-height: 1.5;
+    max-width: 540px; margin-left: auto; margin-right: auto;
+  }
+
+  /* TWO PHONES CENTER */
+  .phones-area {
+    display: flex; justify-content: center; align-items: flex-end;
+    gap: -30px;
+    position: relative; margin-bottom: 36px;
+    height: 440px;
+  }
+
+  .phone-big {
+    position: absolute;
+    left: 50%; transform: translateX(-50%);
+    z-index: 3;
+  }
+  .phone-small {
+    position: absolute; z-index: 2;
+  }
+  .phone-small.right { left: 55%; }
+
+  .phone-frame {
+    background: linear-gradient(180deg, #1a2332 0%, #0d1520 100%);
+    border-radius: 46px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+    border: 2.5px solid #2d3f55;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pf-big { width: 260px; height: 500px; padding: 14px 10px; }
+  .pf-small { width: 200px; height: 390px; padding: 10px 8px; }
+
+  .phone-dyn-island {
+    border-radius: 20px;
+    background: #0d1520;
+    margin: 0 auto 8px;
+    display: block;
+  }
+  .pdi-big { width: 80px; height: 18px; }
+  .pdi-small { width: 60px; height: 14px; }
+
+  .phone-scr { border-radius: 36px; overflow: hidden; }
+  .ps-big { height: calc(500px - 28px - 28px); }
+  .ps-small { height: calc(390px - 20px - 24px); }
+  .phone-scr img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+  /* Feature callout labels */
+  .feat-label {
+    position: absolute;
+    background: #f59e0b; color: #0f172a;
+    border-radius: 10px; padding: 10px 18px;
+    font-size: 15px; font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    z-index: 10;
+  }
+  .feat-label::after {
+    content: '';
+    position: absolute; right: -10px; top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid transparent;
+    border-left-color: #f59e0b;
+  }
+  .feat-label.right-side::after {
+    right: auto; left: -10px;
+    border-left-color: transparent;
+    border-right-color: #f59e0b;
+  }
+
+  /* Bottom */
+  .bottom-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 18px;
+  }
+  .bottom-cta-label {
+    font-size: 12px; font-weight: 700;
+    color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+  .bottom-cta-url {
+    font-size: 20px; font-weight: 800; color: white;
+  }
+  .bottom-btns { display: flex; gap: 12px; }
+  .bbtn {
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    border-radius: 12px; padding: 10px 24px;
+    display: flex; align-items: center; gap: 8px;
+    color: white; font-size: 14px; font-weight: 700;
+  }
+  .bbtn.primary { background: #72dd15; color: #0f172a; border-color: #72dd15; }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="circle" style="width:200px;height:200px;top:-60px;right:200px;"></div>
+<div class="circle" style="width:140px;height:140px;bottom:50px;right:20px;"></div>
+<div class="circle" style="width:100px;height:100px;top:300px;left:20px;"></div>
+<div class="circle" style="width:80px;height:80px;bottom:180px;left:280px;opacity:0.2;"></div>
+
+<div class="content">
+
+  <div class="top-row">
+    <div class="logo-area">
+      <img src="logo.png" class="logo-img" alt="Logo">
+      <span class="brand-name">Quota Hire</span>
+    </div>
+    <div class="social-row">
+      <div class="soc-icon">f</div>
+      <div class="soc-icon">𝕏</div>
+      <span>@quotahire</span>
+    </div>
+  </div>
+
+  <div class="headline">
+    <div class="hl-1">Do it All</div>
+    <div class="hl-2">
+      <span class="white">with </span>
+      <span class="lime">Quota Hire</span>
+    </div>
+    <div class="hl-sub">
+      Why use multiple platforms when you can find<br>
+      your perfect <strong style="color:#72dd15;">sales role</strong> or hire <strong style="color:#72dd15;">top talent</strong> — all in one place?
+    </div>
+  </div>
+
+  <!-- PHONES -->
+  <div class="phones-area">
+
+    <!-- Feature labels left -->
+    <div class="feat-label" style="top:70px;left:50px;">🎯 Post Jobs</div>
+    <div class="feat-label" style="top:180px;left:30px;">📊 Analytics</div>
+
+    <!-- Big phone (company dashboard) -->
+    <div class="phone-big">
+      <div class="phone-frame pf-big">
+        <div class="phone-dyn-island pdi-big"></div>
+        <div class="phone-scr ps-big">
+          <img src="company_dashboard.png" alt="Company Dashboard">
+        </div>
+      </div>
+    </div>
+
+    <!-- Small phone (employee) - right side -->
+    <div class="phone-small right" style="bottom:0;">
+      <div class="phone-frame pf-small">
+        <div class="phone-dyn-island pdi-small"></div>
+        <div class="phone-scr ps-small">
+          <img src="employee_dashboard.png" alt="Employee Dashboard">
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature labels right -->
+    <div class="feat-label right-side" style="top:100px;right:40px;">✅ Quick Apply</div>
+    <div class="feat-label right-side" style="top:220px;right:20px;">💼 Track Apps</div>
+
+  </div>
+
+  <!-- BOTTOM -->
+  <div class="bottom-row">
+    <div>
+      <div class="bottom-cta-label">visit us today</div>
+      <div class="bottom-cta-url">quotahire.org</div>
+    </div>
+    <div class="bottom-btns">
+      <div class="bbtn">🌐 Website</div>
+      <div class="bbtn primary">Get Started Free →</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

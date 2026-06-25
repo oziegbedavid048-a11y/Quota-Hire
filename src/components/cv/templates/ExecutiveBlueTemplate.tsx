@@ -5,7 +5,7 @@ import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/render
 import { CVData } from '../../../lib/cv/types';
 import { dutiesToBullets } from '../../../lib/cv/cvContentBuilder';
 
-const RIBBON_BG = '#891e35';
+const RIBBON_BG = '#0ea5e9'; // Bright light blue
 const WHITE     = '#ffffff';
 const FG_MAIN   = '#1f2937';
 const FG_MUTED  = '#6b7280';
@@ -17,7 +17,6 @@ const s = StyleSheet.create({
   headerArea: { flexDirection: 'row', paddingTop: 30, paddingLeft: 40, paddingRight: 40, alignItems: 'center', zIndex: 10 },
   avatarArea: { width: 90 },
   avatar:     { width: 80, height: 80, borderRadius: 40, objectFit: 'cover' },
-  avatarInit: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#cbd5e1', color: WHITE, fontSize: 26, textAlign: 'center', lineHeight: 80 / 12 },
   nameArea:   { flex: 1, paddingLeft: 20 },
   nameTxt:    { fontSize: 28, fontFamily: 'Helvetica-Bold', color: '#111827', letterSpacing: -0.5 },
 
@@ -54,8 +53,7 @@ const s = StyleSheet.create({
   bdBulletTxt:{ flex: 1, fontSize: 9, color: '#374151', lineHeight: 1.5 },
 });
 
-export const ExecutiveDarkTemplate = ({ data }: { data: CVData }) => {
-  const initials = data.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+export const ExecutiveBlueTemplate = ({ data }: { data: CVData }) => {
 
   return (
     <Document>
@@ -63,13 +61,11 @@ export const ExecutiveDarkTemplate = ({ data }: { data: CVData }) => {
         
         {/* Header */}
         <View style={s.headerArea}>
-          <View style={s.avatarArea}>
-            {data.profileImageUrl ? (
-              <Image source={{ uri: data.profileImageUrl }} style={s.avatar} />
-            ) : (
-              <View style={s.avatarInit}><Text style={{ paddingTop: 24 }}>{initials}</Text></View>
-            )}
-          </View>
+          {data.passportUrl && (
+            <View style={s.avatarArea}>
+              <Image source={{ uri: data.passportUrl }} style={s.avatar} />
+            </View>
+          )}
           <View style={s.nameArea}>
             <Text style={s.nameTxt}>{data.name}</Text>
           </View>

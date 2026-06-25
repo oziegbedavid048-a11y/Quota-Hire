@@ -1,0 +1,11 @@
+{
+  "name": "flyer-screenshots",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "screenshot": "node screenshot.mjs"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0"
+  }
+}

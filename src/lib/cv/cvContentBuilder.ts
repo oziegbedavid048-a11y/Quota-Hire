@@ -122,6 +122,38 @@ function buildCoverLetter(
   };
 }
 
+// ── AI Suggestion Generator (Frontend mock based on domain) ───────────────
+export function generateAIAssistedSuggestions(headline: string, profile: EmployeeProfile): Partial<WizardAnswers> {
+  const t = headline.toLowerCase();
+  let achievement = '';
+  let extraSkills = '';
+  let duties = '';
+
+  if (t.includes('software') || t.includes('developer') || t.includes('engineer')) {
+    achievement = 'Led the refactoring of a legacy monolithic application into microservices, improving system performance by 40% and reducing downtime to zero.';
+    extraSkills = 'React, Node.js, TypeScript, Cloud Architecture, CI/CD';
+    duties = 'Architected and implemented scalable web applications.\nCollaborated with cross-functional teams to define and deliver new features.\nMentored junior developers and established code quality standards.';
+  } else if (t.includes('sales') || t.includes('account')) {
+    achievement = 'Consistently exceeded quarterly sales quotas by 120%, generating over $1.2M in new ARR within the first year.';
+    extraSkills = 'B2B Sales, CRM (Salesforce), Negotiation, Lead Generation';
+    duties = 'Managed the full sales cycle from prospecting to closing.\nDeveloped strategic account plans to expand market share.\nConducted product demonstrations and presentations to C-level executives.';
+  } else if (t.includes('market')) {
+    achievement = 'Spearheaded a multi-channel digital marketing campaign that increased inbound leads by 300% and lowered CPA by 25%.';
+    extraSkills = 'SEO/SEM, Content Strategy, Google Analytics, Social Media Management';
+    duties = 'Designed and executed comprehensive marketing strategies.\nAnalyzed campaign performance data to optimize ROI.\nManaged a team of content creators and digital specialists.';
+  } else if (t.includes('manager') || t.includes('director')) {
+    achievement = 'Successfully led a team of 15+ professionals, reducing operational costs by 20% while increasing overall productivity and employee retention.';
+    extraSkills = 'Strategic Planning, Team Leadership, Budget Management, Process Optimization';
+    duties = 'Directed daily operations and strategic initiatives.\nDeveloped and managed departmental budgets.\nImplemented continuous improvement processes across the organization.';
+  } else {
+    achievement = 'Consistently delivered high-quality results ahead of schedule, driving significant improvements in operational efficiency and stakeholder satisfaction.';
+    extraSkills = 'Project Management, Communication, Problem Solving, Adaptability';
+    duties = 'Managed complex projects from initiation to successful completion.\nCollaborated with internal and external stakeholders to meet organizational goals.\nIdentified process bottlenecks and implemented effective solutions.';
+  }
+
+  return { achievement, extraSkills, workEntries: [{ role: headline, company: 'Previous Company', period: '2020 - Present', duties }] };
+}
+
 // ── Main export: build all CV data ───────────────────────────────────────────
 
 export interface WizardAnswers {
@@ -136,7 +168,8 @@ export function buildCVData(
   job: Job,
   wizard: WizardAnswers,
   templateId: TemplateId,
-  templateName: string
+  templateName: string,
+  passportImage?: string | null
 ): { cvData: CVData; coverLetterData: CoverLetterData } {
   const extraSkillsList = wizard.extraSkills
     .split(',')
@@ -165,7 +198,8 @@ export function buildCVData(
     phone: profile.phoneNumber || '',
     location: [profile.city, profile.country].filter(Boolean).join(', '),
     linkedinUrl: profile.linkedinUrl,
-    profileImageUrl: profile.avatarUrl,
+    profileImageUrl: passportImage || undefined,
+    passportUrl: passportImage || undefined,
     headline: wizard.headline || profile.title || job.title,
     summary,
     experience,

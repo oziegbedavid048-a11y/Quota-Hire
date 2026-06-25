@@ -15,9 +15,6 @@ const s = StyleSheet.create({
   
   // Header section
   headerArea: { backgroundColor: PURPLE, padding: 30, paddingHorizontal: 40, flexDirection: 'row', alignItems: 'center' },
-  avatarArea: { width: 80, marginRight: 24 },
-  avatar:     { width: 70, height: 70, borderRadius: 35, objectFit: 'cover', borderWidth: 2, borderColor: '#a78bfa' },
-  avatarInit: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#5b21b6', color: WHITE, fontSize: 24, textAlign: 'center', lineHeight: 70 / 12, borderWidth: 2, borderColor: '#a78bfa' },
   nameArea:   { flex: 1 },
   nameTxt:    { fontSize: 22, fontFamily: 'Helvetica-Bold', color: WHITE, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   roleTxt:    { fontSize: 10, color: '#e9d5ff' },
@@ -56,7 +53,6 @@ const s = StyleSheet.create({
 });
 
 export const InverseGreenTemplate = ({ data }: { data: CVData }) => {
-  const initials = data.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const skillsWithScores = data.skills.slice(0, 6).map((sk, i) => ({
     name: sk,
     score: Math.min(5, 5 - Math.floor(i / 2)),
@@ -68,13 +64,6 @@ export const InverseGreenTemplate = ({ data }: { data: CVData }) => {
         
         {/* Header */}
         <View style={s.headerArea}>
-          <View style={s.avatarArea}>
-            {data.profileImageUrl ? (
-              <Image source={{ uri: data.profileImageUrl }} style={s.avatar} />
-            ) : (
-              <View style={s.avatarInit}><Text style={{ paddingTop: 20 }}>{initials}</Text></View>
-            )}
-          </View>
           <View style={s.nameArea}>
             <Text style={s.nameTxt}>{data.name}</Text>
             <Text style={s.roleTxt}>{data.headline}</Text>

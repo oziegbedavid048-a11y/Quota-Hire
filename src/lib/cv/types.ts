@@ -16,6 +16,7 @@ export interface CVData {
   location: string;
   linkedinUrl?: string;
   profileImageUrl?: string;
+  passportUrl?: string;
   headline: string;
   summary: string;
   experience: WorkEntry[];
