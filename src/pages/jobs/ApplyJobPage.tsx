@@ -377,16 +377,16 @@ export const ApplyJobPage = () => {
                           Tailored CV and Cover Letter generated and attached!
                         </div>
                       ) : (
-                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-3">
-                          <p className="text-xs font-medium text-blue-800 dark:text-blue-300 leading-relaxed">
+                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 sm:p-5 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-4">
+                          <p className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300 leading-relaxed">
                             Stand out by auto-generating a customized CV and Cover Letter tailored specifically to this job description.
                           </p>
                           <button
                             type="button"
                             onClick={() => setIsWizardOpen(true)}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-sm transition flex justify-center items-center gap-2"
+                            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl shadow-md transition-all flex justify-center items-center gap-2"
                           >
-                            <PenTool size={14} /> Auto-Generate Tailored Application
+                            <PenTool size={16} /> Generate CV
                           </button>
                         </div>
                       )}
