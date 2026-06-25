@@ -47,7 +47,7 @@ const s = StyleSheet.create({
   jobRoleCo:  { flexDirection: 'row', marginBottom: 2 },
   jobRole:    { fontSize: 10, fontFamily: 'Helvetica-Bold', color: FG_MAIN },
   jobCo:      { fontSize: 10, color: FG_MUTED },
-  jobDate:    { fontSize: 8.5, color: '#9ca3af', fontStyle: 'italic', marginBottom: 5 },
+  jobDate:    { fontSize: 8.5, color: '#9ca3af', marginBottom: 5 },
   bdBullet:   { flexDirection: 'row', marginBottom: 4 },
   bdBulletDot:{ fontSize: 8.5, color: FG_MAIN, marginRight: 6, marginTop: 1 },
   bdBulletTxt:{ flex: 1, fontSize: 9, color: '#374151', lineHeight: 1.5 },

@@ -20,6 +20,11 @@ import { ExecutiveBlueTemplate } from './templates/ExecutiveBlueTemplate';
 import { VividSidebarTemplate } from './templates/VividSidebarTemplate';
 import { InverseGreenTemplate } from './templates/InverseGreenTemplate';
 import { CorporateBannerTemplate } from './templates/CorporateBannerTemplate';
+import { MinimalistWhiteTemplate } from './templates/MinimalistWhiteTemplate';
+import { ModernTechTemplate } from './templates/ModernTechTemplate';
+import { CreativeAccentTemplate } from './templates/CreativeAccentTemplate';
+import { ElegantSerifTemplate } from './templates/ElegantSerifTemplate';
+import { BoldTypographyTemplate } from './templates/BoldTypographyTemplate';
 
 interface ApplyJobCVWizardProps {
   job: Job;
@@ -34,6 +39,11 @@ const TEMPLATE_LABELS: Record<TemplateId, { name: string; color: string }> = {
   T3: { name: 'Vivid Sidebar',      color: '#2563eb' },
   T4: { name: 'Inverse Green',      color: '#16a34a' },
   T5: { name: 'Corporate Banner',   color: '#7c3aed' },
+  T6: { name: 'Minimalist White',   color: '#000000' },
+  T7: { name: 'Modern Tech',        color: '#0ea5e9' },
+  T8: { name: 'Creative Accent',    color: '#f43f5e' },
+  T9: { name: 'Elegant Serif',      color: '#333333' },
+  T10: { name: 'Bold Typography',   color: '#111827' },
 };
 
 export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobCVWizardProps) {
@@ -194,6 +204,11 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
       case 'T3': return <VividSidebarTemplate data={cvData} />;
       case 'T4': return <InverseGreenTemplate data={cvData} />;
       case 'T5': return <CorporateBannerTemplate data={cvData} />;
+      case 'T6': return <MinimalistWhiteTemplate data={cvData} />;
+      case 'T7': return <ModernTechTemplate data={cvData} />;
+      case 'T8': return <CreativeAccentTemplate data={cvData} />;
+      case 'T9': return <ElegantSerifTemplate data={cvData} />;
+      case 'T10': return <BoldTypographyTemplate data={cvData} />;
       case 'T1':
       default:   return <ClassicSplitTemplate data={cvData} />;
     }
