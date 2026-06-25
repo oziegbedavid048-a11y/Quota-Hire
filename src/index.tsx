@@ -1,3 +1,5 @@
+import { Buffer } from 'buffer';
+window.Buffer = window.Buffer || Buffer;
 import "./index.css";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
