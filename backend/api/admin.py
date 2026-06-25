@@ -482,23 +482,3 @@ class GeneratedCVAdmin(admin.ModelAdmin):
         return format_html('<span style="color:#94a3b8;">No cover letter</span>')
 
 
-# Add cv_link display to ApplicationAdmin
-@admin.display(description='Generated CV')
-def application_cv_link(obj):
-    try:
-        cv = obj.generated_cv
-        if cv and cv.cv_pdf:
-            url = f'/api/cv/{cv.pk}/download/'
-            return format_html(
-                '<a class="button" style="background:#8b5cf6;color:white;padding:5px 10px;'
-                'border-radius:4px;font-weight:bold;text-decoration:none;font-size:11px;" '
-                'href="{}" target="_blank">CV PDF</a>', url
-            )
-    except Exception:
-        pass
-    return format_html('<span style="color:#94a3b8;font-size:11px;">No CV</span>')
-
-ApplicationAdmin.cv_link = application_cv_link
-
-# Patch inlines after GeneratedCVInline is defined (avoids forward-reference issue)
-ApplicationAdmin.inlines = [GeneratedCVInline]
