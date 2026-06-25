@@ -1,154 +1,200 @@
-// Gold Minimalist (Daniela Murray style)
-// Beige/Gold header block, white body, 2 columns.
+// T3 – Crimson Banner (Sarah Martinez style)
+// Full-width crimson/maroon summary banner across top, photo top-left, left sidebar, white right body
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import { CVData } from '../../../lib/cv/types';
 import { dutiesToBullets } from '../../../lib/cv/cvContentBuilder';
 
-const GOLD      = '#C1A67B';
-const WHITE     = '#ffffff';
-const FG_MAIN   = '#1f2937';
-const FG_MUTED  = '#4b5563';
+const CRIMSON = '#8B1A1A';
+const DARK    = '#1a1a1a';
+const WHITE   = '#ffffff';
+const MUTED   = '#6b7280';
+const SIDEBAR = '#f8f5f2';
 
 const s = StyleSheet.create({
-  page:       { backgroundColor: WHITE, fontFamily: 'Helvetica', padding: 36, paddingTop: 30 },
-  
-  // Header section
-  headerArea: { backgroundColor: GOLD, paddingVertical: 24, paddingHorizontal: 30, alignItems: 'center', marginBottom: 24 },
-  avatarArea: { marginBottom: 14 },
-  avatar:     { width: 60, height: 60, borderRadius: 30, objectFit: 'cover' },
-  nameTxt:    { fontSize: 24, fontFamily: 'Helvetica-Bold', color: WHITE, marginBottom: 4, letterSpacing: 0.5 },
-  roleTxt:    { fontSize: 10, color: WHITE },
+  page:     { backgroundColor: WHITE, fontFamily: 'Helvetica' },
 
-  // Columns
-  columns:    { flexDirection: 'row', flex: 1 },
-  leftCol:    { flex: 1, paddingRight: 24 },
-  rightCol:   { width: 170, paddingLeft: 20, borderLeftWidth: 1, borderLeftColor: '#e5e7eb' },
+  // Top header strip: photo + name
+  topHeader:{ flexDirection: 'row', padding: 28, paddingBottom: 0, alignItems: 'center' },
+  avatar:   { width: 80, height: 80, borderRadius: 6, objectFit: 'cover', marginRight: 18 },
+  initBox:  { width: 80, height: 80, borderRadius: 6, backgroundColor: '#d1d5db', alignItems: 'center', justifyContent: 'center', marginRight: 18 },
+  initTxt:  { fontSize: 28, fontFamily: 'Helvetica-Bold', color: WHITE },
+  nameBlock:{ flex: 1 },
+  bdName:   { fontSize: 26, fontFamily: 'Helvetica-Bold', color: DARK, letterSpacing: -0.3 },
+  bdRole:   { fontSize: 10, color: CRIMSON, fontFamily: 'Helvetica-Bold', marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.5 },
+  bdContact:{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 6 },
+  bdCtxt:   { fontSize: 7.5, color: MUTED },
 
-  // Sections
-  sectionTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: FG_MAIN, textTransform: 'uppercase', marginBottom: 8 },
-  divider:      { height: 1, backgroundColor: '#e5e7eb', marginBottom: 12 },
-  
-  // Main blocks
-  summaryTxt:   { fontSize: 9.5, color: FG_MUTED, lineHeight: 1.6, marginBottom: 20 },
-  jobBlock:     { marginBottom: 16 },
-  jobRole:      { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: FG_MAIN, marginBottom: 2 },
-  jobCoMeta:    { fontSize: 8.5, color: FG_MUTED, marginBottom: 6 },
-  bdBullet:     { flexDirection: 'row', marginBottom: 4 },
-  bdBulletDot:  { fontSize: 10, color: FG_MUTED, marginRight: 6, marginTop: 1 },
-  bdBulletTxt:  { flex: 1, fontSize: 9, color: FG_MUTED, lineHeight: 1.5 },
+  // Crimson banner
+  banner:   { backgroundColor: CRIMSON, marginTop: 14, paddingVertical: 12, paddingHorizontal: 28 },
+  bannerTxt:{ fontSize: 8.5, color: WHITE, lineHeight: 1.65 },
 
-  // Right sidebar items
-  contactRow:   { flexDirection: 'row', marginBottom: 6, alignItems: 'center' },
-  contactIcon:  { width: 16, fontSize: 10, color: FG_MAIN },
-  contactTxt:   { fontSize: 8.5, color: FG_MUTED, flex: 1 },
-  
-  skillDotRow:  { flexDirection: 'row', marginBottom: 5 },
-  skillDot:     { fontSize: 14, color: FG_MAIN, marginRight: 5, marginTop: -3 },
-  skillTxt:     { fontSize: 8.5, color: FG_MUTED, flex: 1 },
+  // Two columns below
+  cols:     { flexDirection: 'row', paddingHorizontal: 0, flex: 1 },
+  leftCol:  { width: 170, backgroundColor: SIDEBAR, padding: 20 },
+  rightCol: { flex: 1, padding: 24, paddingTop: 20 },
+
+  sbSec:    { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: DARK, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 7, marginTop: 14 },
+  sbDiv:    { height: 1, backgroundColor: CRIMSON, marginBottom: 8 },
+  sbSkill:  { fontSize: 8, color: '#374151', marginBottom: 4 },
+  sbLang:   { fontSize: 8, color: '#374151', marginBottom: 4 },
+  sbStr:    { fontSize: 8, color: '#374151', marginBottom: 4 },
+  sbInt:    { fontSize: 8, color: '#374151', marginBottom: 3 },
+  sbCert:   { fontSize: 7.5, color: '#6b7280', marginBottom: 4, lineHeight: 1.4 },
+  sbEdu:    { fontSize: 8, color: '#374151', lineHeight: 1.5 },
+
+  bdSec:    { fontSize: 10, fontFamily: 'Helvetica-Bold', color: DARK, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5, marginTop: 16 },
+  bdDiv:    { height: 1.5, backgroundColor: CRIMSON, marginBottom: 10 },
+
+  jobBlock: { marginBottom: 14 },
+  jobHead:  { flexDirection: 'row', justifyContent: 'space-between' },
+  jobRole:  { fontSize: 9, fontFamily: 'Helvetica-Bold', color: DARK },
+  jobDate:  { fontSize: 8, color: MUTED },
+  jobCo:    { fontSize: 8.5, color: CRIMSON, marginBottom: 4 },
+  bullet:   { flexDirection: 'row', marginBottom: 3 },
+  bulletDot:{ fontSize: 8.5, color: CRIMSON, marginRight: 5, marginTop: 1 },
+  bulletTxt:{ flex: 1, fontSize: 8.5, color: '#374151', lineHeight: 1.5 },
+
+  achBlock: { backgroundColor: '#fff5f5', borderLeftWidth: 3, borderLeftColor: CRIMSON, padding: 10, marginTop: 4 },
+  achTxt:   { fontSize: 8.5, color: '#374151', lineHeight: 1.6 },
+  refText:  { fontSize: 8.5, color: MUTED, fontFamily: 'Helvetica-Oblique' },
 });
 
-export const VividSidebarTemplate = ({ data }: { data: CVData }) => {
+export const VividSidebarTemplate = ({ data }: { data: CVData }) => (
+  <Document>
+    <Page size="A4" style={s.page}>
 
-  return (
-    <Document>
-      <Page size="A4" style={s.page}>
-        
-        {/* Header */}
-        <View style={s.headerArea}>
-          {data.passportUrl && (
-            <View style={s.avatarArea}>
-              <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-            </View>
+      {/* ── Top Header ── */}
+      <View style={s.topHeader}>
+        {data.passportUrl
+          ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
+          : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
+        }
+        <View style={s.nameBlock}>
+          <Text style={s.bdName}>{data.name}</Text>
+          <Text style={s.bdRole}>{data.headline}</Text>
+          <View style={s.bdContact}>
+            {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
+            {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
+            {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+          </View>
+        </View>
+      </View>
+
+      {/* ── Crimson Banner ── */}
+      {data.summary && (
+        <View style={s.banner}>
+          <Text style={s.bannerTxt}>{data.summary}</Text>
+        </View>
+      )}
+
+      {/* ── Two Columns ── */}
+      <View style={s.cols}>
+
+        {/* Left Column */}
+        <View style={s.leftCol}>
+
+          {data.skills.length > 0 && (
+            <>
+              <Text style={s.sbSec}>Key Skills</Text>
+              <View style={s.sbDiv} />
+              {data.skills.slice(0, 8).map((sk, i) => (
+                <Text key={i} style={s.sbSkill}>• {sk}</Text>
+              ))}
+            </>
           )}
-          <Text style={s.nameTxt}>{data.name}</Text>
+
+          {data.languages && data.languages.length > 0 && (
+            <>
+              <Text style={s.sbSec}>Languages</Text>
+              <View style={s.sbDiv} />
+              {data.languages.map((l, i) => (
+                <Text key={i} style={s.sbLang}>• {l}</Text>
+              ))}
+            </>
+          )}
+
+          {data.strengths && data.strengths.length > 0 && (
+            <>
+              <Text style={s.sbSec}>Strengths</Text>
+              <View style={s.sbDiv} />
+              {data.strengths.map((str, i) => (
+                <Text key={i} style={s.sbStr}>◆ {str}</Text>
+              ))}
+            </>
+          )}
+
+          {data.interests && data.interests.length > 0 && (
+            <>
+              <Text style={s.sbSec}>Interests</Text>
+              <View style={s.sbDiv} />
+              <Text style={s.sbInt}>{data.interests.join(' • ')}</Text>
+            </>
+          )}
+
+          {data.education && (
+            <>
+              <Text style={s.sbSec}>Education</Text>
+              <View style={s.sbDiv} />
+              <Text style={s.sbEdu}>{data.education}</Text>
+            </>
+          )}
+
+          {data.certifications && data.certifications.length > 0 && (
+            <>
+              <Text style={s.sbSec}>Certifications</Text>
+              <View style={s.sbDiv} />
+              {data.certifications.map((cert, i) => (
+                <Text key={i} style={s.sbCert}>• {cert}</Text>
+              ))}
+            </>
+          )}
         </View>
 
-        {/* Columns */}
-        <View style={s.columns}>
-          
-          {/* Left Column (Summary, Experience) */}
-          <View style={s.leftCol}>
-            {data.summary && (
-              <>
-                <Text style={s.sectionTitle}>Professional Summary</Text>
-                <Text style={s.summaryTxt}>{data.summary}</Text>
-              </>
-            )}
+        {/* Right Column */}
+        <View style={s.rightCol}>
 
-            {data.experience.length > 0 && (
-              <>
-                <Text style={s.sectionTitle}>Work History</Text>
-                <View style={s.divider} />
-                {data.experience.map((exp, i) => {
-                  const bullets = dutiesToBullets(exp.duties);
-                  return (
-                    <View key={i} style={s.jobBlock}>
+          {data.experience.length > 0 && (
+            <>
+              <Text style={s.bdSec}>Professional Experience</Text>
+              <View style={s.bdDiv} />
+              {data.experience.map((exp, i) => {
+                const bullets = dutiesToBullets(exp.duties);
+                return (
+                  <View key={i} style={s.jobBlock}>
+                    <View style={s.jobHead}>
                       <Text style={s.jobRole}>{exp.role}</Text>
-                      <Text style={s.jobCoMeta}>{exp.company}{exp.period ? ` \u2014 ${exp.period}` : ''}</Text>
-                      {bullets.map((b, bi) => (
-                        <View key={bi} style={s.bdBullet}>
-                          <Text style={s.bdBulletDot}>•</Text>
-                          <Text style={s.bdBulletTxt}>{b}</Text>
-                        </View>
-                      ))}
+                      <Text style={s.jobDate}>{exp.period}</Text>
                     </View>
-                  );
-                })}
-              </>
-            )}
-
-            {data.achievement && (
-              <>
-                <Text style={s.sectionTitle}>Key Achievement</Text>
-                <View style={s.divider} />
-                <Text style={s.summaryTxt}>{data.achievement}</Text>
-              </>
-            )}
-          </View>
-
-          {/* Right Column (Contact, Skills, Education) */}
-          <View style={s.rightCol}>
-            <View style={{ marginBottom: 24 }}>
-              {data.email && (
-                <View style={s.contactRow}><Text style={s.contactIcon}>✉</Text><Text style={s.contactTxt}>{data.email}</Text></View>
-              )}
-              {data.phone && (
-                <View style={s.contactRow}><Text style={s.contactIcon}>☎</Text><Text style={s.contactTxt}>{data.phone}</Text></View>
-              )}
-              {data.location && (
-                <View style={s.contactRow}><Text style={s.contactIcon}>⚲</Text><Text style={s.contactTxt}>{data.location}</Text></View>
-              )}
-              {data.linkedinUrl && (
-                <View style={s.contactRow}><Text style={s.contactIcon}>in</Text><Text style={s.contactTxt}>{data.linkedinUrl}</Text></View>
-              )}
-            </View>
-
-            {data.skills.length > 0 && (
-              <>
-                <Text style={s.sectionTitle}>Skills</Text>
-                <View style={s.divider} />
-                {data.skills.slice(0, 10).map((sk, i) => (
-                  <View key={i} style={s.skillDotRow}>
-                    <Text style={s.skillDot}>•</Text>
-                    <Text style={s.skillTxt}>{sk}</Text>
+                    {exp.company && <Text style={s.jobCo}>{exp.company}</Text>}
+                    {bullets.map((b, bi) => (
+                      <View key={bi} style={s.bullet}>
+                        <Text style={s.bulletDot}>•</Text>
+                        <Text style={s.bulletTxt}>{b}</Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
-                <View style={{ marginBottom: 16 }} />
-              </>
-            )}
+                );
+              })}
+            </>
+          )}
 
-            {data.education && (
-              <>
-                <Text style={s.sectionTitle}>Education</Text>
-                <View style={s.divider} />
-                <Text style={[s.summaryTxt, { marginBottom: 0 }]}>{data.education}</Text>
-              </>
-            )}
-          </View>
+          {data.achievement && (
+            <>
+              <Text style={s.bdSec}>Key Achievement</Text>
+              <View style={s.bdDiv} />
+              <View style={s.achBlock}>
+                <Text style={s.achTxt}>{data.achievement}</Text>
+              </View>
+            </>
+          )}
+
+          <Text style={[s.bdSec, { marginTop: 16 }]}>References</Text>
+          <View style={s.bdDiv} />
+          <Text style={s.refText}>{data.references || 'Available upon request'}</Text>
         </View>
+      </View>
 
-      </Page>
-    </Document>
-  );
-};
+    </Page>
+  </Document>
+);

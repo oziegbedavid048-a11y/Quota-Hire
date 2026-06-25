@@ -1,6 +1,9 @@
 // ── CV Engine Types ────────────────────────────────────────────────────────────
 
-export type TemplateId = 'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'T8' | 'T9' | 'T10';
+export type TemplateId =
+  | 'T1' | 'T2' | 'T3' | 'T4' | 'T5'
+  | 'T6' | 'T7' | 'T8' | 'T9' | 'T10'
+  | 'T11' | 'T12' | 'T13' | 'T14' | 'T15';
 
 export interface WorkEntry {
   role: string;
@@ -27,6 +30,12 @@ export interface CVData {
   companyName: string;
   templateId: TemplateId;
   templateName: string;
+  // ── Extended fields ───────────────────────────────────────────
+  certifications?: string[];   // e.g. ["Certified Sales Professional, 2022"]
+  languages?: string[];        // e.g. ["English (Native)", "French (Conversational)"]
+  interests?: string[];        // e.g. ["Photography", "Running", "Home Brewing"]
+  strengths?: string[];        // e.g. ["Willingness", "Patience", "Adaptability"]
+  references?: string;         // "Available upon request"
 }
 
 export interface CoverLetterData {

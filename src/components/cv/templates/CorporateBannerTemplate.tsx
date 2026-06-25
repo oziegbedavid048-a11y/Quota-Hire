@@ -1,153 +1,213 @@
-// Lime Green Accent (William Perez style)
-// Light green header block, white body, left column with skill bars
+// T5 – Sky Blue Sidebar (Jacob Klein style)
+// White left sidebar with skill dot-bars, teal/sky blue headers, clean right body
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import { CVData } from '../../../lib/cv/types';
 import { dutiesToBullets } from '../../../lib/cv/cvContentBuilder';
 
-const GREEN     = '#8ac149';
-const GREEN_BG  = '#7db632'; // Slightly darker for banner
-const WHITE     = '#ffffff';
-const FG_MAIN   = '#1f2937';
-const FG_MUTED  = '#4b5563';
+const TEAL   = '#2196b8';
+const DARK   = '#1e3a4c';
+const WHITE  = '#ffffff';
+const MUTED  = '#78909c';
+const SIDE   = '#f0f9fc';
 
 const s = StyleSheet.create({
-  page:       { backgroundColor: WHITE, fontFamily: 'Helvetica' },
-  
-  // Header section
-  headerArea: { backgroundColor: GREEN_BG, padding: 30, paddingHorizontal: 40, flexDirection: 'row', alignItems: 'center' },
-  nameArea:   { flex: 1 },
-  nameTxt:    { fontSize: 26, fontFamily: 'Helvetica-Bold', color: '#111827', marginBottom: 4, textTransform: 'uppercase' }, // Dark text in green header
-  roleTxt:    { fontSize: 11, color: '#1f2937' },
-  contactArea:{ width: 160, alignItems: 'flex-start' }, // William Perez style has contacts on right but left-aligned text
-  contactRow: { flexDirection: 'row', marginBottom: 5, alignItems: 'center' },
-  contactIcon:{ width: 14, fontSize: 9, color: '#1f2937', marginRight: 6 },
-  contactTxt: { fontSize: 8.5, color: '#111827' },
+  page:     { flexDirection: 'row', backgroundColor: WHITE, fontFamily: 'Helvetica' },
+  sidebar:  { width: 185, backgroundColor: SIDE, flexShrink: 0, padding: 22 },
+  body:     { flex: 1, padding: 30, paddingTop: 28 },
 
-  // Columns
-  columns:    { flexDirection: 'row', flex: 1, padding: 30, paddingHorizontal: 40 },
-  leftCol:    { width: 170, paddingRight: 24, borderRightWidth: 1, borderRightColor: '#e5e7eb' },
-  rightCol:   { flex: 1, paddingLeft: 24 },
+  sbPhotoBox:{ alignItems: 'center', marginBottom: 14 },
+  avatar:   { width: 78, height: 78, borderRadius: 39, objectFit: 'cover', borderWidth: 3, borderColor: TEAL },
+  initBox:  { width: 78, height: 78, borderRadius: 39, backgroundColor: '#b2dfed', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: TEAL },
+  initTxt:  { fontSize: 26, fontFamily: 'Helvetica-Bold', color: DARK },
+  sbName:   { fontSize: 10, fontFamily: 'Helvetica-Bold', color: DARK, textAlign: 'center', marginTop: 8 },
+  sbRole:   { fontSize: 8, color: TEAL, textAlign: 'center', marginTop: 2 },
+  sbContact:{ fontSize: 7.5, color: MUTED, textAlign: 'center', marginTop: 4 },
 
-  // Sections
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  sectionIcon:  { width: 14, height: 14, borderRadius: 7, backgroundColor: FG_MAIN, color: WHITE, fontSize: 9, textAlign: 'center', lineHeight: 1.5, marginRight: 6 },
-  sectionTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: FG_MAIN, textTransform: 'uppercase' },
-  
-  // Main blocks
-  summaryTxt:   { fontSize: 9.5, color: FG_MUTED, lineHeight: 1.6, marginBottom: 20 },
-  jobBlock:     { marginBottom: 16 },
-  jobRoleRow:   { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
-  jobRole:      { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: FG_MAIN },
-  jobDate:      { fontSize: 8.5, color: FG_MUTED },
-  jobCo:        { fontSize: 8.5, color: GREEN_BG, marginBottom: 6 },
-  bdBullet:     { flexDirection: 'row', marginBottom: 4 },
-  bdBulletNum:  { fontSize: 9, color: GREEN_BG, marginRight: 6 },
-  bdBulletTxt:  { flex: 1, fontSize: 9, color: FG_MUTED, lineHeight: 1.5 },
+  sbSec:    { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: DARK, textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 14, marginBottom: 6 },
+  sbUnderline:{ height: 1.5, backgroundColor: TEAL, marginBottom: 8 },
 
-  // Left sidebar items
-  skillRow:     { marginBottom: 8 },
-  skillLbl:     { fontSize: 8.5, color: FG_MAIN, marginBottom: 3 },
-  barBg:        { height: 4, backgroundColor: '#e5e7eb', borderRadius: 2 },
-  barFg:        { height: 4, backgroundColor: '#471413', borderRadius: 2 }, // Dark brown skill bar like William Perez
+  // Skill with dot bars
+  skillRow: { marginBottom: 7 },
+  skillName:{ fontSize: 8, color: '#374151', marginBottom: 3 },
+  dotBar:   { flexDirection: 'row', gap: 3 },
+  dotFill:  { width: 9, height: 9, borderRadius: 5, backgroundColor: TEAL },
+  dotEmpty: { width: 9, height: 9, borderRadius: 5, backgroundColor: '#c8e8f2' },
+
+  sbText:   { fontSize: 7.5, color: '#374151', marginBottom: 3, lineHeight: 1.5 },
+  sbLang:   { fontSize: 7.5, color: '#374151', marginBottom: 3 },
+  sbStr:    { fontSize: 7.5, color: '#374151', marginBottom: 3 },
+  sbInt:    { fontSize: 7.5, color: '#374151', marginBottom: 2 },
+  sbCert:   { fontSize: 7, color: MUTED, marginBottom: 3, lineHeight: 1.4 },
+
+  // Body
+  bdName:   { fontSize: 26, fontFamily: 'Helvetica-Bold', color: DARK },
+  bdRole:   { fontSize: 10, color: TEAL, fontFamily: 'Helvetica-Bold', marginBottom: 2 },
+  bdContact:{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#e0f3fa' },
+  bdCtxt:   { fontSize: 8, color: MUTED },
+
+  bdSec:    { fontSize: 10, fontFamily: 'Helvetica-Bold', color: DARK, marginTop: 14, marginBottom: 4 },
+  bdDiv:    { height: 2, backgroundColor: TEAL, marginBottom: 10, width: 35 },
+  bdSummary:{ fontSize: 9, color: '#374151', lineHeight: 1.7 },
+
+  jobBlock: { marginBottom: 12 },
+  jobHead:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 },
+  jobRole:  { fontSize: 9, fontFamily: 'Helvetica-Bold', color: DARK },
+  jobDate:  { fontSize: 8, color: MUTED },
+  jobCo:    { fontSize: 8.5, color: TEAL, marginBottom: 4 },
+  bullet:   { flexDirection: 'row', marginBottom: 3 },
+  bulletDot:{ fontSize: 8.5, color: TEAL, marginRight: 5, marginTop: 1 },
+  bulletTxt:{ flex: 1, fontSize: 8.5, color: '#374151', lineHeight: 1.5 },
+
+  achBlock: { backgroundColor: '#e0f3fa', borderLeftWidth: 3, borderLeftColor: TEAL, padding: 10 },
+  achTxt:   { fontSize: 8.5, color: '#374151', lineHeight: 1.6 },
+  refText:  { fontSize: 8.5, color: MUTED, fontFamily: 'Helvetica-Oblique' },
 });
 
-export const CorporateBannerTemplate = ({ data }: { data: CVData }) => {
-  const skillsWithScores = data.skills.slice(0, 6).map((sk, i) => ({
-    name: sk,
-    score: Math.min(100, 100 - (i * 5)), // Percentages
-  }));
+const SkillDots = ({ level = 7 }: { level?: number }) => (
+  <View style={s.dotBar}>
+    {Array.from({ length: 10 }).map((_, i) => (
+      <View key={i} style={i < level ? s.dotFill : s.dotEmpty} />
+    ))}
+  </View>
+);
 
-  return (
-    <Document>
-      <Page size="A4" style={s.page}>
-        
-        {/* Header */}
-        <View style={s.headerArea}>
-          <View style={s.nameArea}>
-            <Text style={s.nameTxt}>{data.name}</Text>
-            <Text style={s.roleTxt}>{data.headline}</Text>
-          </View>
-          <View style={s.contactArea}>
-            {data.email && <View style={s.contactRow}><Text style={s.contactIcon}>✉</Text><Text style={s.contactTxt}>{data.email}</Text></View>}
-            {data.phone && <View style={s.contactRow}><Text style={s.contactIcon}>☎</Text><Text style={s.contactTxt}>{data.phone}</Text></View>}
-            {data.location && <View style={s.contactRow}><Text style={s.contactIcon}>⚲</Text><Text style={s.contactTxt}>{data.location}</Text></View>}
-            {data.linkedinUrl && <View style={s.contactRow}><Text style={s.contactIcon}>in</Text><Text style={s.contactTxt}>{data.linkedinUrl}</Text></View>}
-          </View>
+export const CorporateBannerTemplate = ({ data }: { data: CVData }) => (
+  <Document>
+    <Page size="A4" style={s.page}>
+
+      {/* ── Sidebar ── */}
+      <View style={s.sidebar}>
+        <View style={s.sbPhotoBox}>
+          {data.passportUrl
+            ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
+            : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
+          }
+          <Text style={s.sbName}>{data.name}</Text>
+          <Text style={s.sbRole}>{data.headline}</Text>
+          {data.location && <Text style={s.sbContact}>⚲ {data.location}</Text>}
         </View>
 
-        {/* Columns */}
-        <View style={s.columns}>
-          
-          {/* Left Column */}
-          <View style={s.leftCol}>
-            <View style={s.sectionTitleRow}>
-              <Text style={s.sectionIcon}>★</Text><Text style={s.sectionTitle}>Skills</Text>
-            </View>
-            {skillsWithScores.map((sk, i) => (
-              <View key={i} style={s.skillRow}>
-                <Text style={s.skillLbl}>{sk.name}</Text>
-                <View style={s.barBg}>
-                  <View style={[s.barFg, { width: `${sk.score}%` }]} />
-                </View>
-              </View>
+        <Text style={s.sbSec}>Profile</Text>
+        <View style={s.sbUnderline} />
+        {data.email  && <Text style={s.sbText}>✉ {data.email}</Text>}
+        {data.phone  && <Text style={s.sbText}>☎ {data.phone}</Text>}
+        {data.linkedinUrl && <Text style={s.sbText}>in {data.linkedinUrl}</Text>}
+
+        <Text style={s.sbSec}>Skills</Text>
+        <View style={s.sbUnderline} />
+        {data.skills.slice(0, 6).map((sk, i) => (
+          <View key={i} style={s.skillRow}>
+            <Text style={s.skillName}>{sk}</Text>
+            <SkillDots level={8 - (i % 3)} />
+          </View>
+        ))}
+
+        {data.languages && data.languages.length > 0 && (
+          <>
+            <Text style={s.sbSec}>Languages</Text>
+            <View style={s.sbUnderline} />
+            {data.languages.map((l, i) => (
+              <Text key={i} style={s.sbLang}>• {l}</Text>
             ))}
+          </>
+        )}
 
-            <View style={[s.sectionTitleRow, { marginTop: 24 }]}>
-              <Text style={s.sectionIcon}>🎓</Text><Text style={s.sectionTitle}>Education</Text>
-            </View>
-            <Text style={{ fontSize: 8.5, color: FG_MUTED, lineHeight: 1.5 }}>{data.education}</Text>
-          </View>
+        {data.strengths && data.strengths.length > 0 && (
+          <>
+            <Text style={s.sbSec}>Strengths</Text>
+            <View style={s.sbUnderline} />
+            {data.strengths.map((str, i) => (
+              <Text key={i} style={s.sbStr}>◆ {str}</Text>
+            ))}
+          </>
+        )}
 
-          {/* Right Column */}
-          <View style={s.rightCol}>
-            {data.summary && (
-              <>
-                <View style={s.sectionTitleRow}>
-                  <Text style={s.sectionIcon}>👤</Text><Text style={s.sectionTitle}>Professional Summary</Text>
-                </View>
-                <Text style={s.summaryTxt}>{data.summary}</Text>
-              </>
-            )}
+        {data.interests && data.interests.length > 0 && (
+          <>
+            <Text style={s.sbSec}>Interests</Text>
+            <View style={s.sbUnderline} />
+            <Text style={s.sbInt}>{data.interests.join(' • ')}</Text>
+          </>
+        )}
 
-            {data.experience.length > 0 && (
-              <>
-                <View style={s.sectionTitleRow}>
-                  <Text style={s.sectionIcon}>💼</Text><Text style={s.sectionTitle}>Work Experience</Text>
-                </View>
-                {data.experience.map((exp, i) => {
-                  const bullets = dutiesToBullets(exp.duties);
-                  return (
-                    <View key={i} style={s.jobBlock}>
-                      <View style={s.jobRoleRow}>
-                        <Text style={s.jobRole}>{exp.role}</Text>
-                        {exp.period && <Text style={s.jobDate}>{exp.period}</Text>}
-                      </View>
-                      <Text style={s.jobCo}>{exp.company}</Text>
-                      {bullets.map((b, bi) => (
-                        <View key={bi} style={s.bdBullet}>
-                          <Text style={s.bdBulletNum}>{bi + 1}.</Text>
-                          <Text style={s.bdBulletTxt}>{b}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  );
-                })}
-              </>
-            )}
+        {data.certifications && data.certifications.length > 0 && (
+          <>
+            <Text style={s.sbSec}>Certifications</Text>
+            <View style={s.sbUnderline} />
+            {data.certifications.map((cert, i) => (
+              <Text key={i} style={s.sbCert}>• {cert}</Text>
+            ))}
+          </>
+        )}
+      </View>
 
-            {data.achievement && (
-              <>
-                <View style={[s.sectionTitleRow, { marginTop: 4 }]}>
-                  <Text style={s.sectionIcon}>🏆</Text><Text style={s.sectionTitle}>Achievement</Text>
-                </View>
-                <Text style={s.summaryTxt}>{data.achievement}</Text>
-              </>
-            )}
-          </View>
-
+      {/* ── Body ── */}
+      <View style={s.body}>
+        <Text style={s.bdName}>{data.name}</Text>
+        <Text style={s.bdRole}>{data.headline}</Text>
+        <View style={s.bdContact}>
+          {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
+          {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
+          {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
         </View>
-      </Page>
-    </Document>
-  );
-};
+
+        {data.summary && (
+          <>
+            <Text style={s.bdSec}>Profile</Text>
+            <View style={s.bdDiv} />
+            <Text style={s.bdSummary}>{data.summary}</Text>
+          </>
+        )}
+
+        {data.experience.length > 0 && (
+          <>
+            <Text style={s.bdSec}>Employment History</Text>
+            <View style={s.bdDiv} />
+            {data.experience.map((exp, i) => {
+              const bullets = dutiesToBullets(exp.duties);
+              return (
+                <View key={i} style={s.jobBlock}>
+                  <View style={s.jobHead}>
+                    <Text style={s.jobRole}>{exp.role}</Text>
+                    <Text style={s.jobDate}>{exp.period}</Text>
+                  </View>
+                  {exp.company && <Text style={s.jobCo}>{exp.company}</Text>}
+                  {bullets.map((b, bi) => (
+                    <View key={bi} style={s.bullet}>
+                      <Text style={s.bulletDot}>•</Text>
+                      <Text style={s.bulletTxt}>{b}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {data.achievement && (
+          <>
+            <Text style={s.bdSec}>Key Achievement</Text>
+            <View style={s.bdDiv} />
+            <View style={s.achBlock}>
+              <Text style={s.achTxt}>{data.achievement}</Text>
+            </View>
+          </>
+        )}
+
+        {data.education && (
+          <>
+            <Text style={s.bdSec}>Education</Text>
+            <View style={s.bdDiv} />
+            <Text style={{ fontSize: 9, color: '#374151' }}>{data.education}</Text>
+          </>
+        )}
+
+        <Text style={[s.bdSec, { marginTop: 14 }]}>References</Text>
+        <View style={s.bdDiv} />
+        <Text style={s.refText}>{data.references || 'Available upon request'}</Text>
+      </View>
+
+    </Page>
+  </Document>
+);

@@ -1,72 +1,65 @@
-// T7 – Dark Green Pro (Emma Johnson style)
-// Dark olive-green sidebar with icon-labelled sections, strengths, languages, white body
+// T11 – Burgundy Side (Jackson Turner style)
+// Dark burgundy/maroon sidebar, white right body with numbered experience points
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 import { CVData } from '../../../lib/cv/types';
 import { dutiesToBullets } from '../../../lib/cv/cvContentBuilder';
 
-const GREEN  = '#1a3c2a';
-const LGREEN = '#2e6b47';
-const ACCENT = '#4ade80';
+const BURG   = '#6B1F2E';
+const BURG2  = '#9b2d42';
+const DARK   = '#1a1a1a';
 const WHITE  = '#ffffff';
 const MUTED  = '#94a3b8';
-const BODY   = '#1e293b';
 
 const s = StyleSheet.create({
   page:     { flexDirection: 'row', backgroundColor: WHITE, fontFamily: 'Helvetica' },
-  sidebar:  { width: 195, backgroundColor: GREEN, flexShrink: 0, padding: 22 },
-  body:     { flex: 1, padding: 30 },
+  sidebar:  { width: 190, backgroundColor: BURG, flexShrink: 0, padding: 22, paddingTop: 28 },
+  body:     { flex: 1, padding: 32 },
 
   photoBox: { alignItems: 'center', marginBottom: 18 },
-  avatar:   { width: 82, height: 82, borderRadius: 41, objectFit: 'cover', borderWidth: 2, borderColor: ACCENT },
-  initBox:  { width: 82, height: 82, borderRadius: 41, backgroundColor: LGREEN, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: ACCENT },
+  avatar:   { width: 82, height: 82, borderRadius: 41, objectFit: 'cover', borderWidth: 3, borderColor: BURG2 },
+  initBox:  { width: 82, height: 82, borderRadius: 41, backgroundColor: BURG2, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#f9a8b4' },
   initTxt:  { fontSize: 28, fontFamily: 'Helvetica-Bold', color: WHITE },
   sbName:   { fontSize: 11, fontFamily: 'Helvetica-Bold', color: WHITE, textAlign: 'center', marginTop: 8 },
-  sbRole:   { fontSize: 8, color: ACCENT, textAlign: 'center', marginTop: 3, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sbRole:   { fontSize: 8, color: '#f9a8b4', textAlign: 'center', marginTop: 3, textTransform: 'uppercase' },
 
-  divider:  { height: 1, backgroundColor: LGREEN, marginVertical: 10 },
+  divider:  { height: 1, backgroundColor: BURG2, marginVertical: 10 },
 
-  sbSec:    { fontSize: 8, fontFamily: 'Helvetica-Bold', color: ACCENT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7, marginTop: 12 },
+  sbSec:    { fontSize: 8, fontFamily: 'Helvetica-Bold', color: '#f9a8b4', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 7, marginTop: 12 },
   sbRow:    { flexDirection: 'row', marginBottom: 5, alignItems: 'flex-start' },
-  sbIcon:   { width: 14, fontSize: 8, color: ACCENT },
-  sbText:   { fontSize: 7.5, color: '#a7f3d0', flex: 1, lineHeight: 1.5 },
-  sbSkill:  { fontSize: 7.5, color: '#a7f3d0', marginBottom: 3 },
-  sbLang:   { fontSize: 7.5, color: '#a7f3d0', marginBottom: 3 },
-  sbStr:    { fontSize: 7.5, color: '#a7f3d0', marginBottom: 3 },
-  sbInt:    { fontSize: 7.5, color: '#a7f3d0', marginBottom: 2 },
-  sbCert:   { fontSize: 7, color: '#6ee7b7', marginBottom: 3, lineHeight: 1.4 },
-
-  // Achievement badge in sidebar
-  achBadge: { backgroundColor: LGREEN, borderRadius: 6, padding: 10, marginBottom: 8 },
-  achLabel: { fontSize: 8, fontFamily: 'Helvetica-Bold', color: ACCENT, marginBottom: 3 },
-  achTxtSb: { fontSize: 7.5, color: '#a7f3d0', lineHeight: 1.4 },
+  sbIcon:   { width: 14, fontSize: 8, color: '#f9a8b4' },
+  sbText:   { fontSize: 7.5, color: '#fce7f3', flex: 1, lineHeight: 1.5 },
+  sbSkill:  { fontSize: 7.5, color: '#fce7f3', marginBottom: 3 },
+  sbLang:   { fontSize: 7.5, color: '#fce7f3', marginBottom: 3 },
+  sbStr:    { fontSize: 7.5, color: '#fce7f3', marginBottom: 3 },
+  sbInt:    { fontSize: 7.5, color: '#fce7f3', marginBottom: 2 },
+  sbCert:   { fontSize: 7, color: '#f9a8b4', marginBottom: 3, lineHeight: 1.4 },
 
   // Body
-  bdName:   { fontSize: 24, fontFamily: 'Helvetica-Bold', color: GREEN },
-  bdRole:   { fontSize: 10, color: LGREEN, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
-  bdContact:{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 14 },
+  bdName:   { fontSize: 24, fontFamily: 'Helvetica-Bold', color: BURG },
+  bdRole:   { fontSize: 10, color: BURG, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
+  bdContact:{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#fce7f3', paddingBottom: 8 },
   bdCtxt:   { fontSize: 7.5, color: MUTED },
 
-  bdSec:    { fontSize: 10, fontFamily: 'Helvetica-Bold', color: GREEN, textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 14, marginBottom: 4 },
-  bdDiv:    { height: 2, backgroundColor: GREEN, marginBottom: 10, width: 36 },
+  bdSec:    { fontSize: 10, fontFamily: 'Helvetica-Bold', color: BURG, textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 14, marginBottom: 4 },
+  bdDiv:    { height: 1.5, backgroundColor: BURG, marginBottom: 10 },
   bdSummary:{ fontSize: 9, color: '#374151', lineHeight: 1.7 },
 
   jobBlock: { marginBottom: 14 },
   jobHead:  { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 },
-  jobRole:  { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: BODY },
+  jobRole:  { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: DARK },
   jobDate:  { fontSize: 8, color: MUTED },
-  jobCo:    { fontSize: 8.5, color: LGREEN, marginBottom: 4 },
+  jobCo:    { fontSize: 8.5, color: BURG, marginBottom: 4 },
   bullet:   { flexDirection: 'row', marginBottom: 3 },
-  bulletDot:{ fontSize: 8.5, color: GREEN, marginRight: 5, marginTop: 1 },
+  bulletNum:{ fontSize: 8, color: BURG, marginRight: 5, fontFamily: 'Helvetica-Bold', width: 14 },
   bulletTxt:{ flex: 1, fontSize: 8.5, color: '#374151', lineHeight: 1.5 },
 
-  eduBlock: { backgroundColor: '#f0fdf4', borderLeftWidth: 3, borderLeftColor: LGREEN, padding: 10 },
-  eduTxt:   { fontSize: 8.5, color: '#374151' },
-
+  achBlock: { backgroundColor: '#fff5f7', borderLeftWidth: 3, borderLeftColor: BURG, padding: 10, marginTop: 4 },
+  achTxt:   { fontSize: 8.5, color: '#374151', lineHeight: 1.6 },
   refText:  { fontSize: 8.5, color: MUTED, fontFamily: 'Helvetica-Oblique' },
 });
 
-export const ModernTechTemplate = ({ data }: { data: CVData }) => (
+export const BurgundySideTemplate = ({ data }: { data: CVData }) => (
   <Document>
     <Page size="A4" style={s.page}>
 
@@ -89,42 +82,22 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
         {data.location && <View style={s.sbRow}><Text style={s.sbIcon}>⚲</Text><Text style={s.sbText}>{data.location}</Text></View>}
         {data.linkedinUrl && <View style={s.sbRow}><Text style={s.sbIcon}>in</Text><Text style={s.sbText}>{data.linkedinUrl}</Text></View>}
 
-        <View style={s.divider} />
-
-        {data.skills.length > 0 && (
-          <>
-            <Text style={s.sbSec}>Skills</Text>
-            {data.skills.slice(0, 7).map((sk, i) => (
-              <Text key={i} style={s.sbSkill}>▸ {sk}</Text>
-            ))}
-          </>
-        )}
-
-        {data.achievement && (
-          <>
-            <Text style={s.sbSec}>Achievement</Text>
-            <View style={s.achBadge}>
-              <Text style={s.achLabel}>★ Top Achievement</Text>
-              <Text style={s.achTxtSb}>{data.achievement.slice(0, 110)}...</Text>
-            </View>
-          </>
-        )}
+        <Text style={s.sbSec}>Skills</Text>
+        {data.skills.slice(0, 8).map((sk, i) => (
+          <Text key={i} style={s.sbSkill}>▸ {sk}</Text>
+        ))}
 
         {data.languages && data.languages.length > 0 && (
           <>
             <Text style={s.sbSec}>Languages</Text>
-            {data.languages.map((l, i) => (
-              <Text key={i} style={s.sbLang}>• {l}</Text>
-            ))}
+            {data.languages.map((l, i) => <Text key={i} style={s.sbLang}>• {l}</Text>)}
           </>
         )}
 
         {data.strengths && data.strengths.length > 0 && (
           <>
             <Text style={s.sbSec}>Strengths</Text>
-            {data.strengths.map((str, i) => (
-              <Text key={i} style={s.sbStr}>◆ {str}</Text>
-            ))}
+            {data.strengths.map((str, i) => <Text key={i} style={s.sbStr}>◆ {str}</Text>)}
           </>
         )}
 
@@ -138,9 +111,14 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
         {data.certifications && data.certifications.length > 0 && (
           <>
             <Text style={s.sbSec}>Certifications</Text>
-            {data.certifications.map((cert, i) => (
-              <Text key={i} style={s.sbCert}>• {cert}</Text>
-            ))}
+            {data.certifications.map((cert, i) => <Text key={i} style={s.sbCert}>• {cert}</Text>)}
+          </>
+        )}
+
+        {data.education && (
+          <>
+            <Text style={s.sbSec}>Education</Text>
+            <Text style={s.sbText}>{data.education}</Text>
           </>
         )}
       </View>
@@ -178,7 +156,7 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
                   {exp.company && <Text style={s.jobCo}>{exp.company}</Text>}
                   {bullets.map((b, bi) => (
                     <View key={bi} style={s.bullet}>
-                      <Text style={s.bulletDot}>•</Text>
+                      <Text style={s.bulletNum}>{bi + 1}.</Text>
                       <Text style={s.bulletTxt}>{b}</Text>
                     </View>
                   ))}
@@ -188,12 +166,12 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
           </>
         )}
 
-        {data.education && (
+        {data.achievement && (
           <>
-            <Text style={s.bdSec}>Education</Text>
+            <Text style={s.bdSec}>Key Achievement</Text>
             <View style={s.bdDiv} />
-            <View style={s.eduBlock}>
-              <Text style={s.eduTxt}>{data.education}</Text>
+            <View style={s.achBlock}>
+              <Text style={s.achTxt}>{data.achievement}</Text>
             </View>
           </>
         )}

@@ -25,6 +25,11 @@ import { ModernTechTemplate } from './templates/ModernTechTemplate';
 import { CreativeAccentTemplate } from './templates/CreativeAccentTemplate';
 import { ElegantSerifTemplate } from './templates/ElegantSerifTemplate';
 import { BoldTypographyTemplate } from './templates/BoldTypographyTemplate';
+import { BurgundySideTemplate } from './templates/BurgundySideTemplate';
+import { ForestGreenPhotoTemplate } from './templates/ForestGreenPhotoTemplate';
+import { GoldenYellowTemplate } from './templates/GoldenYellowTemplate';
+import { SteelBlueBannerTemplate } from './templates/SteelBlueBannerTemplate';
+import { CharcoalChevronTemplate } from './templates/CharcoalChevronTemplate';
 
 interface ApplyJobCVWizardProps {
   job: Job;
@@ -34,16 +39,21 @@ interface ApplyJobCVWizardProps {
 }
 
 const TEMPLATE_LABELS: Record<TemplateId, { name: string; color: string }> = {
-  T1: { name: 'Classic Split',      color: '#3a3e47' },
-  T2: { name: 'Executive Blue',     color: '#0ea5e9' },
-  T3: { name: 'Vivid Sidebar',      color: '#2563eb' },
-  T4: { name: 'Inverse Green',      color: '#16a34a' },
-  T5: { name: 'Corporate Banner',   color: '#7c3aed' },
-  T6: { name: 'Minimalist White',   color: '#000000' },
-  T7: { name: 'Modern Tech',        color: '#0ea5e9' },
-  T8: { name: 'Creative Accent',    color: '#f43f5e' },
-  T9: { name: 'Elegant Serif',      color: '#333333' },
-  T10: { name: 'Bold Typography',   color: '#111827' },
+  T1:  { name: 'Classic Split',        color: '#3a3e47' },
+  T2:  { name: 'Executive Pro',        color: '#2c3140' },
+  T3:  { name: 'Crimson Banner',       color: '#8B1A1A' },
+  T4:  { name: 'Navy Achievement',     color: '#1a2e4a' },
+  T5:  { name: 'Sky Blue Sidebar',     color: '#2196b8' },
+  T6:  { name: 'Warm Minimal',         color: '#b5966f' },
+  T7:  { name: 'Dark Green Pro',       color: '#1a3c2a' },
+  T8:  { name: 'Gold Sidebar',         color: '#8B7B30' },
+  T9:  { name: 'Indigo Sidebar',       color: '#4338ca' },
+  T10: { name: 'Executive Panel',      color: '#7B2035' },
+  T11: { name: 'Burgundy Side',        color: '#6B1F2E' },
+  T12: { name: 'Forest Green Photo',   color: '#2D5016' },
+  T13: { name: 'Golden Yellow',        color: '#C4A000' },
+  T14: { name: 'Steel Blue Banner',    color: '#1B4F8A' },
+  T15: { name: 'Charcoal Chevron',     color: '#3a3e47' },
 };
 
 export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobCVWizardProps) {
@@ -200,17 +210,22 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
   // ── Render the selected PDF template ─────────────────────────────────────
   const renderTemplate = () => {
     switch (selectedTemplateId) {
-      case 'T2': return <ExecutiveBlueTemplate data={cvData} />;
-      case 'T3': return <VividSidebarTemplate data={cvData} />;
-      case 'T4': return <InverseGreenTemplate data={cvData} />;
-      case 'T5': return <CorporateBannerTemplate data={cvData} />;
-      case 'T6': return <MinimalistWhiteTemplate data={cvData} />;
-      case 'T7': return <ModernTechTemplate data={cvData} />;
-      case 'T8': return <CreativeAccentTemplate data={cvData} />;
-      case 'T9': return <ElegantSerifTemplate data={cvData} />;
+      case 'T2':  return <ExecutiveBlueTemplate data={cvData} />;
+      case 'T3':  return <VividSidebarTemplate data={cvData} />;
+      case 'T4':  return <InverseGreenTemplate data={cvData} />;
+      case 'T5':  return <CorporateBannerTemplate data={cvData} />;
+      case 'T6':  return <MinimalistWhiteTemplate data={cvData} />;
+      case 'T7':  return <ModernTechTemplate data={cvData} />;
+      case 'T8':  return <CreativeAccentTemplate data={cvData} />;
+      case 'T9':  return <ElegantSerifTemplate data={cvData} />;
       case 'T10': return <BoldTypographyTemplate data={cvData} />;
+      case 'T11': return <BurgundySideTemplate data={cvData} />;
+      case 'T12': return <ForestGreenPhotoTemplate data={cvData} />;
+      case 'T13': return <GoldenYellowTemplate data={cvData} />;
+      case 'T14': return <SteelBlueBannerTemplate data={cvData} />;
+      case 'T15': return <CharcoalChevronTemplate data={cvData} />;
       case 'T1':
-      default:   return <ClassicSplitTemplate data={cvData} />;
+      default:    return <ClassicSplitTemplate data={cvData} />;
     }
   };
 
