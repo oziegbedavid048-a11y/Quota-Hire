@@ -15,4 +15,8 @@ if not User.objects.filter(username=username).exists():
     User.objects.create_superuser(username=username, email=email, password=password)
     print(f"Superuser '{username}' created successfully.")
 else:
-    print(f"Superuser '{username}' already exists. Skipping creation.")
+    u = User.objects.get(username=username)
+    u.email = email
+    u.set_password(password)
+    u.save()
+    print(f"Superuser '{username}' already exists. Password and email have been synced with Render environment variables.")
