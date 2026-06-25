@@ -21,7 +21,6 @@ const s = StyleSheet.create({
   // Avatar
   avatarContainer: { marginTop: 40, alignItems: 'center' },
   avatar:     { width: 80, height: 80, borderRadius: 40, objectFit: 'cover' },
-  avatarInit: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#4a5568', color: WHITE, fontSize: 26, textAlign: 'center', lineHeight: 80 / 12 },
 
   // Sidebar content
   sbContent:  { padding: 30, paddingTop: 10 },
@@ -50,7 +49,6 @@ const s = StyleSheet.create({
 });
 
 export const ClassicSplitTemplate = ({ data }: { data: CVData }) => {
-  const initials = data.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
     <Document>
@@ -59,10 +57,8 @@ export const ClassicSplitTemplate = ({ data }: { data: CVData }) => {
         {/* ── Left Sidebar ── */}
         <View style={s.sidebar}>
           <View style={s.sbHeader}>
-            {data.profileImageUrl ? (
-              <Image source={{ uri: data.profileImageUrl }} style={s.avatar} />
-            ) : (
-              <View style={s.avatarInit}><Text style={{ paddingTop: 24 }}>{initials}</Text></View>
+            {data.passportUrl && (
+              <Image source={{ uri: data.passportUrl }} style={s.avatar} />
             )}
           </View>
 

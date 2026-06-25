@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+
+  body {
+    width: 1080px; height: 1080px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    background: #15750a;
+    position: relative;
+  }
+
+  .bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 70% at 30% 50%, #0e4f06 0%, #15750a 50%, #082e04 100%);
+  }
+
+  /* Floating circles like Favex flyer */
+  .circle {
+    position: absolute; border-radius: 50%;
+    background: radial-gradient(circle, #72dd15 0%, #15750a 70%);
+    opacity: 0.4;
+    filter: blur(2px);
+  }
+
+  .content {
+    position: relative; z-index: 10;
+    width: 100%; height: 100%;
+    display: flex;
+    padding: 52px 60px;
+    gap: 40px;
+  }
+
+  /* LEFT: Text + download buttons */
+  .left-col {
+    flex: 1;
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    padding-top: 10px;
+  }
+
+  .logo-area {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 0;
+  }
+  .logo-img {
+    width: 48px; height: 48px; object-fit: contain;
+    background: white; border-radius: 12px; padding: 4px;
+  }
+  .brand-name {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 24px; font-weight: 800; color: white;
+  }
+
+  .social-tag {
+    position: absolute; top: 52px; right: 60px;
+    display: flex; align-items: center; gap: 10px;
+    color: rgba(255,255,255,0.75); font-size: 16px; font-weight: 600;
+  }
+  .social-icon-sm {
+    font-size: 18px; color: rgba(255,255,255,0.8);
+  }
+
+  .main-text { margin-top: 40px; }
+
+  .welcome-line {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 76px; font-weight: 900;
+    color: white; line-height: 0.95;
+    margin-bottom: 0;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .welcome-month {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 76px; font-weight: 900;
+    color: #f59e0b; line-height: 0.95;
+  }
+
+  .sub-text {
+    margin-top: 28px;
+    font-size: 20px; line-height: 1.6;
+    color: rgba(255,255,255,0.85);
+    max-width: 340px;
+  }
+  .sub-text .highlight {
+    color: #72dd15; font-weight: 700;
+  }
+
+  /* Feature pills */
+  .pills {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin-top: 30px;
+  }
+  .pill {
+    background: rgba(114, 221, 21, 0.2);
+    border: 1px solid rgba(114, 221, 21, 0.4);
+    border-radius: 50px; padding: 8px 20px;
+    color: #72dd15; font-size: 15px; font-weight: 600;
+  }
+
+  .cta-area { margin-top: 40px; }
+  .cta-label {
+    font-size: 13px; font-weight: 700;
+    color: rgba(255,255,255,0.5); letter-spacing: 1.5px;
+    text-transform: uppercase; margin-bottom: 14px;
+  }
+  .store-btns { display: flex; gap: 14px; }
+  .store-btn {
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    backdrop-filter: blur(10px);
+    border-radius: 14px;
+    padding: 12px 22px;
+    display: flex; align-items: center; gap: 10px;
+    color: white;
+  }
+  .store-btn-icon { font-size: 26px; }
+  .store-btn-text { text-align: left; }
+  .store-btn-sub { font-size: 10px; color: rgba(255,255,255,0.6); display: block; }
+  .store-btn-name { font-size: 16px; font-weight: 700; display: block; }
+
+  /* RIGHT: Phone mockup */
+  .right-col {
+    width: 360px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .phone-container {
+    position: relative; z-index: 2;
+  }
+
+  .phone-body {
+    width: 280px; height: 560px;
+    background: linear-gradient(180deg, #1a2332 0%, #0f1a26 100%);
+    border-radius: 50px;
+    padding: 16px 12px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+    border: 2px solid #334155;
+    position: relative;
+  }
+
+  .phone-island {
+    width: 90px; height: 20px;
+    background: #0f172a; border-radius: 20px;
+    margin: 0 auto 8px;
+  }
+
+  .phone-screen {
+    border-radius: 36px; overflow: hidden;
+    height: calc(100% - 28px);
+    background: #f4fbf2;
+  }
+  .phone-screen img {
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: top left;
+  }
+
+  /* Glow under phone */
+  .phone-glow {
+    position: absolute;
+    bottom: -30px; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 60px;
+    background: #72dd15;
+    border-radius: 50%; filter: blur(30px);
+    opacity: 0.3; z-index: 1;
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<!-- Floating orbs like Favex -->
+<div class="circle" style="width:180px;height:180px;top:-50px;right:320px;opacity:0.25;"></div>
+<div class="circle" style="width:120px;height:120px;bottom:100px;right:30px;opacity:0.2;"></div>
+<div class="circle" style="width:80px;height:80px;top:200px;left:20px;opacity:0.15;"></div>
+<div class="circle" style="width:60px;height:60px;bottom:200px;left:360px;opacity:0.2;filter:blur(1px);"></div>
+<div class="circle" style="width:100px;height:100px;top:400px;right:50px;opacity:0.15;"></div>
+
+<div class="social-tag">
+  <span class="social-icon-sm">𝕏</span>
+  <span>@quotahire</span>
+</div>
+
+<div class="content">
+
+  <div class="left-col">
+    <div class="logo-area">
+      <img src="logo.png" class="logo-img" alt="Logo">
+      <span class="brand-name">Quota Hire</span>
+    </div>
+
+    <div class="main-text">
+      <div class="welcome-line">Welcome</div>
+      <div class="welcome-line">to <span class="welcome-month">Sales</span></div>
+      <div class="welcome-line">Hiring</div>
+
+      <p class="sub-text">
+        In this new era, hire your<br>
+        <span class="highlight">top sales talent</span> on Quota Hire
+        with peace of mind.
+      </p>
+
+      <div class="pills">
+        <div class="pill">🎯 Smart Matching</div>
+        <div class="pill">✅ Verified Companies</div>
+        <div class="pill">📊 Analytics</div>
+        <div class="pill">🚀 Quick Apply</div>
+      </div>
+    </div>
+
+    <div class="cta-area">
+      <div class="cta-label">Start hiring or job hunting today</div>
+      <div class="store-btns">
+        <div class="store-btn">
+          <span class="store-btn-icon">🌐</span>
+          <div class="store-btn-text">
+            <span class="store-btn-sub">VISIT US AT</span>
+            <span class="store-btn-name">quotahire.org</span>
+          </div>
+        </div>
+        <div class="store-btn">
+          <span class="store-btn-icon">📧</span>
+          <div class="store-btn-text">
+            <span class="store-btn-sub">REACH US</span>
+            <span class="store-btn-name">Support</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Phone Mockup -->
+  <div class="right-col">
+    <div class="phone-container">
+      <div class="phone-body">
+        <div class="phone-island"></div>
+        <div class="phone-screen">
+          <img src="employee_dashboard.png" alt="Employee Dashboard">
+        </div>
+      </div>
+      <div class="phone-glow"></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

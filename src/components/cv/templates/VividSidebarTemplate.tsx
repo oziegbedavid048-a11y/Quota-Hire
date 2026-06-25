@@ -17,7 +17,6 @@ const s = StyleSheet.create({
   headerArea: { backgroundColor: GOLD, paddingVertical: 24, paddingHorizontal: 30, alignItems: 'center', marginBottom: 24 },
   avatarArea: { marginBottom: 14 },
   avatar:     { width: 60, height: 60, borderRadius: 30, objectFit: 'cover' },
-  avatarInit: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.2)', color: WHITE, fontSize: 20, textAlign: 'center', lineHeight: 60 / 10 },
   nameTxt:    { fontSize: 24, fontFamily: 'Helvetica-Bold', color: WHITE, marginBottom: 4, letterSpacing: 0.5 },
   roleTxt:    { fontSize: 10, color: WHITE, fontStyle: 'italic' },
 
@@ -50,7 +49,6 @@ const s = StyleSheet.create({
 });
 
 export const VividSidebarTemplate = ({ data }: { data: CVData }) => {
-  const initials = data.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
     <Document>
@@ -58,13 +56,11 @@ export const VividSidebarTemplate = ({ data }: { data: CVData }) => {
         
         {/* Header */}
         <View style={s.headerArea}>
-          <View style={s.avatarArea}>
-            {data.profileImageUrl ? (
-              <Image source={{ uri: data.profileImageUrl }} style={s.avatar} />
-            ) : (
-              <View style={s.avatarInit}><Text style={{ paddingTop: 18 }}>{initials}</Text></View>
-            )}
-          </View>
+          {data.passportUrl && (
+            <View style={s.avatarArea}>
+              <Image source={{ uri: data.passportUrl }} style={s.avatar} />
+            </View>
+          )}
           <Text style={s.nameTxt}>{data.name}</Text>
         </View>
 
