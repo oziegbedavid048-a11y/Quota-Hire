@@ -233,8 +233,11 @@ class ApplicationAdmin(admin.ModelAdmin):
 
     @admin.display(description='CV')
     def cv_link(self, obj):
-        if hasattr(obj, 'generatedcv'):
-            return format_html('<span style="color:#10b981;font-weight:bold;">✅ Attached</span>')
+        try:
+            if obj.generated_cv:
+                return format_html('<span style="color:#10b981;font-weight:bold;">✅ Attached</span>')
+        except Exception:
+            pass
         return format_html('<span style="color:#94a3b8;">—</span>')
 
     @admin.display(description='Status')
