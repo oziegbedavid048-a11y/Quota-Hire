@@ -359,16 +359,19 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                   {step === 1 && (
                     <div className="p-5 sm:p-6 space-y-5">
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-semibold text-gray-700 flex justify-between items-center">
-                          <span>Target Headline</span>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-sm font-semibold text-gray-700">
+                            Target Headline
+                          </label>
                           <button
+                            type="button"
                             onClick={handleSuggest}
                             className="text-xs flex items-center gap-1 text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded transition"
                           >
                             <Sparkles className="w-3 h-3" />
                             Autofill Suggestions
                           </button>
-                        </label>
+                        </div>
                         <input
                           value={answers.headline}
                           onChange={e => setAnswers(p => ({ ...p, headline: e.target.value }))}
