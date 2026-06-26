@@ -73,12 +73,9 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
       {/* ── Sidebar ── */}
       <View style={s.sidebar}>
         <View style={s.photoBox}>
-          {data.passportUrl
-            ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-            : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
-          }
+          {data.passportUrl && <Image source={{ uri: data.passportUrl }} style={s.avatar} />}
           <Text style={s.sbName}>{data.name}</Text>
-          <Text style={s.sbRole}>{data.headline}</Text>
+          
         </View>
 
         <View style={s.divider} />
@@ -86,7 +83,7 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
         <Text style={s.sbSec}>Contact</Text>
         {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>✉</Text><Text style={s.sbText}>{data.email}</Text></View>}
         {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>☎</Text><Text style={s.sbText}>{data.phone}</Text></View>}
-        {data.location && <View style={s.sbRow}><Text style={s.sbIcon}>⚲</Text><Text style={s.sbText}>{data.location}</Text></View>}
+        {data.location && <View style={s.sbRow}><Text style={s.sbIcon}></Text><Text style={s.sbText}>{data.location}</Text></View>}
         {data.linkedinUrl && <View style={s.sbRow}><Text style={s.sbIcon}>in</Text><Text style={s.sbText}>{data.linkedinUrl}</Text></View>}
 
         <View style={s.divider} />
@@ -123,7 +120,7 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
           <>
             <Text style={s.sbSec}>Strengths</Text>
             {data.strengths.map((str, i) => (
-              <Text key={i} style={s.sbStr}>◆ {str}</Text>
+              <Text key={i} style={s.sbStr}>• {str}</Text>
             ))}
           </>
         )}
@@ -148,11 +145,11 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
       {/* ── Body ── */}
       <View style={s.body}>
         <Text style={s.bdName}>{data.name}</Text>
-        <Text style={s.bdRole}>{data.headline}</Text>
+        
         <View style={s.bdContact}>
           {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
           {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+          {data.location && <Text style={s.bdCtxt}>{data.location}</Text>}
         </View>
 
         {data.summary && (

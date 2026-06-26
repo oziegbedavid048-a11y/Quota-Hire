@@ -96,10 +96,7 @@ export const GoldenYellowTemplate = ({ data }: { data: CVData }) => (
       {/* ── Sidebar ── */}
       <View style={s.sidebar}>
         <View style={s.photoBox}>
-          {data.passportUrl
-            ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-            : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
-          }
+          {data.passportUrl && <Image source={{ uri: data.passportUrl }} style={s.avatar} />}
         </View>
 
         <Text style={s.sbSec}>Skills</Text>
@@ -146,11 +143,11 @@ export const GoldenYellowTemplate = ({ data }: { data: CVData }) => (
       {/* ── Body ── */}
       <View style={s.body}>
         <Text style={s.bdName}>{data.name}</Text>
-        <Text style={s.bdRole}>{data.headline}</Text>
+        
         <View style={s.bdContact}>
           {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
           {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+          {data.location && <Text style={s.bdCtxt}>{data.location}</Text>}
           {data.linkedinUrl && <Text style={s.bdCtxt}>in {data.linkedinUrl}</Text>}
         </View>
 

@@ -30,6 +30,14 @@ import { ForestGreenPhotoTemplate } from './templates/ForestGreenPhotoTemplate';
 import { GoldenYellowTemplate } from './templates/GoldenYellowTemplate';
 import { SteelBlueBannerTemplate } from './templates/SteelBlueBannerTemplate';
 import { CharcoalChevronTemplate } from './templates/CharcoalChevronTemplate';
+import { PlainTemplate1 } from './templates/plain/PlainTemplate1';
+import { PlainTemplate2 } from './templates/plain/PlainTemplate2';
+import { PlainTemplate3 } from './templates/plain/PlainTemplate3';
+import { PlainTemplate4 } from './templates/plain/PlainTemplate4';
+import { PlainTemplate5 } from './templates/plain/PlainTemplate5';
+import { PlainTemplate6 } from './templates/plain/PlainTemplate6';
+import { PlainTemplate7 } from './templates/plain/PlainTemplate7';
+import { PlainTemplate8 } from './templates/plain/PlainTemplate8';
 
 interface ApplyJobCVWizardProps {
   job: Job;
@@ -38,22 +46,26 @@ interface ApplyJobCVWizardProps {
   onComplete: (cvId: number) => void;
 }
 
-const TEMPLATE_LABELS: Record<TemplateId, { name: string; color: string }> = {
-  T1:  { name: 'Classic Split',        color: '#3a3e47' },
-  T2:  { name: 'Executive Pro',        color: '#2c3140' },
+const PIC_TEMPLATES: Record<string, { name: string; color: string }> = {
   T3:  { name: 'Crimson Banner',       color: '#8B1A1A' },
-  T4:  { name: 'Navy Achievement',     color: '#1a2e4a' },
-  T5:  { name: 'Sky Blue Sidebar',     color: '#2196b8' },
-  T6:  { name: 'Warm Minimal',         color: '#b5966f' },
   T7:  { name: 'Dark Green Pro',       color: '#1a3c2a' },
-  T8:  { name: 'Gold Sidebar',         color: '#8B7B30' },
   T9:  { name: 'Indigo Sidebar',       color: '#4338ca' },
   T10: { name: 'Executive Panel',      color: '#7B2035' },
   T11: { name: 'Burgundy Side',        color: '#6B1F2E' },
   T12: { name: 'Forest Green Photo',   color: '#2D5016' },
   T13: { name: 'Golden Yellow',        color: '#C4A000' },
   T14: { name: 'Steel Blue Banner',    color: '#1B4F8A' },
-  T15: { name: 'Charcoal Chevron',     color: '#3a3e47' },
+};
+
+const PLAIN_TEMPLATES: Record<string, { name: string; color: string }> = {
+  P1:  { name: 'Traditional Formal',     color: '#000000' },
+  P2:  { name: 'Corporate Clean',        color: '#1B4F8A' },
+  P3:  { name: 'Minimalist Classic',     color: '#2D5016' },
+  P4:  { name: 'Modern Plain',           color: '#333333' },
+  P5:  { name: 'Elegant Text',           color: '#6B1F2E' },
+  P6:  { name: 'Executive Text',         color: '#000000' },
+  P7:  { name: 'Simple Clean',           color: '#2C3E50' },
+  P8:  { name: 'Standard Professional',  color: '#4A4A4A' },
 };
 
 export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobCVWizardProps) {
@@ -83,6 +95,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
     headline: '',
     achievement: '',
     extraSkills: '',
+    languages: '',
     workEntries: [{ role: '', company: '', period: '', duties: '' }],
   });
 
@@ -148,6 +161,19 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
     currentUrlRef.current = null;
   }, [selectedTemplateId]);
 
+  // ── Dynamic Template Logic ────────────────────────────────────────────────
+  const availableTemplates = passportImage 
+    ? { ...PIC_TEMPLATES, ...Object.fromEntries(Object.entries(PLAIN_TEMPLATES).slice(0, 4)) }
+    : PLAIN_TEMPLATES;
+
+  // Auto-switch template if photo is removed and current template is PIC_TEMPLATE
+  useEffect(() => {
+    if (!passportImage && Object.keys(PIC_TEMPLATES).includes(selectedTemplateId)) {
+      setSelectedTemplateId('P1');
+      setSelectedTemplateName(PLAIN_TEMPLATES['P1'].name);
+    }
+  }, [passportImage, selectedTemplateId]);
+
   // ── Navigation ────────────────────────────────────────────────────────────
   const handleNext = () => setStep(s => Math.min(s + 1, 4));
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
@@ -210,22 +236,23 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
   // ── Render the selected PDF template ─────────────────────────────────────
   const renderTemplate = () => {
     switch (selectedTemplateId) {
-      case 'T2':  return <ExecutiveBlueTemplate data={cvData} />;
       case 'T3':  return <VividSidebarTemplate data={cvData} />;
-      case 'T4':  return <InverseGreenTemplate data={cvData} />;
-      case 'T5':  return <CorporateBannerTemplate data={cvData} />;
-      case 'T6':  return <MinimalistWhiteTemplate data={cvData} />;
       case 'T7':  return <ModernTechTemplate data={cvData} />;
-      case 'T8':  return <CreativeAccentTemplate data={cvData} />;
       case 'T9':  return <ElegantSerifTemplate data={cvData} />;
       case 'T10': return <BoldTypographyTemplate data={cvData} />;
       case 'T11': return <BurgundySideTemplate data={cvData} />;
       case 'T12': return <ForestGreenPhotoTemplate data={cvData} />;
       case 'T13': return <GoldenYellowTemplate data={cvData} />;
       case 'T14': return <SteelBlueBannerTemplate data={cvData} />;
-      case 'T15': return <CharcoalChevronTemplate data={cvData} />;
-      case 'T1':
-      default:    return <ClassicSplitTemplate data={cvData} />;
+      case 'P1':  return <PlainTemplate1 data={cvData} />;
+      case 'P2':  return <PlainTemplate2 data={cvData} />;
+      case 'P3':  return <PlainTemplate3 data={cvData} />;
+      case 'P4':  return <PlainTemplate4 data={cvData} />;
+      case 'P5':  return <PlainTemplate5 data={cvData} />;
+      case 'P6':  return <PlainTemplate6 data={cvData} />;
+      case 'P7':  return <PlainTemplate7 data={cvData} />;
+      case 'P8':  return <PlainTemplate8 data={cvData} />;
+      default:    return <PlainTemplate1 data={cvData} />;
     }
   };
 
@@ -419,6 +446,18 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                           className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none text-sm transition"
                         />
                         <p className="text-[11px] text-gray-400">Comma-separated. These get prioritised in your CV.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-semibold text-gray-700">
+                          Languages (Select 2 or 3)
+                        </label>
+                        <input
+                          value={answers.languages}
+                          onChange={e => setAnswers(p => ({ ...p, languages: e.target.value }))}
+                          placeholder="e.g. English, French, Spanish"
+                          className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none text-sm transition"
+                        />
+                        <p className="text-[11px] text-gray-400">Comma-separated. If left empty, a default set based on your profile will be used.</p>
                       </div>
 
                       <div className="space-y-1.5">
@@ -665,7 +704,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                                     Change CV Design
                                   </p>
                                   <div className="flex gap-2 flex-wrap">
-                                    {(Object.entries(TEMPLATE_LABELS) as [TemplateId, { name: string; color: string }][]).map(([id, { name, color }]) => (
+                                    {(Object.entries(availableTemplates) as [TemplateId, { name: string; color: string }][]).map(([id, { name, color }]) => (
                                       <button
                                         key={id}
                                         onClick={() => {
