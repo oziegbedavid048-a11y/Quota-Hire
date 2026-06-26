@@ -153,14 +153,18 @@ export const ApplyJobPage = () => {
         <h2 className="text-base sm:text-lg font-extrabold text-neutral-900 dark:text-white truncate">{job.title}</h2>
         <div className="flex items-center gap-3 text-xs sm:text-sm font-bold text-neutral-500 mt-0.5 flex-wrap">
           <span className="flex items-center gap-1"><Building size={13} /> {job.companyName}</span>
-          {job.employment_type && <span className="flex items-center gap-1"><Briefcase size={13} /> {job.employment_type}</span>}
+          {job.isRemote ? (
+            <span className="flex items-center gap-1"><Briefcase size={13} /> Remote</span>
+          ) : job.employment_type ? (
+            <span className="flex items-center gap-1"><Briefcase size={13} /> {job.employment_type}</span>
+          ) : null}
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-[#0a0a0a] flex flex-col items-center py-4 sm:py-10 px-4 sm:px-6">
+    <div className="min-h-screen bg-white dark:bg-[#111] flex flex-col items-center py-4 sm:py-10 px-4 sm:px-6">
       
       {/* Top Navigation */}
       <div className="w-full max-w-2xl mb-6 flex items-center justify-between">
