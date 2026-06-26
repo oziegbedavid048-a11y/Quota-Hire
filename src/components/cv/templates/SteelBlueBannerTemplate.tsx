@@ -71,17 +71,14 @@ export const SteelBlueBannerTemplate = ({ data }: { data: CVData }) => (
       {/* ── Header ── */}
       <View style={s.header}>
         <Text style={s.hdName}>{data.name}</Text>
-        <Text style={s.hdRole}>{data.headline}</Text>
+        
         <View style={s.hdContact}>
           {data.email    && <Text style={s.hdCtxt}>✉ {data.email}</Text>}
           {data.phone    && <Text style={s.hdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.hdCtxt}>⚲ {data.location}</Text>}
+          {data.location && <Text style={s.hdCtxt}>{data.location}</Text>}
           {data.linkedinUrl && <Text style={s.hdCtxt}>in {data.linkedinUrl}</Text>}
         </View>
-        {data.passportUrl
-          ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-          : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
-        }
+        
       </View>
 
       {/* ── Content ── */}
@@ -166,7 +163,7 @@ export const SteelBlueBannerTemplate = ({ data }: { data: CVData }) => (
               <>
                 <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: STEEL, marginBottom: 6, marginTop: 12 }}>Strengths</Text>
                 {data.strengths.map((str, i) => (
-                  <Text key={i} style={s.strTxt}>◆ {str}</Text>
+                  <Text key={i} style={s.strTxt}>• {str}</Text>
                 ))}
               </>
             )}

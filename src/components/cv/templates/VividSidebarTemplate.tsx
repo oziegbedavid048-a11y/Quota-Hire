@@ -66,17 +66,14 @@ export const VividSidebarTemplate = ({ data }: { data: CVData }) => (
 
       {/* ── Top Header ── */}
       <View style={s.topHeader}>
-        {data.passportUrl
-          ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-          : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
-        }
+        
         <View style={s.nameBlock}>
           <Text style={s.bdName}>{data.name}</Text>
-          <Text style={s.bdRole}>{data.headline}</Text>
+          
           <View style={s.bdContact}>
             {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
             {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
-            {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+            {data.location && <Text style={s.bdCtxt}>{data.location}</Text>}
           </View>
         </View>
       </View>
@@ -119,7 +116,7 @@ export const VividSidebarTemplate = ({ data }: { data: CVData }) => (
               <Text style={s.sbSec}>Strengths</Text>
               <View style={s.sbDiv} />
               {data.strengths.map((str, i) => (
-                <Text key={i} style={s.sbStr}>◆ {str}</Text>
+                <Text key={i} style={s.sbStr}>• {str}</Text>
               ))}
             </>
           )}

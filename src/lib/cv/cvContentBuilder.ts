@@ -320,6 +320,7 @@ export interface WizardAnswers {
   headline: string;
   achievement: string;
   extraSkills: string;
+  languages?: string;
   workEntries: WorkEntry[];
 }
 
@@ -347,7 +348,8 @@ export function buildCVData(
   // Process work entries
   const experience: WorkEntry[] = wizard.workEntries
     .filter((e) => e.role.trim() || e.company.trim())
-    .map((e) => ({ ...e }));
+    .map((e) => ({ ...e }))
+    .slice(0, 3); // Limit to 3 to ensure 1-page CV
 
   const cvData: CVData = {
     name: profile.name || '',
@@ -360,7 +362,7 @@ export function buildCVData(
     headline: wizard.headline || profile.title || job.title,
     summary,
     experience,
-    skills: allSkills.slice(0, 12),
+    skills: allSkills.slice(0, 8), // Reduced to 8 for 1-page CV
     education: profile.education || '',
     achievement: wizard.achievement,
     targetRole: job.title,
@@ -369,7 +371,7 @@ export function buildCVData(
     templateName,
     // ── Extended fields ──────────────────────────────────────────────
     certifications: buildCertifications(wizard.headline || job.title),
-    languages: buildLanguages(profile),
+    languages: wizard.languages ? wizard.languages.split(',').map(s => s.trim()).filter(Boolean) : buildLanguages(profile),
     interests: buildInterests(wizard.headline || job.title),
     strengths: buildStrengths(wizard.headline || job.title),
     references: 'Available upon request',

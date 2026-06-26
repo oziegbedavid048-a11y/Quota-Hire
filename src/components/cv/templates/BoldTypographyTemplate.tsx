@@ -79,11 +79,11 @@ export const BoldTypographyTemplate = ({ data }: { data: CVData }) => (
       {/* ── Body (Left) ── */}
       <View style={s.body}>
         <Text style={s.bdName}>{data.name}</Text>
-        <Text style={s.bdRole}>{data.headline}</Text>
+        
         <View style={s.bdContact}>
           {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
           {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+          {data.location && <Text style={s.bdCtxt}>{data.location}</Text>}
           {data.linkedinUrl && <Text style={s.bdCtxt}>in {data.linkedinUrl}</Text>}
         </View>
         <View style={s.bdDivTop} />
@@ -147,17 +147,14 @@ export const BoldTypographyTemplate = ({ data }: { data: CVData }) => (
       {/* ── Right Panel ── */}
       <View style={s.panel}>
         <View style={s.pnPhoto}>
-          {data.passportUrl
-            ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-            : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
-          }
+          {data.passportUrl && <Image source={{ uri: data.passportUrl }} style={s.avatar} />}
         </View>
 
         <Text style={s.pnSec}>Contact</Text>
         <View style={s.pnDiv} />
         {data.email    && <Text style={s.pnText}>✉ {data.email}</Text>}
         {data.phone    && <Text style={s.pnText}>☎ {data.phone}</Text>}
-        {data.location && <Text style={s.pnText}>⚲ {data.location}</Text>}
+        {data.location && <Text style={s.pnText}>{data.location}</Text>}
         {data.linkedinUrl && <Text style={s.pnText}>in {data.linkedinUrl}</Text>}
 
         <Text style={s.pnSec}>Skills</Text>
@@ -181,7 +178,7 @@ export const BoldTypographyTemplate = ({ data }: { data: CVData }) => (
             <Text style={s.pnSec}>Strengths</Text>
             <View style={s.pnDiv} />
             {data.strengths.map((str, i) => (
-              <Text key={i} style={s.pnStr}>◆ {str}</Text>
+              <Text key={i} style={s.pnStr}>• {str}</Text>
             ))}
           </>
         )}
