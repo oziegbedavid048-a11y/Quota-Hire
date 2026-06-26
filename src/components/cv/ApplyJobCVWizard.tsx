@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BlobProvider } from '@react-pdf/renderer';
 import {
   Loader2, Send, ChevronRight, ChevronLeft, X, Sparkles,
-  FileText, AlertTriangle, Download, ExternalLink, RefreshCw
+  FileText, AlertTriangle, ExternalLink, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppContext, apiFetch } from '../../context/AppContext';
@@ -291,15 +291,6 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
     if (url) window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const handleDownloadPreview = () => {
-    const url = currentUrlRef.current;
-    if (url) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `CV_${cvData.name.replace(/\s+/g, '_')}_${job.title.replace(/\s+/g, '_')}.pdf`;
-      a.click();
-    }
-  };
 
   // ── Render guard: show loading or fatal error before main UI ──────────────
   const isFatalError = profileError && !profile && !currentUser;
@@ -586,13 +577,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                             >
                               <ExternalLink className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={handleDownloadPreview}
-                              title="Download CV PDF"
-                              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-400 transition"
-                            >
-                              <Download className="w-4 h-4" />
-                            </button>
+
                           </div>
                         </div>
 
@@ -659,12 +644,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                                             >
                                               <ExternalLink className="w-4 h-4" /> Open PDF
                                             </button>
-                                            <button
-                                              onClick={handleDownloadPreview}
-                                              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition"
-                                            >
-                                              <Download className="w-4 h-4" /> Download
-                                            </button>
+
                                           </div>
                                         </div>
                                       </object>
