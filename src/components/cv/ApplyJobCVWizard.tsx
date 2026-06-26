@@ -23,21 +23,12 @@ import { CorporateBannerTemplate } from './templates/CorporateBannerTemplate';
 import { MinimalistWhiteTemplate } from './templates/MinimalistWhiteTemplate';
 import { ModernTechTemplate } from './templates/ModernTechTemplate';
 import { CreativeAccentTemplate } from './templates/CreativeAccentTemplate';
-import { ElegantSerifTemplate } from './templates/ElegantSerifTemplate';
-import { BoldTypographyTemplate } from './templates/BoldTypographyTemplate';
-import { BurgundySideTemplate } from './templates/BurgundySideTemplate';
-import { ForestGreenPhotoTemplate } from './templates/ForestGreenPhotoTemplate';
-import { GoldenYellowTemplate } from './templates/GoldenYellowTemplate';
 import { SteelBlueBannerTemplate } from './templates/SteelBlueBannerTemplate';
 import { CharcoalChevronTemplate } from './templates/CharcoalChevronTemplate';
 import { PlainTemplate1 } from './templates/plain/PlainTemplate1';
 import { PlainTemplate2 } from './templates/plain/PlainTemplate2';
 import { PlainTemplate3 } from './templates/plain/PlainTemplate3';
 import { PlainTemplate4 } from './templates/plain/PlainTemplate4';
-import { PlainTemplate5 } from './templates/plain/PlainTemplate5';
-import { PlainTemplate6 } from './templates/plain/PlainTemplate6';
-import { PlainTemplate7 } from './templates/plain/PlainTemplate7';
-import { PlainTemplate8 } from './templates/plain/PlainTemplate8';
 
 interface ApplyJobCVWizardProps {
   job: Job;
@@ -49,11 +40,6 @@ interface ApplyJobCVWizardProps {
 const PIC_TEMPLATES: Record<string, { name: string; color: string }> = {
   T3:  { name: 'Crimson Banner',       color: '#8B1A1A' },
   T7:  { name: 'Dark Green Pro',       color: '#1a3c2a' },
-  T9:  { name: 'Indigo Sidebar',       color: '#4338ca' },
-  T10: { name: 'Executive Panel',      color: '#7B2035' },
-  T11: { name: 'Burgundy Side',        color: '#6B1F2E' },
-  T12: { name: 'Forest Green Photo',   color: '#2D5016' },
-  T13: { name: 'Golden Yellow',        color: '#C4A000' },
   T14: { name: 'Steel Blue Banner',    color: '#1B4F8A' },
 };
 
@@ -62,10 +48,7 @@ const PLAIN_TEMPLATES: Record<string, { name: string; color: string }> = {
   P2:  { name: 'Corporate Clean',        color: '#1B4F8A' },
   P3:  { name: 'Minimalist Classic',     color: '#2D5016' },
   P4:  { name: 'Modern Plain',           color: '#333333' },
-  P5:  { name: 'Elegant Text',           color: '#6B1F2E' },
-  P6:  { name: 'Executive Text',         color: '#000000' },
-  P7:  { name: 'Simple Clean',           color: '#2C3E50' },
-  P8:  { name: 'Standard Professional',  color: '#4A4A4A' },
+  T14: { name: 'Steel Blue Banner',    color: '#1B4F8A' },
 };
 
 export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobCVWizardProps) {
@@ -238,20 +221,11 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
     switch (selectedTemplateId) {
       case 'T3':  return <VividSidebarTemplate data={cvData} />;
       case 'T7':  return <ModernTechTemplate data={cvData} />;
-      case 'T9':  return <ElegantSerifTemplate data={cvData} />;
-      case 'T10': return <BoldTypographyTemplate data={cvData} />;
-      case 'T11': return <BurgundySideTemplate data={cvData} />;
-      case 'T12': return <ForestGreenPhotoTemplate data={cvData} />;
-      case 'T13': return <GoldenYellowTemplate data={cvData} />;
       case 'T14': return <SteelBlueBannerTemplate data={cvData} />;
       case 'P1':  return <PlainTemplate1 data={cvData} />;
       case 'P2':  return <PlainTemplate2 data={cvData} />;
       case 'P3':  return <PlainTemplate3 data={cvData} />;
       case 'P4':  return <PlainTemplate4 data={cvData} />;
-      case 'P5':  return <PlainTemplate5 data={cvData} />;
-      case 'P6':  return <PlainTemplate6 data={cvData} />;
-      case 'P7':  return <PlainTemplate7 data={cvData} />;
-      case 'P8':  return <PlainTemplate8 data={cvData} />;
       default:    return <PlainTemplate1 data={cvData} />;
     }
   };
