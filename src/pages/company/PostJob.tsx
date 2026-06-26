@@ -401,15 +401,58 @@ export const PostJob = () => {
 
 
 
-                    <label className="flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 cursor-pointer w-fit p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl shadow-inner-soft hover:bg-neutral-100 transition-colors">
-                      <input
-                        type="checkbox"
-                        className="rounded-lg w-5 h-5 text-accent-500 focus:ring-accent-500 bg-white dark:bg-neutral-900 border-none cursor-pointer"
-                        checked={formData.isRemote}
-                        onChange={(e) => setFormData({ ...formData, isRemote: e.target.checked })}
-                      />
-                      This is a fully remote position
-                    </label>
+                    <div className="flex flex-col gap-3">
+                      <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 ml-1">
+                        Workplace Type
+                      </label>
+                      <div className="flex flex-wrap gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, isRemote: true, location: '' })}
+                          className={`flex-1 min-w-[140px] px-4 py-3 rounded-xl border-2 transition-all font-bold text-sm flex items-center justify-center gap-2 ${
+                            formData.isRemote
+                              ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-400'
+                              : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300'
+                          }`}
+                        >
+                          🌍 Remote
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, isRemote: false })}
+                          className={`flex-1 min-w-[140px] px-4 py-3 rounded-xl border-2 transition-all font-bold text-sm flex items-center justify-center gap-2 ${
+                            !formData.isRemote
+                              ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-400'
+                              : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300'
+                          }`}
+                        >
+                          🏢 Full Time
+                        </button>
+                      </div>
+                    </div>
+
+                    <AnimatePresence>
+                      {!formData.isRemote && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pt-2">
+                            <GlassInput
+                              icon={<MapPin size={18} />}
+                              label="Job Location (State)"
+                              placeholder="e.g. Lagos, Abuja, New York"
+                              value={formData.location}
+                              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                              required={!formData.isRemote}
+                              className="input-soft"
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </motion.div>
               )}
