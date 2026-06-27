@@ -867,6 +867,16 @@ class ApplyForJobView(APIView):
             employee=request.user,
             cover_letter=request.data.get('cover_letter', ''),
         )
+
+        generated_cv_id = request.data.get('generated_cv_id')
+        if generated_cv_id:
+            try:
+                cv = GeneratedCV.objects.get(pk=generated_cv_id, employee=request.user)
+                cv.application = app
+                cv.save(update_fields=['application'])
+            except GeneratedCV.DoesNotExist:
+                pass
+
         return Response(ApplicationSerializer(app).data, status=status.HTTP_201_CREATED)
 
 
