@@ -201,7 +201,7 @@ class GeneratedCVInline(admin.StackedInline):
     @admin.display(description='View CV PDF')
     def view_cv_link(self, obj):
         if obj.pk and obj.cv_pdf:
-            url = f'/api/cv/{obj.pk}/download/'
+            url = reverse('admin:api_generatedcv_view_pdf', args=[obj.pk])
             return format_html(
                 '<a class="button" style="background:#10b981;color:white;padding:5px 12px;'
                 'border-radius:4px;font-weight:bold;text-decoration:none;" '
@@ -289,7 +289,7 @@ class ApplicationAdmin(admin.ModelAdmin):
             profile = app.employee.employee_profile
         except Exception:
             raise Http404("Profile not found")
-        
+
         if profile.resume_binary:
             response = HttpResponse(profile.resume_binary, content_type='application/pdf')
             response['Content-Disposition'] = f'inline; filename="{profile.resume_filename or "resume.pdf"}"'
@@ -424,12 +424,12 @@ class ShortlistedApplicantAdmin(admin.ModelAdmin):
 
 @admin.register(GeneratedCV)
 class GeneratedCVAdmin(admin.ModelAdmin):
-    list_display    = ('employee_name', 'template_name', 'target_role', 'target_company', 'generated_at', 'view_cv_button', 'has_cover_letter')
+    list_display    = ('employee_name', 'template_name', 'target_role', 'target_company', 'has_pdf', 'generated_at', 'view_cv_button', 'has_cover_letter')
     list_filter     = ('template_id', 'generated_at')
     search_fields   = ('employee__email', 'employee__first_name', 'employee__last_name', 'target_role', 'target_company')
     ordering        = ('-generated_at',)
     readonly_fields = ('generated_at', 'employee', 'application', 'template_id', 'template_name',
-                       'target_role', 'target_company', 'generated_at', 'view_cv_button_detail', 'cover_letter_preview')
+                       'target_role', 'target_company', 'view_cv_button_detail', 'cover_letter_preview')
 
     fieldsets = (
         ('CV Info', {
@@ -440,6 +440,33 @@ class GeneratedCVAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            # Admin-session-authenticated PDF download — no JWT token needed
+            path('<int:pk>/view-pdf/', self.admin_site.admin_view(self.serve_cv_pdf), name='api_generatedcv_view_pdf'),
+        ]
+        return custom_urls + urls
+
+    def serve_cv_pdf(self, request, pk):
+        """Serve the CV PDF binary directly via Django admin session auth — no JWT needed."""
+        from django.http import HttpResponse, Http404
+        try:
+            cv_obj = GeneratedCV.objects.get(pk=pk)
+        except GeneratedCV.DoesNotExist:
+            raise Http404('CV not found')
+        if not cv_obj.cv_pdf:
+            raise Http404('No PDF stored for this CV')
+        response = HttpResponse(bytes(cv_obj.cv_pdf), content_type='application/pdf')
+        filename = cv_obj.cv_filename or 'cv.pdf'
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+
+    @admin.display(description='Has PDF', boolean=True)
+    def has_pdf(self, obj):
+        return bool(obj.cv_pdf)
+
     @admin.display(description='Employee')
     def employee_name(self, obj):
         return obj.employee.get_full_name() or obj.employee.email
@@ -447,7 +474,7 @@ class GeneratedCVAdmin(admin.ModelAdmin):
     @admin.display(description='View CV')
     def view_cv_button(self, obj):
         if obj.cv_pdf:
-            url = f'/api/cv/{obj.pk}/download/'
+            url = reverse('admin:api_generatedcv_view_pdf', args=[obj.pk])
             return format_html(
                 '<a class="button" style="background:#10b981;color:white;padding:4px 10px;'
                 'border-radius:4px;font-weight:bold;text-decoration:none;font-size:11px;" '
@@ -458,7 +485,7 @@ class GeneratedCVAdmin(admin.ModelAdmin):
     @admin.display(description='CV PDF (click to open)')
     def view_cv_button_detail(self, obj):
         if obj.cv_pdf:
-            url = f'/api/cv/{obj.pk}/download/'
+            url = reverse('admin:api_generatedcv_view_pdf', args=[obj.pk])
             return format_html(
                 '<a class="button" style="background:#10b981;color:white;padding:8px 16px;'
                 'border-radius:6px;font-weight:bold;text-decoration:none;font-size:14px;" '
@@ -480,5 +507,3 @@ class GeneratedCVAdmin(admin.ModelAdmin):
                 obj.cover_letter_text
             )
         return format_html('<span style="color:#94a3b8;">No cover letter</span>')
-
-
