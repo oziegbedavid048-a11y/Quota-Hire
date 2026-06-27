@@ -176,18 +176,6 @@ export default function ResumeUpload() {
                   <span className="break-words">{error}</span>
                 </div>
               )}
-
-              <div className="mx-4 mb-4 grid grid-cols-3 gap-2">
-                {[
-                  { icon: FileText, text: 'Text-based PDF' },
-                  { icon: Briefcase, text: 'Word document' },
-                  { icon: Sparkles, text: 'Auto-fills profile' },
-                ].map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex flex-col items-center gap-1.5 p-3 bg-neutral-50 dark:bg-neutral-800/60 rounded-2xl">
-                    <Icon size={16} className="text-accent-500" />
-                    <span className="text-[10px] font-bold text-neutral-600 dark:text-neutral-400 text-center leading-tight">{text}</span>
-                  </div>
-                ))}
               </div>
             </motion.div>
           )}
@@ -207,14 +195,14 @@ export default function ResumeUpload() {
                 <div>
                   <h3 className="text-xl font-extrabold mb-1">No resume? Generate one instantly</h3>
                   <p className="text-blue-200 text-sm max-w-sm leading-relaxed">
-                    Answer a few questions and our AI will craft a professional, ATS-friendly Steel Blue CV for you.
+                    Answer a few questions and our AI will craft a professional, ATS-friendly CV for you.
                   </p>
                 </div>
                 <button
                   onClick={() => setShowGenerateCV(true)}
-                  className="w-full sm:w-auto px-6 py-3.5 bg-white text-blue-900 rounded-2xl font-bold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg hover:bg-blue-500 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 border border-blue-500"
                 >
-                  <Sparkles size={16} className="text-blue-600" />
+                  <Sparkles size={16} className="text-white" />
                   Generate Resume
                 </button>
               </div>
