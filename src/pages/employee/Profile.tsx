@@ -604,8 +604,6 @@ export const EmployeeProfilePage = () => {
           </>
         )}
       </AnimatePresence>
-
-      </AnimatePresence>
     </div>
   );
 };
