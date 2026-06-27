@@ -1138,6 +1138,7 @@ class SaveGeneratedCVView(APIView):
     POST /api/cv/save/
     Accepts a base64-encoded PDF + cover letter text + metadata.
     Creates a GeneratedCV record and also saves the cover letter to the Application.
+    Accepts either application_id or job_id (will resolve application from job_id).
     """
     permission_classes = [IsEmployee]
 
@@ -1146,6 +1147,7 @@ class SaveGeneratedCVView(APIView):
 
         data = request.data
         application_id      = data.get('application_id')
+        job_id              = data.get('job_id')          # ← new: accept job_id too
         template_id         = data.get('template_id', 'T1')
         template_name       = data.get('template_name', 'Classic Split')
         target_role         = data.get('target_role', '')
@@ -1162,7 +1164,7 @@ class SaveGeneratedCVView(APIView):
             except Exception as e:
                 logger.warning(f'CV PDF base64 decode failed: {e}')
 
-        # Resolve the Application
+        # Resolve the Application — try application_id first, then job_id
         application = None
         if application_id:
             try:
@@ -1170,12 +1172,20 @@ class SaveGeneratedCVView(APIView):
                     pk=application_id,
                     employee=request.user,
                 )
-                # Also store cover letter on the application itself
-                if cover_letter_text:
-                    application.cover_letter = cover_letter_text
-                    application.save(update_fields=['cover_letter'])
             except Application.DoesNotExist:
                 pass
+
+        if application is None and job_id:
+            # Find the most recent application by this user for this job
+            application = Application.objects.filter(
+                job_id=job_id,
+                employee=request.user,
+            ).order_by('-applied_at').first()
+
+        # Also store cover letter on the application itself
+        if application and cover_letter_text:
+            application.cover_letter = cover_letter_text
+            application.save(update_fields=['cover_letter'])
 
         # Delete any previous GeneratedCV for this application to avoid duplicates
         if application:

@@ -142,22 +142,57 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
     init();
 
-    // Background polling for real-time notifications
+    // Background polling for real-time updates (notifications + jobs + applications)
     const pollInterval = setInterval(async () => {
       const token = localStorage.getItem('access_token');
       if (token) {
         try {
+          // Always refresh notifications
           const notifData = await apiFetch('/notifications/') || [];
           const notifs = Array.isArray(notifData) ? notifData : (notifData?.results || []);
+
+          // Refresh jobs so admin-approved/rejected jobs appear immediately
+          const jobsData = await apiFetch('/jobs/');
+          const jobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
+          const normalizedJobs = jobs.map((j: any) => ({
+            id: j.id.toString(),
+            companyId: j.company?.toString() || j.company_name,
+            companyName: j.company_name,
+            companyLogoUrl: j.company_logo_url,
+            companyIsVerified: true,
+            title: j.title,
+            description: j.description,
+            requirements: j.requirements || [],
+            employment_type: j.employment_type,
+            isRemote: j.is_remote,
+            location: j.location,
+            currency: j.currency,
+            salaryRange: j.salary_range,
+            commissionRange: j.commission_range,
+            status: j.status,
+            createdAt: j.created_at,
+          }));
+
+          // Refresh applications so status changes from admin/company propagate
+          let applications: any[] = [];
+          try {
+            const appsData = await apiFetch('/applications/');
+            applications = Array.isArray(appsData) ? appsData : (appsData?.results || []);
+          } catch (_) { /* company accounts may get empty, that's OK */ }
+
           setState(prev => ({
             ...prev,
-            notifications: notifs.map((n: any) => ({ ...n, id: n.id.toString(), createdAt: n.created_at })) as any
+            notifications: notifs.map((n: any) => ({ ...n, id: n.id.toString(), createdAt: n.created_at })) as any,
+            jobs: normalizedJobs,
+            applications: applications.length > 0
+              ? applications.map((a: any) => ({ id: a.id.toString(), ...a })) as any
+              : prev.applications,
           }));
         } catch (e) {
           // silently ignore polling errors
         }
       }
-    }, 15000);
+    }, 20000);
 
     return () => clearInterval(pollInterval);
   }, []);
