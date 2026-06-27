@@ -25,7 +25,6 @@ import { EmployeeProfile } from '../../types';
 import { calculateProfileStrength } from '../../utils/profile';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 import { toast } from 'sonner';
-import { GenerateCVModal } from '../../components/cv/GenerateCVModal';
 
 /* ─── Section edit modal ──────────────────────────────────────────────── */
 type SectionKey =
@@ -60,8 +59,6 @@ export const EmployeeProfilePage = () => {
   const [passwordData, setPasswordData] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [saving, setSaving] = useState(false);
   const [generatedCVs, setGeneratedCVs] = useState<any[]>([]);
-  const [showGenerateCV, setShowGenerateCV] = useState(false);
-
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -499,33 +496,6 @@ export const EmployeeProfilePage = () => {
 
 
 
-        {/* ── Generate CV Banner ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="mb-4"
-        >
-          <div className="card-soft overflow-hidden bg-gradient-to-r from-[#1B4F8A] to-[#2563eb] border-0">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-5 sm:px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                  <Wand2 className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">Generate Resume with AI</p>
-                  <p className="text-xs text-blue-200 mt-0.5">Answer a few questions — we'll build a professional Steel Blue CV for you instantly.</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowGenerateCV(true)}
-                className="shrink-0 px-4 py-2.5 bg-white text-[#1B4F8A] font-bold text-sm rounded-xl hover:bg-blue-50 transition shadow-md"
-              >
-                Generate Resume
-              </button>
-            </div>
-          </div>
-        </motion.div>
 
         {/* ── Section Groups ── */}
         {profileSections.map((group, gi) => (
@@ -635,11 +605,7 @@ export const EmployeeProfilePage = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Generate CV Modal ── */}
-      <GenerateCVModal
-        isOpen={showGenerateCV}
-        onClose={() => setShowGenerateCV(false)}
-      />
+      </AnimatePresence>
     </div>
   );
 };
