@@ -11,6 +11,7 @@ import { useAppContext } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
 import { SteelBlueBannerTemplate } from './templates/SteelBlueBannerTemplate';
 import { CVData } from '../../lib/cv/types';
+import { generateAIAssistedSuggestions } from '../../lib/cv/cvContentBuilder';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface WorkEntry {
@@ -150,6 +151,23 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
       extraSkills: (profile?.skills || []).join(', '),
     });
   }, [profile]);
+
+  const handleSuggest = () => {
+    if (!form.headline) {
+      toast.error('Please enter a Target Headline first.');
+      return;
+    }
+    const effectiveProfile = profile || (currentUser as EmployeeProfile);
+    const suggestions = generateAIAssistedSuggestions(form.headline, effectiveProfile);
+    
+    setForm(prev => ({
+      ...prev,
+      achievement: suggestions.achievement || prev.achievement,
+      extraSkills: suggestions.extraSkills || prev.extraSkills,
+      workEntries: suggestions.workEntries && suggestions.workEntries.length > 0 ? suggestions.workEntries : prev.workEntries,
+    }));
+    toast.success('Suggestions applied! Feel free to edit them.');
+  };
 
   // Navigate steps
   const handleNext = () => {
@@ -324,7 +342,19 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
               {!generating && step === 1 && (
                 <div className="p-5 sm:p-6 space-y-5">
                   <div className="space-y-1.5">
-                    <label className={labelCls}>Target Headline / Job Title <span className="text-red-400">*</span></label>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        Target Headline / Job Title <span className="text-red-400">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleSuggest}
+                        className="text-[11px] font-bold flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md transition"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        Autofill Suggestions
+                      </button>
+                    </div>
                     <input
                       value={form.headline}
                       onChange={e => setForm(p => ({ ...p, headline: e.target.value }))}
