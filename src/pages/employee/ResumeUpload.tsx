@@ -176,7 +176,6 @@ export default function ResumeUpload() {
                   <span className="break-words">{error}</span>
                 </div>
               )}
-              </div>
             </motion.div>
           )}
 
