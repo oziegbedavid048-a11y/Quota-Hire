@@ -366,7 +366,7 @@ export const EmployeeProfilePage = () => {
                 <div key={cv.id} className="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-neutral-900 dark:text-white mb-0.5">{cv.target_role}</p>
-                    <p className="text-xs text-neutral-500">{cv.target_company} • {new Date(cv.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-neutral-500">{cv.target_company} • {new Date(cv.generated_at).toLocaleDateString()}</p>
                   </div>
                   <button onClick={() => handleDownloadCV(cv.id)} className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
                     Download PDF
