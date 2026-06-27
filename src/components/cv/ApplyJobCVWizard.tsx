@@ -47,7 +47,7 @@ const PLAIN_TEMPLATES: Record<string, { name: string; color: string }> = {
   P1:  { name: 'Traditional Formal',     color: '#000000' },
   P2:  { name: 'Corporate Clean',        color: '#1B4F8A' },
   P3:  { name: 'Minimalist Classic',     color: '#2D5016' },
-  P4:  { name: 'Modern Plain',           color: '#333333' },
+  P4:  { name: 'Modern Plain',           color: '#1E293B' },
   T14: { name: 'Steel Blue Banner',    color: '#1B4F8A' },
 };
 
@@ -151,7 +151,8 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
 
   // Auto-switch template if photo is removed and current template is PIC_TEMPLATE
   useEffect(() => {
-    if (!passportImage && Object.keys(PIC_TEMPLATES).includes(selectedTemplateId)) {
+    const isStrictlyPicTemplate = Object.keys(PIC_TEMPLATES).includes(selectedTemplateId) && !Object.keys(PLAIN_TEMPLATES).includes(selectedTemplateId);
+    if (!passportImage && isStrictlyPicTemplate) {
       setSelectedTemplateId('P1');
       setSelectedTemplateName(PLAIN_TEMPLATES['P1'].name);
     }
