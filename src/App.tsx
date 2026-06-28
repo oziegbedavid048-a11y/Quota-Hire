@@ -38,6 +38,7 @@ import { ApplicationTracker } from './pages/employee/ApplicationTracker';
 import { SavedJobs } from './pages/jobs/SavedJobs';
 import { Purpose } from './pages/Purpose';
 import { Contact } from './pages/Contact';
+import { CVGeneratorPage } from './pages/employee/CVGeneratorPage';
 
 import UnifiedDashboardLayout from './components/layout/UnifiedDashboardLayout';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -149,6 +150,15 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute allowedRoles={['employee']}>
                 <UnifiedDashboardLayout><ApplicationTracker /></UnifiedDashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/employee/cv-generator"
+            element={
+              <ProtectedRoute allowedRoles={['employee']}>
+                <UnifiedDashboardLayout><CVGeneratorPage /></UnifiedDashboardLayout>
               </ProtectedRoute>
             }
           />

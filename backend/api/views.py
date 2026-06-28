@@ -1201,6 +1201,16 @@ class SaveGeneratedCVView(APIView):
         if application:
             GeneratedCV.objects.filter(application=application).delete()
 
+        # Also clean up orphaned CVs (application=NULL) for the same job+employee
+        # so the profile list doesn't accumulate duplicates from multiple generate attempts
+        if job_id:
+            GeneratedCV.objects.filter(
+                employee=request.user,
+                application__isnull=True,
+                target_role=target_role,
+                target_company=target_company,
+            ).delete()
+
         cv_obj = GeneratedCV.objects.create(
             employee            = request.user,
             application         = application,

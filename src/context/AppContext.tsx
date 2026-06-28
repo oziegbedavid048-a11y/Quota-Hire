@@ -419,6 +419,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       toast.success('Application submitted successfully');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to apply'}. Please try again.`);
+      throw error; // rethrow so callers can react to failure
     }
   };
 

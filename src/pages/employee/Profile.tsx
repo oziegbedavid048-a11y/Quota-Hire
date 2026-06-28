@@ -18,7 +18,9 @@ import {
   Save,
   User,
   CheckCircle2,
-  Wand2
+  Wand2,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
@@ -59,6 +61,26 @@ export const EmployeeProfilePage = () => {
   const [passwordData, setPasswordData] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [saving, setSaving] = useState(false);
   const [generatedCVs, setGeneratedCVs] = useState<any[]>([]);
+  const [cvsLoading, setCvsLoading] = useState(false);
+
+  const fetchGeneratedCVs = () => {
+    setCvsLoading(true);
+    apiFetch('/cv/my-cvs/')
+      .then(res => setGeneratedCVs(Array.isArray(res) ? res : []))
+      .catch(() => {})
+      .finally(() => setCvsLoading(false));
+  };
+
+  // Fetch once on mount so the count in the sidebar is always current
+  useEffect(() => {
+    if (profile) fetchGeneratedCVs();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-fetch every time the user opens the Generated CVs panel
+  useEffect(() => {
+    if (activeSection === 'generated-cvs') fetchGeneratedCVs();
+  }, [activeSection]);
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -73,7 +95,6 @@ export const EmployeeProfilePage = () => {
         phoneNumber: profile.phoneNumber || '',
         location: (profile as any).location || '',
       });
-      apiFetch('/cv/my-cvs/').then(res => setGeneratedCVs(res)).catch(() => {});
     }
   }, [profile]);
 
@@ -359,16 +380,41 @@ export const EmployeeProfilePage = () => {
       case 'generated-cvs':
         return (
           <div className="space-y-4">
-            {generatedCVs.length === 0 ? (
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-neutral-500">
+                {generatedCVs.length > 0 ? `${generatedCVs.length} tailored CV${generatedCVs.length > 1 ? 's' : ''} saved` : 'No tailored CVs yet'}
+              </p>
+              <button
+                onClick={fetchGeneratedCVs}
+                disabled={cvsLoading}
+                className="flex items-center gap-1.5 text-xs font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${cvsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+
+            {cvsLoading && generatedCVs.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+              </div>
+            ) : generatedCVs.length === 0 ? (
               <p className="text-sm text-neutral-500 text-center py-4">You haven't generated any tailored CVs yet. Apply to a job to create one!</p>
             ) : (
               generatedCVs.map(cv => (
                 <div key={cv.id} className="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold text-neutral-900 dark:text-white mb-0.5">{cv.target_role}</p>
-                    <p className="text-xs text-neutral-500">{cv.target_company} • {new Date(cv.generated_at).toLocaleDateString()}</p>
+                    <p className="text-sm font-bold text-neutral-900 dark:text-white mb-0.5">{cv.target_role || 'Tailored CV'}</p>
+                    <p className="text-xs text-neutral-500">
+                      {cv.target_company && <span>{cv.target_company} • </span>}
+                      <span>{cv.template_name}</span>
+                      <span> • {new Date(cv.generated_at).toLocaleDateString()}</span>
+                    </p>
                   </div>
-                  <button onClick={() => handleDownloadCV(cv.id)} className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                  <button
+                    onClick={() => handleDownloadCV(cv.id)}
+                    className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors shrink-0 ml-3"
+                  >
                     Download PDF
                   </button>
                 </div>

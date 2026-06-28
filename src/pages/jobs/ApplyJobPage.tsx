@@ -132,10 +132,11 @@ export const ApplyJobPage = () => {
         skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
       });
 
+      // Submit the application, linking the generated CV if one was created
       await applyForJob(job.id, '', generatedCvId || undefined);
       setFlowState('success');
     } catch {
-      toast.error('Application failed. Please try again.');
+      // applyForJob already toasts the error; revert so user can retry
       setFlowState('step2');
     }
   };

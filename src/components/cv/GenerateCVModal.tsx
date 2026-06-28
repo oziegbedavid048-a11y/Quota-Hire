@@ -7,7 +7,7 @@ import {
   GraduationCap, Star, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
 import { SteelBlueBannerTemplate } from './templates/SteelBlueBannerTemplate';
 import { CVData } from '../../lib/cv/types';
@@ -135,6 +135,8 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
 
   const currentBlobRef = useRef<Blob | null>(null);
   const currentUrlRef = useRef<string | null>(null);
+  const [backendSaved, setBackendSaved] = useState(false);
+  const [backendSaving, setBackendSaving] = useState(false);
 
   // Reset on open
   const handleOpen = useCallback(() => {
@@ -142,6 +144,8 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
     setGenerating(false);
     setSaving(false);
     setSaved(false);
+    setBackendSaved(false);
+    setBackendSaving(false);
     currentBlobRef.current = null;
     currentUrlRef.current = null;
     setForm({
@@ -239,6 +243,48 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
       toast.error('Failed to update profile.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveToDjango = async (blob: Blob | null) => {
+    if (!blob) {
+      toast.error('PDF is still rendering. Please wait a moment.');
+      return;
+    }
+    setBackendSaving(true);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = async () => {
+          try {
+            const b64 = reader.result?.toString().split(',')[1];
+            if (!b64) throw new Error('Base64 conversion failed.');
+            await apiFetch('/cv/save/', {
+              method: 'POST',
+              body: JSON.stringify({
+                template_id: 'T14',
+                template_name: 'Steel Blue Banner',
+                target_role: form.headline || 'Generated CV',
+                target_company: '',
+                cv_pdf_base64: b64,
+                cover_letter_text: '',
+                work_experience_json: form.workEntries,
+              }),
+            });
+            setBackendSaved(true);
+            toast.success('CV saved to your Generated Documents!');
+            resolve();
+          } catch (err: any) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error('FileReader failed.'));
+      });
+    } catch (err: any) {
+      toast.error(`Failed to save CV: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setBackendSaving(false);
     }
   };
 
@@ -602,9 +648,34 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                               )}
                             </div>
 
+                            {/* Save to Django CTA */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-3">
+                              <p className="text-sm font-bold text-blue-800 mb-1">💾 Save to Generated Documents</p>
+                              <p className="text-xs text-blue-600 mb-3">
+                                Save this CV so you can download it later from your profile's Generated Documents section.
+                              </p>
+                              {backendSaved ? (
+                                <div className="flex items-center gap-2 text-blue-700 font-bold text-sm">
+                                  <CheckCircle className="w-5 h-5" /> CV saved to your profile!
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleSaveToDjango(blob)}
+                                  disabled={backendSaving || blobLoading}
+                                  className="w-full py-3 bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white rounded-xl flex items-center justify-center text-sm font-bold transition shadow-md shadow-blue-700/20"
+                                >
+                                  {backendSaving ? (
+                                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving CV…</>
+                                  ) : (
+                                    <><FileText className="w-4 h-4 mr-2" /> Save CV to Profile</>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+
                             {/* Update Profile CTA */}
-                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mt-4">
-                              <p className="text-sm font-bold text-emerald-800 mb-1">Save to Profile</p>
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mt-3">
+                              <p className="text-sm font-bold text-emerald-800 mb-1">Update Profile Info</p>
                               <p className="text-xs text-emerald-600 mb-3">
                                 Click below to update your profile (title, education, skills) using the information from this resume.
                               </p>
