@@ -10,6 +10,7 @@
 
 @layer base {
   html {
+    scroll-behavior: smooth;
     @apply transition-colors duration-300;
   }
   body {
@@ -59,16 +60,16 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-accent-300 rounded-full;
+  @apply bg-accent-500/10 rounded-full;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-accent-400;
+  @apply bg-accent-500/20;
 }
 .dark ::-webkit-scrollbar-thumb {
-  @apply bg-accent-700;
+  @apply bg-accent-500/10;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  @apply bg-accent-600;
+  @apply bg-accent-500/20;
 }
 /* Hide scrollbar for clean horizontal scrolling areas */
 .hide-scrollbar::-webkit-scrollbar {
