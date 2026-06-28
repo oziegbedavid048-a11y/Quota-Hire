@@ -58,14 +58,7 @@ export function CVGeneratorPage() {
               Professional multi-template CV. Answer a few questions about your experience, skills and goals â€” we'll generate a polished, downloadable PDF tailored to you.
             </p>
 
-            {/* Feature tags */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {['Steel accent Template', 'AI-formatted bullets', 'Multiple designs', 'Instant PDF'].map(tag => (
-                <span key={tag} className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-300 border border-accent-100 dark:border-accent-800">
-                  {tag}
-                </span>
-              ))}
-            </div>
+
 
             <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-[#116108] to-[#72dd15] hover:from-[#0e4f06] hover:to-[#15750a] shadow-md shadow-accent-900/20 transition-all group-hover:shadow-lg">
               Generate CV <ArrowRight className="w-4 h-4" />
@@ -84,18 +77,10 @@ export function CVGeneratorPage() {
           {/* EU accent top band */}
           <div className="h-2 w-full bg-gradient-to-r from-[#15750a] to-[#72dd15]" />
 
-          {/* EU Stars watermark */}
-          <div className="absolute top-4 right-5 text-accent-400 text-xl opacity-20 group-hover:opacity-40 transition-opacity select-none pointer-events-none">
-            â˜…â˜…â˜…â˜…â˜…â˜…â˜…â˜…â˜…â˜…â˜…â˜…
-          </div>
-
           <div className="p-7">
             {/* Icon */}
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#15750a] to-[#72dd15] flex items-center justify-center mb-5 shadow-lg shadow-accent-900/20 group-hover:scale-105 transition-transform relative">
               <Globe className="w-7 h-7 text-white" />
-              <div className="absolute -top-1 -right-1 bg-accent-400 rounded-full w-4 h-4 flex items-center justify-center">
-                <Star className="w-2.5 h-2.5 text-accent-900 fill-accent-900" />
-              </div>
             </div>
 
             <div className="flex items-center gap-2 mb-2">
@@ -110,24 +95,17 @@ export function CVGeneratorPage() {
               Create an official Europe-formatted CV, including CEFR language levels, digital skills, and your passport photo.
             </p>
 
-            {/* Feature tags */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {['Europass Format', 'Passport Photo', 'CEFR Languages', 'EU-Standard Sections'].map(tag => (
-                <span key={tag} className="px-2.5 py-1 text-[11px] font-bold rounded-lg text-accent-700 dark:text-accent-300 border" style={{ background: 'rgba(114,221,21,0.1)', borderColor: 'rgba(114,221,21,0.2)' }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
+
 
             <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white shadow-md transition-all group-hover:shadow-lg"
                     style={{ background: 'linear-gradient(135deg, #15750a 0%, #72dd15 100%)' }}>
-              <span className="text-accent-400">â˜…</span> Generate Europe CV <ArrowRight className="w-4 h-4" />
+              Generate Europe CV <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </motion.div>
       </div>
 
-      {/* â”€â”€ Info strip â”€â”€ */}
+      {/* ——— Info strip ——— */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
