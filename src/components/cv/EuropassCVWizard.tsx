@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BlobProvider } from '@react-pdf/renderer';
 import {
@@ -273,13 +273,13 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
   };
 
   // â”€â”€ Shared styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const inputCls = 'w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent-900 focus:border-accent-900 outline-none text-sm transition';
+  const inputCls = 'w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none text-sm transition';
   const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5';
   const cefrSelect = (value: string, onChange: (v: string) => void) => (
     <select
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-accent-900 transition"
+      className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-blue-900 transition"
     >
       {CEFR_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
     </select>
@@ -296,30 +296,29 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="w-full sm:max-w-2xl bg-gray-50 rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 h-[94vh] sm:h-auto sm:max-h-[92vh]"
           >
-            {/* â”€â”€ Header â”€â”€ */}
-            <div className="flex items-center justify-between px-5 sm:px-6 py-4 shrink-0"
-                 style={{ background: 'linear-gradient(135deg, #15750a 0%, #72dd15 100%)' }}>
+            {/* ── Header ── */}
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 bg-white border-b border-gray-200 shrink-0">
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                  <span className="text-accent-400">â˜…â˜…</span> Generate Europass CV
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                  Generate Europass CV
                 </h2>
                 {!generating && step !== 6 && (
-                  <p className="text-accent-200 text-xs mt-0.5">
-                    Step {step} of 5 Â· {STEPS[step - 1]?.label}
+                  <p className="text-gray-400 text-xs mt-0.5">
+                    Step {step} of 5 · {STEPS[step - 1]?.label}
                   </p>
                 )}
               </div>
-              <button onClick={onClose} className="p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition ml-4 shrink-0">
+              <button onClick={onClose} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition ml-4 shrink-0">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* â”€â”€ Progress bar â”€â”€ */}
+            {/* ── Progress bar ── */}
             {!generating && (
-              <div className="flex gap-1 px-5 py-2 bg-accent-950 shrink-0">
+              <div className="flex gap-1 px-5 py-3 bg-white border-b border-gray-100 shrink-0">
                 {[1, 2, 3, 4, 5, 6].map(s => (
                   <div key={s}
-                    className={`h-1 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-accent-400' : 'bg-accent-800'}`}
+                    className={`h-1 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-blue-900' : 'bg-gray-200'}`}
                   />
                 ))}
               </div>
@@ -435,18 +434,18 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                   {/* Passport Photo */}
                   <div>
                     <label className={labelCls}>Passport Photo (Recommended for Europass)</label>
-                    <div className="flex items-center gap-4 p-4 bg-accent-50 border border-accent-200 rounded-xl">
-                      <div className="w-16 h-20 rounded-lg overflow-hidden border-2 border-accent-300 shrink-0 flex items-center justify-center bg-accent-100">
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="w-16 h-20 rounded-lg overflow-hidden border-2 border-blue-300 shrink-0 flex items-center justify-center bg-blue-100">
                         {passportImage ? (
                           <img src={passportImage} alt="Passport" className="w-full h-full object-cover" />
                         ) : (
-                          <Camera className="w-6 h-6 text-accent-400" />
+                          <Camera className="w-6 h-6 text-blue-400" />
                         )}
                       </div>
                       <div className="flex-1">
                         <input type="file" accept="image/*" onChange={handlePhotoUpload}
-                          className="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-accent-900 file:text-white hover:file:bg-accent-800 transition w-full" />
-                        <p className="text-[10px] text-accent-600 mt-1">
+                          className="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:text-white hover:file:bg-blue-800 transition w-full" />
+                        <p className="text-[10px] text-blue-600 mt-1">
                           Photo will appear blended in the top-left of your Europass CV header. Recommended: square format, professional attire.
                         </p>
                         {passportImage && (
@@ -467,7 +466,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                     <p className="text-sm text-gray-500">Add your work experience (up to 5 roles).</p>
                     <button onClick={handleAutoFillWork}
-                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-accent-50 text-accent-700 hover:bg-accent-100 rounded-md transition-colors">
+                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md transition-colors">
                       <Sparkles className="w-3 h-3" /> Auto-Fill Work
                     </button>
                   </div>
@@ -488,28 +487,28 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                           <input value={entry.dates}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], dates: e.target.value }; return n; })}
                             placeholder="Jan 2020 â€“ Present"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Job Title / Role *</label>
                           <input value={entry.role}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], role: e.target.value }; return n; })}
                             placeholder="Senior Sales Manager"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Employer / Company *</label>
                           <input value={entry.employer}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], employer: e.target.value }; return n; })}
                             placeholder="Acme Corporation"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Location (City, Country)</label>
                           <input value={entry.location}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], location: e.target.value }; return n; })}
                             placeholder="London, UK"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                       </div>
                       <div>
@@ -518,7 +517,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                           onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], duties: e.target.value }; return n; })}
                           rows={3}
                           placeholder="Led a team of 8 sales reps. Developed new market strategies. Increased revenue by 30%..."
-                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm resize-none outline-none focus:border-accent-900 transition" />
+                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm resize-none outline-none focus:border-blue-900 transition" />
                         <p className="text-[10px] text-gray-400 mt-1">Each sentence becomes a bullet point on the CV.</p>
                       </div>
                     </div>
@@ -538,7 +537,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                     <p className="text-sm text-gray-500">Add your educational qualifications (up to 3).</p>
                     <button onClick={handleAutoFillEdu}
-                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-accent-50 text-accent-700 hover:bg-accent-100 rounded-md transition-colors">
+                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md transition-colors">
                       <Sparkles className="w-3 h-3" /> Auto-Fill Edu
                     </button>
                   </div>
@@ -559,35 +558,35 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                           <input value={entry.dates}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], dates: e.target.value }; return n; })}
                             placeholder="2018 â€“ 2022"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Qualification / Degree *</label>
                           <input value={entry.qualification}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], qualification: e.target.value }; return n; })}
                             placeholder="B.Sc. Business Administration"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Field of Study</label>
                           <input value={entry.fieldOfStudy || ''}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], fieldOfStudy: e.target.value }; return n; })}
                             placeholder="Marketing & Sales"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Institution *</label>
                           <input value={entry.institution}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], institution: e.target.value }; return n; })}
                             placeholder="University of Lagos"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Location</label>
                           <input value={entry.location}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], location: e.target.value }; return n; })}
                             placeholder="Lagos, Nigeria"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-accent-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                       </div>
                     </div>
@@ -606,7 +605,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                 <div className="p-5 sm:p-6 space-y-5">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 sm:gap-0">
                     <button onClick={handleAutoFillSkills}
-                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-accent-50 text-accent-700 hover:bg-accent-100 rounded-md transition-colors">
+                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md transition-colors">
                       <Sparkles className="w-3 h-3" /> Auto-Fill Skills
                     </button>
                   </div>
@@ -624,14 +623,14 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs border-collapse">
                         <thead>
-                          <tr className="bg-accent-50">
-                            <th className="text-left p-2 font-bold text-accent-900 border border-accent-100 min-w-[100px]">Language</th>
-                            <th className="p-2 font-bold text-accent-900 border border-accent-100">Listening</th>
-                            <th className="p-2 font-bold text-accent-900 border border-accent-100">Reading</th>
-                            <th className="p-2 font-bold text-accent-900 border border-accent-100">Spoken Int.</th>
-                            <th className="p-2 font-bold text-accent-900 border border-accent-100">Spoken Prod.</th>
-                            <th className="p-2 font-bold text-accent-900 border border-accent-100">Writing</th>
-                            <th className="p-2 border border-accent-100"></th>
+                          <tr className="bg-blue-50">
+                            <th className="text-left p-2 font-bold text-blue-900 border border-blue-100 min-w-[100px]">Language</th>
+                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Listening</th>
+                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Reading</th>
+                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Spoken Int.</th>
+                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Spoken Prod.</th>
+                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Writing</th>
+                            <th className="p-2 border border-blue-100"></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -641,7 +640,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                                 <input value={lang.language}
                                   onChange={e => setForeignLangs(p => { const n = [...p]; n[i] = { ...n[i], language: e.target.value }; return n; })}
                                   placeholder="e.g. French"
-                                  className="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs outline-none focus:border-accent-900" />
+                                  className="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs outline-none focus:border-blue-900" />
                               </td>
                               {(['listening', 'reading', 'spokenInteraction', 'spokenProduction', 'writing'] as const).map(field => (
                                 <td key={field} className="p-1 border border-gray-100">
@@ -663,7 +662,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                     </div>
                     {foreignLangs.length < 4 && (
                       <button onClick={() => setForeignLangs(p => [...p, { ...EMPTY_LANG }])}
-                        className="mt-2 text-xs font-bold text-accent-900 flex items-center gap-1 hover:text-accent-700 transition">
+                        className="mt-2 text-xs font-bold text-blue-900 flex items-center gap-1 hover:text-blue-700 transition">
                         <Plus className="w-3.5 h-3.5" /> Add Language
                       </button>
                     )}
@@ -704,11 +703,11 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
               {!generating && step === 5 && (
                 <div className="p-5 sm:p-6 space-y-5">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-                    <div className="flex-1 p-3 bg-accent-50 border border-accent-100 rounded-xl text-xs text-accent-700 leading-relaxed mr-4">
+                    <div className="flex-1 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-relaxed mr-4">
                       <strong>Europass Competencies</strong> â€” Describe your key strengths.
                     </div>
                     <button onClick={handleAutoFillCompetencies}
-                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-accent-50 text-accent-700 hover:bg-accent-100 rounded-md transition-colors whitespace-nowrap shrink-0">
+                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md transition-colors whitespace-nowrap shrink-0">
                       <Sparkles className="w-3 h-3" /> Auto-Fill Competencies
                     </button>
                   </div>
@@ -884,4 +883,5 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
     </AnimatePresence>
   );
 }
+
 
