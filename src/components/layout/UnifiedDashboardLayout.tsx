@@ -17,7 +17,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
-import { ThemeToggle } from '../ui/ThemeToggle';
+
 import { Logo } from '../ui/Logo';
 
 function FloatingHeader({ toggleSidebar, user }: { toggleSidebar: () => void; user: any }) {
@@ -192,9 +192,6 @@ function PillSidebar({ isOpen, closeSidebar, user }: { isOpen: boolean; closeSid
         </nav>
 
         <div className="p-4 shrink-0 space-y-2 border-t border-neutral-100 dark:border-neutral-800">
-          <div className="flex justify-center mb-3">
-            <ThemeToggle />
-          </div>
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-bold text-[14px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
