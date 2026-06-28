@@ -149,6 +149,61 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
 
   const euroData = buildData();
 
+  // ── Auto-Fill Example Data ─────────────────────────────────────────────────
+  const handleAutoFill = () => {
+    setPersonal({
+      firstName: 'Faithful',
+      lastName: 'Awuojo Imadi',
+      dateOfBirth: '14/05/1992',
+      nationality: 'Nigerian',
+      address: '12, Example Street, Victoria Island, Lagos, Nigeria',
+      phone: '+234 800 000 0000',
+      email: 'faithful.imadi@example.com',
+      linkedinUrl: 'linkedin.com/in/faithful-imadi',
+      website: '',
+      jobTitle: 'Senior Full Stack Developer',
+      summary: 'Experienced Senior Full Stack Developer with over 8 years of expertise in building scalable enterprise applications. Proficient in React, Node.js, and Python. Passionate about creating efficient solutions and leading cross-functional teams to deliver high-quality software on time.',
+    });
+    setWorkEntries([
+      {
+        dates: '05/2020 – Present',
+        role: 'Senior Software Engineer',
+        employer: 'TechNova Solutions',
+        location: 'Lagos, Nigeria',
+        duties: 'Lead a team of 5 developers to build a scalable SaaS platform.\nReduced system latency by 40% through database optimization.\nImplemented CI/CD pipelines using GitHub Actions and AWS.',
+      },
+      {
+        dates: '01/2016 – 04/2020',
+        role: 'Full Stack Developer',
+        employer: 'Digital Creations Agency',
+        location: 'Abuja, Nigeria',
+        duties: 'Developed and maintained responsive web applications using React and Django.\nCollaborated with UI/UX designers to implement modern interfaces.\nIntegrated third-party APIs for payment processing and analytics.',
+      }
+    ]);
+    setEduEntries([
+      {
+        dates: '09/2011 – 07/2015',
+        qualification: 'B.Sc. Computer Science',
+        institution: 'University of Lagos',
+        location: 'Lagos, Nigeria',
+        fieldOfStudy: 'First Class Honours',
+      }
+    ]);
+    setMotherTongue('English');
+    setForeignLangs([
+      { language: 'French', listening: 'B2', reading: 'B2', spokenInteraction: 'B1', spokenProduction: 'B1', writing: 'B2' }
+    ]);
+    setDigitalSkills('Programming Languages: JavaScript, TypeScript, Python, Java\nFrameworks: React, Next.js, Django, Node.js\nTools: Git, Docker, AWS, Azure, CI/CD, JIRA\nDatabases: PostgreSQL, MongoDB, Redis');
+    setCommComp('Excellent communication skills gained through leading team meetings, presenting technical solutions to non-technical stakeholders, and mentoring junior developers.');
+    setOrgComp('Strong leadership and project management skills. Successfully managed agile sprints and coordinated cross-functional teams of up to 10 members.');
+    setJobComp('Deep understanding of software architecture, microservices, and cloud infrastructure. Proficient in debugging complex production issues.');
+    setOtherComp('Adaptable and quick learner. Strong problem-solving mindset with a focus on delivering business value.');
+    setDrivingLicence('Category B');
+    setCertifications('AWS Certified Solutions Architect – Associate (2022)\nScrum Master Certified (SMC) (2021)');
+    setHobbies('Open-source contributing, Playing chess, Photography');
+    toast.success('Form filled with example data! Feel free to edit.');
+  };
+
   // ── Navigation ─────────────────────────────────────────────────────────────
   const handleNext = () => {
     if (step === 1 && !personal.firstName.trim()) {
@@ -262,12 +317,20 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
 
             {/* ── Progress bar ── */}
             {!generating && (
-              <div className="flex gap-1 px-5 py-2 bg-blue-950 shrink-0">
-                {[1, 2, 3, 4, 5, 6].map(s => (
-                  <div key={s}
-                    className={`h-1 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-yellow-400' : 'bg-blue-800'}`}
-                  />
-                ))}
+              <div className="flex gap-1 px-5 py-2 bg-blue-950 shrink-0 items-center justify-between">
+                <div className="flex gap-1 flex-1 mr-4">
+                  {[1, 2, 3, 4, 5, 6].map(s => (
+                    <div key={s}
+                      className={`h-1 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-yellow-400' : 'bg-blue-800'}`}
+                    />
+                  ))}
+                </div>
+                <button 
+                  onClick={handleAutoFill}
+                  className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 bg-blue-800 text-blue-200 hover:bg-blue-700 hover:text-white rounded-md transition-colors whitespace-nowrap"
+                >
+                  <Sparkles className="w-3 h-3" /> Auto-Fill Example
+                </button>
               </div>
             )}
 
