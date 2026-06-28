@@ -12,7 +12,7 @@ export function CVGeneratorPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
 
-      {/* â”€â”€ Hero Header â”€â”€ */}
+      {/* ── Hero Header ── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -31,10 +31,10 @@ export function CVGeneratorPage() {
         </p>
       </motion.div>
 
-      {/* â”€â”€ Card grid â”€â”€ */}
+      {/* ── Card grid ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
-        {/* â”€â”€ Standard CV Card â”€â”€ */}
+        {/* ── Standard CV Card ── */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ export function CVGeneratorPage() {
               Generate CV
             </h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed mb-6">
-              Professional multi-template CV. Answer a few questions about your experience, skills and goals â€” we'll generate a polished, downloadable PDF tailored to you.
+              Professional multi-template CV. Answer a few questions about your experience, skills and goals — we'll generate a polished, downloadable PDF tailored to you.
             </p>
 
 
@@ -66,7 +66,7 @@ export function CVGeneratorPage() {
           </div>
         </motion.div>
 
-        {/* â”€â”€ Europass Card â”€â”€ */}
+        {/* ── Europass Card ── */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -118,19 +118,19 @@ export function CVGeneratorPage() {
         <div>
           <p className="text-sm font-bold text-neutral-900 dark:text-white mb-1">Your CVs are saved automatically</p>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Once generated, all your CVs appear under <strong>My Profile â†’ Generated Documents</strong> and can be downloaded as PDF at any time. CVs generated during job applications are also saved there automatically.
+            Once generated, all your CVs appear under <strong>My Profile → Generated Documents</strong> and can be downloaded as PDF at any time. CVs generated during job applications are also saved there automatically.
           </p>
         </div>
       </motion.div>
 
-      {/* â”€â”€ Modals â”€â”€ */}
+      {/* ── Modals ── */}
       <GenerateCVModal isOpen={showStandard} onClose={() => setShowStandard(false)} />
       <EuropassCVWizard
         isOpen={showEuropass}
         onClose={() => setShowEuropass(false)}
         onSaved={() => {
           setShowEuropass(false);
-          toast.success('Europass CV saved! View it in your profile â†’ Generated Documents.', { duration: 5000 });
+          toast.success('Europass CV saved! View it in your profile → Generated Documents.', { duration: 5000 });
         }}
       />
     </div>

@@ -47,7 +47,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
   const blobRef = useRef<Blob | null>(null);
   const urlRef  = useRef<string | null>(null);
 
-  // â”€â”€ Personal Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Personal Info ──────────────────────────────────────────────────────────
   const [personal, setPersonal] = useState({
     firstName: '',
     lastName: '',
@@ -64,24 +64,24 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
 
   const [passportImage, setPassportImage] = useState<string | null>(null);
 
-  // â”€â”€ Work Experience â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Work Experience ────────────────────────────────────────────────────────
   const [workEntries, setWorkEntries] = useState<WorkEntry[]>([{ ...EMPTY_WORK }]);
 
-  // â”€â”€ Education â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Education ──────────────────────────────────────────────────────────────
   const [eduEntries, setEduEntries] = useState<EduEntry[]>([{ ...EMPTY_EDU }]);
 
-  // â”€â”€ Languages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Languages ──────────────────────────────────────────────────────────────
   const [motherTongue, setMotherTongue] = useState('English');
   const [foreignLangs, setForeignLangs] = useState<LangEntry[]>([{ ...EMPTY_LANG }]);
 
-  // â”€â”€ Digital & Competencies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Digital & Competencies ─────────────────────────────────────────────────
   const [digitalSkills, setDigitalSkills] = useState('');
   const [commComp, setCommComp] = useState('');
   const [orgComp, setOrgComp] = useState('');
   const [jobComp, setJobComp] = useState('');
   const [otherComp, setOtherComp] = useState('');
 
-  // â”€â”€ Additional â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Additional ─────────────────────────────────────────────────────────────
   const [drivingLicence, setDrivingLicence] = useState('');
   const [certifications, setCertifications] = useState('');
   const [hobbies, setHobbies] = useState('');
@@ -112,7 +112,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
     }
   }, [isOpen]);
 
-  // â”€â”€ Passport photo handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Passport photo handler ─────────────────────────────────────────────────
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -128,7 +128,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
     reader.readAsDataURL(file);
   };
 
-  // â”€â”€ Build EuropassData â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Build EuropassData ─────────────────────────────────────────────────────
   const buildData = useCallback((): EuropassData => ({
     ...personal,
     passportImageUrl: passportImage || undefined,
@@ -149,18 +149,18 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
 
   const euroData = buildData();
 
-  // â”€â”€ Auto-Fill Handlers per Step â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Auto-Fill Handlers per Step ────────────────────────────────────────────
   const handleAutoFillWork = () => {
     setWorkEntries([
       {
-        dates: '05/2020 â€“ Present',
+        dates: '05/2020 – Present',
         role: 'Senior Software Engineer',
         employer: 'TechNova Solutions',
         location: 'Lagos, Nigeria',
         duties: 'Lead a team of 5 developers to build a scalable SaaS platform.\nReduced system latency by 40% through database optimization.\nImplemented CI/CD pipelines using GitHub Actions and AWS.',
       },
       {
-        dates: '01/2016 â€“ 04/2020',
+        dates: '01/2016 – 04/2020',
         role: 'Full Stack Developer',
         employer: 'Digital Creations Agency',
         location: 'Abuja, Nigeria',
@@ -173,7 +173,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
   const handleAutoFillEdu = () => {
     setEduEntries([
       {
-        dates: '09/2011 â€“ 07/2015',
+        dates: '09/2011 – 07/2015',
         qualification: 'B.Sc. Computer Science',
         institution: 'University of Lagos',
         location: 'Lagos, Nigeria',
@@ -198,12 +198,12 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
     setJobComp('Deep understanding of software architecture, microservices, and cloud infrastructure. Proficient in debugging complex production issues.');
     setOtherComp('Adaptable and quick learner. Strong problem-solving mindset with a focus on delivering business value.');
     setDrivingLicence('Category B');
-    setCertifications('AWS Certified Solutions Architect â€“ Associate (2022)\nScrum Master Certified (SMC) (2021)');
+    setCertifications('AWS Certified Solutions Architect – Associate (2022)\nScrum Master Certified (SMC) (2021)');
     setHobbies('Open-source contributing, Playing chess, Photography');
     toast.success('Competencies filled with example data!');
   };
 
-  // â”€â”€ Navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Navigation ─────────────────────────────────────────────────────────────
   const handleNext = () => {
     if (step === 1 && !personal.firstName.trim()) {
       toast.error('Please enter your first name.'); return;
@@ -230,7 +230,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
   };
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
 
-  // â”€â”€ Save to backend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Save to backend ────────────────────────────────────────────────────────
   const handleSave = async (blob: Blob | null) => {
     if (!blob) {
       toast.error('PDF is still rendering. Please wait a moment.'); return;
@@ -272,7 +272,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
     }
   };
 
-  // â”€â”€ Shared styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Shared styles ──────────────────────────────────────────────────────────
   const inputCls = 'w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none text-sm transition';
   const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5';
   const cefrSelect = (value: string, onChange: (v: string) => void) => (
@@ -324,7 +324,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
               </div>
             )}
 
-            {/* â”€â”€ Body â”€â”€ */}
+            {/* ── Body ── */}
             <div className="flex-1 overflow-y-auto bg-white">
 
               {/* Generating animation */}
@@ -333,18 +333,18 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                   <div className="relative mb-8">
                     <div className="w-24 h-24 rounded-full flex items-center justify-center animate-pulse"
                          style={{ background: 'rgba(0,51,153,0.1)' }}>
-                      <span className="text-4xl">â˜…</span>
+                      <span className="text-4xl">★</span>
                     </div>
                     <Loader2 className="w-24 h-24 animate-spin absolute inset-0 opacity-20" style={{ color: '#15750a' }} />
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Building Your Europass CV</h3>
                   <p className="text-gray-400 max-w-sm text-sm leading-relaxed">
-                    Formatting your profile in official Europass style with all sectionsâ€¦
+                    Formatting your profile in official Europass style with all sections…
                   </p>
                 </div>
               )}
 
-              {/* â”€â”€ STEP 1: Personal Details â”€â”€ */}
+              {/* ── STEP 1: Personal Details ── */}
               {!generating && step === 1 && (
                 <div className="p-5 sm:p-6 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -426,7 +426,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                     <textarea value={personal.summary}
                       onChange={e => setPersonal(p => ({ ...p, summary: e.target.value }))}
                       rows={3}
-                      placeholder="Brief professional summary about yourselfâ€¦"
+                      placeholder="Brief professional summary about yourself…"
                       className={`${inputCls} resize-none`}
                     />
                   </div>
@@ -460,7 +460,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                 </div>
               )}
 
-              {/* â”€â”€ STEP 2: Work Experience â”€â”€ */}
+              {/* ── STEP 2: Work Experience ── */}
               {!generating && step === 2 && (
                 <div className="p-5 sm:p-6 space-y-4 relative">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
@@ -483,10 +483,10 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs font-semibold text-gray-700 mb-1 block">Dates (e.g. Jan 2020 â€“ Present)</label>
+                          <label className="text-xs font-semibold text-gray-700 mb-1 block">Dates (e.g. Jan 2020 – Present)</label>
                           <input value={entry.dates}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], dates: e.target.value }; return n; })}
-                            placeholder="Jan 2020 â€“ Present"
+                            placeholder="Jan 2020 – Present"
                             className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
@@ -531,7 +531,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                 </div>
               )}
 
-              {/* â”€â”€ STEP 3: Education â”€â”€ */}
+              {/* ── STEP 3: Education ── */}
               {!generating && step === 3 && (
                 <div className="p-5 sm:p-6 space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
@@ -554,10 +554,10 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-xs font-semibold text-gray-700 mb-1 block">Dates (e.g. 2018 â€“ 2022)</label>
+                          <label className="text-xs font-semibold text-gray-700 mb-1 block">Dates (e.g. 2018 – 2022)</label>
                           <input value={entry.dates}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], dates: e.target.value }; return n; })}
-                            placeholder="2018 â€“ 2022"
+                            placeholder="2018 – 2022"
                             className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
                         </div>
                         <div>
@@ -600,7 +600,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                 </div>
               )}
 
-              {/* â”€â”€ STEP 4: Languages & Digital Skills â”€â”€ */}
+              {/* ── STEP 4: Languages & Digital Skills ── */}
               {!generating && step === 4 && (
                 <div className="p-5 sm:p-6 space-y-5">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 sm:gap-0">
@@ -699,12 +699,12 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                 </div>
               )}
 
-              {/* â”€â”€ STEP 5: Competencies â”€â”€ */}
+              {/* ── STEP 5: Competencies ── */}
               {!generating && step === 5 && (
                 <div className="p-5 sm:p-6 space-y-5">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                     <div className="flex-1 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-relaxed mr-4">
-                      <strong>Europass Competencies</strong> â€” Describe your key strengths.
+                      <strong>Europass Competencies</strong> — Describe your key strengths.
                     </div>
                     <button onClick={handleAutoFillCompetencies}
                       className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md transition-colors whitespace-nowrap shrink-0">
@@ -727,7 +727,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                     <textarea value={orgComp}
                       onChange={e => setOrgComp(e.target.value)}
                       rows={3}
-                      placeholder="e.g. Proven ability to lead cross-functional teams of 10+. Managed pipeline of over Â£2M quarterly. Skilled in time management, task delegation, and project tracking..."
+                      placeholder="e.g. Proven ability to lead cross-functional teams of 10+. Managed pipeline of over £2M quarterly. Skilled in time management, task delegation, and project tracking..."
                       className={`${inputCls} resize-none`}
                     />
                   </div>
@@ -763,7 +763,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                 </div>
               )}
 
-              {/* â”€â”€ STEP 6: Preview & Save â”€â”€ */}
+              {/* ── STEP 6: Preview & Save ── */}
               {!generating && step === 6 && (
                 <div className="p-5 sm:p-6 space-y-6">
                   <div className="flex items-center justify-between mb-2">
@@ -794,7 +794,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                             {blobLoading && (
                               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
                                 <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: '#15750a' }} />
-                                <p className="text-sm text-gray-500 font-medium">Rendering Europass PDFâ€¦</p>
+                                <p className="text-sm text-gray-500 font-medium">Rendering Europass PDF…</p>
                               </div>
                             )}
                             {!blobLoading && blobError && (
@@ -827,15 +827,15 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                             style={{ background: 'linear-gradient(135deg, #15750a 0%, #72dd15 100%)' }}
                           >
                             {saving ? (
-                              <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving to Profileâ€¦</>
+                              <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving to Profile…</>
                             ) : blobLoading ? (
-                              <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Waiting for PDF to renderâ€¦</>
+                              <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Waiting for PDF to render…</>
                             ) : (
                               <><Send className="w-5 h-5 mr-2" /> Save Europass CV to Profile</>
                             )}
                           </button>
                           {blobError && (
-                            <p className="text-center text-xs text-red-500 mt-1">Cannot save â€” PDF failed to render. Please go back and check your entries.</p>
+                            <p className="text-center text-xs text-red-500 mt-1">Cannot save — PDF failed to render. Please go back and check your entries.</p>
                           )}
                         </>
                       );
@@ -845,7 +845,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
               )}
             </div>
 
-            {/* â”€â”€ Footer Navigation â”€â”€ */}
+            {/* ── Footer Navigation ── */}
             {!generating && step !== 6 && (
               <div className="p-4 sm:p-5 bg-white border-t border-gray-200 flex justify-between items-center shrink-0">
                 <button onClick={handlePrev} disabled={step === 1}
