@@ -486,9 +486,13 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
                 onClick={() => navigate(`/jobs/${job.id}`)}
               >
                 <div className="flex justify-between items-start mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 flex items-center justify-center text-neutral-500 font-bold text-sm shadow-sm border border-neutral-100 dark:border-neutral-800">
-                    {job.companyName?.charAt(0) || 'C'}
-                  </div>
+                  {job.companyLogoUrl ? (
+                    <img src={job.companyLogoUrl} alt={job.companyName} className="w-10 h-10 rounded-xl object-cover shadow-sm border border-neutral-100 dark:border-neutral-800" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 flex items-center justify-center text-neutral-500 font-bold text-sm shadow-sm border border-neutral-100 dark:border-neutral-800">
+                      {job.companyName?.charAt(0) || 'C'}
+                    </div>
+                  )}
                   <button
                     onClick={(e) => handleSaveJob(e, job.id)}
                     className={`p-1.5 rounded-lg transition-all ${savedJobs?.includes(job.id) ? 'bg-warm-100 text-warm-500' : 'text-neutral-300 hover:text-warm-400 hover:bg-warm-50'}`}
@@ -517,7 +521,10 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
                   )}
                 </div>
                 <button
-                  onClick={(e) => handleQuickApply(e, job.id, job.title)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/jobs/${job.id}`);
+                  }}
                   className="w-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-bold py-2 rounded-lg hover:bg-accent-600 dark:hover:bg-accent-100 transition-colors"
                 >
                   Quick Apply
