@@ -40,18 +40,18 @@ export function CVGeneratorPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
           onClick={() => setShowStandard(true)}
-          className="group relative cursor-pointer rounded-3xl border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-blue-500 dark:hover:border-blue-500 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 overflow-hidden"
+          className="group relative cursor-pointer rounded-3xl border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-yellow-500 dark:hover:border-yellow-500 shadow-sm hover:shadow-2xl hover:shadow-yellow-500/10 transition-all duration-300 overflow-hidden"
         >
           {/* Top gradient band */}
-          <div className="h-2 w-full bg-gradient-to-r from-[#1B4F8A] to-[#2563eb]" />
+          <div className="h-2 w-full bg-gradient-to-r from-[#a16207] to-[#eab308]" />
 
           <div className="p-7">
             {/* Icon */}
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#1B4F8A] to-[#2563eb] flex items-center justify-center mb-5 shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#a16207] to-[#eab308] flex items-center justify-center mb-5 shadow-lg shadow-yellow-900/20 group-hover:scale-105 transition-transform">
               <FileText className="w-7 h-7 text-white" />
             </div>
 
-            <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white mb-2 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+            <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white mb-2 group-hover:text-yellow-700 dark:group-hover:text-yellow-400 transition-colors">
               Generate CV
             </h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed mb-6">
@@ -60,14 +60,14 @@ export function CVGeneratorPage() {
 
             {/* Feature tags */}
             <div className="flex flex-wrap gap-2 mb-6">
-              {['Steel Blue Template', 'AI-formatted bullets', 'Multiple designs', 'Instant PDF'].map(tag => (
-                <span key={tag} className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+              {['Steel yellow Template', 'AI-formatted bullets', 'Multiple designs', 'Instant PDF'].map(tag => (
+                <span key={tag} className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-100 dark:border-yellow-800">
                   {tag}
                 </span>
               ))}
             </div>
 
-            <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-[#1B4F8A] to-[#2563eb] hover:from-[#163d6e] hover:to-[#1d4ed8] shadow-md shadow-blue-900/20 transition-all group-hover:shadow-lg">
+            <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-[#a16207] to-[#eab308] hover:from-[#854d0e] hover:to-[#ca8a04] shadow-md shadow-yellow-900/20 transition-all group-hover:shadow-lg">
               Generate CV <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -81,8 +81,8 @@ export function CVGeneratorPage() {
           onClick={() => setShowEuropass(true)}
           className="group relative cursor-pointer rounded-3xl border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-yellow-500 dark:hover:border-yellow-500 shadow-sm hover:shadow-2xl hover:shadow-yellow-500/10 transition-all duration-300 overflow-hidden"
         >
-          {/* EU blue top band */}
-          <div className="h-2 w-full bg-gradient-to-r from-[#003399] to-[#1a4db3]" />
+          {/* EU yellow top band */}
+          <div className="h-2 w-full bg-gradient-to-r from-[#ca8a04] to-[#facc15]" />
 
           {/* EU Stars watermark */}
           <div className="absolute top-4 right-5 text-yellow-400 text-xl opacity-20 group-hover:opacity-40 transition-opacity select-none pointer-events-none">
@@ -91,37 +91,37 @@ export function CVGeneratorPage() {
 
           <div className="p-7">
             {/* Icon */}
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#003399] to-[#1a4db3] flex items-center justify-center mb-5 shadow-lg shadow-blue-900/20 group-hover:scale-105 transition-transform relative">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#ca8a04] to-[#facc15] flex items-center justify-center mb-5 shadow-lg shadow-yellow-900/20 group-hover:scale-105 transition-transform relative">
               <Globe className="w-7 h-7 text-white" />
               <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center">
-                <Star className="w-2.5 h-2.5 text-blue-900 fill-blue-900" />
+                <Star className="w-2.5 h-2.5 text-yellow-900 fill-yellow-900" />
               </div>
             </div>
 
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
-                Generate Europass CV
+                Generate Europe CV
               </h2>
-              <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-yellow-400 text-blue-900 uppercase tracking-wide">
+              <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-yellow-400 text-yellow-900 uppercase tracking-wide">
                 EU Style
               </span>
             </div>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed mb-6">
-              Official European Europass format with passport photo, CEFR language table, competencies grid and all required sections — perfect for jobs in Europe.
+              Create an official Europe-formatted CV, including CEFR language levels, digital skills, and your passport photo.
             </p>
 
             {/* Feature tags */}
             <div className="flex flex-wrap gap-2 mb-6">
               {['Europass Format', 'Passport Photo', 'CEFR Languages', 'EU-Standard Sections'].map(tag => (
-                <span key={tag} className="px-2.5 py-1 text-[11px] font-bold rounded-lg text-yellow-700 dark:text-yellow-300 border" style={{ background: 'rgba(0,51,153,0.06)', borderColor: 'rgba(0,51,153,0.15)' }}>
+                <span key={tag} className="px-2.5 py-1 text-[11px] font-bold rounded-lg text-yellow-700 dark:text-yellow-300 border" style={{ background: 'rgba(234,179,8,0.1)', borderColor: 'rgba(234,179,8,0.2)' }}>
                   {tag}
                 </span>
               ))}
             </div>
 
             <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white shadow-md transition-all group-hover:shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #003399 0%, #1a4db3 100%)' }}>
-              <span className="text-yellow-400">★</span> Generate Europass CV <ArrowRight className="w-4 h-4" />
+                    style={{ background: 'linear-gradient(135deg, #ca8a04 0%, #facc15 100%)' }}>
+              <span className="text-yellow-400">★</span> Generate Europe CV <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </motion.div>
