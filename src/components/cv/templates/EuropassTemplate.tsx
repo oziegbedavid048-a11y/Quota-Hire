@@ -217,15 +217,21 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   langNameCell: {
-    width: 80,
-    fontFamily: 'Helvetica-Bold',
-    color: WHITE,
-    fontSize: 10,
+    width: 90,
     paddingLeft: 4,
+    justifyContent: 'center',
   },
   langDataCell: {
     flex: 1,
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  langDataText: {
+    color: WHITE,
+    fontFamily: 'Helvetica-Bold',
+    fontSize: 10,
+  },
+  langNameText: {
     color: WHITE,
     fontFamily: 'Helvetica-Bold',
     fontSize: 10,
@@ -411,13 +417,13 @@ export const EuropassTemplate = ({ data }: { data: EuropassData }) => {
             <View style={s.langTable}>
               {/* Header rows matching PDF layout */}
               <View style={s.langHeaderRow1}>
-                <View style={{ width: 80 }}></View>
+                <View style={{ width: 90 }}></View>
                 <View style={{ flex: 2 }}><Text style={s.langColLabel}>UNDERSTANDING</Text></View>
                 <View style={{ flex: 2 }}><Text style={s.langColLabel}>SPEAKING</Text></View>
                 <View style={{ flex: 1 }}><Text style={s.langColLabel}>WRITING</Text></View>
               </View>
               <View style={s.langHeaderRow2}>
-                <View style={{ width: 80 }}></View>
+                <View style={{ width: 90 }}></View>
                 <View style={{ flex: 1 }}><Text style={s.langColSub}>Listening</Text></View>
                 <View style={{ flex: 1 }}><Text style={s.langColSub}>Reading</Text></View>
                 <View style={{ flex: 1 }}><Text style={s.langColSub}>Spoken production</Text></View>
@@ -428,12 +434,12 @@ export const EuropassTemplate = ({ data }: { data: EuropassData }) => {
               {/* Data rows with Red background */}
               {data.foreignLanguages.map((lang, i) => (
                 <View key={i} style={s.langDataRow}>
-                  <Text style={s.langNameCell}>{lang.language}</Text>
-                  <Text style={s.langDataCell}>{lang.listening}</Text>
-                  <Text style={s.langDataCell}>{lang.reading}</Text>
-                  <Text style={s.langDataCell}>{lang.spokenProduction}</Text>
-                  <Text style={s.langDataCell}>{lang.spokenInteraction}</Text>
-                  <Text style={s.langDataCell}>{lang.writing}</Text>
+                  <View style={s.langNameCell}><Text style={s.langNameText}>{lang.language}</Text></View>
+                  <View style={s.langDataCell}><Text style={s.langDataText}>{lang.listening}</Text></View>
+                  <View style={s.langDataCell}><Text style={s.langDataText}>{lang.reading}</Text></View>
+                  <View style={s.langDataCell}><Text style={s.langDataText}>{lang.spokenProduction}</Text></View>
+                  <View style={s.langDataCell}><Text style={s.langDataText}>{lang.spokenInteraction}</Text></View>
+                  <View style={s.langDataCell}><Text style={s.langDataText}>{lang.writing}</Text></View>
                 </View>
               ))}
             </View>
