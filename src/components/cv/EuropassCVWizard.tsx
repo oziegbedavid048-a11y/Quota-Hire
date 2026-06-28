@@ -149,21 +149,8 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
 
   const euroData = buildData();
 
-  // ── Auto-Fill Example Data ─────────────────────────────────────────────────
-  const handleAutoFill = () => {
-    setPersonal({
-      firstName: 'Faithful',
-      lastName: 'Awuojo Imadi',
-      dateOfBirth: '14/05/1992',
-      nationality: 'Nigerian',
-      address: '12, Example Street, Victoria Island, Lagos, Nigeria',
-      phone: '+234 800 000 0000',
-      email: 'faithful.imadi@example.com',
-      linkedinUrl: 'linkedin.com/in/faithful-imadi',
-      website: '',
-      jobTitle: 'Senior Full Stack Developer',
-      summary: 'Experienced Senior Full Stack Developer with over 8 years of expertise in building scalable enterprise applications. Proficient in React, Node.js, and Python. Passionate about creating efficient solutions and leading cross-functional teams to deliver high-quality software on time.',
-    });
+  // ── Auto-Fill Handlers per Step ────────────────────────────────────────────
+  const handleAutoFillWork = () => {
     setWorkEntries([
       {
         dates: '05/2020 – Present',
@@ -180,6 +167,10 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
         duties: 'Developed and maintained responsive web applications using React and Django.\nCollaborated with UI/UX designers to implement modern interfaces.\nIntegrated third-party APIs for payment processing and analytics.',
       }
     ]);
+    toast.success('Work Experience filled with example data!');
+  };
+
+  const handleAutoFillEdu = () => {
     setEduEntries([
       {
         dates: '09/2011 – 07/2015',
@@ -189,11 +180,19 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
         fieldOfStudy: 'First Class Honours',
       }
     ]);
+    toast.success('Education filled with example data!');
+  };
+
+  const handleAutoFillSkills = () => {
     setMotherTongue('English');
     setForeignLangs([
       { language: 'French', listening: 'B2', reading: 'B2', spokenInteraction: 'B1', spokenProduction: 'B1', writing: 'B2' }
     ]);
     setDigitalSkills('Programming Languages: JavaScript, TypeScript, Python, Java\nFrameworks: React, Next.js, Django, Node.js\nTools: Git, Docker, AWS, Azure, CI/CD, JIRA\nDatabases: PostgreSQL, MongoDB, Redis');
+    toast.success('Languages & Digital Skills filled with example data!');
+  };
+
+  const handleAutoFillCompetencies = () => {
     setCommComp('Excellent communication skills gained through leading team meetings, presenting technical solutions to non-technical stakeholders, and mentoring junior developers.');
     setOrgComp('Strong leadership and project management skills. Successfully managed agile sprints and coordinated cross-functional teams of up to 10 members.');
     setJobComp('Deep understanding of software architecture, microservices, and cloud infrastructure. Proficient in debugging complex production issues.');
@@ -201,7 +200,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
     setDrivingLicence('Category B');
     setCertifications('AWS Certified Solutions Architect – Associate (2022)\nScrum Master Certified (SMC) (2021)');
     setHobbies('Open-source contributing, Playing chess, Photography');
-    toast.success('Form filled with example data! Feel free to edit.');
+    toast.success('Competencies filled with example data!');
   };
 
   // ── Navigation ─────────────────────────────────────────────────────────────
@@ -274,13 +273,13 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
   };
 
   // ── Shared styles ──────────────────────────────────────────────────────────
-  const inputCls = 'w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none text-sm transition';
+  const inputCls = 'w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-900 focus:border-yellow-900 outline-none text-sm transition';
   const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5';
   const cefrSelect = (value: string, onChange: (v: string) => void) => (
     <select
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-blue-900 transition"
+      className="w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-yellow-900 transition"
     >
       {CEFR_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
     </select>
@@ -299,13 +298,13 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
           >
             {/* ── Header ── */}
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 shrink-0"
-                 style={{ background: 'linear-gradient(135deg, #003399 0%, #1a4db3 100%)' }}>
+                 style={{ background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 100%)' }}>
               <div className="flex-1 min-w-0">
                 <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
                   <span className="text-yellow-400">★★</span> Generate Europass CV
                 </h2>
                 {!generating && step !== 6 && (
-                  <p className="text-blue-200 text-xs mt-0.5">
+                  <p className="text-yellow-200 text-xs mt-0.5">
                     Step {step} of 5 · {STEPS[step - 1]?.label}
                   </p>
                 )}
@@ -317,20 +316,12 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
 
             {/* ── Progress bar ── */}
             {!generating && (
-              <div className="flex gap-1 px-5 py-2 bg-blue-950 shrink-0 items-center justify-between">
-                <div className="flex gap-1 flex-1 mr-4">
-                  {[1, 2, 3, 4, 5, 6].map(s => (
-                    <div key={s}
-                      className={`h-1 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-yellow-400' : 'bg-blue-800'}`}
-                    />
-                  ))}
-                </div>
-                <button 
-                  onClick={handleAutoFill}
-                  className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 bg-blue-800 text-blue-200 hover:bg-blue-700 hover:text-white rounded-md transition-colors whitespace-nowrap"
-                >
-                  <Sparkles className="w-3 h-3" /> Auto-Fill Example
-                </button>
+              <div className="flex gap-1 px-5 py-2 bg-yellow-950 shrink-0">
+                {[1, 2, 3, 4, 5, 6].map(s => (
+                  <div key={s}
+                    className={`h-1 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-yellow-400' : 'bg-yellow-800'}`}
+                  />
+                ))}
               </div>
             )}
 
@@ -345,7 +336,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                          style={{ background: 'rgba(0,51,153,0.1)' }}>
                       <span className="text-4xl">★</span>
                     </div>
-                    <Loader2 className="w-24 h-24 animate-spin absolute inset-0 opacity-20" style={{ color: '#003399' }} />
+                    <Loader2 className="w-24 h-24 animate-spin absolute inset-0 opacity-20" style={{ color: '#ca8a04' }} />
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">Building Your Europass CV</h3>
                   <p className="text-gray-400 max-w-sm text-sm leading-relaxed">
@@ -444,18 +435,18 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                   {/* Passport Photo */}
                   <div>
                     <label className={labelCls}>Passport Photo (Recommended for Europass)</label>
-                    <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                      <div className="w-16 h-20 rounded-lg overflow-hidden border-2 border-blue-300 shrink-0 flex items-center justify-center bg-blue-100">
+                    <div className="flex items-center gap-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                      <div className="w-16 h-20 rounded-lg overflow-hidden border-2 border-yellow-300 shrink-0 flex items-center justify-center bg-yellow-100">
                         {passportImage ? (
                           <img src={passportImage} alt="Passport" className="w-full h-full object-cover" />
                         ) : (
-                          <Camera className="w-6 h-6 text-blue-400" />
+                          <Camera className="w-6 h-6 text-yellow-400" />
                         )}
                       </div>
                       <div className="flex-1">
                         <input type="file" accept="image/*" onChange={handlePhotoUpload}
-                          className="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-900 file:text-white hover:file:bg-blue-800 transition w-full" />
-                        <p className="text-[10px] text-blue-600 mt-1">
+                          className="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-yellow-900 file:text-white hover:file:bg-yellow-800 transition w-full" />
+                        <p className="text-[10px] text-yellow-600 mt-1">
                           Photo will appear blended in the top-left of your Europass CV header. Recommended: square format, professional attire.
                         </p>
                         {passportImage && (
@@ -472,8 +463,14 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
 
               {/* ── STEP 2: Work Experience ── */}
               {!generating && step === 2 && (
-                <div className="p-5 sm:p-6 space-y-4">
-                  <p className="text-sm text-gray-500">Add your work experience (up to 5 roles). Duties become bullet points on the CV.</p>
+                <div className="p-5 sm:p-6 space-y-4 relative">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-500">Add your work experience (up to 5 roles).</p>
+                    <button onClick={handleAutoFillWork}
+                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-md transition-colors">
+                      <Sparkles className="w-3 h-3" /> Auto-Fill Work
+                    </button>
+                  </div>
                   {workEntries.map((entry, i) => (
                     <div key={i} className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3 relative">
                       <div className="flex justify-between items-center">
@@ -491,28 +488,28 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                           <input value={entry.dates}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], dates: e.target.value }; return n; })}
                             placeholder="Jan 2020 – Present"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Job Title / Role *</label>
                           <input value={entry.role}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], role: e.target.value }; return n; })}
                             placeholder="Senior Sales Manager"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Employer / Company *</label>
                           <input value={entry.employer}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], employer: e.target.value }; return n; })}
                             placeholder="Acme Corporation"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Location (City, Country)</label>
                           <input value={entry.location}
                             onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], location: e.target.value }; return n; })}
                             placeholder="London, UK"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                       </div>
                       <div>
@@ -521,7 +518,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                           onChange={e => setWorkEntries(p => { const n = [...p]; n[i] = { ...n[i], duties: e.target.value }; return n; })}
                           rows={3}
                           placeholder="Led a team of 8 sales reps. Developed new market strategies. Increased revenue by 30%..."
-                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm resize-none outline-none focus:border-blue-900 transition" />
+                          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm resize-none outline-none focus:border-yellow-900 transition" />
                         <p className="text-[10px] text-gray-400 mt-1">Each sentence becomes a bullet point on the CV.</p>
                       </div>
                     </div>
@@ -538,7 +535,13 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
               {/* ── STEP 3: Education ── */}
               {!generating && step === 3 && (
                 <div className="p-5 sm:p-6 space-y-4">
-                  <p className="text-sm text-gray-500">Add your educational qualifications (up to 3).</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-500">Add your educational qualifications (up to 3).</p>
+                    <button onClick={handleAutoFillEdu}
+                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-md transition-colors">
+                      <Sparkles className="w-3 h-3" /> Auto-Fill Edu
+                    </button>
+                  </div>
                   {eduEntries.map((entry, i) => (
                     <div key={i} className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3 relative">
                       <div className="flex justify-between items-center">
@@ -556,35 +559,35 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                           <input value={entry.dates}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], dates: e.target.value }; return n; })}
                             placeholder="2018 – 2022"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Qualification / Degree *</label>
                           <input value={entry.qualification}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], qualification: e.target.value }; return n; })}
                             placeholder="B.Sc. Business Administration"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Field of Study</label>
                           <input value={entry.fieldOfStudy || ''}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], fieldOfStudy: e.target.value }; return n; })}
                             placeholder="Marketing & Sales"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Institution *</label>
                           <input value={entry.institution}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], institution: e.target.value }; return n; })}
                             placeholder="University of Lagos"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                         <div>
                           <label className="text-xs font-semibold text-gray-700 mb-1 block">Location</label>
                           <input value={entry.location}
                             onChange={e => setEduEntries(p => { const n = [...p]; n[i] = { ...n[i], location: e.target.value }; return n; })}
                             placeholder="Lagos, Nigeria"
-                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900 transition" />
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-yellow-900 transition" />
                         </div>
                       </div>
                     </div>
@@ -601,6 +604,12 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
               {/* ── STEP 4: Languages & Digital Skills ── */}
               {!generating && step === 4 && (
                 <div className="p-5 sm:p-6 space-y-5">
+                  <div className="flex items-center justify-end">
+                    <button onClick={handleAutoFillSkills}
+                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-md transition-colors">
+                      <Sparkles className="w-3 h-3" /> Auto-Fill Skills
+                    </button>
+                  </div>
                   <div>
                     <label className={labelCls}>Mother Tongue *</label>
                     <input value={motherTongue}
@@ -615,14 +624,14 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs border-collapse">
                         <thead>
-                          <tr className="bg-blue-50">
-                            <th className="text-left p-2 font-bold text-blue-900 border border-blue-100 min-w-[100px]">Language</th>
-                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Listening</th>
-                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Reading</th>
-                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Spoken Int.</th>
-                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Spoken Prod.</th>
-                            <th className="p-2 font-bold text-blue-900 border border-blue-100">Writing</th>
-                            <th className="p-2 border border-blue-100"></th>
+                          <tr className="bg-yellow-50">
+                            <th className="text-left p-2 font-bold text-yellow-900 border border-yellow-100 min-w-[100px]">Language</th>
+                            <th className="p-2 font-bold text-yellow-900 border border-yellow-100">Listening</th>
+                            <th className="p-2 font-bold text-yellow-900 border border-yellow-100">Reading</th>
+                            <th className="p-2 font-bold text-yellow-900 border border-yellow-100">Spoken Int.</th>
+                            <th className="p-2 font-bold text-yellow-900 border border-yellow-100">Spoken Prod.</th>
+                            <th className="p-2 font-bold text-yellow-900 border border-yellow-100">Writing</th>
+                            <th className="p-2 border border-yellow-100"></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -632,7 +641,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                                 <input value={lang.language}
                                   onChange={e => setForeignLangs(p => { const n = [...p]; n[i] = { ...n[i], language: e.target.value }; return n; })}
                                   placeholder="e.g. French"
-                                  className="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs outline-none focus:border-blue-900" />
+                                  className="w-full px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs outline-none focus:border-yellow-900" />
                               </td>
                               {(['listening', 'reading', 'spokenInteraction', 'spokenProduction', 'writing'] as const).map(field => (
                                 <td key={field} className="p-1 border border-gray-100">
@@ -654,7 +663,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                     </div>
                     {foreignLangs.length < 4 && (
                       <button onClick={() => setForeignLangs(p => [...p, { ...EMPTY_LANG }])}
-                        className="mt-2 text-xs font-bold text-blue-900 flex items-center gap-1 hover:text-blue-700 transition">
+                        className="mt-2 text-xs font-bold text-yellow-900 flex items-center gap-1 hover:text-yellow-700 transition">
                         <Plus className="w-3.5 h-3.5" /> Add Language
                       </button>
                     )}
@@ -694,8 +703,14 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
               {/* ── STEP 5: Competencies ── */}
               {!generating && step === 5 && (
                 <div className="p-5 sm:p-6 space-y-5">
-                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-relaxed">
-                    <strong>Europass Competencies</strong> — These sections appear in the official Europass "Personal Competencies" section. Describe your key strengths in each category.
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 p-3 bg-yellow-50 border border-yellow-100 rounded-xl text-xs text-yellow-700 leading-relaxed mr-4">
+                      <strong>Europass Competencies</strong> — Describe your key strengths.
+                    </div>
+                    <button onClick={handleAutoFillCompetencies}
+                      className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-md transition-colors whitespace-nowrap shrink-0">
+                      <Sparkles className="w-3 h-3" /> Auto-Fill Competencies
+                    </button>
                   </div>
 
                   <div>
@@ -755,7 +770,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                           style={{ background: '#003399' }}>
+                           style={{ background: '#ca8a04' }}>
                         <FileText className="w-4 h-4" />
                       </div>
                       <h3 className="font-bold text-gray-900">Your Europass CV Preview</h3>
@@ -779,7 +794,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                                style={{ height: '52vh', minHeight: '360px' }}>
                             {blobLoading && (
                               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
-                                <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: '#003399' }} />
+                                <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: '#ca8a04' }} />
                                 <p className="text-sm text-gray-500 font-medium">Rendering Europass PDF…</p>
                               </div>
                             )}
@@ -797,7 +812,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                                   <p className="text-gray-600 font-semibold text-sm mb-3">Preview not supported in this browser</p>
                                   <button onClick={() => urlRef.current && window.open(urlRef.current, '_blank')}
                                     className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-sm font-semibold transition mt-3"
-                                    style={{ background: '#003399' }}>
+                                    style={{ background: '#ca8a04' }}>
                                     <ExternalLink className="w-4 h-4" /> Open PDF
                                   </button>
                                 </div>
@@ -810,7 +825,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                             onClick={() => handleSave(blob)}
                             disabled={blobLoading || saving || !!blobError}
                             className="w-full py-3.5 text-white rounded-xl flex items-center justify-center text-sm font-bold transition shadow-lg disabled:opacity-50"
-                            style={{ background: 'linear-gradient(135deg, #003399 0%, #1a4db3 100%)' }}
+                            style={{ background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 100%)' }}
                           >
                             {saving ? (
                               <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Saving to Profile…</>
@@ -840,7 +855,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                 </button>
                 <button onClick={handleNext}
                   className="px-6 py-2.5 text-white rounded-xl flex items-center text-sm font-semibold transition shadow-md"
-                  style={{ background: 'linear-gradient(135deg, #003399 0%, #1a4db3 100%)' }}>
+                  style={{ background: 'linear-gradient(135deg, #ca8a04 0%, #eab308 100%)' }}>
                   {step === 5 ? (
                     <><Sparkles className="w-4 h-4 mr-1.5" /> Generate Europass CV</>
                   ) : (
