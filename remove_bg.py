@@ -1,19 +1,24 @@
-from rembg import remove
 from PIL import Image
-import sys
 
-input_path = r"C:\Users\David\.gemini\antigravity-ide\brain\0fe577e2-4f68-4ec1-9980-70d1b546e704\tracker_3d_illustration_1781177116779.png"
-output_path = r"C:\Users\David\Desktop\QOUTA HIRE\public\images\tracker_illustration.png"
+def remove_white_background(input_path, output_path):
+    img = Image.open(input_path)
+    img = img.convert("RGBA")
+    datas = img.getdata()
 
-print(f"Loading image from: {input_path}")
-with open(input_path, "rb") as f:
-    input_data = f.read()
+    newData = []
+    # Make white (and near-white) pixels transparent
+    for item in datas:
+        # Check if the pixel is near white
+        if item[0] > 230 and item[1] > 230 and item[2] > 230:
+            newData.append((255, 255, 255, 0))
+        else:
+            newData.append(item)
 
-print("Removing background...")
-output_data = remove(input_data)
+    img.putdata(newData)
+    img.save(output_path, "PNG")
+    print(f"Saved transparent logo to {output_path}")
 
-print(f"Saving to: {output_path}")
-with open(output_path, "wb") as f:
-    f.write(output_data)
-
-print("Done! Background removed successfully.")
+remove_white_background(
+    r"c:\Users\David\Desktop\QOUTA HIRE\download.png", 
+    r"c:\Users\David\Desktop\QOUTA HIRE\public\europass_logo.png"
+)

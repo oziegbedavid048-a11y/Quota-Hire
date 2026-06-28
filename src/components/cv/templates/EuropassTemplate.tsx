@@ -1,16 +1,13 @@
 // EU1 – Official Europass CV Template
 // Matches the exact design of Imadi_Faithful_Awuojo_Europass_CV2.pdf
-// EU blue (#003399), two-column sections, passport photo blended in header
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
+// White background, left column for labels, vertical separator, right column for content
+import { Document, Page, Text, View, StyleSheet, Image, Link } from '@react-pdf/renderer';
 
 // ── Europass brand colours ────────────────────────────────────────────────────
 const EU_BLUE   = '#003399';
-const EU_LIGHT  = '#e8f0fe';
-const EU_ACCENT = '#1a4db3';
 const DARK      = '#1a1a2e';
 const MUTED     = '#6b7280';
 const WHITE     = '#ffffff';
-const RULE_CLR  = '#d1d9f0';
 const BODY_BG   = '#ffffff';
 
 export interface EuropassData {
@@ -73,254 +70,219 @@ const s = StyleSheet.create({
     backgroundColor: BODY_BG,
     fontFamily: 'Helvetica',
     fontSize: 9,
-    paddingBottom: 28,
+    paddingTop: 36,
+    paddingBottom: 36,
+    paddingHorizontal: 36,
   },
 
-  // ── Header ─────────────────────────────────────────────────────────────────
-  header: {
-    backgroundColor: EU_BLUE,
-    paddingTop: 22,
-    paddingBottom: 18,
-    paddingHorizontal: 28,
+  // ── Header Layout ──────────────────────────────────────────────────────────
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    minHeight: 110,
-    position: 'relative',
+    marginBottom: 20,
   },
-  headerLeft: {
-    flex: 1,
-  },
-  headerName: {
-    fontSize: 22,
-    fontFamily: 'Helvetica-Bold',
-    color: WHITE,
-    letterSpacing: 0.5,
-    lineHeight: 1.2,
-  },
-  headerCVTitle: {
-    fontSize: 9,
-    color: '#a8c3ff',
-    marginTop: 3,
-    letterSpacing: 2,
-    fontFamily: 'Helvetica-Bold',
-    textTransform: 'uppercase',
-  },
-  headerJobTitle: {
-    fontSize: 11,
-    color: '#c8d9ff',
-    marginTop: 5,
-    fontFamily: 'Helvetica-Bold',
-  },
-
-  // Europass logo area (top right of header)
-  headerRight: {
+  leftColHeader: {
+    width: 140, // Match the left column width
+    flexShrink: 0,
     alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    minWidth: 100,
+    paddingRight: 10,
   },
-  europassText: {
-    fontSize: 13,
-    fontFamily: 'Helvetica-Bold',
-    color: WHITE,
-    letterSpacing: 1,
+  rightColHeader: {
+    flex: 1,
+    paddingLeft: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: EU_BLUE, // Vertical separator
+    position: 'relative',
+    minHeight: 80,
   },
-  europassSubText: {
-    fontSize: 7,
-    color: '#a8c3ff',
-    letterSpacing: 0.5,
-    marginTop: 1,
+  
+  logoContainer: {
+    position: 'absolute',
+    top: -10,
+    right: 0,
+    width: 100, // Adjust based on logo proportions
   },
-  euroStars: {
-    flexDirection: 'row',
-    gap: 2,
-    marginTop: 4,
-  },
-  euroStar: {
-    fontSize: 8,
-    color: '#ffd700',
+  logoImage: {
+    width: '100%',
+    objectFit: 'contain',
   },
 
   // Passport photo
   photoBox: {
-    width: 72,
-    height: 88,
+    width: 55,
+    height: 70,
     borderRadius: 4,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.4)',
-    marginLeft: 16,
-    marginRight: 4,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    // Push it slightly down so it aligns nicely with the name
+    marginTop: 5,
   },
   photoImage: {
-    width: 72,
-    height: 88,
+    width: '100%',
+    height: '100%',
     objectFit: 'cover',
   },
   photoPlaceholder: {
-    width: 72,
-    height: 88,
-    backgroundColor: EU_ACCENT,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#e5e7eb',
     alignItems: 'center',
     justifyContent: 'center',
   },
   photoInitial: {
-    fontSize: 26,
+    fontSize: 22,
     fontFamily: 'Helvetica-Bold',
-    color: WHITE,
+    color: '#9ca3af',
   },
 
-  // ── Body ───────────────────────────────────────────────────────────────────
-  body: {
-    paddingHorizontal: 28,
-    paddingTop: 14,
-  },
-
-  // Section header — EU blue bar with white text + left gold accent
-  sectionHeader: {
-    backgroundColor: EU_BLUE,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    marginTop: 14,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#ffd700',
-  },
-  sectionTitle: {
-    fontSize: 8.5,
+  headerName: {
+    fontSize: 20,
     fontFamily: 'Helvetica-Bold',
-    color: WHITE,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    color: EU_BLUE,
+    marginBottom: 6,
+    paddingRight: 100, // Leave space for the logo
   },
-
-  // Horizontal rule
-  rule: {
-    borderBottomWidth: 1,
-    borderBottomColor: RULE_CLR,
-    marginVertical: 6,
-  },
-
-  // ── Personal info row ───────────────────────────────────────────────────────
-  infoGrid: {
+  headerContactRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    width: '48%',
-    marginBottom: 4,
-  },
-  infoLabel: {
-    fontSize: 8,
-    fontFamily: 'Helvetica-Bold',
+  contactIcon: {
     color: EU_BLUE,
-    width: 72,
-    flexShrink: 0,
+    marginRight: 4,
   },
-  infoValue: {
-    fontSize: 8.5,
+  contactText: {
+    fontSize: 9,
     color: DARK,
-    flex: 1,
-    lineHeight: 1.4,
+    marginRight: 12,
+  },
+  linkText: {
+    color: EU_BLUE,
+    textDecoration: 'none',
   },
 
-  // ── Experience / Education entry ───────────────────────────────────────────
-  entryRow: {
+  // ── Section Layout ─────────────────────────────────────────────────────────
+  section: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  entryDateCol: {
-    width: 100,
-    paddingRight: 10,
+  leftCol: {
+    width: 140,
     flexShrink: 0,
+    paddingRight: 10,
+    paddingTop: 2,
+    alignItems: 'flex-end',
   },
-  entryDate: {
-    fontSize: 8.5,
-    color: EU_BLUE,
-    fontFamily: 'Helvetica-Bold',
-    lineHeight: 1.4,
-  },
-  entryBody: {
+  rightCol: {
     flex: 1,
-    borderLeftWidth: 2,
-    borderLeftColor: RULE_CLR,
     paddingLeft: 10,
+    paddingTop: 2,
+    paddingBottom: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: EU_BLUE,
   },
+
+  sectionTitle: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: EU_BLUE,
+    textTransform: 'uppercase',
+    textAlign: 'right',
+  },
+  sectionDate: {
+    fontSize: 8.5,
+    color: DARK,
+    textAlign: 'right',
+  },
+  
+  // ── Right Column Content ────────────────────────────────────────────────────
   entryTitle: {
-    fontSize: 9.5,
+    fontSize: 10,
     fontFamily: 'Helvetica-Bold',
     color: DARK,
-    marginBottom: 1,
+    marginBottom: 2,
   },
   entrySubtitle: {
-    fontSize: 8.5,
-    color: EU_ACCENT,
+    fontSize: 9,
+    fontFamily: 'Helvetica-Oblique',
+    color: DARK,
     marginBottom: 4,
   },
-  entryLocation: {
-    fontSize: 8,
-    color: MUTED,
-    marginBottom: 4,
+  entryBody: {
+    fontSize: 9,
+    color: DARK,
+    lineHeight: 1.4,
+    marginBottom: 6,
   },
   bullet: {
     flexDirection: 'row',
-    marginBottom: 2.5,
+    marginBottom: 2,
   },
   bulletDot: {
-    fontSize: 8.5,
-    color: EU_BLUE,
+    fontSize: 9,
+    color: DARK,
     marginRight: 5,
-    marginTop: 0.5,
   },
   bulletTxt: {
     flex: 1,
-    fontSize: 8.5,
-    color: '#374151',
-    lineHeight: 1.5,
+    fontSize: 9,
+    color: DARK,
+    lineHeight: 1.4,
+  },
+
+  labelValueRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  rowLabel: {
+    fontSize: 9,
+    color: MUTED,
+    width: 65,
+  },
+  rowValue: {
+    fontSize: 9,
+    color: DARK,
+    flex: 1,
   },
 
   // ── Language table ──────────────────────────────────────────────────────────
   langTable: {
+    marginTop: 4,
     marginBottom: 8,
   },
   langHeaderRow: {
     flexDirection: 'row',
-    backgroundColor: EU_LIGHT,
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    marginBottom: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: EU_BLUE,
+    paddingBottom: 2,
+    marginBottom: 4,
   },
   langHeaderCell: {
-    fontSize: 7.5,
+    fontSize: 8,
     fontFamily: 'Helvetica-Bold',
     color: EU_BLUE,
     textAlign: 'center',
     flex: 1,
   },
   langHeaderFirst: {
-    fontSize: 7.5,
-    fontFamily: 'Helvetica-Bold',
+    fontSize: 8,
     color: EU_BLUE,
     width: 80,
   },
   langRow: {
     flexDirection: 'row',
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: RULE_CLR,
+    marginBottom: 4,
   },
   langCell: {
-    fontSize: 8,
+    fontSize: 8.5,
     color: DARK,
     textAlign: 'center',
     flex: 1,
   },
   langCellFirst: {
-    fontSize: 8,
+    fontSize: 8.5,
     fontFamily: 'Helvetica-Bold',
     color: DARK,
     width: 80,
@@ -328,65 +290,7 @@ const s = StyleSheet.create({
   langNote: {
     fontSize: 7,
     color: MUTED,
-    marginTop: 3,
-    fontFamily: 'Helvetica-Oblique',
-  },
-  motherTongueTxt: {
-    fontSize: 8.5,
-    color: DARK,
-    fontFamily: 'Helvetica-Bold',
-    marginBottom: 6,
-  },
-
-  // ── Two-column layout for skills sections ──────────────────────────────────
-  twoCol: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 4,
-  },
-  col: {
-    flex: 1,
-  },
-  competencyBlock: {
-    marginBottom: 8,
-  },
-  competencyLabel: {
-    fontSize: 8.5,
-    fontFamily: 'Helvetica-Bold',
-    color: EU_BLUE,
-    marginBottom: 3,
-  },
-  competencyText: {
-    fontSize: 8.5,
-    color: '#374151',
-    lineHeight: 1.5,
-  },
-
-  // ── Additional info ─────────────────────────────────────────────────────────
-  additionalRow: {
-    flexDirection: 'row',
-    marginBottom: 5,
-  },
-  addLabel: {
-    fontSize: 8.5,
-    fontFamily: 'Helvetica-Bold',
-    color: EU_BLUE,
-    width: 110,
-    flexShrink: 0,
-  },
-  addValue: {
-    fontSize: 8.5,
-    color: DARK,
-    flex: 1,
-    lineHeight: 1.4,
-  },
-
-  // Summary
-  summaryText: {
-    fontSize: 8.5,
-    color: '#374151',
-    lineHeight: 1.7,
-    marginBottom: 4,
+    marginTop: 2,
   },
 });
 
@@ -400,137 +304,138 @@ function dutiesToBullets(raw: string): string[] {
     .map(s => s.charAt(0).toUpperCase() + s.slice(1));
 }
 
-// ── 12 EU stars in a circle (simplified row) ─────────────────────────────────
-const EuroStars = () => (
-  <View style={s.euroStars}>
-    {['★', '★', '★', '★', '★', '★', '★', '★', '★', '★', '★', '★'].map((star, i) => (
-      <Text key={i} style={s.euroStar}>{star}</Text>
-    ))}
-  </View>
-);
-
 // ── Main Template ─────────────────────────────────────────────────────────────
 export const EuropassTemplate = ({ data }: { data: EuropassData }) => {
-  const fullName = `${data.firstName} ${data.lastName}`;
+  const fullName = `${data.firstName} ${data.lastName}`.trim().toUpperCase();
   const initial = (data.firstName || 'U').charAt(0).toUpperCase();
 
   return (
     <Document title={`Europass CV – ${fullName}`} author={fullName}>
       <Page size="A4" style={s.page}>
 
-        {/* ── HEADER ── */}
-        <View style={s.header}>
-          {/* Photo */}
-          <View style={s.photoBox}>
-            {data.passportImageUrl ? (
-              <Image src={data.passportImageUrl} style={s.photoImage} />
-            ) : (
-              <View style={s.photoPlaceholder}>
-                <Text style={s.photoInitial}>{initial}</Text>
-              </View>
-            )}
+        {/* ── HEADER (Personal Info & Logo) ── */}
+        <View style={s.headerRow}>
+          {/* Left Column: Photo */}
+          <View style={s.leftColHeader}>
+            <View style={s.photoBox}>
+              {data.passportImageUrl ? (
+                <Image src={data.passportImageUrl} style={s.photoImage} />
+              ) : (
+                <View style={s.photoPlaceholder}>
+                  <Text style={s.photoInitial}>{initial}</Text>
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Name + title */}
-          <View style={s.headerLeft}>
+          {/* Right Column: Name, Contacts, Logo */}
+          <View style={s.rightColHeader}>
+            {/* The Logo */}
+            <View style={s.logoContainer}>
+               <Image src="/europass_logo.png" style={s.logoImage} />
+            </View>
+
             <Text style={s.headerName}>{fullName}</Text>
-            <Text style={s.headerCVTitle}>Curriculum Vitae</Text>
-            {data.jobTitle && (
-              <Text style={s.headerJobTitle}>{data.jobTitle}</Text>
-            )}
-          </View>
 
-          {/* Europass branding top-right */}
-          <View style={s.headerRight}>
-            <EuroStars />
-            <Text style={s.europassText}>Europass</Text>
-            <Text style={s.europassSubText}>CURRICULUM VITAE</Text>
+            {/* Contact details */}
+            <View style={s.headerContactRow}>
+              {data.address && (
+                <View style={{ flexDirection: 'row', marginRight: 12 }}>
+                  <Text style={s.contactIcon}>📍</Text>
+                  <Text style={s.contactText}>{data.address}</Text>
+                </View>
+              )}
+            </View>
+            
+            <View style={s.headerContactRow}>
+              {data.phone && (
+                <View style={{ flexDirection: 'row', marginRight: 12 }}>
+                  <Text style={s.contactIcon}>📱</Text>
+                  <Text style={s.contactText}>{data.phone}</Text>
+                </View>
+              )}
+              {data.email && (
+                <View style={{ flexDirection: 'row', marginRight: 12 }}>
+                  <Text style={s.contactIcon}>✉️</Text>
+                  <Text style={s.contactText}>{data.email}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={s.headerContactRow}>
+              {data.linkedinUrl && (
+                <View style={{ flexDirection: 'row', marginRight: 12 }}>
+                  <Text style={s.contactIcon}>in</Text>
+                  <Text style={s.contactText}>{data.linkedinUrl}</Text>
+                </View>
+              )}
+              {data.website && (
+                <View style={{ flexDirection: 'row', marginRight: 12 }}>
+                  <Text style={s.contactIcon}>🌐</Text>
+                  <Text style={s.contactText}>{data.website}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={s.headerContactRow}>
+              {data.dateOfBirth && (
+                <View style={s.labelValueRow}>
+                  <Text style={s.rowLabel}>Date of birth</Text>
+                  <Text style={s.rowValue}>{data.dateOfBirth}</Text>
+                </View>
+              )}
+            </View>
+            <View style={s.headerContactRow}>
+              {data.nationality && (
+                <View style={s.labelValueRow}>
+                  <Text style={s.rowLabel}>Nationality</Text>
+                  <Text style={s.rowValue}>{data.nationality}</Text>
+                </View>
+              )}
+            </View>
+
           </View>
         </View>
 
-        {/* ── BODY ── */}
-        <View style={s.body}>
-
-          {/* PERSONAL INFORMATION */}
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Personal Information</Text>
+        {/* ── JOB APPLIED FOR / SUMMARY ── */}
+        {(data.jobTitle || data.summary) && (
+          <View style={s.section}>
+            <View style={s.leftCol}>
+              <Text style={s.sectionTitle}>
+                {data.jobTitle ? 'Job applied for' : 'Personal Statement'}
+              </Text>
+            </View>
+            <View style={s.rightCol}>
+              {data.jobTitle && <Text style={s.entryTitle}>{data.jobTitle}</Text>}
+              {data.summary && <Text style={s.entryBody}>{data.summary}</Text>}
+            </View>
           </View>
+        )}
 
-          <View style={s.infoGrid}>
-            {data.address && (
-              <View style={s.infoItem}>
-                <Text style={s.infoLabel}>Address</Text>
-                <Text style={s.infoValue}>{data.address}</Text>
-              </View>
-            )}
-            {data.phone && (
-              <View style={s.infoItem}>
-                <Text style={s.infoLabel}>Telephone</Text>
-                <Text style={s.infoValue}>{data.phone}</Text>
-              </View>
-            )}
-            {data.email && (
-              <View style={s.infoItem}>
-                <Text style={s.infoLabel}>Email</Text>
-                <Text style={s.infoValue}>{data.email}</Text>
-              </View>
-            )}
-            {data.linkedinUrl && (
-              <View style={s.infoItem}>
-                <Text style={s.infoLabel}>LinkedIn</Text>
-                <Text style={s.infoValue}>{data.linkedinUrl}</Text>
-              </View>
-            )}
-            {data.website && (
-              <View style={s.infoItem}>
-                <Text style={s.infoLabel}>Website</Text>
-                <Text style={s.infoValue}>{data.website}</Text>
-              </View>
-            )}
-            {data.dateOfBirth && (
-              <View style={s.infoItem}>
-                <Text style={s.infoLabel}>Date of Birth</Text>
-                <Text style={s.infoValue}>{data.dateOfBirth}</Text>
-              </View>
-            )}
-            {data.nationality && (
-              <View style={s.infoItem}>
-                <Text style={s.infoLabel}>Nationality</Text>
-                <Text style={s.infoValue}>{data.nationality}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* PROFILE SUMMARY (optional) */}
-          {data.summary && (
-            <>
-              <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Personal Statement</Text>
-              </View>
-              <Text style={s.summaryText}>{data.summary}</Text>
-            </>
-          )}
-
-          {/* WORK EXPERIENCE */}
-          {data.workExperience && data.workExperience.length > 0 && (
-            <>
-              <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Work Experience</Text>
-              </View>
+        {/* ── WORK EXPERIENCE ── */}
+        {data.workExperience && data.workExperience.length > 0 && (
+          <View style={s.section}>
+            <View style={s.leftCol}>
+              <Text style={s.sectionTitle}>Work experience</Text>
+            </View>
+            <View style={s.rightCol}>
               {data.workExperience.map((exp, i) => {
                 const bullets = dutiesToBullets(exp.duties);
                 return (
-                  <View key={i} style={s.entryRow}>
-                    <View style={s.entryDateCol}>
-                      <Text style={s.entryDate}>{exp.dates}</Text>
+                  <View key={i} style={{ marginBottom: i < data.workExperience.length - 1 ? 12 : 0, flexDirection: 'row' }}>
+                    {/* Dates on the left, next to the line but inside rightCol for easier alignment? 
+                        Actually, official Europass has dates in the left column. Let's adjust section layout for lists */}
+                    <View style={{ width: 100, position: 'absolute', left: -110, alignItems: 'flex-end' }}>
+                       <Text style={s.sectionDate}>{exp.dates}</Text>
                     </View>
-                    <View style={s.entryBody}>
+                    <View style={{ flex: 1 }}>
                       <Text style={s.entryTitle}>{exp.role}</Text>
-                      {exp.employer && <Text style={s.entrySubtitle}>{exp.employer}</Text>}
-                      {exp.location && <Text style={s.entryLocation}>{exp.location}</Text>}
+                      <Text style={s.entrySubtitle}>
+                        {exp.employer}{exp.location ? `, ${exp.location}` : ''}
+                      </Text>
                       {bullets.map((b, bi) => (
                         <View key={bi} style={s.bullet}>
-                          <Text style={s.bulletDot}>▪</Text>
+                          <Text style={s.bulletDot}>-</Text>
                           <Text style={s.bulletTxt}>{b}</Text>
                         </View>
                       ))}
@@ -538,149 +443,176 @@ export const EuropassTemplate = ({ data }: { data: EuropassData }) => {
                   </View>
                 );
               })}
-            </>
-          )}
-
-          {/* EDUCATION AND TRAINING */}
-          {data.education && data.education.length > 0 && (
-            <>
-              <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Education and Training</Text>
-              </View>
-              {data.education.map((edu, i) => (
-                <View key={i} style={s.entryRow}>
-                  <View style={s.entryDateCol}>
-                    <Text style={s.entryDate}>{edu.dates}</Text>
-                  </View>
-                  <View style={s.entryBody}>
-                    <Text style={s.entryTitle}>{edu.qualification}</Text>
-                    {edu.fieldOfStudy && <Text style={s.entrySubtitle}>{edu.fieldOfStudy}</Text>}
-                    <Text style={s.entrySubtitle}>{edu.institution}</Text>
-                    {edu.location && <Text style={s.entryLocation}>{edu.location}</Text>}
-                  </View>
-                </View>
-              ))}
-            </>
-          )}
-
-          {/* LANGUAGE SKILLS */}
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Language Skills</Text>
+            </View>
           </View>
+        )}
 
-          {data.motherTongue && (
-            <View style={{ marginBottom: 6 }}>
-              <Text style={s.motherTongueTxt}>Mother tongue: {data.motherTongue}</Text>
+        {/* ── EDUCATION AND TRAINING ── */}
+        {data.education && data.education.length > 0 && (
+          <View style={s.section}>
+            <View style={s.leftCol}>
+              <Text style={s.sectionTitle}>Education and training</Text>
             </View>
-          )}
-
-          {data.foreignLanguages && data.foreignLanguages.length > 0 && (
-            <View style={s.langTable}>
-              {/* Table header */}
-              <View style={s.langHeaderRow}>
-                <Text style={s.langHeaderFirst}>Language</Text>
-                <Text style={s.langHeaderCell}>Listening</Text>
-                <Text style={s.langHeaderCell}>Reading</Text>
-                <Text style={s.langHeaderCell}>Spoken Int.</Text>
-                <Text style={s.langHeaderCell}>Spoken Prod.</Text>
-                <Text style={s.langHeaderCell}>Writing</Text>
-              </View>
-              {/* Rows */}
-              {data.foreignLanguages.map((lang, i) => (
-                <View key={i} style={s.langRow}>
-                  <Text style={s.langCellFirst}>{lang.language}</Text>
-                  <Text style={s.langCell}>{lang.listening}</Text>
-                  <Text style={s.langCell}>{lang.reading}</Text>
-                  <Text style={s.langCell}>{lang.spokenInteraction}</Text>
-                  <Text style={s.langCell}>{lang.spokenProduction}</Text>
-                  <Text style={s.langCell}>{lang.writing}</Text>
+            <View style={s.rightCol}>
+              {data.education.map((edu, i) => (
+                <View key={i} style={{ marginBottom: i < data.education.length - 1 ? 12 : 0, flexDirection: 'row' }}>
+                  <View style={{ width: 100, position: 'absolute', left: -110, alignItems: 'flex-end' }}>
+                     <Text style={s.sectionDate}>{edu.dates}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.entryTitle}>{edu.qualification}</Text>
+                    <Text style={s.entrySubtitle}>
+                      {edu.institution}{edu.location ? `, ${edu.location}` : ''}
+                    </Text>
+                    {edu.fieldOfStudy && (
+                      <View style={s.bullet}>
+                        <Text style={s.bulletDot}>-</Text>
+                        <Text style={s.bulletTxt}>{edu.fieldOfStudy}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               ))}
-              <Text style={s.langNote}>
-                Levels: A1/A2 – Basic | B1/B2 – Independent | C1/C2 – Proficient (CEFR framework)
-              </Text>
             </View>
-          )}
+          </View>
+        )}
 
-          {/* DIGITAL SKILLS */}
-          {data.digitalSkills && (
-            <>
-              <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Digital Skills</Text>
-              </View>
-              <Text style={s.competencyText}>{data.digitalSkills}</Text>
-            </>
-          )}
+        {/* ── PERSONAL SKILLS ── */}
+        <View style={s.section}>
+            <View style={s.leftCol}>
+              <Text style={s.sectionTitle}>Personal skills</Text>
+            </View>
+            <View style={s.rightCol}>
+              
+              {data.motherTongue && (
+                <View style={s.labelValueRow}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Mother tongue(s)</Text>
+                  <Text style={[s.rowValue, { fontFamily: 'Helvetica-Bold' }]}>{data.motherTongue}</Text>
+                </View>
+              )}
 
-          {/* PERSONAL COMPETENCIES */}
-          {(data.communicationCompetencies || data.organisationalCompetencies || data.jobRelatedCompetencies || data.otherCompetencies) && (
-            <>
-              <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Personal Competencies</Text>
-              </View>
+              {data.foreignLanguages && data.foreignLanguages.length > 0 && (
+                <View style={s.labelValueRow}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Foreign language(s)</Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={s.langTable}>
+                      {/* Table header */}
+                      <View style={s.langHeaderRow}>
+                        <Text style={s.langHeaderFirst}></Text>
+                        <View style={{ flex: 2, textAlign: 'center' }}>
+                          <Text style={{ fontSize: 8, color: EU_BLUE, textAlign: 'center', marginBottom: 2 }}>UNDERSTANDING</Text>
+                          <View style={{ flexDirection: 'row' }}>
+                            <Text style={s.langHeaderCell}>Listening</Text>
+                            <Text style={s.langHeaderCell}>Reading</Text>
+                          </View>
+                        </View>
+                        <View style={{ flex: 2, textAlign: 'center' }}>
+                          <Text style={{ fontSize: 8, color: EU_BLUE, textAlign: 'center', marginBottom: 2 }}>SPEAKING</Text>
+                          <View style={{ flexDirection: 'row' }}>
+                            <Text style={s.langHeaderCell}>Spoken Int.</Text>
+                            <Text style={s.langHeaderCell}>Spoken Prod.</Text>
+                          </View>
+                        </View>
+                        <View style={{ flex: 1, textAlign: 'center' }}>
+                          <Text style={{ fontSize: 8, color: EU_BLUE, textAlign: 'center', marginBottom: 2 }}>WRITING</Text>
+                          <Text style={s.langHeaderCell}></Text>
+                        </View>
+                      </View>
+
+                      {/* Rows */}
+                      {data.foreignLanguages.map((lang, i) => (
+                        <View key={i} style={s.langRow}>
+                          <Text style={s.langCellFirst}>{lang.language}</Text>
+                          <Text style={s.langCell}>{lang.listening}</Text>
+                          <Text style={s.langCell}>{lang.reading}</Text>
+                          <Text style={s.langCell}>{lang.spokenInteraction}</Text>
+                          <Text style={s.langCell}>{lang.spokenProduction}</Text>
+                          <Text style={s.langCell}>{lang.writing}</Text>
+                        </View>
+                      ))}
+                      <Text style={s.langNote}>
+                        Levels: A1/A2: Basic user - B1/B2: Independent user - C1/C2 Proficient user
+                      </Text>
+                      <Text style={s.langNote}>Common European Framework of Reference for Languages</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
 
               {data.communicationCompetencies && (
-                <View style={s.competencyBlock}>
-                  <Text style={s.competencyLabel}>Communication competencies</Text>
-                  <Text style={s.competencyText}>{data.communicationCompetencies}</Text>
+                <View style={[s.labelValueRow, { marginTop: 8 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Communication skills</Text>
+                  <Text style={s.rowValue}>{data.communicationCompetencies}</Text>
                 </View>
               )}
-              {data.organisationalCompetencies && (
-                <View style={s.competencyBlock}>
-                  <Text style={s.competencyLabel}>Organisational / managerial competencies</Text>
-                  <Text style={s.competencyText}>{data.organisationalCompetencies}</Text>
-                </View>
-              )}
-              {data.jobRelatedCompetencies && (
-                <View style={s.competencyBlock}>
-                  <Text style={s.competencyLabel}>Job-related competencies</Text>
-                  <Text style={s.competencyText}>{data.jobRelatedCompetencies}</Text>
-                </View>
-              )}
-              {data.otherCompetencies && (
-                <View style={s.competencyBlock}>
-                  <Text style={s.competencyLabel}>Other competencies</Text>
-                  <Text style={s.competencyText}>{data.otherCompetencies}</Text>
-                </View>
-              )}
-            </>
-          )}
 
-          {/* ADDITIONAL INFORMATION */}
-          {(data.drivingLicence || data.certifications || data.publications || data.hobbies) && (
-            <>
-              <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Additional Information</Text>
-              </View>
+              {data.organisationalCompetencies && (
+                <View style={[s.labelValueRow, { marginTop: 8 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Organisational / managerial skills</Text>
+                  <Text style={s.rowValue}>{data.organisationalCompetencies}</Text>
+                </View>
+              )}
+
+              {data.jobRelatedCompetencies && (
+                <View style={[s.labelValueRow, { marginTop: 8 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Job-related skills</Text>
+                  <Text style={s.rowValue}>{data.jobRelatedCompetencies}</Text>
+                </View>
+              )}
+
+              {data.digitalSkills && (
+                <View style={[s.labelValueRow, { marginTop: 8 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Digital skills</Text>
+                  <Text style={s.rowValue}>{data.digitalSkills}</Text>
+                </View>
+              )}
+
+              {data.otherCompetencies && (
+                <View style={[s.labelValueRow, { marginTop: 8 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Other skills</Text>
+                  <Text style={s.rowValue}>{data.otherCompetencies}</Text>
+                </View>
+              )}
 
               {data.drivingLicence && (
-                <View style={s.additionalRow}>
-                  <Text style={s.addLabel}>Driving licence</Text>
-                  <Text style={s.addValue}>{data.drivingLicence}</Text>
+                <View style={[s.labelValueRow, { marginTop: 8 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Driving licence</Text>
+                  <Text style={s.rowValue}>{data.drivingLicence}</Text>
                 </View>
               )}
+
+            </View>
+        </View>
+
+        {/* ── ADDITIONAL INFORMATION ── */}
+        {(data.certifications || data.publications || data.hobbies) && (
+          <View style={s.section}>
+            <View style={s.leftCol}>
+              <Text style={s.sectionTitle}>Additional information</Text>
+            </View>
+            <View style={s.rightCol}>
               {data.certifications && (
-                <View style={s.additionalRow}>
-                  <Text style={s.addLabel}>Certifications</Text>
-                  <Text style={s.addValue}>{data.certifications}</Text>
+                <View style={[s.labelValueRow, { marginTop: 2 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Certifications</Text>
+                  <Text style={s.rowValue}>{data.certifications}</Text>
                 </View>
               )}
               {data.publications && (
-                <View style={s.additionalRow}>
-                  <Text style={s.addLabel}>Publications</Text>
-                  <Text style={s.addValue}>{data.publications}</Text>
+                <View style={[s.labelValueRow, { marginTop: 8 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Publications</Text>
+                  <Text style={s.rowValue}>{data.publications}</Text>
                 </View>
               )}
               {data.hobbies && (
-                <View style={s.additionalRow}>
-                  <Text style={s.addLabel}>Hobbies & Interests</Text>
-                  <Text style={s.addValue}>{data.hobbies}</Text>
+                <View style={[s.labelValueRow, { marginTop: 8 }]}>
+                  <Text style={[s.rowLabel, { width: 100 }]}>Hobbies</Text>
+                  <Text style={s.rowValue}>{data.hobbies}</Text>
                 </View>
               )}
-            </>
-          )}
+            </View>
+          </View>
+        )}
 
-        </View>
       </Page>
     </Document>
   );
