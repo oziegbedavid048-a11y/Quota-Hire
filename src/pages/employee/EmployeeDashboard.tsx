@@ -153,12 +153,7 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
                 <Search size={16} /> Browse Jobs
               </button>
               <button
-                onClick={() => {
-                  toast('🚀 CV Generator is coming soon!', {
-                    description: 'This feature will be available very soon. Stay tuned!',
-                    duration: 4000,
-                  });
-                }}
+                onClick={() => navigate('/employee/cv-generator')}
                 className="inline-flex items-center gap-2 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 font-bold text-sm px-5 py-2.5 rounded-xl transition-all"
               >
                 <Sparkles size={16} className="text-warm-500" /> CV Generator
