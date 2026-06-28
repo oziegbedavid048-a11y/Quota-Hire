@@ -19,7 +19,6 @@ import {
 import { useAppContext } from '../../context/AppContext';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { Logo } from '../ui/Logo';
-import { toast } from 'sonner';
 
 function FloatingHeader({ toggleSidebar, user }: { toggleSidebar: () => void; user: any }) {
   const { notifications } = useAppContext();
@@ -154,24 +153,22 @@ function PillSidebar({ isOpen, closeSidebar, user }: { isOpen: boolean; closeSid
             const isCVGenerator = link.name === 'CV Generator';
 
             if (isCVGenerator) {
+              const isActiveCV = location.pathname === link.href || location.pathname.startsWith(link.href);
               return (
-                <button
-                  key={link.name}
-                  onClick={() => {
-                    closeSidebar();
-                    toast('🚀 CV Generator is coming soon!', {
-                      description: 'This feature will be available very soon. Stay tuned!',
-                      duration: 4000,
-                    });
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-700 dark:hover:text-neutral-300 cursor-pointer"
-                >
-                  <div className="p-1 rounded-full text-neutral-400">
-                    <link.icon size={20} strokeWidth={2} />
+                <Link key={link.name} to={link.href} onClick={closeSidebar}>
+                  <div
+                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+                      isActiveCV
+                        ? 'bg-accent-500 text-white shadow-soft'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <div className={`p-1 rounded-full ${isActiveCV ? 'text-white' : 'text-neutral-400 dark:text-neutral-500'}`}>
+                      <link.icon size={20} strokeWidth={isActiveCV ? 2.5 : 2} />
+                    </div>
+                    {link.name}
                   </div>
-                  {link.name}
-                  <span className="ml-auto text-[10px] font-extrabold px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-md uppercase tracking-wide">Soon</span>
-                </button>
+                </Link>
               );
             }
 

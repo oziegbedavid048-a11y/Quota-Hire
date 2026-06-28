@@ -4,7 +4,8 @@ export type TemplateId =
   | 'T1' | 'T2' | 'T3' | 'T4' | 'T5'
   | 'T6' | 'T7' | 'T8' 
   | 'T14' | 'T15'
-  | 'P1' | 'P2' | 'P3' | 'P4';
+  | 'P1' | 'P2' | 'P3' | 'P4'
+  | 'EU1';
 
 export interface WorkEntry {
   role: string;
