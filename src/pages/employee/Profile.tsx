@@ -66,7 +66,7 @@ export const EmployeeProfilePage = () => {
   const fetchGeneratedCVs = () => {
     setCvsLoading(true);
     apiFetch('/cv/my-cvs/')
-      .then(res => setGeneratedCVs(Array.isArray(res) ? res : []))
+      .then(res => setGeneratedCVs(Array.isArray(res) ? res : (res?.results && Array.isArray(res.results) ? res.results : [])))
       .catch(() => {})
       .finally(() => setCvsLoading(false));
   };
