@@ -680,12 +680,6 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                     <p className="text-[10px] text-gray-400 mt-1">List all relevant software, tools, and digital platforms.</p>
                   </div>
 
-                  <div>
-                    <label className={labelCls}>Driving Licence (Optional)</label>
-                    <input value={drivingLicence}
-                      onChange={e => setDrivingLicence(e.target.value)}
-                      placeholder="e.g. Full UK Driving Licence (Category B)" className={inputCls} />
-                  </div>
 
                   <div>
                     <label className={labelCls}>Certifications (Optional)</label>
