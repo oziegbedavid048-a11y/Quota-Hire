@@ -17,9 +17,20 @@ export function CVGeneratorPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-accent-500/10 via-white dark:via-neutral-900 to-warm-500/10 border border-neutral-100 dark:border-neutral-800 p-8 sm:p-12 shadow-sm mb-10 flex flex-col md:flex-row items-center gap-8 md:gap-12"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-accent-500/10 via-white dark:via-neutral-900 to-warm-500/10 border border-neutral-100 dark:border-neutral-800 p-8 sm:p-12 shadow-sm mb-10 flex flex-col items-center text-center"
       >
-        <div className="flex-1 text-center md:text-left z-10">
+        <div className="z-10 w-full max-w-[280px] sm:max-w-[360px] md:max-w-lg mb-8">
+          <motion.img
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: [0, -15, 0], opacity: 1 }}
+            transition={{ y: { repeat: Infinity, duration: 4, ease: "easeInOut" }, opacity: { duration: 0.8 } }}
+            src="/assets/resume_3d.png"
+            alt="3D Resume Illustration"
+            className="w-full h-auto drop-shadow-2xl mx-auto"
+          />
+        </div>
+        
+        <div className="z-10 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-accent-200 dark:border-accent-800 bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-300 text-xs font-bold mb-5">
             <Sparkles className="w-3.5 h-3.5" />
             AI-Powered CV Generator
@@ -27,20 +38,9 @@ export function CVGeneratorPage() {
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-neutral-900 dark:text-white mb-4 tracking-tight leading-tight">
             Build Your Perfect CV
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 text-base sm:text-lg max-w-xl mx-auto md:mx-0 leading-relaxed">
+          <p className="text-neutral-500 dark:text-neutral-400 text-base sm:text-lg leading-relaxed">
             Choose a style below. Your generated CV will be saved automatically to your profile so you can download it anytime and use it for applications.
           </p>
-        </div>
-        
-        <div className="flex-1 flex justify-center md:justify-end z-10 w-full max-w-[280px] sm:max-w-[320px] md:max-w-md">
-          <motion.img
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: [0, -15, 0], opacity: 1 }}
-            transition={{ y: { repeat: Infinity, duration: 4, ease: "easeInOut" }, opacity: { duration: 0.8 } }}
-            src="/assets/resume_3d.png"
-            alt="3D Resume Illustration"
-            className="w-full h-auto drop-shadow-2xl"
-          />
         </div>
 
         {/* Decorative background blurs */}
@@ -48,8 +48,8 @@ export function CVGeneratorPage() {
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 bg-warm-400/20 rounded-full blur-3xl pointer-events-none" />
       </motion.div>
 
-      {/* ── Card grid ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+      {/* ── List Layout Options ── */}
+      <div className="flex flex-col gap-5">
 
         {/* ── Standard CV Card ── */}
         <motion.div
@@ -57,26 +57,24 @@ export function CVGeneratorPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1 }}
           onClick={() => setShowStandard(true)}
-          className="group relative cursor-pointer rounded-3xl border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-accent-500 dark:hover:border-accent-500 shadow-sm hover:shadow-2xl hover:shadow-accent-500/10 transition-all duration-300 overflow-hidden flex flex-col"
+          className="group relative cursor-pointer rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/40 hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:border-accent-500/50 dark:hover:border-accent-500/50 shadow-sm hover:shadow-xl hover:shadow-accent-500/5 transition-all duration-300 overflow-hidden flex flex-col sm:flex-row items-center p-6 sm:p-8 gap-6 sm:gap-8"
         >
-          {/* Top gradient band */}
-          <div className="h-2 w-full bg-gradient-to-r from-[#116108] to-[#72dd15]" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl bg-gradient-to-br from-[#116108] to-[#72dd15] flex items-center justify-center shadow-lg shadow-accent-900/20 group-hover:scale-105 transition-transform">
+            <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+          </div>
 
-          <div className="p-8 flex flex-col flex-1">
-            {/* Icon */}
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#116108] to-[#72dd15] flex items-center justify-center mb-6 shadow-lg shadow-accent-900/20 group-hover:scale-105 transition-transform">
-              <FileText className="w-7 h-7 text-white" />
-            </div>
-
-            <h2 className="text-2xl font-extrabold text-neutral-900 dark:text-white mb-3 group-hover:text-accent-700 dark:group-hover:text-accent-400 transition-colors">
-              Generate CV
+          <div className="flex-1 text-center sm:text-left">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white mb-2 group-hover:text-accent-700 dark:group-hover:text-accent-400 transition-colors">
+              Generate Standard CV
             </h2>
-            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 leading-relaxed mb-8 flex-1">
+            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-2xl">
               Professional multi-template CV. Answer a few questions about your experience, skills and goals — we'll generate a polished, downloadable PDF tailored to you.
             </p>
+          </div>
 
-            <button className="w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-[#116108] to-[#72dd15] hover:from-[#0e4f06] hover:to-[#15750a] shadow-md shadow-accent-900/20 transition-all group-hover:shadow-lg mt-auto">
-              Generate CV <ArrowRight className="w-4 h-4" />
+          <div className="w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+            <button className="w-full sm:w-auto px-8 py-3.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-[#116108] to-[#72dd15] hover:from-[#0e4f06] hover:to-[#15750a] shadow-md shadow-accent-900/20 transition-all group-hover:shadow-lg flex items-center justify-center gap-2">
+              Start <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </motion.div>
@@ -87,32 +85,30 @@ export function CVGeneratorPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
           onClick={() => setShowEuropass(true)}
-          className="group relative cursor-pointer rounded-3xl border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-accent-500 dark:hover:border-accent-500 shadow-sm hover:shadow-2xl hover:shadow-accent-500/10 transition-all duration-300 overflow-hidden flex flex-col"
+          className="group relative cursor-pointer rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/40 hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:border-accent-500/50 dark:hover:border-accent-500/50 shadow-sm hover:shadow-xl hover:shadow-accent-500/5 transition-all duration-300 overflow-hidden flex flex-col sm:flex-row items-center p-6 sm:p-8 gap-6 sm:gap-8"
         >
-          {/* EU accent top band */}
-          <div className="h-2 w-full bg-gradient-to-r from-[#15750a] to-[#72dd15]" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl bg-gradient-to-br from-[#15750a] to-[#72dd15] flex items-center justify-center shadow-lg shadow-accent-900/20 group-hover:scale-105 transition-transform relative">
+            <Globe className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+          </div>
 
-          <div className="p-8 flex flex-col flex-1">
-            {/* Icon */}
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#15750a] to-[#72dd15] flex items-center justify-center mb-6 shadow-lg shadow-accent-900/20 group-hover:scale-105 transition-transform relative">
-              <Globe className="w-7 h-7 text-white" />
-            </div>
-
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-2xl font-extrabold text-neutral-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
+          <div className="flex-1 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-3 mb-2">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">
                 Generate Europe CV
               </h2>
-              <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-accent-400 text-accent-900 uppercase tracking-wide">
+              <span className="px-2.5 py-0.5 text-[10px] font-extrabold rounded-md bg-accent-400 text-accent-900 uppercase tracking-wide">
                 EU Style
               </span>
             </div>
-            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 leading-relaxed mb-8 flex-1">
+            <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-2xl">
               Create an official Europe-formatted CV, including CEFR language levels, digital skills, and your passport photo.
             </p>
+          </div>
 
-            <button className="w-full flex items-center justify-center gap-2 py-4 rounded-xl text-sm font-bold text-white shadow-md transition-all group-hover:shadow-lg mt-auto"
+          <div className="w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+            <button className="w-full sm:w-auto px-8 py-3.5 rounded-xl text-sm font-bold text-white shadow-md transition-all group-hover:shadow-lg flex items-center justify-center gap-2"
                     style={{ background: 'linear-gradient(135deg, #15750a 0%, #72dd15 100%)' }}>
-              Generate Europe CV <ArrowRight className="w-4 h-4" />
+              Start <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </motion.div>
