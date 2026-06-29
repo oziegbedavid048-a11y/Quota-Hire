@@ -120,7 +120,7 @@ export const MyJobs = () => {
                       <div className="flex justify-between items-start mb-3 gap-2">
                         <div>
                           <h3 className="font-extrabold text-neutral-900 dark:text-white text-lg">{job.title}</h3>
-                          <p className="text-sm text-neutral-500">{job.employment_type || 'Full-time'}</p>
+                          <p className="text-sm text-neutral-500">{job.is_remote ? 'Remote' : (job.employment_type || 'Full-time')}</p>
                         </div>
                         <div className="shrink-0">{getStatusBadge(job.status)}</div>
                       </div>
@@ -162,7 +162,7 @@ export const MyJobs = () => {
                         <tr key={job.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors group">
                           <td className="py-4 px-6">
                             <p className="font-extrabold text-neutral-900 dark:text-white group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors">{job.title}</p>
-                            <p className="text-xs text-neutral-400 mt-1 font-semibold">{job.employment_type || 'Full-time'}</p>
+                            <p className="text-xs text-neutral-400 mt-1 font-semibold">{job.is_remote ? 'Remote' : (job.employment_type || 'Full-time')}</p>
                           </td>
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-1.5 text-sm font-bold text-neutral-600 dark:text-neutral-300">

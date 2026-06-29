@@ -191,7 +191,7 @@ const SavedJobCard = ({
           {/* Employment type */}
           <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2.5 py-1 rounded-lg border border-purple-100 dark:border-purple-900/30">
             <Briefcase size={11} className="flex-shrink-0" />
-            {job.employment_type || 'Full-time'}
+            {job.isRemote ? 'Remote' : (job.employment_type || 'Full-time')}
           </span>
 
           {/* Salary / Commission */}
