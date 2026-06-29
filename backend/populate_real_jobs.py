@@ -12,6 +12,8 @@ django.setup()
 
 from api.models import CustomUser, CompanyProfile, Job, JobStatus, JobPackage
 
+import re
+
 def clean_html(html_text):
     if not html_text:
         return ""
@@ -26,10 +28,31 @@ def clean_html(html_text):
         li.insert_after("\n")
     
     text = soup.get_text()
+    
+    # Replace smart quotes to preserve them
+    text = text.replace("‘", "'").replace("’", "'").replace("“", '"').replace("”", '"').replace("–", "-").replace("—", "-")
+    
+    # Remove all remaining non-ASCII characters (this removes emojis)
+    text = re.sub(r'[^\x00-\x7F]+', '', text)
+    
     # Clean up excessive newlines
-    lines = text.split('\n')
-    cleaned_lines = [line.strip() for line in lines]
-    cleaned_text = '\n'.join(line for line in cleaned_lines if line)
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    
+    # Keep the first 10 meaningful lines
+    truncated_lines = lines[:10]
+    cleaned_text = '\n'.join(truncated_lines)
+    
+    # Truncate by character limit as a fallback
+    max_length = 800
+    if len(cleaned_text) > max_length:
+        cleaned_text = cleaned_text[:max_length]
+        last_space = cleaned_text.rfind(' ')
+        if last_space > 0:
+            cleaned_text = cleaned_text[:last_space]
+        cleaned_text += "..."
+    elif len(lines) > 10:
+        cleaned_text += "\n..."
+        
     return cleaned_text
 
 def get_or_create_dummy_company():
