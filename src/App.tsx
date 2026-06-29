@@ -12,6 +12,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/layout/Navbar';
 import { MyJobs } from './pages/company/MyJobs';
 import { Footer } from './components/layout/Footer';
+import { preloadImages, PRELOAD_ILLUSTRATIONS } from './utils/preloadImages';
 import { Home } from './pages/Home';
 import { Login } from './pages/auth/Login';
 import { Signup } from './pages/auth/Signup';
@@ -63,6 +64,11 @@ const ProtectedRoute = ({
 const AppRoutes = () => {
   const location = useLocation();
   const { appError, retryFetchData } = useAppContext();
+
+  React.useEffect(() => {
+    // Preload illustrations on app load so they display instantly
+    preloadImages(PRELOAD_ILLUSTRATIONS.map(path => `${import.meta.env.BASE_URL || '/'}${path.startsWith('/') ? path.slice(1) : path}`));
+  }, []);
   
   const isDashboardRoute = location.pathname.includes('/dashboard') || location.pathname.includes('/admin') || location.pathname.includes('/employee/') || location.pathname.includes('/company/') || location.pathname.startsWith('/jobs') || location.pathname.includes('/notifications') || location.pathname.includes('/saved-jobs') || location.pathname === '/settings';
   const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/forgot-password' || location.pathname === '/reset-password' || location.pathname === '/verify-email';
