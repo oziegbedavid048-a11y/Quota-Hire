@@ -248,7 +248,7 @@ export const JobDetail = () => {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-center">
 
           {/* Apply Button Area - Top on mobile, Right on desktop */}
-          <div className="order-1 sm:order-4 sm:ml-auto w-full sm:w-auto flex flex-col">
+          <div className="order-1 sm:order-4 sm:ml-auto w-full sm:w-auto flex flex-col gap-2">
             {!currentUser ? (
               <button
                 onClick={() => navigate('/signup?role=employee')}
@@ -299,6 +299,19 @@ export const JobDetail = () => {
               <div className="w-full sm:w-auto flex items-center justify-center px-4 py-3 text-sm text-neutral-400 font-medium">
                 Login as an employee to apply
               </div>
+            )}
+            
+            {/* External Apply Link */}
+            {job.external_apply_url && (
+              <a
+                href={job.external_apply_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+              >
+                <Globe size={15} />
+                Apply directly on Company Website
+              </a>
             )}
           </div>
 

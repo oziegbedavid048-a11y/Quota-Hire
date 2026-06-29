@@ -65,6 +65,7 @@ export interface Job {
   commissionRange?: string;
   package?: string;
   status: JobStatus;
+  external_apply_url?: string;
   createdAt: string;
 }
 
