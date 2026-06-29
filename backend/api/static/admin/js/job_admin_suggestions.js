@@ -11,6 +11,16 @@ document.addEventListener("DOMContentLoaded", function () {
         "description": "We are seeking an experienced Property Manager to oversee the daily operations of our real estate portfolio. You will be responsible for tenant relations, lease administration, maintenance coordination, and financial reporting. The ideal candidate ensures properties are well-maintained, occupancy rates are high, and tenant satisfaction is maximized.",
         "requirements": "3+ years of property management experience\nStrong knowledge of local housing and property laws\nExcellent communication and conflict resolution skills\nProficiency in property management software (Yardi, AppFolio, etc.)\nAbility to be on-call for property emergencies"
     },
+    "Properties Sales Marketer": {
+        "keywords": [
+            "properties sales marketer",
+            "property sales",
+            "real estate marketer",
+            "property marketer"
+        ],
+        "description": "We are looking for a dynamic Properties Sales Marketer to drive our real estate marketing campaigns. You will be responsible for creating compelling property listings, managing digital marketing channels, and generating qualified leads for our sales team. The ideal candidate has a strong understanding of the real estate market and digital marketing trends.",
+        "requirements": "2+ years of experience in real estate marketing or sales\nStrong knowledge of digital marketing (SEO, social media, email campaigns)\nExcellent communication and copywriting skills\nAbility to create engaging property listings and promotional materials\nProven track record of generating real estate leads"
+    },
     "Real Estate Agent": {
         "keywords": [
             "real estate agent",
@@ -349,10 +359,12 @@ document.addEventListener("DOMContentLoaded", function () {
   
     const titleInput = document.getElementById('id_title');
     const descriptionBox = document.getElementById('id_description');
-    const requirementsBox = document.getElementById('id_requirements');
-  
+    
+    // We check for the new text-based requirements box, falling back to the old JSON one if needed.
+    const requirementsBox = document.getElementById('id_requirements_text') || document.getElementById('id_requirements');
+
     if (!titleInput || !descriptionBox) return; // Not on the Job admin page
-  
+
     // Create the suggestion banner container
     const suggestionBanner = document.createElement('div');
     suggestionBanner.style.display = 'none';
@@ -367,10 +379,10 @@ document.addEventListener("DOMContentLoaded", function () {
     suggestionBanner.style.justifyContent = 'space-between';
     suggestionBanner.style.gap = '15px';
     suggestionBanner.style.maxWidth = '800px';
-  
+
     const bannerText = document.createElement('span');
     suggestionBanner.appendChild(bannerText);
-  
+
     const applyButton = document.createElement('button');
     applyButton.innerText = '✨ Use Template';
     applyButton.type = 'button';
@@ -382,13 +394,13 @@ document.addEventListener("DOMContentLoaded", function () {
     applyButton.style.cursor = 'pointer';
     applyButton.style.fontWeight = 'bold';
     suggestionBanner.appendChild(applyButton);
-  
+
     // Insert banner before description box
     const descriptionRow = descriptionBox.closest('.form-row') || descriptionBox.parentNode;
     descriptionRow.parentNode.insertBefore(suggestionBanner, descriptionRow);
-  
+
     let currentTemplate = null;
-  
+
     function checkTitle() {
         const title = titleInput.value;
         const match = findMatchingTemplate(title);
@@ -402,23 +414,28 @@ document.addEventListener("DOMContentLoaded", function () {
             currentTemplate = null;
         }
     }
-  
+
     titleInput.addEventListener('input', checkTitle);
     
     // Check initially in case editing an existing job
     checkTitle();
-  
+
     applyButton.addEventListener('click', function(e) {
         e.preventDefault();
         if (currentTemplate) {
             const templateData = jobTemplates[currentTemplate];
-            const reqArray = templateData.requirements.split('\n').filter(r => r.trim() !== '');
-            const reqJson = JSON.stringify(reqArray, null, 2);
-  
+            
             descriptionBox.value = templateData.description;
             
             if (requirementsBox) {
-                requirementsBox.value = reqJson;
+                if (requirementsBox.id === 'id_requirements_text') {
+                    // It's the new plain text area, insert text directly
+                    requirementsBox.value = templateData.requirements;
+                } else {
+                    // Fallback to JSON array for legacy field
+                    const reqArray = templateData.requirements.split('\n').filter(r => r.trim() !== '');
+                    requirementsBox.value = JSON.stringify(reqArray, null, 2);
+                }
             }
   
             // Visual feedback
