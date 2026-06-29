@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, MapPin, DollarSign, Briefcase, CheckCircle2,
+  ArrowLeft, MapPin, Banknote, Briefcase, CheckCircle2,
   BadgeCheck, Globe, TrendingUp,
   Bookmark, BookmarkCheck, Flag, Send,
 } from 'lucide-react';
@@ -147,7 +147,7 @@ export const JobDetail = () => {
             )}
             {job.salaryRange && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs sm:text-sm font-bold rounded-xl">
-                <DollarSign size={13} className="shrink-0" /> {job.currency || 'USD'} {job.salaryRange}
+                <Banknote size={13} className="shrink-0" /> {job.currency || 'USD'} {job.salaryRange}
               </span>
             )}
             {job.commissionRange && (
@@ -157,7 +157,7 @@ export const JobDetail = () => {
             )}
             {!job.salaryRange && !job.commissionRange && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-xs sm:text-sm font-bold rounded-xl">
-                <DollarSign size={13} className="shrink-0" /> Competitive
+                <Banknote size={13} className="shrink-0" /> Competitive
               </span>
             )}
           </div>
@@ -203,7 +203,7 @@ export const JobDetail = () => {
             <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 sm:p-6 shadow-sm">
               <h3 className="font-extrabold text-neutral-900 dark:text-white mb-5 flex items-center gap-2 text-sm sm:text-base">
                 <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                  <DollarSign size={16} className="text-green-600 dark:text-green-400" />
+                  <Banknote size={16} className="text-green-600 dark:text-green-400" />
                 </div>
                 Compensation
               </h3>

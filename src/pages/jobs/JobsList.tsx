@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, MapPin, DollarSign, Briefcase, Filter, BadgeCheck, TrendingUp } from 'lucide-react';
+import { Search, MapPin, Banknote, Briefcase, Filter, BadgeCheck, TrendingUp } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAppContext } from '../../context/AppContext';
 export const JobsList = () => {
@@ -171,7 +171,7 @@ export const JobsList = () => {
                     <div className="flex flex-wrap items-center gap-3 mb-4 mt-2">
                       {job.salaryRange && (
                         <span className="inline-flex items-center gap-1.5 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-lg">
-                          <DollarSign size={14} /> {job.salaryRange}
+                          <Banknote size={14} /> {job.salaryRange}
                         </span>
                       )}
                       {job.commissionRange && (
@@ -181,7 +181,7 @@ export const JobsList = () => {
                       )}
                       {!job.salaryRange && !job.commissionRange && (
                         <span className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded-lg">
-                          <DollarSign size={14} /> Competitive
+                          <Banknote size={14} /> Competitive
                         </span>
                       )}
                       {job.isRemote && (

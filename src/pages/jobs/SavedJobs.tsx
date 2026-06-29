@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bookmark, MapPin, DollarSign, ArrowRight, Heart,
+  Bookmark, MapPin, Banknote, ArrowRight, Heart,
   Briefcase, Clock, BadgeCheck, TrendingUp, Zap, Search, X
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
@@ -197,7 +197,7 @@ const SavedJobCard = ({
           {/* Salary / Commission */}
           {job.salaryRange && (
             <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-lg border border-green-100 dark:border-green-900/30">
-              <DollarSign size={11} className="flex-shrink-0" />
+              <Banknote size={11} className="flex-shrink-0" />
               {currencySymbol !== '$' ? currencySymbol : ''}{job.salaryRange}
             </span>
           )}
