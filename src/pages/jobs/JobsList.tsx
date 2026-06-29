@@ -184,16 +184,15 @@ export const JobsList = () => {
                           <Banknote size={14} /> Competitive
                         </span>
                       )}
-                      {job.employment_type && (
-                        <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-lg text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20">
-                          <Briefcase size={14} /> {job.employment_type}
-                        </span>
-                      )}
-                      {job.isRemote && (
+                      {job.isRemote ? (
                         <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-lg text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20">
                           Remote
                         </span>
-                      )}
+                      ) : job.employment_type ? (
+                        <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-lg text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20">
+                          <Briefcase size={14} /> {job.employment_type}
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="mb-5 space-y-2">

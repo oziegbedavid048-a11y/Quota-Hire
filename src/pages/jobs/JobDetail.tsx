@@ -140,16 +140,15 @@ export const JobDetail = () => {
                 <MapPin size={13} className="text-neutral-400 shrink-0" /> {job.location}
               </span>
             )}
-            {job.employment_type && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-bold rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400">
-                <Briefcase size={13} className="shrink-0" /> {job.employment_type}
-              </span>
-            )}
-            {job.isRemote && (
+            {job.isRemote ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-bold rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400">
                 <Globe size={13} className="shrink-0" /> Remote
               </span>
-            )}
+            ) : job.employment_type ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-bold rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400">
+                <Briefcase size={13} className="shrink-0" /> {job.employment_type}
+              </span>
+            ) : null}
             {job.salaryRange && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs sm:text-sm font-bold rounded-xl">
                 <Banknote size={13} className="shrink-0" /> {job.currency || 'USD'} {job.salaryRange}
