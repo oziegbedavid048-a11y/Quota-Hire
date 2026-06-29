@@ -9,6 +9,7 @@ import { EmployeeProfile } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { toast } from 'sonner';
 import { ApplyJobCVWizard } from '../../components/cv/ApplyJobCVWizard';
+import { apiFetch } from '../../context/AppContext';
 
 type FlowState = 'step1' | 'transition' | 'step2' | 'submitting' | 'success';
 
@@ -28,6 +29,28 @@ export const ApplyJobPage = () => {
   // CV Wizard State
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [generatedCvId, setGeneratedCvId] = useState<number | null>(null);
+
+  // Saved CVs State
+  const [savedCvs, setSavedCvs] = useState<any[]>([]);
+  const [loadingCvs, setLoadingCvs] = useState(false);
+
+  const fetchCvs = async () => {
+    setLoadingCvs(true);
+    try {
+      const cvs = await apiFetch('/cv/my-cvs/');
+      setSavedCvs(Array.isArray(cvs) ? cvs : (cvs?.results || []));
+    } catch (err) {
+      console.error('Failed to fetch CVs', err);
+    } finally {
+      setLoadingCvs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (profile && flowState === 'step2') {
+      fetchCvs();
+    }
+  }, [profile, flowState]);
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -356,16 +379,58 @@ export const ApplyJobPage = () => {
                     <FileText size={18} className="text-accent-500" /> Resume Information
                   </h3>
                   <div className="bg-neutral-50 dark:bg-neutral-900/60 rounded-2xl p-4 sm:p-5 border border-neutral-200 dark:border-neutral-800 space-y-4">
-                    <div>
-                      <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5 mb-1">
-                        <Briefcase size={12} /> Resume
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                        <Briefcase size={12} /> Select Resume
                       </p>
-                      {profile?.resumeUrl ? (
-                        <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-accent-600 hover:underline flex items-center gap-1.5">
-                          <FileText size={14} /> View Attached Resume
-                        </a>
+                      
+                      {loadingCvs ? (
+                        <div className="flex items-center gap-2 text-sm text-neutral-500 py-2">
+                          <Loader2 size={16} className="animate-spin" /> Loading saved resumes...
+                        </div>
                       ) : (
-                        <p className="text-sm font-medium text-neutral-500">No resume uploaded</p>
+                        <div className="space-y-3">
+                          {/* Option: Main Profile Resume */}
+                          {profile?.resumeUrl && (
+                            <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${!generatedCvId ? 'border-accent-500 bg-accent-50/50 dark:bg-accent-900/10' : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 bg-white dark:bg-neutral-800'}`}>
+                              <div className="pt-0.5">
+                                <input type="radio" name="resume-selection" checked={!generatedCvId} onChange={() => setGeneratedCvId(null)} className="w-4 h-4 text-accent-600 focus:ring-accent-500 border-neutral-300" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                                  <FileText size={14} className={!generatedCvId ? 'text-accent-600' : 'text-neutral-500'} />
+                                  Attached Profile Resume
+                                </p>
+                                <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-accent-600 hover:underline mt-1 inline-block" onClick={(e) => e.stopPropagation()}>
+                                  View Resume
+                                </a>
+                              </div>
+                            </label>
+                          )}
+
+                          {/* Option: Saved Generated CVs */}
+                          {savedCvs.map(cv => (
+                            <label key={cv.id} className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${generatedCvId === cv.id ? 'border-accent-500 bg-accent-50/50 dark:bg-accent-900/10' : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 bg-white dark:bg-neutral-800'}`}>
+                              <div className="pt-0.5">
+                                <input type="radio" name="resume-selection" checked={generatedCvId === cv.id} onChange={() => setGeneratedCvId(cv.id)} className="w-4 h-4 text-accent-600 focus:ring-accent-500 border-neutral-300" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                                  <FileText size={14} className={generatedCvId === cv.id ? 'text-accent-600' : 'text-neutral-500'} />
+                                  {cv.target_role || 'Tailored CV'} ({cv.template_name})
+                                </p>
+                                <p className="text-xs font-medium text-neutral-500 mt-1">Generated: {new Date(cv.generated_at).toLocaleDateString()}</p>
+                              </div>
+                            </label>
+                          ))}
+
+                          {/* No resume saved fallback */}
+                          {!profile?.resumeUrl && savedCvs.length === 0 && (
+                            <div className="p-4 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 text-center">
+                              <p className="text-sm font-medium text-neutral-500">No resume saved on your profile.</p>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -376,25 +441,18 @@ export const ApplyJobPage = () => {
                         </label>
                       </div>
                       
-                      {generatedCvId ? (
-                        <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/30 text-sm font-medium flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          Tailored CV and Cover Letter generated and attached!
-                        </div>
-                      ) : (
-                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 sm:p-5 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-4">
-                          <p className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300 leading-relaxed">
-                            Stand out by auto-generating a customized CV and Cover Letter tailored specifically to this job description.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setIsWizardOpen(true)}
-                            className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl shadow-md transition-all flex justify-center items-center gap-2"
-                          >
-                            <PenTool size={16} /> Generate CV
-                          </button>
-                        </div>
-                      )}
+                      <div className="bg-blue-50 dark:bg-blue-900/10 p-4 sm:p-5 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-4">
+                        <p className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300 leading-relaxed">
+                          Stand out by auto-generating a customized CV and Cover Letter tailored specifically to this job description.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsWizardOpen(true)}
+                          className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl shadow-md transition-all flex justify-center items-center gap-2"
+                        >
+                          <PenTool size={16} /> Generate New Tailored CV
+                        </button>
+                      </div>
                     </div>
 
                     <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700">
@@ -494,7 +552,7 @@ export const ApplyJobPage = () => {
                 className="relative z-10 w-full"
               >
                 <h3 className="text-2xl sm:text-4xl font-display font-extrabold text-neutral-900 dark:text-white mb-3 sm:mb-4 tracking-tight">
-                  Application Submitted! 🎉
+                  Application Submitted!
                 </h3>
                 <p className="text-neutral-500 dark:text-neutral-400 text-sm sm:text-base font-medium mb-8 sm:mb-10 max-w-sm mx-auto leading-relaxed px-4 sm:px-0">
                   Your profile and contact details have been successfully and securely delivered. Best of luck!
@@ -518,6 +576,7 @@ export const ApplyJobPage = () => {
         onComplete={(cvId) => {
           setGeneratedCvId(cvId);
           setIsWizardOpen(false);
+          fetchCvs();
           toast.success("CV generated successfully. Don't forget to submit your application!");
         }}
       />
