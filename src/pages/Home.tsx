@@ -17,6 +17,7 @@ import { ShaderAnimation } from '../components/ui/ShaderAnimation';
 import { useScreenInit } from '../useScreenInit';
 import { CircularTestimonials } from '../components/ui/circular-testimonials';
 import { useTheme } from '../context/ThemeContext';
+import { PhoneMockup } from '../components/home/PhoneMockup';
 const fadeIn = {
   hidden: {
     opacity: 0,
@@ -132,7 +133,7 @@ export const Home = () => {
                   rightIcon={<ArrowRight size={18} />}
                   className="w-full sm:w-auto shadow-elevated">
 
-                  I am looking for job
+                  I am looking for a job
                 </Button>
               </Link>
               <Link to="/signup?role=company">
@@ -581,148 +582,7 @@ export const Home = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}>
               {/* Phone outer shell */}
-              <div className="relative w-[280px] sm:w-[300px]">
-                {/* Ambient glow */}
-                <div className="absolute inset-0 -z-10 blur-3xl opacity-30 bg-accent-500 scale-75 rounded-full" />
-
-                {/* Phone frame */}
-                <div className="relative bg-neutral-900 dark:bg-neutral-800 rounded-[44px] p-2.5 shadow-[0_40px_80px_-10px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.08)] ring-1 ring-white/10">
-
-                  {/* Side buttons */}
-                  <div className="absolute -left-[3px] top-24 w-[3px] h-8 bg-neutral-700 rounded-l-sm" />
-                  <div className="absolute -left-[3px] top-36 w-[3px] h-12 bg-neutral-700 rounded-l-sm" />
-                  <div className="absolute -left-[3px] top-52 w-[3px] h-12 bg-neutral-700 rounded-l-sm" />
-                  <div className="absolute -right-[3px] top-32 w-[3px] h-16 bg-neutral-700 rounded-r-sm" />
-
-                  {/* Screen — exact website dashboard light mode */}
-                  <div className="rounded-[36px] overflow-hidden relative bg-white flex flex-col h-[550px]">
-
-                    {/* Status bar */}
-                    <div className="px-6 pt-4 pb-2 flex items-center justify-between relative bg-white z-20">
-                      {/* Dynamic island */}
-                      <div className="absolute left-1/2 -translate-x-1/2 top-2.5 w-20 h-6 bg-black rounded-full z-10" />
-                      <span className="text-neutral-900 text-xs font-semibold">9:41</span>
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex items-end gap-0.5 h-3">
-                          {[1, 1.5, 2, 3].map((h, i) => (
-                            <div key={i} className="w-0.5 bg-neutral-900 rounded-sm" style={{ height: `${h * 4}px` }} />
-                          ))}
-                        </div>
-                        <div className="w-5 h-2.5 border border-neutral-900 rounded-sm flex items-center px-0.5">
-                          <div className="h-1.5 bg-neutral-900 rounded-sm" style={{ width: '70%' }} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto bg-neutral-50 pb-20 custom-scrollbar relative z-10">
-                      {/* App header (Navbar mobile) */}
-                      <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-neutral-200 shadow-sm">
-                        <div className="flex items-center gap-2">
-                           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent-500 to-warm-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">QH</div>
-                           <span className="font-display font-bold text-neutral-900">Quota Hire</span>
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-500 to-primary-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white shadow-sm">AJ</div>
-                      </div>
-
-                      {/* Dashboard Content */}
-                      <div className="p-4 space-y-4">
-                        {/* Welcome Banner */}
-                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent-500/10 via-white to-warm-500/10 border border-neutral-200 p-4 shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-neutral-600 bg-white/60 px-2 py-0.5 rounded-full border border-neutral-200/50">
-                              <svg className="w-3 h-3 text-accent-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                              My Dashboard
-                            </span>
-                          </div>
-                          <h1 className="text-lg font-extrabold text-neutral-900 mb-1 leading-tight">
-                            Ready to crush it, <span className="text-accent-600">Alex!</span>
-                          </h1>
-                          <p className="text-neutral-600 text-[10px] max-w-md">
-                            You have <strong className="text-neutral-900">12 active applications</strong>.
-                          </p>
-                        </div>
-
-                        {/* Stat Cards Grid */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-white rounded-2xl p-3 border border-neutral-100 shadow-sm hover:-translate-y-0.5 transition-transform">
-                            <div className="w-8 h-8 rounded-xl bg-accent-50 flex items-center justify-center mb-2">
-                              <svg className="w-4 h-4 text-accent-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                            </div>
-                            <p className="text-xl font-extrabold text-neutral-900">12</p>
-                            <p className="text-[10px] font-semibold text-neutral-500">Active Applications</p>
-                          </div>
-                          <div className="bg-white rounded-2xl p-3 border border-neutral-100 shadow-sm hover:-translate-y-0.5 transition-transform">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center mb-2">
-                              <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                            </div>
-                            <p className="text-xl font-extrabold text-neutral-900">80%</p>
-                            <p className="text-[10px] font-semibold text-neutral-500">Profile Score</p>
-                          </div>
-                        </div>
-
-                        {/* Recent Applications */}
-                        <div className="bg-white rounded-2xl border border-neutral-100 p-4 shadow-sm">
-                           <div className="flex justify-between items-center mb-3">
-                             <h2 className="text-sm font-extrabold text-neutral-900">Recent Applications</h2>
-                           </div>
-                           <div className="space-y-2">
-                             <div className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-neutral-50 hover:-translate-y-0.5 transition-transform shadow-sm">
-                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-100 to-warm-100 flex items-center justify-center text-accent-600 font-extrabold text-xs shadow-sm border border-white/50">S</div>
-                               <div className="flex-1 min-w-0">
-                                 <p className="text-[11px] font-bold text-neutral-900 truncate">Sr. Account Exec</p>
-                                 <p className="text-[9px] text-neutral-500 font-medium mt-0.5">Northwind Cloud</p>
-                               </div>
-                               <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-amber-50 text-amber-700">Under Review</span>
-                             </div>
-                             <div className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-neutral-50 hover:-translate-y-0.5 transition-transform shadow-sm">
-                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-100 to-warm-100 flex items-center justify-center text-accent-600 font-extrabold text-xs shadow-sm border border-white/50">E</div>
-                               <div className="flex-1 min-w-0">
-                                 <p className="text-[11px] font-bold text-neutral-900 truncate">Enterprise AE</p>
-                                 <p className="text-[9px] text-neutral-500 font-medium mt-0.5">Helios SaaS</p>
-                               </div>
-                               <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-purple-50 text-purple-700">Interview</span>
-                             </div>
-                             <div className="flex items-center gap-3 p-2.5 rounded-xl border border-neutral-100 bg-neutral-50 hover:-translate-y-0.5 transition-transform shadow-sm">
-                               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-100 to-warm-100 flex items-center justify-center text-accent-600 font-extrabold text-xs shadow-sm border border-white/50">G</div>
-                               <div className="flex-1 min-w-0">
-                                 <p className="text-[11px] font-bold text-neutral-900 truncate">Growth Marketer</p>
-                                 <p className="text-[9px] text-neutral-500 font-medium mt-0.5">Ozone Apps</p>
-                               </div>
-                               <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-neutral-100 text-neutral-600">Applied</span>
-                             </div>
-                           </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom nav bar — exact mobile nav mimicking real app */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-                      <div className="flex justify-around items-center px-2 py-3">
-                        <div className="flex flex-col items-center text-accent-600 gap-1 cursor-pointer">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                          <span className="text-[9px] font-bold">Dashboard</span>
-                        </div>
-                        <div className="flex flex-col items-center text-neutral-400 gap-1 cursor-pointer hover:text-neutral-600 transition-colors">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                          <span className="text-[9px] font-medium">Jobs</span>
-                        </div>
-                        <div className="flex flex-col items-center text-neutral-400 gap-1 cursor-pointer hover:text-neutral-600 transition-colors">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                          <span className="text-[9px] font-medium">Tracker</span>
-                        </div>
-                        <div className="flex flex-col items-center text-neutral-400 gap-1 cursor-pointer hover:text-neutral-600 transition-colors">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                          <span className="text-[9px] font-medium">Profile</span>
-                        </div>
-                      </div>
-                      {/* Home indicator */}
-                      <div className="pb-2 flex justify-center">
-                        <div className="w-24 h-1.5 rounded-full bg-neutral-300" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <PhoneMockup />
             </motion.div>
 
             {/* Right: Copy & Download Buttons */}
