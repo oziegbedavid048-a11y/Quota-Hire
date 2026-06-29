@@ -192,7 +192,7 @@ class JobSerializer(serializers.ModelSerializer):
             'title', 'description', 'requirements', 'employment_type',
             'is_remote', 'location', 'salary_range', 'commission_range', 'currency',
             'contact_email', 'contact_phone', 'whatsapp_number', 'company_address', 'custom_company_name',
-            'status', 'package', 'applicants_count', 'created_at',
+            'external_apply_url', 'status', 'package', 'applicants_count', 'created_at',
         )
         read_only_fields = ('id', 'status', 'created_at')
 

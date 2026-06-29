@@ -174,6 +174,7 @@ class Job(models.Model):
     whatsapp_number  = models.CharField(max_length=50, blank=True)
     company_address  = models.CharField(max_length=300, blank=True)
     custom_company_name = models.CharField(max_length=200, blank=True)
+    external_apply_url = models.URLField(max_length=1000, blank=True, null=True, help_text="Link to external company website for applying")
     status           = models.CharField(max_length=20, choices=JobStatus.choices, default=JobStatus.PENDING)
     package          = models.CharField(max_length=50, choices=JobPackage.choices, blank=True)
     created_at       = models.DateTimeField(auto_now_add=True)
@@ -189,6 +190,8 @@ class Job(models.Model):
 
     @property
     def company_name(self):
+        if self.custom_company_name:
+            return self.custom_company_name
         try:
             return self.company.company_profile.company_name
         except CompanyProfile.DoesNotExist:
