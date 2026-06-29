@@ -117,7 +117,7 @@ class CompanyProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display    = ('title', 'company_name_display', 'package', 'status', 'status_badge', 'is_remote', 'location', 'created_at', 'edit_button')
+    list_display    = ('title', 'company_name_display', 'package', 'status', 'status_badge', 'employment_type', 'is_remote', 'location', 'created_at', 'edit_button')
     list_display_links = ('title', 'edit_button')
     list_filter     = ('status', 'package', 'is_remote', 'created_at')
     search_fields   = ('title', 'description', 'company__email', 'location')
@@ -127,11 +127,14 @@ class JobAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Job Details', {'fields': ('company', 'title', 'description', 'requirements')}),
-        ('Location & Pay', {'fields': ('is_remote', 'location', 'currency', 'salary_range', 'commission_range')}),
+        ('Location & Pay', {'fields': ('employment_type', 'is_remote', 'location', 'currency', 'salary_range', 'commission_range')}),
         ('Contact Info (Hidden from users)', {'fields': ('custom_company_name', 'company_address', 'contact_email', 'contact_phone', 'whatsapp_number')}),
         ('Status & Package', {'fields': ('status', 'package')}),
         ('Timestamps',  {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
     )
+
+    class Media:
+        js = ('admin/js/job_admin_suggestions.js',)
 
     @admin.display(description='Company')
     def company_name_display(self, obj):

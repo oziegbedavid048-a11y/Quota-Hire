@@ -231,6 +231,7 @@ export const PostJob = () => {
         title: formData.title,
         location: formData.location,
         isRemote: formData.isRemote,
+        employment_type: 'Full-time', // Explicitly setting to Full-time as requested
         currency: formData.currency,
         salaryRange: formData.salaryRange,
         commissionRange: formData.commissionRange,
