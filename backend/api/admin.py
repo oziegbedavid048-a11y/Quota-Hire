@@ -9,6 +9,8 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
 from django.urls import reverse
+from django import forms
+import json
 
 from .models import (
     CustomUser,
@@ -115,8 +117,52 @@ class CompanyProfileAdmin(admin.ModelAdmin):
 
 # ── Job Admin ─────────────────────────────────────────────────────────────────
 
+class JobAdminForm(forms.ModelForm):
+    requirements_text = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 10, 'cols': 80}),
+        required=False,
+        label="Requirements",
+        help_text="Enter requirements, one per line. It will be saved correctly for the app."
+    )
+
+    class Meta:
+        model = Job
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            reqs = self.instance.requirements
+            if isinstance(reqs, list):
+                self.fields['requirements_text'].initial = '\n'.join(reqs)
+            elif isinstance(reqs, str):
+                try:
+                    reqs_list = json.loads(reqs)
+                    if isinstance(reqs_list, list):
+                        self.fields['requirements_text'].initial = '\n'.join(reqs_list)
+                except Exception:
+                    self.fields['requirements_text'].initial = reqs
+        elif 'requirements' in self.initial:
+            reqs = self.initial['requirements']
+            if isinstance(reqs, list):
+                self.fields['requirements_text'].initial = '\n'.join(reqs)
+        
+        # Hide the original JSON field from the UI
+        if 'requirements' in self.fields:
+            self.fields['requirements'].required = False
+            self.fields['requirements'].widget = forms.HiddenInput()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        req_text = cleaned_data.get('requirements_text', '')
+        # Convert newline separated text to a list
+        req_list = [r.strip() for r in req_text.split('\n') if r.strip()]
+        cleaned_data['requirements'] = req_list
+        return cleaned_data
+
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
+    form = JobAdminForm
     list_display    = ('title', 'company_name_display', 'package', 'status', 'status_badge', 'employment_type', 'is_remote', 'location', 'created_at', 'edit_button')
     list_display_links = ('title', 'edit_button')
     list_filter     = ('status', 'package', 'is_remote', 'created_at')
@@ -126,7 +172,7 @@ class JobAdmin(admin.ModelAdmin):
     actions         = ['approve_jobs', 'reject_jobs', 'close_jobs']
 
     fieldsets = (
-        ('Job Details', {'fields': ('company', 'title', 'description', 'requirements')}),
+        ('Job Details', {'fields': ('company', 'title', 'description', 'requirements_text', 'requirements')}),
         ('Location & Pay', {'fields': ('employment_type', 'is_remote', 'location', 'currency', 'salary_range', 'commission_range')}),
         ('Contact Info (Hidden from users)', {'fields': ('custom_company_name', 'company_address', 'contact_email', 'contact_phone', 'whatsapp_number')}),
         ('Status & Package', {'fields': ('status', 'package')}),
