@@ -8,6 +8,8 @@ export const JobsList = () => {
   const { jobs } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRemote, setFilterRemote] = useState(false);
+  const [filterType, setFilterType] = useState('All');
+  const [visibleCount, setVisibleCount] = useState(5);
   const formatRelativeTime = (dateString?: string) => {
     if (!dateString) return 'Recent';
     const date = new Date(dateString);
@@ -24,12 +26,21 @@ export const JobsList = () => {
   // Only show approved jobs
   const approvedJobs = jobs.filter((j) => j.status === 'approved');
   const filteredJobs = approvedJobs.filter((job) => {
+    const term = searchTerm.toLowerCase();
     const matchesSearch =
-    job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    job.companyName.toLowerCase().includes(searchTerm.toLowerCase());
+      job.title.toLowerCase().includes(term) ||
+      (job.companyName && job.companyName.toLowerCase().includes(term)) ||
+      (job.location && job.location.toLowerCase().includes(term));
+      
     const matchesRemote = filterRemote ? job.isRemote : true;
-    return matchesSearch && matchesRemote;
+    
+    const matchesType = filterType === 'All' ? true : 
+      (job.employment_type === filterType || (filterType === 'Remote' && job.isRemote));
+
+    return matchesSearch && matchesRemote && matchesType;
   });
+
+  const displayedJobs = filteredJobs.slice(0, visibleCount);
   return (
     <div className="min-h-screen py-12">
       <div className="container mx-auto px-4 max-w-5xl">
@@ -83,12 +94,19 @@ export const JobsList = () => {
               />
               Remote only
             </label>
-            <button
-              onClick={() => alert("More filters coming soon!")}
-              className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-            >
-              <Filter size={16} /> More filters
-            </button>
+            <div className="flex items-center gap-2">
+              <Filter size={16} className="text-neutral-400" />
+              <select 
+                className="bg-transparent text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors outline-none cursor-pointer border-none p-0"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+              >
+                <option value="All">All Job Types</option>
+                <option value="Freelance">Freelance</option>
+                <option value="Contract">Contract</option>
+                <option value="Remote">Remote</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -115,7 +133,7 @@ export const JobsList = () => {
               </Button>
             </div> :
 
-          filteredJobs.map((job, index) =>
+          displayedJobs.map((job, index) =>
           <motion.div
             key={job.id}
             initial={{
@@ -228,6 +246,18 @@ export const JobsList = () => {
               </motion.div>
           )
           }
+          
+          {filteredJobs.length > visibleCount && (
+            <div className="flex justify-center mt-10">
+              <Button
+                variant="outline"
+                className="px-8 py-2.5 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border-neutral-200 dark:border-neutral-700 shadow-sm transition-all"
+                onClick={() => setVisibleCount(v => v + 5)}
+              >
+                See More Jobs
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>);

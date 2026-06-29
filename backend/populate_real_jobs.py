@@ -69,10 +69,11 @@ def populate_jobs():
 
     company_user = get_or_create_dummy_company()
 
-    # We want mostly UK, some US, Nigeria, Worldwide
+    # We want mostly UK, some US, Canada, Worldwide
     uk_jobs = []
     us_jobs = []
-    other_jobs = []
+    canada_jobs = []
+    worldwide_jobs = []
 
     for j in jobs_data:
         loc = j.get('candidate_required_location', '').lower()
@@ -80,14 +81,17 @@ def populate_jobs():
             uk_jobs.append(j)
         elif 'us' in loc or 'united states' in loc or 'usa' in loc:
             us_jobs.append(j)
-        else:
-            other_jobs.append(j)
+        elif 'canada' in loc:
+            canada_jobs.append(j)
+        elif 'worldwide' in loc or 'anywhere' in loc:
+            worldwide_jobs.append(j)
 
-    # Let's target: 30 UK, 10 US, 10 Others
+    # Let's target: 20 UK, 15 US, 5 Canada, 10 Worldwide
     selected_jobs = []
-    selected_jobs.extend(uk_jobs[:30])
-    selected_jobs.extend(us_jobs[:10])
-    selected_jobs.extend(other_jobs[:(50 - len(selected_jobs))])
+    selected_jobs.extend(uk_jobs[:20])
+    selected_jobs.extend(us_jobs[:15])
+    selected_jobs.extend(canada_jobs[:5])
+    selected_jobs.extend(worldwide_jobs[:(50 - len(selected_jobs))])
 
     print(f"Selected {len(selected_jobs)} jobs. Saving to database...")
     
@@ -105,15 +109,20 @@ def populate_jobs():
         if not reqs:
             reqs = ["Relevant experience in the role", "Strong communication skills", "Ability to work remotely"]
 
-        # Parse salary
-        salary = j.get('salary', '')
-        if not salary:
-            salary = 'Competitive'
-
-        # Parse job type
+        # Determine job type and salary
         jtype = j.get('job_type', '').replace('_', ' ').title()
-        if not jtype:
-            jtype = 'Full-time'
+        if 'Freelance' in jtype:
+            jtype = 'Freelance'
+        elif 'Contract' in jtype:
+            jtype = 'Contract'
+        else:
+            jtype = random.choice(['Freelance', 'Contract', 'Remote'])
+
+        # Set specific salaries based on job type
+        if jtype in ['Freelance', 'Remote']:
+            salary = '$50 - $75 / hour'
+        else:
+            salary = '$90 - $150 / hour'
 
         Job.objects.create(
             company=company_user,
