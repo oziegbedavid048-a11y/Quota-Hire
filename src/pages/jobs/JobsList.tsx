@@ -7,7 +7,8 @@ import { useAppContext } from '../../context/AppContext';
 export const JobsList = () => {
   const { jobs } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRemote, setFilterRemote] = useState(false);
+  const [filterCountry, setFilterCountry] = useState('');
+  const [filterSalary, setFilterSalary] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [visibleCount, setVisibleCount] = useState(5);
   const formatRelativeTime = (dateString?: string) => {
@@ -29,15 +30,15 @@ export const JobsList = () => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
       job.title.toLowerCase().includes(term) ||
-      (job.companyName && job.companyName.toLowerCase().includes(term)) ||
-      (job.location && job.location.toLowerCase().includes(term));
+      (job.companyName && job.companyName.toLowerCase().includes(term));
       
-    const matchesRemote = filterRemote ? job.isRemote : true;
+    const matchesCountry = filterCountry === '' || (job.location && job.location.toLowerCase().includes(filterCountry.toLowerCase()));
+    const matchesSalary = filterSalary === '' || (job.salaryRange && job.salaryRange.toLowerCase().includes(filterSalary.toLowerCase()));
     
     const matchesType = filterType === 'All' ? true : 
       (job.employment_type === filterType || (filterType === 'Remote' && job.isRemote));
 
-    return matchesSearch && matchesRemote && matchesType;
+    return matchesSearch && matchesCountry && matchesSalary && matchesType;
   });
 
   const displayedJobs = filteredJobs.slice(0, visibleCount);
@@ -59,12 +60,12 @@ export const JobsList = () => {
                 Browse exclusive sales opportunities at top-tier companies.
               </p>
               {/* Search bar moved into banner */}
-              <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 p-1.5 rounded-xl shadow-subtle border border-neutral-200 dark:border-neutral-800 w-full max-w-md mx-auto md:mx-0">
+              <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 p-1.5 rounded-xl shadow-subtle border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl mx-auto md:mx-0">
                 <div className="relative flex-1 min-w-0">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={16} />
                   <input
                     type="text"
-                    placeholder="Search roles or companies..."
+                    placeholder="Search by job title or company..."
                     className="w-full h-10 pl-9 pr-3 rounded-lg focus:outline-none bg-transparent text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 text-sm truncate"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -84,20 +85,33 @@ export const JobsList = () => {
             </div>
           </div>
           {/* Filter row */}
-          <div className="relative z-10 flex items-center gap-6 mt-4 justify-center md:justify-start">
-            <label className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400 cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors">
+          <div className="relative z-10 flex flex-wrap items-center gap-3 mt-6 justify-center md:justify-start">
+            <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 w-full sm:w-auto flex-1 sm:flex-none">
+              <MapPin size={16} className="text-neutral-400 shrink-0" />
               <input
-                type="checkbox"
-                className="rounded border-neutral-300 dark:border-neutral-700 text-accent-600 focus:ring-accent-500 bg-white dark:bg-neutral-900"
-                checked={filterRemote}
-                onChange={(e) => setFilterRemote(e.target.checked)}
+                type="text"
+                placeholder="Country/Location"
+                className="bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none w-full sm:w-36"
+                value={filterCountry}
+                onChange={(e) => setFilterCountry(e.target.value)}
               />
-              Remote only
-            </label>
-            <div className="flex items-center gap-2">
-              <Filter size={16} className="text-neutral-400" />
+            </div>
+
+            <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 w-full sm:w-auto flex-1 sm:flex-none">
+              <Banknote size={16} className="text-neutral-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Salary Amount"
+                className="bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none w-full sm:w-36"
+                value={filterSalary}
+                onChange={(e) => setFilterSalary(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 w-full sm:w-auto">
+              <Filter size={16} className="text-neutral-400 shrink-0" />
               <select 
-                className="bg-transparent text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors outline-none cursor-pointer border-none p-0"
+                className="bg-transparent text-sm text-neutral-900 dark:text-neutral-100 outline-none cursor-pointer border-none p-0 w-full sm:w-auto"
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
               >
@@ -105,6 +119,7 @@ export const JobsList = () => {
                 <option value="Freelance">Freelance</option>
                 <option value="Contract">Contract</option>
                 <option value="Remote">Remote</option>
+                <option value="Full-time">Full-time</option>
               </select>
             </div>
           </div>
@@ -126,7 +141,9 @@ export const JobsList = () => {
               className="mt-6"
               onClick={() => {
                 setSearchTerm('');
-                setFilterRemote(false);
+                setFilterCountry('');
+                setFilterSalary('');
+                setFilterType('All');
               }}>
               
                 Clear Filters
