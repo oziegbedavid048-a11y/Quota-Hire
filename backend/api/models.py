@@ -7,6 +7,8 @@ Mirrors the TypeScript types defined in src/types.ts:
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from decimal import Decimal
+import uuid
 
 
 # ── User Roles ───────────────────────────────────────────────────────────────
@@ -356,3 +358,91 @@ class ShortlistedApplicant(models.Model):
 
     def __str__(self):
         return f"Shortlisted: {self.application.employee.get_full_name()} for {self.application.job.title}"
+
+
+# ── Payment Transaction ───────────────────────────────────────────────────────
+
+class PaymentStatus(models.TextChoices):
+    PENDING = 'pending', 'Pending'
+    PAID    = 'paid',    'Paid'
+    FAILED  = 'failed',  'Failed'
+
+
+class PaymentTransaction(models.Model):
+    """
+    Tracks a Paystack payment for a CV document download.
+    One record per payment attempt.
+    """
+    user        = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='payment_transactions',
+    )
+    cv          = models.ForeignKey(
+        GeneratedCV,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payment_transactions',
+        help_text='The CV document this payment is for. Null = uploaded resume.',
+    )
+    # Paystack reference — unique UUID used as the payment reference
+    reference   = models.CharField(max_length=100, unique=True, default=uuid.uuid4)
+    amount_eur  = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('1.50'))
+    # Amount in NGN kobo as returned by Paystack on verification
+    amount_kobo = models.IntegerField(null=True, blank=True)
+    status      = models.CharField(
+        max_length=20,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING,
+    )
+    # Paystack internal transaction ID (filled after successful verification)
+    paystack_id = models.CharField(max_length=100, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'Payment Transaction'
+        verbose_name_plural = 'Payment Transactions'
+        ordering            = ['-created_at']
+
+    def __str__(self):
+        return f'Payment [{self.status}] — {self.user} | CV:{self.cv_id} | {self.reference}'
+
+
+# ── Download Token ────────────────────────────────────────────────────────────
+
+class DownloadToken(models.Model):
+    """
+    A short-lived, one-time token issued after a successful Paystack payment.
+    The frontend redeems this token to stream the CV PDF.
+    Expires 10 minutes after creation and is marked used after the first download.
+    """
+    user       = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='download_tokens',
+    )
+    cv         = models.ForeignKey(
+        GeneratedCV,
+        on_delete=models.CASCADE,
+        related_name='download_tokens',
+    )
+    transaction = models.ForeignKey(
+        PaymentTransaction,
+        on_delete=models.CASCADE,
+        related_name='download_tokens',
+    )
+    token      = models.CharField(max_length=255, unique=True)
+    expires_at = models.DateTimeField()
+    used       = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Download Token'
+        verbose_name_plural = 'Download Tokens'
+        ordering            = ['-created_at']
+
+    def __str__(self):
+        status = 'used' if self.used else 'active'
+        return f'DownloadToken [{status}] — {self.user} | CV:{self.cv_id}'
