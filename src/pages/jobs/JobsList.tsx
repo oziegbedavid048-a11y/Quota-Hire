@@ -7,8 +7,6 @@ import { useAppContext } from '../../context/AppContext';
 export const JobsList = () => {
   const { jobs } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCountry, setFilterCountry] = useState('');
-  const [filterSalary, setFilterSalary] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [visibleCount, setVisibleCount] = useState(5);
   const formatRelativeTime = (dateString?: string) => {
@@ -30,15 +28,13 @@ export const JobsList = () => {
     const term = searchTerm.toLowerCase();
     const matchesSearch =
       job.title.toLowerCase().includes(term) ||
-      (job.companyName && job.companyName.toLowerCase().includes(term));
+      (job.companyName && job.companyName.toLowerCase().includes(term)) ||
+      (job.location && job.location.toLowerCase().includes(term));
       
-    const matchesCountry = filterCountry === '' || (job.location && job.location.toLowerCase().includes(filterCountry.toLowerCase()));
-    const matchesSalary = filterSalary === '' || (job.salaryRange && job.salaryRange.toLowerCase().includes(filterSalary.toLowerCase()));
-    
     const matchesType = filterType === 'All' ? true : 
       (job.employment_type === filterType || (filterType === 'Remote' && job.isRemote));
 
-    return matchesSearch && matchesCountry && matchesSalary && matchesType;
+    return matchesSearch && matchesType;
   });
 
   const displayedJobs = filteredJobs.slice(0, visibleCount);
@@ -65,7 +61,7 @@ export const JobsList = () => {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={16} />
                   <input
                     type="text"
-                    placeholder="Search by job title or company..."
+                    placeholder="Search by job title, company, or location..."
                     className="w-full h-10 pl-9 pr-3 rounded-lg focus:outline-none bg-transparent text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 text-sm truncate"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -86,28 +82,6 @@ export const JobsList = () => {
           </div>
           {/* Filter row */}
           <div className="relative z-10 flex flex-wrap items-center gap-3 mt-6 justify-center md:justify-start">
-            <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 w-full sm:w-auto flex-1 sm:flex-none">
-              <MapPin size={16} className="text-neutral-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Country/Location"
-                className="bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none w-full sm:w-36"
-                value={filterCountry}
-                onChange={(e) => setFilterCountry(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 w-full sm:w-auto flex-1 sm:flex-none">
-              <Banknote size={16} className="text-neutral-400 shrink-0" />
-              <input
-                type="text"
-                placeholder="Salary Amount"
-                className="bg-transparent text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none w-full sm:w-36"
-                value={filterSalary}
-                onChange={(e) => setFilterSalary(e.target.value)}
-              />
-            </div>
-
             <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 w-full sm:w-auto">
               <Filter size={16} className="text-neutral-400 shrink-0" />
               <select 
@@ -141,8 +115,6 @@ export const JobsList = () => {
               className="mt-6"
               onClick={() => {
                 setSearchTerm('');
-                setFilterCountry('');
-                setFilterSalary('');
                 setFilterType('All');
               }}>
               
