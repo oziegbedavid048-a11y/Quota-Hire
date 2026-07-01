@@ -1355,6 +1355,8 @@ def _paystack_request(path, method='GET', payload=None):
     headers = {
         'Authorization': f'Bearer {secret_key}',
         'Content-Type': 'application/json',
+        'User-Agent': 'QuotaHire/1.0 (https://quotahire.org)',
+        'Accept': 'application/json',
     }
     data = json_module.dumps(payload).encode('utf-8') if payload else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
