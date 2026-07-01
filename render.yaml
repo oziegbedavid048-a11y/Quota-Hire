@@ -28,8 +28,17 @@ services:
         value: "587"
       - key: EMAIL_USE_TLS
         value: "True"
+      # ── Paystack Payment Gateway ──────────────────────────────────────────
+      # IMPORTANT: Set these in the Render Dashboard → Environment → Secret Files
+      # PAYSTACK_SECRET_KEY and PAYSTACK_PUBLIC_KEY must be added manually
+      - key: CV_DOWNLOAD_FEE_EUR
+        value: "1.50"
+      - key: NGN_PER_EUR
+        value: "1650"
       # DATABASE_URL must be set manually in Render Dashboard (contains secret credentials)
       # COURIER_AUTH_TOKEN must be set manually in Render Dashboard
+      # PAYSTACK_SECRET_KEY must be set manually in Render Dashboard
+      # PAYSTACK_PUBLIC_KEY must be set manually in Render Dashboard
       # CLOUDINARY_URL must be set manually in Render Dashboard (if using file uploads)
 
   - type: web
