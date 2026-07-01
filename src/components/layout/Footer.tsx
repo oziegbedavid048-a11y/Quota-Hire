@@ -39,8 +39,8 @@ const footerLinks: FooterSection[] = [
 		label: 'Company',
 		links: [
 			{ title: 'About Us', href: '/about' },
+			{ title: 'Why Quotahire', href: '/why' },
 
-			{ title: 'Our Purpose', href: '/purpose' },
 			{ title: 'Contact', href: '/contact' },
 		],
 	},
