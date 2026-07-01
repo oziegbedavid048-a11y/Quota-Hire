@@ -49,6 +49,8 @@ services:
     envVars:
       - key: VITE_API_URL
         value: "https://quotahire-backend.onrender.com/api"
+      - key: VITE_PAYSTACK_PUBLIC_KEY
+        value: "pk_test_bb5d0b744b4bd3e9feb529bcf872afc361358af0"
     routes:
       - type: rewrite
         source: /*
