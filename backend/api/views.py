@@ -590,7 +590,7 @@ class ForgotPasswordView(APIView):
 
         token = jwt.encode({
             'email': email,
-            'exp': timezone.now() + timedelta(hours=1)
+            'exp': timezone.now() + timedelta(minutes=10)
         }, settings.SECRET_KEY, algorithm='HS256')
 
         frontend_url = settings.FRONTEND_URL.strip()

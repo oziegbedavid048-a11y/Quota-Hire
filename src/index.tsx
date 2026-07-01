@@ -8,7 +8,7 @@ import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
 
 // Initialize Sentry
-if (import.meta.env.VITE_SENTRY_DSN) {
+if (import.meta.env.VITE_SENTRY_DSN && import.meta.env.PROD) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     integrations: [
@@ -30,9 +30,13 @@ if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
   });
 }
 
+import { SmoothScroll } from "./components/ui/SmoothScroll";
+
 const root = createRoot(document.getElementById("root")!);
 root.render(
   <PostHogProvider client={posthog}>
-    <App />
+    <SmoothScroll>
+      <App />
+    </SmoothScroll>
   </PostHogProvider>
 );

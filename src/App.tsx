@@ -37,9 +37,10 @@ import { Onboarding } from './pages/auth/Onboarding';
 import { AIProfileCoach } from './pages/employee/AIProfileCoach';
 import { ApplicationTracker } from './pages/employee/ApplicationTracker';
 import { SavedJobs } from './pages/jobs/SavedJobs';
-import { Purpose } from './pages/Purpose';
+
 import { Contact } from './pages/Contact';
 import { CVGeneratorPage } from './pages/employee/CVGeneratorPage';
+import { Why } from './pages/Why';
 
 import UnifiedDashboardLayout from './components/layout/UnifiedDashboardLayout';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -85,7 +86,7 @@ const AppRoutes = () => {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
-          <Route path="/purpose" element={<Purpose />} />
+          <Route path="/why" element={<Why />} />
 
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />

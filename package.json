@@ -17,6 +17,7 @@
     "@radix-ui/react-avatar": "^1.1.11",
     "@react-pdf/renderer": "^4.5.1",
     "@sentry/react": "^10.57.0",
+    "@studio-freight/lenis": "^1.0.42",
     "buffer": "^6.0.3",
     "date-fns": "^4.4.0",
     "framer-motion": "^11.5.4",

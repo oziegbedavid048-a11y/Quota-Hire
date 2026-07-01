@@ -66,6 +66,7 @@ export const Navbar = () => {
                 Home
               </Link>
               <Link to="/about" className="text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">About</Link>
+              <Link to="/why" className="text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Why Quotahire</Link>
 
               <Link to="/contact" className="text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors">Contact</Link>
               <div className="h-4 w-px bg-neutral-200 dark:bg-neutral-700"></div>
@@ -227,6 +228,7 @@ export const Navbar = () => {
             <>
                   <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-neutral-700 dark:text-neutral-300 py-2">Home</Link>
                   <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-neutral-700 dark:text-neutral-300 py-2">About</Link>
+                  <Link to="/why" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-neutral-700 dark:text-neutral-300 py-2">Why Quotahire</Link>
 
                   <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="text-base font-medium text-neutral-700 dark:text-neutral-300 py-2">Contact</Link>
                   <div className="h-px w-full bg-neutral-200 dark:bg-neutral-800 my-2"></div>
