@@ -511,44 +511,7 @@ export const ApplyJobPage = () => {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                      <label className="text-xs font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5 mb-1 block">
-                        <GraduationCap size={12} /> Education
-                      </label>
-                      <textarea
-                        value={formData.education}
-                        onChange={e => setFormData({ ...formData, education: e.target.value })}
-                        className="w-full text-sm font-medium text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus:border-accent-500 outline-none resize-none pb-1"
-                        rows={2}
-                        placeholder="e.g. B.Sc Computer Science"
-                      />
-                    </div>
 
-                    <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                      <label className="text-xs font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5 mb-1 block">
-                        <Briefcase size={12} /> Experience (Years)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.experienceYears}
-                        onChange={e => setFormData({ ...formData, experienceYears: parseInt(e.target.value) || 0 })}
-                        className="w-full text-sm font-medium text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus:border-accent-500 outline-none pb-1"
-                      />
-                    </div>
-
-                    <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700">
-                      <label className="text-xs font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1.5 mb-2 block">
-                        <PenTool size={12} /> Skills (comma-separated)
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.skills}
-                        onChange={e => setFormData({ ...formData, skills: e.target.value })}
-                        placeholder="e.g. Sales, Python, Marketing"
-                        className="w-full text-sm font-medium text-neutral-900 dark:text-white bg-transparent border-b border-neutral-200 dark:border-neutral-700 focus:border-accent-500 outline-none pb-1"
-                      />
-                    </div>
                   </div>
                 </section>
 
