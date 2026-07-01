@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Building, Briefcase, MapPinned, FileText,
-  GraduationCap, PenTool, Loader2
+  GraduationCap, PenTool, Loader2, ChevronDown
 } from 'lucide-react';
 import { EmployeeProfile } from '../../types';
 import { useAppContext } from '../../context/AppContext';
@@ -33,6 +33,7 @@ export const ApplyJobPage = () => {
   // Saved CVs State
   const [savedCvs, setSavedCvs] = useState<any[]>([]);
   const [loadingCvs, setLoadingCvs] = useState(false);
+  const [isResumeSelectOpen, setIsResumeSelectOpen] = useState(false);
 
   const fetchCvs = async () => {
     setLoadingCvs(true);
@@ -116,6 +117,13 @@ export const ApplyJobPage = () => {
       }
     }, 80);
   };
+
+  const isStep1Valid = Boolean(
+    formData.fullName.trim() &&
+    formData.phoneNumber.trim() &&
+    formData.country.trim() &&
+    formData.city.trim()
+  );
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,8 +293,12 @@ export const ApplyJobPage = () => {
                   <div className="pt-4 flex justify-end">
                     <button
                       type="submit"
-                      disabled={isContinuing}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 bg-accent-600 hover:bg-accent-700 active:scale-95 text-white px-8 py-3.5 rounded-xl font-bold text-sm transition-all disabled:opacity-60 shadow-md"
+                      disabled={isContinuing || !isStep1Valid}
+                      className={`w-full sm:w-auto flex items-center justify-center gap-2 bg-accent-600 text-white px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-md ${
+                        !isStep1Valid || isContinuing
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:bg-accent-700 active:scale-95'
+                      }`}
                     >
                       {isContinuing ? <Loader2 size={16} className="animate-spin" /> : null}
                       Continue
@@ -389,47 +401,91 @@ export const ApplyJobPage = () => {
                           <Loader2 size={16} className="animate-spin" /> Loading saved resumes...
                         </div>
                       ) : (
-                        <div className="space-y-3">
-                          {/* Option: Main Profile Resume */}
-                          {profile?.resumeUrl && (
-                            <label className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${!generatedCvId ? 'border-accent-500 bg-accent-50/50 dark:bg-accent-900/10' : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 bg-white dark:bg-neutral-800'}`}>
-                              <div className="pt-0.5">
-                                <input type="radio" name="resume-selection" checked={!generatedCvId} onChange={() => setGeneratedCvId(null)} className="w-4 h-4 text-accent-600 focus:ring-accent-500 border-neutral-300" />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
-                                  <FileText size={14} className={!generatedCvId ? 'text-accent-600' : 'text-neutral-500'} />
-                                  Attached Profile Resume
-                                </p>
-                                <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-accent-600 hover:underline mt-1 inline-block" onClick={(e) => e.stopPropagation()}>
-                                  View Resume
-                                </a>
-                              </div>
-                            </label>
-                          )}
-
-                          {/* Option: Saved Generated CVs */}
-                          {savedCvs.map(cv => (
-                            <label key={cv.id} className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${generatedCvId === cv.id ? 'border-accent-500 bg-accent-50/50 dark:bg-accent-900/10' : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 bg-white dark:bg-neutral-800'}`}>
-                              <div className="pt-0.5">
-                                <input type="radio" name="resume-selection" checked={generatedCvId === cv.id} onChange={() => setGeneratedCvId(cv.id)} className="w-4 h-4 text-accent-600 focus:ring-accent-500 border-neutral-300" />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
-                                  <FileText size={14} className={generatedCvId === cv.id ? 'text-accent-600' : 'text-neutral-500'} />
-                                  {cv.target_role || 'Tailored CV'} ({cv.template_name})
-                                </p>
-                                <p className="text-xs font-medium text-neutral-500 mt-1">Generated: {new Date(cv.generated_at).toLocaleDateString()}</p>
-                              </div>
-                            </label>
-                          ))}
-
-                          {/* No resume saved fallback */}
-                          {!profile?.resumeUrl && savedCvs.length === 0 && (
-                            <div className="p-4 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 text-center">
-                              <p className="text-sm font-medium text-neutral-500">No resume saved on your profile.</p>
+                        <div className="space-y-3 relative">
+                          <button
+                            type="button"
+                            onClick={() => setIsResumeSelectOpen(!isResumeSelectOpen)}
+                            className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-neutral-200 dark:border-neutral-700 hover:border-accent-500 dark:hover:border-accent-500 bg-white dark:bg-neutral-800 transition-all focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                          >
+                            <div className="flex items-center gap-3">
+                              <FileText size={18} className="text-accent-600" />
+                              <span className="text-sm font-bold text-neutral-900 dark:text-white truncate">
+                                {(!generatedCvId && profile?.resumeUrl)
+                                  ? 'Attached Profile Resume'
+                                  : savedCvs.find(cv => cv.id === generatedCvId)
+                                    ? `${savedCvs.find(cv => cv.id === generatedCvId)?.target_role || 'Tailored CV'} (${savedCvs.find(cv => cv.id === generatedCvId)?.template_name})`
+                                    : (!profile?.resumeUrl && savedCvs.length === 0)
+                                      ? 'No resume saved'
+                                      : 'Select a Resume'}
+                              </span>
                             </div>
-                          )}
+                            <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-700/50 px-2.5 py-1 rounded-md">
+                              <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300">Select</span>
+                              <ChevronDown size={14} className={`text-neutral-500 transition-transform ${isResumeSelectOpen ? 'rotate-180' : ''}`} />
+                            </div>
+                          </button>
+
+                          <AnimatePresence>
+                            {isResumeSelectOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -5 }}
+                                transition={{ duration: 0.15 }}
+                                className="absolute z-20 w-full mt-1 bg-white dark:bg-neutral-800 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-700 max-h-64 overflow-y-auto top-full left-0 right-0"
+                              >
+                                <div className="p-2 space-y-1">
+                                  {/* Option: Main Profile Resume */}
+                                  {profile?.resumeUrl && (
+                                    <div
+                                      onClick={() => { setGeneratedCvId(null); setIsResumeSelectOpen(false); }}
+                                      className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all ${!generatedCvId ? 'bg-accent-50 dark:bg-accent-900/10' : 'hover:bg-neutral-50 dark:hover:bg-neutral-700/50'}`}
+                                    >
+                                      <div className="pt-0.5">
+                                        <input type="radio" checked={!generatedCvId} readOnly className="w-4 h-4 text-accent-600 focus:ring-accent-500 border-neutral-300" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                                          <FileText size={14} className={!generatedCvId ? 'text-accent-600' : 'text-neutral-500'} />
+                                          Attached Profile Resume
+                                        </p>
+                                        <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-accent-600 hover:underline mt-1 inline-block" onClick={(e) => e.stopPropagation()}>
+                                          View Resume
+                                        </a>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Option: Saved Generated CVs */}
+                                  {savedCvs.map(cv => (
+                                    <div
+                                      key={cv.id}
+                                      onClick={() => { setGeneratedCvId(cv.id); setIsResumeSelectOpen(false); }}
+                                      className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all ${generatedCvId === cv.id ? 'bg-accent-50 dark:bg-accent-900/10' : 'hover:bg-neutral-50 dark:hover:bg-neutral-700/50'}`}
+                                    >
+                                      <div className="pt-0.5">
+                                        <input type="radio" checked={generatedCvId === cv.id} readOnly className="w-4 h-4 text-accent-600 focus:ring-accent-500 border-neutral-300" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
+                                          <FileText size={14} className={generatedCvId === cv.id ? 'text-accent-600' : 'text-neutral-500'} />
+                                          {cv.target_role || 'Tailored CV'} ({cv.template_name})
+                                        </p>
+                                        <p className="text-xs font-medium text-neutral-500 mt-1">Generated: {new Date(cv.generated_at).toLocaleDateString()}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                  {/* No resume saved fallback */}
+                                  {!profile?.resumeUrl && savedCvs.length === 0 && (
+                                    <div className="p-4 text-center">
+                                      <p className="text-sm font-medium text-neutral-500">No resume saved on your profile.</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
                     </div>
@@ -441,14 +497,14 @@ export const ApplyJobPage = () => {
                         </label>
                       </div>
                       
-                      <div className="bg-blue-50 dark:bg-blue-900/10 p-4 sm:p-5 rounded-xl border border-blue-100 dark:border-blue-900/30 space-y-4">
-                        <p className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-300 leading-relaxed">
+                      <div className="bg-accent-50 dark:bg-accent-900/10 p-4 sm:p-5 rounded-xl border border-accent-100 dark:border-accent-900/30 space-y-4">
+                        <p className="text-xs sm:text-sm font-medium text-accent-800 dark:text-accent-300 leading-relaxed">
                           Stand out by auto-generating a customized CV and Cover Letter tailored specifically to this job description.
                         </p>
                         <button
                           type="button"
                           onClick={() => setIsWizardOpen(true)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl shadow-md transition-all flex justify-center items-center gap-2"
+                          className="w-full bg-accent-600 hover:bg-accent-700 active:scale-95 text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl shadow-md transition-all flex justify-center items-center gap-2"
                         >
                           <PenTool size={16} /> Generate New Tailored CV
                         </button>
