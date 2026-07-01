@@ -11,7 +11,7 @@ import {
   Loader2, AlertTriangle, CheckCircle2, RefreshCw, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiFetch } from "../../context/AppContext";
+import { apiFetch, ApiError } from "../../context/AppContext";
 import { openPaystackPopup } from "../../lib/paystack";
 
 export interface PaymentModalProps {
@@ -102,8 +102,19 @@ export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail }: Payme
         onClose: () => { setModalState("cancelled"); },
       });
     } catch (err: unknown) {
-      const e = err as { data?: { message?: string } };
-      setError(e?.data?.message || (err instanceof Error ? err.message : "An unexpected error occurred."));
+      if (err instanceof ApiError) {
+        if (err.status === 404) {
+          setError("The CV document could not be found. It may have been deleted.");
+        } else if (err.status >= 500) {
+          setError("The server is currently unavailable or waking up from sleep. Please wait 30 seconds and try again.");
+        } else if (err.status === 0) {
+          setError("Network issue detected. Please check your internet connection.");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+      }
     }
   }, [cvId, cvName, userEmail, downloadWithToken, verifyAndDownload]);
 
