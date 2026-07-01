@@ -21,6 +21,8 @@ from .models import (
     Notification,
     ShortlistedApplicant,
     GeneratedCV,
+    PaymentTransaction,
+    DownloadToken,
 )
 
 
@@ -556,3 +558,35 @@ class GeneratedCVAdmin(admin.ModelAdmin):
                 obj.cover_letter_text
             )
         return format_html('<span style="color:#94a3b8;">No cover letter</span>')
+
+
+# ── Payment Admin ─────────────────────────────────────────────────────────────
+
+@admin.register(PaymentTransaction)
+class PaymentTransactionAdmin(admin.ModelAdmin):
+    list_display   = ('reference', 'user', 'cv', 'status', 'amount_eur', 'amount_kobo', 'paystack_id', 'created_at')
+    list_filter    = ('status', 'created_at')
+    search_fields  = ('reference', 'user__email', 'user__first_name', 'user__last_name', 'paystack_id')
+    readonly_fields = ('reference', 'created_at', 'updated_at', 'paystack_id', 'amount_kobo')
+    ordering       = ('-created_at',)
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        ('Transaction Info', {'fields': ('reference', 'status', 'amount_eur', 'amount_kobo', 'paystack_id')}),
+        ('Linked Records', {'fields': ('user', 'cv')}),
+        ('Timestamps', {'fields': ('created_at', 'updated_at')}),
+    )
+
+
+@admin.register(DownloadToken)
+class DownloadTokenAdmin(admin.ModelAdmin):
+    list_display  = ('token_short', 'user', 'cv', 'used', 'expires_at', 'created_at')
+    list_filter   = ('used', 'created_at')
+    search_fields = ('token', 'user__email', 'user__first_name', 'user__last_name')
+    readonly_fields = ('token', 'created_at', 'expires_at')
+    ordering      = ('-created_at',)
+
+    @admin.display(description='Token (short)')
+    def token_short(self, obj):
+        return obj.token[:20] + '…' if len(obj.token) > 20 else obj.token
+

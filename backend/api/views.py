@@ -21,6 +21,9 @@ Endpoints:
   GET    /api/admin/users/          (admin only)
   GET    /api/admin/jobs/           (admin only — all statuses)
   POST   /api/cv/generate/          (employee only)
+  POST   /api/payments/initiate/    (employee only)
+  POST   /api/payments/verify/      (employee only)
+  POST   /api/payments/webhook/     (Paystack, no auth)
 """
 
 from rest_framework import generics, permissions, status
@@ -32,7 +35,16 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.mail import EmailMultiAlternatives
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 import jwt
+import hmac
+import hashlib
+import secrets
+import urllib.request
+import urllib.error
+import urllib.parse
+import json as json_module
 
 import re
 import io
@@ -46,7 +58,11 @@ from django.views.decorators.cache import cache_page
 logger = logging.getLogger(__name__)
 
 from datetime import timedelta
-from .models import CustomUser, EmployeeProfile, CompanyProfile, Job, Application, Notification, SavedJob, GeneratedCV
+from .models import (
+    CustomUser, EmployeeProfile, CompanyProfile, Job, Application,
+    Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
+    PaymentStatus,
+)
 from .serializers import (
     CustomTokenObtainPairSerializer,
     RegisterSerializer,
@@ -1242,9 +1258,14 @@ class MyGeneratedCVsView(generics.ListAPIView):
 
 class DownloadGeneratedCVView(APIView):
     """
-    GET /api/cv/<pk>/download/
-    Returns the binary PDF for a specific GeneratedCV.
-    Accessible only by the owner employee or admin users.
+    GET /api/cv/<pk>/download/?token=<download_token>
+    Streams the binary PDF for a specific GeneratedCV.
+
+    Security model:
+    - Admin/staff: can download any CV directly with JWT auth (no token needed)
+    - Employee (owner): must supply a valid, unused, non-expired DownloadToken
+      issued by PaymentVerifyView after a successful Paystack payment.
+    - Any other user: 403 Forbidden
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1254,15 +1275,441 @@ class DownloadGeneratedCVView(APIView):
         except GeneratedCV.DoesNotExist:
             return Response({'error': 'CV not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Permission check: owner or admin only
-        if cv_obj.employee != request.user and not request.user.is_staff and request.user.role != 'admin':
+        user = request.user
+
+        # Admin/staff bypass — they can always download freely
+        if user.is_staff or user.role == 'admin':
+            if not cv_obj.cv_pdf:
+                return Response({'error': 'No PDF stored for this CV.'}, status=status.HTTP_404_NOT_FOUND)
+            response = HttpResponse(bytes(cv_obj.cv_pdf), content_type='application/pdf')
+            filename = cv_obj.cv_filename or 'cv.pdf'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+        # Non-owner employee: forbidden
+        if cv_obj.employee != user:
             return Response({'error': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Employee must provide a valid payment-based download token
+        raw_token = request.query_params.get('token', '').strip()
+        if not raw_token:
+            return Response(
+                {'error': 'payment_required', 'message': 'A valid payment token is required to download this document.'},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+
+        # Validate the download token
+        try:
+            dt = DownloadToken.objects.select_related('cv', 'user').get(
+                token=raw_token,
+                user=user,
+                cv=cv_obj,
+            )
+        except DownloadToken.DoesNotExist:
+            return Response(
+                {'error': 'invalid_token', 'message': 'Download token is invalid or does not belong to you.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if dt.used:
+            return Response(
+                {'error': 'token_used', 'message': 'This download token has already been used. Please initiate a new payment.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if timezone.now() > dt.expires_at:
+            return Response(
+                {'error': 'token_expired', 'message': 'Your download link has expired (10 minutes). You can re-download using your existing payment.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Mark token as used BEFORE streaming — prevents replay even if request errors
+        dt.used = True
+        dt.save(update_fields=['used'])
 
         if not cv_obj.cv_pdf:
             return Response({'error': 'No PDF stored for this CV.'}, status=status.HTTP_404_NOT_FOUND)
 
-        from django.http import HttpResponse
         response = HttpResponse(bytes(cv_obj.cv_pdf), content_type='application/pdf')
         filename = cv_obj.cv_filename or 'cv.pdf'
-        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        # Security headers
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
         return response
+
+
+# ── Payment Views ────────────────────────────────────────────────────────────────
+
+
+def _paystack_request(path, method='GET', payload=None):
+    """
+    Internal helper to call the Paystack REST API using only stdlib.
+    Raises RuntimeError on non-2xx responses.
+    """
+    secret_key = settings.PAYSTACK_SECRET_KEY
+    if not secret_key:
+        raise RuntimeError('PAYSTACK_SECRET_KEY is not configured on the server.')
+
+    url = f'https://api.paystack.co{path}'
+    headers = {
+        'Authorization': f'Bearer {secret_key}',
+        'Content-Type': 'application/json',
+    }
+    data = json_module.dumps(payload).encode('utf-8') if payload else None
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            body = resp.read().decode('utf-8')
+            return json_module.loads(body)
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8')
+        logger.error(f'Paystack API error [{e.code}] {path}: {body}')
+        raise RuntimeError(f'Paystack API error {e.code}: {body}')
+
+
+def _make_download_token(user_id, cv_id, transaction_id):
+    """
+    Generate a cryptographically secure HMAC-signed download token.
+    Format: <random_hex>.<hmac_hex>
+    The HMAC covers: user_id + cv_id + transaction_id + random_hex.
+    """
+    random_part = secrets.token_hex(24)
+    message = f'{user_id}:{cv_id}:{transaction_id}:{random_part}'
+    sig = hmac.new(
+        settings.SECRET_KEY.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256,
+    ).hexdigest()
+    return f'{random_part}.{sig}'
+
+
+def _get_live_eur_ngn_rate() -> float:
+    """
+    Fetches the live EUR → NGN exchange rate from a free public API.
+    Results are cached for 1 hour so we don't hammer the API.
+    Falls back to the NGN_PER_EUR setting if the API is unavailable.
+
+    Free API used: https://open.er-api.com/v6/latest/EUR
+    No API key required. Rate limit: 1,500 req/month on the free tier.
+    Cache means we only call it once per hour regardless of traffic.
+    """
+    from django.core.cache import cache
+
+    CACHE_KEY = 'eur_ngn_rate'
+    CACHE_TTL = 3600  # 1 hour
+
+    cached = cache.get(CACHE_KEY)
+    if cached is not None:
+        return float(cached)
+
+    fallback = float(settings.NGN_PER_EUR)
+    try:
+        req = urllib.request.Request(
+            'https://open.er-api.com/v6/latest/EUR',
+            headers={'User-Agent': 'QuotaHire/1.0'},
+            method='GET',
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json_module.loads(resp.read().decode('utf-8'))
+
+        if data.get('result') == 'success':
+            rate = float(data['rates'].get('NGN', fallback))
+            # Sanity check: rate should be between 500 and 5000
+            if 500 <= rate <= 5000:
+                cache.set(CACHE_KEY, rate, CACHE_TTL)
+                logger.info(f'Live EUR/NGN rate fetched: {rate}')
+                return rate
+            else:
+                logger.warning(f'EUR/NGN rate {rate} out of sanity range, using fallback {fallback}')
+    except Exception as e:
+        logger.warning(f'Could not fetch live EUR/NGN rate: {e}. Using fallback {fallback}')
+
+    # Cache the fallback too (shorter TTL so we retry sooner)
+    cache.set(CACHE_KEY, fallback, 300)  # retry in 5 min
+    return fallback
+
+
+class PaymentInitiateView(APIView):
+    """
+    POST /api/payments/initiate/
+    Body: { "cv_id": <int> }
+
+    1. Checks if the user already has a valid unused paid token for this CV
+       → returns it immediately so user can download without paying again.
+    2. Otherwise creates a new PaymentTransaction and calls Paystack /transaction/initialize.
+    3. Returns: { authorization_url, reference, amount_ngn, already_paid, download_token }
+    """
+    permission_classes = [IsEmployee]
+
+    def post(self, request):
+        cv_id = request.data.get('cv_id')
+        if not cv_id:
+            return Response({'error': 'cv_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cv_obj = GeneratedCV.objects.get(pk=cv_id, employee=request.user)
+        except GeneratedCV.DoesNotExist:
+            return Response({'error': 'CV not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # ─ Idempotency: check for valid existing paid token (avoid double charging)
+        existing_token = DownloadToken.objects.filter(
+            user=request.user,
+            cv=cv_obj,
+            used=False,
+            expires_at__gt=timezone.now(),
+            transaction__status=PaymentStatus.PAID,
+        ).order_by('-created_at').first()
+
+        if existing_token:
+            return Response({
+                'already_paid': True,
+                'download_token': existing_token.token,
+                'message': 'You have already paid for this document. Download is ready.',
+            })
+
+        # ─ Calculate amount in kobo using LIVE EUR/NGN rate
+        fee_eur = settings.CV_DOWNLOAD_FEE_EUR
+        ngn_per_eur = _get_live_eur_ngn_rate()   # live rate, cached 1 hour
+        amount_ngn = fee_eur * ngn_per_eur
+        amount_kobo = int(amount_ngn * 100)  # Paystack expects kobo
+
+        # ─ Create pending transaction record (idempotent reference)
+        import uuid as _uuid
+        reference = str(_uuid.uuid4())
+
+        transaction = PaymentTransaction.objects.create(
+            user=request.user,
+            cv=cv_obj,
+            reference=reference,
+            amount_eur=fee_eur,
+            status=PaymentStatus.PENDING,
+        )
+
+        # ─ Call Paystack to initialize the transaction
+        try:
+            payload = {
+                'email': request.user.email,
+                'amount': amount_kobo,
+                'reference': reference,
+                'currency': 'NGN',
+                'metadata': {
+                    'cv_id': cv_obj.pk,
+                    'user_id': request.user.pk,
+                    'document': cv_obj.cv_filename or 'cv.pdf',
+                    'fee_eur': str(fee_eur),
+                },
+            }
+            result = _paystack_request('/transaction/initialize', method='POST', payload=payload)
+        except RuntimeError as e:
+            transaction.status = PaymentStatus.FAILED
+            transaction.save(update_fields=['status'])
+            logger.error(f'Paystack init failed for user {request.user.pk}: {e}')
+            return Response(
+                {'error': 'payment_init_failed', 'message': 'Could not connect to payment provider. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if not result.get('status'):
+            transaction.status = PaymentStatus.FAILED
+            transaction.save(update_fields=['status'])
+            return Response(
+                {'error': 'payment_init_failed', 'message': result.get('message', 'Paystack returned an error.')},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        data = result.get('data', {})
+        return Response({
+            'already_paid': False,
+            'authorization_url': data.get('authorization_url'),
+            'access_code': data.get('access_code'),
+            'reference': reference,
+            'amount_kobo': amount_kobo,
+            'amount_ngn': amount_kobo / 100,
+            'fee_eur': fee_eur,
+        })
+
+
+class PaymentVerifyView(APIView):
+    """
+    POST /api/payments/verify/
+    Body: { "reference": "<paystack_reference>" }
+
+    1. Looks up the PaymentTransaction by reference (must belong to this user).
+    2. Calls Paystack /transaction/verify/:reference with the secret key.
+    3. Validates status == 'success' and amount >= expected.
+    4. Issues a one-time, 10-minute DownloadToken for the CV.
+    5. Returns: { download_token, cv_id }
+    """
+    permission_classes = [IsEmployee]
+
+    def post(self, request):
+        reference = request.data.get('reference', '').strip()
+        if not reference:
+            return Response({'error': 'reference is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch transaction; enforce ownership
+        try:
+            transaction = PaymentTransaction.objects.select_related('cv', 'user').get(
+                reference=reference,
+                user=request.user,
+            )
+        except PaymentTransaction.DoesNotExist:
+            return Response(
+                {'error': 'invalid_reference', 'message': 'Transaction not found or does not belong to you.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # If already verified and paid, just regenerate a fresh download token
+        if transaction.status == PaymentStatus.PAID:
+            token_str = _make_download_token(request.user.pk, transaction.cv_id, transaction.pk)
+            dt = DownloadToken.objects.create(
+                user=request.user,
+                cv=transaction.cv,
+                transaction=transaction,
+                token=token_str,
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
+            return Response({
+                'download_token': dt.token,
+                'cv_id': transaction.cv_id,
+                'already_verified': True,
+            })
+
+        # Call Paystack verify endpoint — server-side, using secret key
+        try:
+            result = _paystack_request(f'/transaction/verify/{reference}', method='GET')
+        except RuntimeError as e:
+            logger.error(f'Paystack verify failed for reference {reference}: {e}')
+            return Response(
+                {'error': 'verify_failed', 'message': 'Could not verify payment with Paystack. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        if not result.get('status'):
+            return Response(
+                {'error': 'verify_failed', 'message': result.get('message', 'Paystack verification error.')},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        pdata = result.get('data', {})
+        ps_status = pdata.get('status')
+
+        if ps_status != 'success':
+            transaction.status = PaymentStatus.FAILED
+            transaction.save(update_fields=['status', 'updated_at'])
+            return Response(
+                {
+                    'error': 'payment_not_successful',
+                    'message': f'Payment status is "{ps_status}". Please try paying again.',
+                    'paystack_status': ps_status,
+                },
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+
+        # Validate amount — must be >= expected kobo (allow small rounding diff)
+        # Use the same live rate that was used when the payment was initiated (cached, 1 hour)
+        paid_kobo = pdata.get('amount', 0)
+        live_rate = _get_live_eur_ngn_rate()
+        expected_kobo = int(settings.CV_DOWNLOAD_FEE_EUR * live_rate * 100)
+        if paid_kobo < expected_kobo * 0.90:  # 10% tolerance covers rate drift between initiate + verify
+            transaction.status = PaymentStatus.FAILED
+            transaction.save(update_fields=['status', 'updated_at'])
+            logger.warning(
+                f'Amount mismatch: paid {paid_kobo} kobo, expected >={expected_kobo} '
+                f'(rate={live_rate}) for ref {reference}'
+            )
+            return Response(
+                {'error': 'amount_mismatch', 'message': 'Payment amount does not match the required fee.'},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+
+
+        # All checks passed — mark transaction as paid
+        transaction.status = PaymentStatus.PAID
+        transaction.paystack_id = str(pdata.get('id', ''))
+        transaction.amount_kobo = paid_kobo
+        transaction.save(update_fields=['status', 'paystack_id', 'amount_kobo', 'updated_at'])
+
+        # Issue one-time download token (10 minutes)
+        token_str = _make_download_token(request.user.pk, transaction.cv_id, transaction.pk)
+        dt = DownloadToken.objects.create(
+            user=request.user,
+            cv=transaction.cv,
+            transaction=transaction,
+            token=token_str,
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+
+        logger.info(
+            f'Payment verified: user={request.user.pk} cv={transaction.cv_id} '
+            f'reference={reference} paystack_id={transaction.paystack_id}'
+        )
+
+        return Response({
+            'download_token': dt.token,
+            'cv_id': transaction.cv_id,
+            'already_verified': False,
+        })
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class PaystackWebhookView(APIView):
+    """
+    POST /api/payments/webhook/
+    Receives async event notifications from Paystack.
+    Validates the HMAC-SHA512 signature in X-Paystack-Signature header.
+    On charge.success: marks matching transaction as paid and creates a download token.
+    """
+    permission_classes = [permissions.AllowAny]  # Webhook is public; auth via HMAC
+    authentication_classes = []  # No JWT required
+
+    def post(self, request):
+        secret_key = settings.PAYSTACK_SECRET_KEY
+        if not secret_key:
+            return HttpResponse(status=400)
+
+        # Validate Paystack HMAC-SHA512 signature
+        paystack_sig = request.headers.get('X-Paystack-Signature', '')
+        body_bytes = request.body  # raw bytes
+        expected_sig = hmac.new(
+            secret_key.encode('utf-8'),
+            body_bytes,
+            hashlib.sha512,
+        ).hexdigest()
+
+        if not hmac.compare_digest(paystack_sig, expected_sig):
+            logger.warning(f'Paystack webhook: invalid signature received.')
+            return HttpResponse('Invalid signature', status=401)
+
+        try:
+            event = json_module.loads(body_bytes.decode('utf-8'))
+        except Exception:
+            return HttpResponse('Bad JSON', status=400)
+
+        event_type = event.get('event')
+        edata = event.get('data', {})
+
+        if event_type == 'charge.success':
+            reference = edata.get('reference', '')
+            paid_kobo = edata.get('amount', 0)
+            paystack_id = str(edata.get('id', ''))
+            ps_status = edata.get('status', '')
+
+            if ps_status == 'success' and reference:
+                try:
+                    txn = PaymentTransaction.objects.get(reference=reference)
+                    if txn.status != PaymentStatus.PAID:
+                        txn.status = PaymentStatus.PAID
+                        txn.paystack_id = paystack_id
+                        txn.amount_kobo = paid_kobo
+                        txn.save(update_fields=['status', 'paystack_id', 'amount_kobo', 'updated_at'])
+                        logger.info(
+                            f'Webhook: transaction {reference} marked paid via charge.success event.'
+                        )
+                except PaymentTransaction.DoesNotExist:
+                    logger.warning(f'Webhook: unknown reference {reference}.')
+
+        # Always return 200 to acknowledge receipt
+        return HttpResponse(status=200)
+

@@ -20,12 +20,14 @@ import {
   CheckCircle2,
   Wand2,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  CreditCard,
 } from 'lucide-react';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
 import { calculateProfileStrength } from '../../utils/profile';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
+import { PaymentModal } from '../../components/ui/PaymentModal';
 import { toast } from 'sonner';
 
 /* ─── Section edit modal ──────────────────────────────────────────────── */
@@ -62,6 +64,10 @@ export const EmployeeProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [generatedCVs, setGeneratedCVs] = useState<any[]>([]);
   const [cvsLoading, setCvsLoading] = useState(false);
+
+  // Payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedCV, setSelectedCV] = useState<{ id: number; name: string } | null>(null);
 
   const fetchGeneratedCVs = () => {
     setCvsLoading(true);
@@ -136,24 +142,13 @@ export const EmployeeProfilePage = () => {
     }
   };
 
-  const handleDownloadCV = async (cvId: number) => {
-    try {
-      const token = localStorage.getItem('access_token');
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-      const response = await fetch(`${API_BASE_URL}/cv/${cvId}/download/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Download failed');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Tailored_CV_${cvId}.pdf`;
-      a.click();
-    } catch (e) {
-      toast.error('Failed to download CV');
-    }
+  // Open payment modal instead of downloading directly
+  const handleDownloadCV = (cv: any) => {
+    const cvName = cv.target_role || cv.template_name || `CV #${cv.id}`;
+    setSelectedCV({ id: cv.id, name: cvName });
+    setPaymentModalOpen(true);
   };
+
 
   /* ── Nav rows ── */
   type ProfileSectionItem = {
@@ -402,9 +397,9 @@ export const EmployeeProfilePage = () => {
               <p className="text-sm text-neutral-500 text-center py-4">You haven't generated any tailored CVs yet. Apply to a job to create one!</p>
             ) : (
               generatedCVs.map(cv => (
-                <div key={cv.id} className="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-neutral-900 dark:text-white mb-0.5">{cv.target_role || 'Tailored CV'}</p>
+                <div key={cv.id} className="p-4 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-neutral-900 dark:text-white mb-0.5 truncate">{cv.target_role || 'Tailored CV'}</p>
                     <p className="text-xs text-neutral-500">
                       {cv.target_company && <span>{cv.target_company} • </span>}
                       <span>{cv.template_name}</span>
@@ -412,10 +407,11 @@ export const EmployeeProfilePage = () => {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleDownloadCV(cv.id)}
-                    className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors shrink-0 ml-3"
+                    onClick={() => handleDownloadCV(cv)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors shrink-0"
                   >
-                    Download PDF
+                    <CreditCard size={12} />
+                    €1.50
                   </button>
                 </div>
               ))
@@ -650,6 +646,20 @@ export const EmployeeProfilePage = () => {
           </>
         )}
       </AnimatePresence>
+
+      {/* ── Payment Modal ── */}
+      {selectedCV && (
+        <PaymentModal
+          isOpen={paymentModalOpen}
+          onClose={() => {
+            setPaymentModalOpen(false);
+            setSelectedCV(null);
+          }}
+          cvId={selectedCV.id}
+          cvName={selectedCV.name}
+          userEmail={profile.email || ''}
+        />
+      )}
     </div>
   );
 };

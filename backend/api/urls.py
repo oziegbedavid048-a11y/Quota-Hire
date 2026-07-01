@@ -32,6 +32,11 @@ urlpatterns = [
     path('cv/my-cvs/',              views.MyGeneratedCVsView.as_view(),           name='cv-my-list'),
     path('cv/<int:pk>/download/',   views.DownloadGeneratedCVView.as_view(),      name='cv-download'),
 
+    # ── Payments ──────────────────────────────────────────────────────────────
+    path('payments/initiate/',      views.PaymentInitiateView.as_view(),         name='payment-initiate'),
+    path('payments/verify/',        views.PaymentVerifyView.as_view(),           name='payment-verify'),
+    path('payments/webhook/',       views.PaystackWebhookView.as_view(),         name='payment-webhook'),
+
     # ── Analytics ─────────────────────────────────────────────────────────────
     path('dashboard/analytics/',    views.DashboardAnalyticsView.as_view(),      name='dashboard-analytics'),
 
@@ -62,3 +67,4 @@ urlpatterns = [
     path('admin/jobs/',             views.AdminJobListView.as_view(),            name='admin-jobs'),
     path('admin/jobs/<int:pk>/edit/', views.AdminJobUpdateView.as_view(),        name='admin-job-update'),
 ]
+

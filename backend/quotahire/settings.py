@@ -192,3 +192,12 @@ POSTHOG_API_KEY = config('POSTHOG_API_KEY', default=None)
 POSTHOG_HOST = config('POSTHOG_HOST', default=None)
 if POSTHOG_API_KEY and POSTHOG_HOST:
     posthog = Posthog(POSTHOG_API_KEY, host=POSTHOG_HOST)
+
+# ── Paystack Payment Gateway ──────────────────────────────────────────────────
+PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')
+PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='')
+# CV download fee in EUR; Paystack converts to NGN at live exchange rate
+CV_DOWNLOAD_FEE_EUR = float(config('CV_DOWNLOAD_FEE_EUR', default='1.50'))
+# Approximate NGN per EUR — used to compute a floor kobo amount for validation
+NGN_PER_EUR = int(config('NGN_PER_EUR', default='1650'))
+
