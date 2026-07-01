@@ -146,14 +146,14 @@ export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail }: Payme
             key="drawer"
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 32, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50"
+            className="fixed bottom-0 left-0 right-0 z-50 w-full"
           >
-            <div className="w-full max-w-sm mx-auto">
+            <div className="w-full">
               <div className="flex justify-center pb-2 pt-2">
                 <div className="w-9 h-1 rounded-full bg-neutral-300 dark:bg-neutral-700" />
               </div>
 
-              <div className="bg-white dark:bg-neutral-900 rounded-t-3xl overflow-hidden border-t border-x border-neutral-200 dark:border-neutral-800 shadow-2xl">
+              <div className="bg-white dark:bg-neutral-900 rounded-t-3xl overflow-hidden border-t border-neutral-200 dark:border-neutral-800 shadow-2xl">
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-neutral-100 dark:border-neutral-800">
@@ -176,7 +176,7 @@ export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail }: Payme
                 </div>
 
                 {/* Body */}
-                <div className="px-5 pt-4 pb-7">
+                <div className="px-5 pt-4 pb-7" style={{ paddingBottom: 'max(1.75rem, env(safe-area-inset-bottom))' }}>
                   <AnimatePresence mode="wait">
 
                     {/* IDLE */}
