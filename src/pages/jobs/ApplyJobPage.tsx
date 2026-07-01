@@ -122,7 +122,9 @@ export const ApplyJobPage = () => {
     formData.fullName.trim() &&
     formData.phoneNumber.trim() &&
     formData.country.trim() &&
-    formData.city.trim()
+    formData.city.trim() &&
+    formData.postalCode.trim() &&
+    formData.streetAddress.trim()
   );
 
   const handleContinue = async (e: React.FormEvent) => {
@@ -271,8 +273,9 @@ export const ApplyJobPage = () => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Postal Code</label>
+                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Postal Code *</label>
                       <input
+                        required
                         type="text"
                         value={formData.postalCode}
                         onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
@@ -280,8 +283,9 @@ export const ApplyJobPage = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Street Address</label>
+                      <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Street Address *</label>
                       <input
+                        required
                         type="text"
                         value={formData.streetAddress}
                         onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
