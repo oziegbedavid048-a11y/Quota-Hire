@@ -92,10 +92,7 @@ export const CharcoalChevronTemplate = ({ data }: { data: CVData }) => (
             {data.linkedinUrl && <Text style={s.hdCtxt}>in {data.linkedinUrl}</Text>}
           </View>
         </View>
-        {data.passportUrl
-          ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-          : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
-        }
+        {data.passportUrl && <Image source={{ uri: data.passportUrl }} style={s.avatar} />}
       </View>
 
       {/* ── Columns ── */}

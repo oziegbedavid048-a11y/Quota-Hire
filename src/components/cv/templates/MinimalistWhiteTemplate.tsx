@@ -64,14 +64,7 @@ export const MinimalistWhiteTemplate = ({ data }: { data: CVData }) => (
 
       {/* ── Header ── */}
       <View style={s.header}>
-        {data.passportUrl
-          ? <Image source={{ uri: data.passportUrl }} style={s.avatarImg} />
-          : (
-            <View style={s.monogram}>
-              <Text style={s.monoTxt}>{(data.name || 'U').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}</Text>
-            </View>
-          )
-        }
+        {data.passportUrl && <Image source={{ uri: data.passportUrl }} style={s.avatarImg} />}
         <Text style={s.hdName}>{data.name}</Text>
         <View style={s.hdLine} />
         <Text style={s.hdRole}>{data.headline}</Text>

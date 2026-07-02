@@ -79,10 +79,7 @@ export const CorporateBannerTemplate = ({ data }: { data: CVData }) => (
       {/* ── Sidebar ── */}
       <View style={s.sidebar}>
         <View style={s.sbPhotoBox}>
-          {data.passportUrl
-            ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-            : <View style={s.initBox}><Text style={s.initTxt}>{(data.name || 'U').charAt(0)}</Text></View>
-          }
+          {data.passportUrl && <Image source={{ uri: data.passportUrl }} style={s.avatar} />}
           <Text style={s.sbName}>{data.name}</Text>
           <Text style={s.sbRole}>{data.headline}</Text>
           {data.location && <Text style={s.sbContact}>⚲ {data.location}</Text>}

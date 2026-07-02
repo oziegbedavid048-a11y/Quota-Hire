@@ -257,10 +257,8 @@ export const EuropassTemplate = ({ data }: { data: EuropassData }) => {
         {/* ── TOP: Photo & Logo ── */}
         <View style={s.topRow}>
           <View style={s.photoBox}>
-            {data.passportImageUrl ? (
+            {data.passportImageUrl && (
               <Image src={data.passportImageUrl} style={s.photoImage} />
-            ) : (
-              <View style={s.photoPlaceholder}><Text style={{ color: '#9ca3af' }}>{initial}</Text></View>
             )}
           </View>
           <View style={s.logoContainer}>
