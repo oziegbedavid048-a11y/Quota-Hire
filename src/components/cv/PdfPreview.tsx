@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
 // Initialize PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface PdfPreviewProps {
   url: string;
@@ -27,7 +28,7 @@ export function PdfPreview({ url }: PdfPreviewProps) {
         setError(null);
 
         // Load the PDF
-        const loadingTask = pdfjsLib.getDocument(url);
+        const loadingTask = pdfjsLib.getDocument({ url });
         const pdf = await loadingTask.promise;
         
         if (!isActive) return;
@@ -55,6 +56,7 @@ export function PdfPreview({ url }: PdfPreviewProps) {
 
         const renderContext = {
           canvasContext: ctx,
+          canvas: canvas,
           viewport: scaledViewport,
         };
 
