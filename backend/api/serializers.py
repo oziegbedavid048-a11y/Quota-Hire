@@ -5,6 +5,15 @@ Quota Hire — DRF Serializers
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+import re
+
+def sanitize_text(value):
+    if not value:
+        return value
+    # Remove emojis and characters outside the basic multilingual plane (BMP)
+    # This prevents DB crashes on strict utf8 setups and PDF generation crashes.
+    return re.sub(r'[^\u0000-\uFFFF]', '', str(value))
+
 
 from .models import (
     CustomUser,
@@ -69,15 +78,25 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 # ── Profile Serializers ───────────────────────────────────────────────────────
 
 class EmployeeProfileSerializer(serializers.ModelSerializer):
+    bio = serializers.CharField(max_length=2000, allow_blank=True, required=False)
+
     class Meta:
         model  = EmployeeProfile
         fields = ('title', 'bio', 'linkedin_url', 'resume_url', 'resume_file', 'education', 'skills', 'experience_years', 'phone_number', 'country', 'city', 'postal_code', 'street_address')
 
+    def validate_bio(self, value):
+        return sanitize_text(value)
+
 
 class CompanyProfileSerializer(serializers.ModelSerializer):
+    description = serializers.CharField(max_length=2000, allow_blank=True, required=False)
+
     class Meta:
         model  = CompanyProfile
         fields = ('company_name', 'website', 'industry', 'description', 'logo_url', 'contact_email', 'contact_phone')
+
+    def validate_description(self, value):
+        return sanitize_text(value)
 
 
 # ── User Serializers ──────────────────────────────────────────────────────────
@@ -184,6 +203,7 @@ class JobSerializer(serializers.ModelSerializer):
     company_is_verified = serializers.SerializerMethodField()
     company_logo_url = serializers.SerializerMethodField()
     applicants_count = serializers.SerializerMethodField()
+    description      = serializers.CharField(max_length=5000, allow_blank=True, required=False)
 
     class Meta:
         model  = Job
@@ -195,6 +215,9 @@ class JobSerializer(serializers.ModelSerializer):
             'external_apply_url', 'status', 'package', 'applicants_count', 'created_at',
         )
         read_only_fields = ('id', 'status', 'created_at')
+
+    def validate_description(self, value):
+        return sanitize_text(value)
 
     def get_company_name(self, obj):
         return obj.company_name
@@ -236,11 +259,15 @@ class ApplicationSerializer(serializers.ModelSerializer):
     job_title    = serializers.CharField(source='job.title', read_only=True)
     company_name = serializers.SerializerMethodField()
     employee_name = serializers.SerializerMethodField()
+    cover_letter = serializers.CharField(max_length=3000, allow_blank=True, required=False)
 
     class Meta:
         model  = Application
         fields = ('id', 'job', 'job_title', 'company_name', 'employee', 'employee_name', 'status', 'cover_letter', 'applied_at')
         read_only_fields = ('id', 'employee', 'status', 'applied_at')
+
+    def validate_cover_letter(self, value):
+        return sanitize_text(value)
 
     def get_company_name(self, obj):
         return obj.job.company_name

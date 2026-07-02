@@ -31,6 +31,7 @@ class CustomUser(AbstractUser):
     setup_completed  = models.BooleanField(default=False)
     location         = models.CharField(max_length=200, blank=True)
     saved_jobs       = models.ManyToManyField('Job', related_name='saved_by', blank=True)
+    email_verified   = models.BooleanField(default=False)
     created_at       = models.DateTimeField(auto_now_add=True)
 
     # Use email as the primary login identifier
@@ -53,6 +54,9 @@ class CustomUser(AbstractUser):
 
     @property
     def is_verified(self):
+        if not self.email_verified:
+            return False
+            
         if self.role == UserRole.COMPANY:
             try:
                 prof = self.company_profile

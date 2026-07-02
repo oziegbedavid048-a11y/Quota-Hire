@@ -541,6 +541,13 @@ class VerifyEmailView(APIView):
                 return Response({'error': 'Invalid token payload'}, status=status.HTTP_400_BAD_REQUEST)
                 
             # Verification is handled implicitly by successful login if needed, or we could add an is_verified field
+            try:
+                user = CustomUser.objects.get(email=email)
+                user.email_verified = True
+                user.save(update_fields=['email_verified'])
+            except CustomUser.DoesNotExist:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
             return Response({'message': 'Email verified successfully'}, status=status.HTTP_200_OK)
             
         except jwt.ExpiredSignatureError:
