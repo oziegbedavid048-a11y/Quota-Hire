@@ -1375,6 +1375,9 @@ def _paystack_request(path, method='GET', payload=None):
         body = e.read().decode('utf-8')
         logger.error(f'Paystack API error [{e.code}] {path}: {body}')
         raise RuntimeError(f'Paystack API error {e.code}: {body}')
+    except (urllib.error.URLError, TimeoutError) as e:
+        logger.error(f'Paystack network error {path}: {e}')
+        raise RuntimeError(f'Paystack API network error: {e}')
 
 
 def _make_download_token(user_id, cv_id, transaction_id):
