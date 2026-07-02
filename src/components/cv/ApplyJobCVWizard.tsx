@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BlobProvider } from '@react-pdf/renderer';
 import {
   Loader2, Send, ChevronRight, ChevronLeft, X, Sparkles,
-  FileText, AlertTriangle, ExternalLink, RefreshCw
+  FileText, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppContext, apiFetch } from '../../context/AppContext';
@@ -15,16 +15,9 @@ import { selectTemplate } from '../../lib/cv/cvTemplateSelector';
 import { TemplateId } from '../../lib/cv/types';
 
 // Templates
-import { ClassicSplitTemplate } from './templates/ClassicSplitTemplate';
-import { ExecutiveBlueTemplate } from './templates/ExecutiveBlueTemplate';
 import { VividSidebarTemplate } from './templates/VividSidebarTemplate';
-import { InverseGreenTemplate } from './templates/InverseGreenTemplate';
-import { CorporateBannerTemplate } from './templates/CorporateBannerTemplate';
-import { MinimalistWhiteTemplate } from './templates/MinimalistWhiteTemplate';
 import { ModernTechTemplate } from './templates/ModernTechTemplate';
-import { CreativeAccentTemplate } from './templates/CreativeAccentTemplate';
 import { SteelBlueBannerTemplate } from './templates/SteelBlueBannerTemplate';
-import { CharcoalChevronTemplate } from './templates/CharcoalChevronTemplate';
 import { PlainTemplate1 } from './templates/plain/PlainTemplate1';
 import { PlainTemplate2 } from './templates/plain/PlainTemplate2';
 import { PlainTemplate3 } from './templates/plain/PlainTemplate3';
@@ -284,12 +277,6 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
     } finally {
       setSaving(false);
     }
-  };
-
-  // ── Open PDF in new tab (reliable cross-browser alternative to iframe) ────
-  const handleOpenInNewTab = () => {
-    const url = currentUrlRef.current;
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
   };
 
 
@@ -569,16 +556,8 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                             </div>
                             <h3 className="font-bold text-gray-900">Tailored CV Preview</h3>
                           </div>
-                          {/* Quick action buttons - always shown in step 4; use ref values */}
+                          {/* Quick action buttons removed to enforce partial preview */}
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={handleOpenInNewTab}
-                              title="Open PDF in new tab"
-                              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-400 transition"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </button>
-
                           </div>
                         </div>
 
@@ -593,7 +572,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                               <>
                                 {/* PDF Viewer Container */}
                                 <div
-                                  className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative"
+                                  className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative select-none"
                                   style={{ height: '55vh', minHeight: '380px' }}
                                 >
                                   {/* Loading overlay */}
@@ -619,36 +598,18 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                                     </div>
                                   )}
 
-                                  {/* ── PDF display: use object tag with fallback ── */}
+                                  {/* ── PDF display: use restricted iframe with gradient mask ── */}
                                   {!blobLoading && !blobError && url && (
                                     <>
-                                      {/* Primary: <object> tag — most reliable for blob: URLs */}
-                                      <object
-                                        data={url}
-                                        type="application/pdf"
-                                        className="w-full h-full border-none"
-                                        aria-label="CV PDF Preview"
-                                      >
-                                        {/* Fallback if <object> is unsupported (e.g. mobile browsers) */}
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
-                                          <FileText className="w-12 h-12 text-gray-300 mb-4" />
-                                          <p className="text-gray-600 font-semibold text-sm mb-1">
-                                            PDF preview not supported in this browser
-                                          </p>
-                                          <p className="text-gray-400 text-xs mb-4">
-                                            Your CV has been generated successfully. Use the buttons below to view or download it.
-                                          </p>
-                                          <div className="flex gap-3">
-                                            <button
-                                              onClick={handleOpenInNewTab}
-                                              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-black transition"
-                                            >
-                                              <ExternalLink className="w-4 h-4" /> Open PDF
-                                            </button>
-
-                                          </div>
-                                        </div>
-                                      </object>
+                                      <div className="absolute top-0 left-0 w-full pointer-events-none" style={{ height: '115%' }}>
+                                        <iframe src={`${url}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-none" title="CV PDF Preview" />
+                                      </div>
+                                      {/* Gradient mask to hide the bottom and show it's a partial preview */}
+                                      <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-gray-50 via-white/80 to-transparent pointer-events-none flex items-end justify-center pb-6 z-20">
+                                        <span className="bg-gray-900/10 text-gray-600 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md">
+                                          Preview (Partial)
+                                        </span>
+                                      </div>
                                     </>
                                   )}
                                 </div>

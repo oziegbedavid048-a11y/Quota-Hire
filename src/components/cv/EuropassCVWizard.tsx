@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BlobProvider } from '@react-pdf/renderer';
 import {
   X, ChevronRight, ChevronLeft, Loader2, FileText,
-  Sparkles, ExternalLink, User, Briefcase, GraduationCap,
+  Sparkles, User, Briefcase, GraduationCap,
   Globe, Star, Send, AlertTriangle, Camera, Plus, Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -768,13 +768,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                       </div>
                       <h3 className="font-bold text-gray-900">Your Europass CV Preview</h3>
                     </div>
-                    <button
-                      onClick={() => urlRef.current && window.open(urlRef.current, '_blank', 'noopener,noreferrer')}
-                      title="Open in new tab"
-                      className="p-2 rounded-lg bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-400 transition"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
+                    {/* Removed Open PDF Button */}
                   </div>
 
                   <BlobProvider document={<EuropassTemplate data={euroData} />}>
@@ -783,7 +777,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                       if (url) urlRef.current = url;
                       return (
                         <>
-                          <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative"
+                          <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative select-none"
                                style={{ height: '52vh', minHeight: '360px' }}>
                             {blobLoading && (
                               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
@@ -799,17 +793,17 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                               </div>
                             )}
                             {!blobLoading && !blobError && url && (
-                              <object data={url} type="application/pdf" className="w-full h-full border-none" aria-label="Europass CV Preview">
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 p-6 text-center">
-                                  <FileText className="w-12 h-12 text-gray-300 mb-4" />
-                                  <p className="text-gray-600 font-semibold text-sm mb-3">Preview not supported in this browser</p>
-                                  <button onClick={() => urlRef.current && window.open(urlRef.current, '_blank')}
-                                    className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-sm font-semibold transition mt-3"
-                                    style={{ background: '#15750a' }}>
-                                    <ExternalLink className="w-4 h-4" /> Open PDF
-                                  </button>
+                              <>
+                                <div className="absolute top-0 left-0 w-full pointer-events-none" style={{ height: '115%' }}>
+                                  <iframe src={`${url}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-none" title="Europass CV Preview" />
                                 </div>
-                              </object>
+                                {/* Gradient mask to hide the bottom and show it's a partial preview */}
+                                <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-gray-50 via-white/80 to-transparent pointer-events-none flex items-end justify-center pb-6 z-20">
+                                  <span className="bg-gray-900/10 text-gray-600 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md">
+                                    Preview (Partial)
+                                  </span>
+                                </div>
+                              </>
                             )}
                           </div>
 
