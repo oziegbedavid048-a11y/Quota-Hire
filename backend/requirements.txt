@@ -54,7 +54,7 @@ markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
 multidict==6.7.1
-networkx==3.6.1
+networkx==3.4.2
 numba==0.65.1
 numpy==2.4.6
 onnxruntime==1.26.0
