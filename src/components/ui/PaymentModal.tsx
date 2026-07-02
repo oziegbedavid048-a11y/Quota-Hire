@@ -20,6 +20,7 @@ export interface PaymentModalProps {
   cvId: number;
   cvName: string;
   userEmail: string;
+  isPaid?: boolean;
 }
 
 type ModalState =
@@ -27,7 +28,7 @@ type ModalState =
   | "verifying" | "downloading" | "success"
   | "cancelled" | "error";
 
-export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail, isPaid }: PaymentModalProps) {
   const [modalState, setModalState] = useState<ModalState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [currentReference, setCurrentReference] = useState("");
@@ -36,6 +37,7 @@ export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail }: Payme
     document.body.style.overflow = isOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
+
 
   const setError = (msg: string) => { setErrorMessage(msg); setModalState("error"); };
 
@@ -117,6 +119,13 @@ export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail }: Payme
       }
     }
   }, [cvId, cvName, userEmail, downloadWithToken, verifyAndDownload]);
+
+  // Auto-trigger if already paid
+  useEffect(() => {
+    if (isOpen && isPaid && modalState === "idle") {
+      handlePay();
+    }
+  }, [isOpen, isPaid, modalState, handlePay]);
 
   const handleRetry = useCallback(async () => {
     if (currentReference && modalState === "error") { await verifyAndDownload(currentReference); }
@@ -231,7 +240,9 @@ export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail }: Payme
                         className="flex flex-col items-center py-8 gap-3"
                       >
                         <Loader2 size={32} className="text-accent-500 animate-spin" />
-                        <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Preparing payment...</p>
+                        <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+                          {isPaid ? "Preparing download..." : "Preparing payment..."}
+                        </p>
                       </motion.div>
                     )}
 
