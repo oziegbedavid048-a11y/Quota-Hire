@@ -50,7 +50,7 @@ services:
       - key: VITE_API_URL
         value: "https://quotahire-backend.onrender.com/api"
       - key: VITE_PAYSTACK_PUBLIC_KEY
-        value: "pk_test_bb5d0b744b4bd3e9feb529bcf872afc361358af0"
+        value: "pk_live_beef698343ec5dbd2937927772c726f907e0db9e"
     routes:
       - type: rewrite
         source: /*
