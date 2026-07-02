@@ -67,7 +67,7 @@ export const EmployeeProfilePage = () => {
 
   // Payment modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedCV, setSelectedCV] = useState<{ id: number; name: string } | null>(null);
+  const [selectedCV, setSelectedCV] = useState<{ id: number; name: string; isPaid?: boolean } | null>(null);
 
   const fetchGeneratedCVs = () => {
     setCvsLoading(true);
@@ -142,10 +142,10 @@ export const EmployeeProfilePage = () => {
     }
   };
 
-  // Open payment modal instead of downloading directly
+  // Open payment modal. If paid, it will auto-download inside the modal.
   const handleDownloadCV = (cv: any) => {
     const cvName = cv.target_role || cv.template_name || `CV #${cv.id}`;
-    setSelectedCV({ id: cv.id, name: cvName });
+    setSelectedCV({ id: cv.id, name: cvName, isPaid: cv.is_paid });
     setPaymentModalOpen(true);
   };
 
@@ -668,6 +668,7 @@ export const EmployeeProfilePage = () => {
           cvId={selectedCV.id}
           cvName={selectedCV.name}
           userEmail={profile.email || ''}
+          isPaid={selectedCV.isPaid}
         />
       )}
     </div>

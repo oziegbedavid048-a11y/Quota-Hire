@@ -97,6 +97,7 @@ export async function openPaystackPopup(opts: PaystackPopupOptions): Promise<voi
     amount: opts.amountKobo,
     ref: opts.reference,
     currency: 'NGN',
+    channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer', 'apple_pay'],
     label: opts.label ?? 'Quota Hire — Document Download',
     onClose: opts.onClose,
     callback: (response: PaystackSuccessResponse) => {
