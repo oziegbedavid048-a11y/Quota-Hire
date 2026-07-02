@@ -1,5 +1,17 @@
 import { Buffer } from 'buffer';
 window.Buffer = window.Buffer || Buffer;
+
+// Polyfill for Promise.withResolvers required by newer pdfjs-dist versions
+if (typeof (Promise as any).withResolvers === 'undefined') {
+  (Promise as any).withResolvers = function () {
+    let resolve, reject;
+    const promise = new Promise((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  };
+}
 import "./index.css";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
