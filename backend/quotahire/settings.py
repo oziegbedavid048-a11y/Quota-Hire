@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     'cloudinary',
     'rest_framework',
     'corsheaders',
+    # Third party JWT Blacklist
+    'rest_framework_simplejwt.token_blacklist',
     # Local
     'api.apps.ApiConfig',
 ]
@@ -151,6 +153,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '200/day',
+        'user': '1000/day'
+    },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
@@ -160,6 +170,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
