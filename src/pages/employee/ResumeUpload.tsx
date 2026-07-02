@@ -4,12 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, UploadCloud, FileText, CheckCircle2, X,
   ChevronRight, Briefcase, GraduationCap, MapPin, Phone,
-  Sparkles, RefreshCw, User, Clock
+  RefreshCw, User, Clock
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { toast } from 'sonner';
-import { GenerateCVModal } from '../../components/cv/GenerateCVModal';
-import { Wand2 } from 'lucide-react';
 
 export default function ResumeUpload() {
   const navigate = useNavigate();
@@ -22,7 +20,6 @@ export default function ResumeUpload() {
   const [isSaving, setIsSaving] = useState(false);
   const [parsedData, setParsedData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showGenerateCV, setShowGenerateCV] = useState(false);
 
   const handleFileChange = async (selectedFile: File) => {
     if (!selectedFile) return;
@@ -179,34 +176,7 @@ export default function ResumeUpload() {
             </motion.div>
           )}
 
-          {/* ── Generate CV Banner ── */}
-          {!parsedData && !isParsing && (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="mt-6 bg-gradient-to-br from-blue-900 to-blue-800 rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden group"
-            >
-              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity duration-500 transform group-hover:scale-110">
-                <Wand2 size={120} />
-              </div>
-              <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-xl font-extrabold mb-1">No resume? Generate one instantly</h3>
-                  <p className="text-blue-200 text-sm max-w-sm leading-relaxed">
-                    Answer a few questions and our AI will craft a professional, ATS-friendly CV for you.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowGenerateCV(true)}
-                  className="w-full sm:w-auto px-6 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg hover:bg-blue-500 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 border border-blue-500"
-                >
-                  <Sparkles size={16} className="text-white" />
-                  Generate Resume
-                </button>
-              </div>
-            </motion.div>
-          )}
+
 
           {/* ── Parsing loader ── */}
           {isParsing && (
@@ -363,11 +333,6 @@ export default function ResumeUpload() {
 
         </AnimatePresence>
 
-        {/* ── Generate CV Modal ── */}
-        <GenerateCVModal
-          isOpen={showGenerateCV}
-          onClose={() => setShowGenerateCV(false)}
-        />
       </div>
     </div>
   );

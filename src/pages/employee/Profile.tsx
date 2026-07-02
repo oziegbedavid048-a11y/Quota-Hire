@@ -18,10 +18,10 @@ import {
   Save,
   User,
   CheckCircle2,
-  Wand2,
   Loader2,
   RefreshCw,
   CreditCard,
+  Download,
 } from 'lucide-react';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
@@ -406,13 +406,23 @@ export const EmployeeProfilePage = () => {
                       <span> • {new Date(cv.generated_at).toLocaleDateString()}</span>
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleDownloadCV(cv)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors shrink-0"
-                  >
-                    <CreditCard size={12} />
-                    €1.50
-                  </button>
+                  {cv.is_paid ? (
+                    <button
+                      onClick={() => handleDownloadCV(cv)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors shrink-0"
+                    >
+                      <Download size={12} />
+                      Download
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleDownloadCV(cv)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors shrink-0"
+                    >
+                      <CreditCard size={12} />
+                      €1.50
+                    </button>
+                  )}
                 </div>
               ))
             )}

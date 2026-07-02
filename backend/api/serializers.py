@@ -408,15 +408,16 @@ class ShortlistedApplicantSerializer(serializers.ModelSerializer):
 
 class GeneratedCVSerializer(serializers.ModelSerializer):
     download_url = serializers.SerializerMethodField()
+    is_paid = serializers.SerializerMethodField()
 
     class Meta:
         model  = GeneratedCV
         fields = (
             'id', 'template_id', 'template_name', 'target_role',
             'target_company', 'cover_letter_text', 'generated_at',
-            'download_url', 'application', 'work_experience_json',
+            'download_url', 'application', 'work_experience_json', 'is_paid',
         )
-        read_only_fields = ('id', 'generated_at', 'download_url')
+        read_only_fields = ('id', 'generated_at', 'download_url', 'is_paid')
 
     def get_download_url(self, obj):
         request = self.context.get('request')
@@ -424,4 +425,8 @@ class GeneratedCVSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(url)
         return url
+
+    def get_is_paid(self, obj):
+        from .models import PaymentTransaction, PaymentStatus
+        return PaymentTransaction.objects.filter(cv=obj, status=PaymentStatus.PAID).exists()
 
