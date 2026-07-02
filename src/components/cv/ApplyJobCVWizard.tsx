@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { Job, EmployeeProfile } from '../../types';
+import { PdfPreview } from './PdfPreview';
 
 // CV Engine
 import { WizardAnswers, buildCVData, generateAIAssistedSuggestions } from '../../lib/cv/cvContentBuilder';
@@ -571,48 +572,37 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                             return (
                               <>
                                 {/* PDF Viewer Container */}
-                                <div
-                                  className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative select-none"
-                                  style={{ height: '55vh', minHeight: '380px' }}
-                                >
-                                  {/* Loading overlay */}
-                                  {blobLoading && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
-                                      <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
-                                      <p className="text-sm text-gray-500 font-medium">Rendering PDF…</p>
-                                      <p className="text-xs text-gray-400 mt-1">This usually takes a few seconds</p>
+                                  {!blobLoading && !blobError && url ? (
+                                    <PdfPreview url={url} />
+                                  ) : (
+                                    <div
+                                      className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative select-none"
+                                      style={{ height: '55vh', minHeight: '380px' }}
+                                    >
+                                      {/* Loading overlay */}
+                                      {blobLoading && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+                                          <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
+                                          <p className="text-sm text-gray-500 font-medium">Rendering PDF…</p>
+                                          <p className="text-xs text-gray-400 mt-1">This usually takes a few seconds</p>
+                                        </div>
+                                      )}
+
+                                      {/* Error state */}
+                                      {!blobLoading && blobError && (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center z-10">
+                                          <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+                                          <p className="text-red-700 font-bold text-sm mb-1">Failed to Render PDF</p>
+                                          <p className="text-red-500 text-xs mb-4 max-w-xs">
+                                            {blobError.message || 'An unexpected error occurred while rendering the CV template.'}
+                                          </p>
+                                          <p className="text-gray-400 text-xs">
+                                            Try switching to a different template below, or reload the wizard.
+                                          </p>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
-
-                                  {/* Error state */}
-                                  {!blobLoading && blobError && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center z-10">
-                                      <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
-                                      <p className="text-red-700 font-bold text-sm mb-1">Failed to Render PDF</p>
-                                      <p className="text-red-500 text-xs mb-4 max-w-xs">
-                                        {blobError.message || 'An unexpected error occurred while rendering the CV template.'}
-                                      </p>
-                                      <p className="text-gray-400 text-xs">
-                                        Try switching to a different template below, or reload the wizard.
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* ── PDF display: use restricted iframe with gradient mask ── */}
-                                  {!blobLoading && !blobError && url && (
-                                    <>
-                                      <div className="absolute top-0 left-0 w-full pointer-events-none" style={{ height: '115%' }}>
-                                        <iframe src={`${url}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-none" title="CV PDF Preview" />
-                                      </div>
-                                      {/* Gradient mask to hide the bottom and show it's a partial preview */}
-                                      <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-gray-50 via-white/80 to-transparent pointer-events-none flex items-end justify-center pb-6 z-20">
-                                        <span className="bg-gray-900/10 text-gray-600 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md">
-                                          Preview (Partial)
-                                        </span>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
 
                                 {/* Template Selector */}
                                 <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-sm mt-4">

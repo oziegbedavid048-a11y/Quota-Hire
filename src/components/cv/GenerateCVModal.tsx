@@ -12,6 +12,7 @@ import { EmployeeProfile } from '../../types';
 import { SteelBlueBannerTemplate } from './templates/SteelBlueBannerTemplate';
 import { CVData } from '../../lib/cv/types';
 import { generateAIAssistedSuggestions } from '../../lib/cv/cvContentBuilder';
+import { PdfPreview } from './PdfPreview';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface WorkEntry {
@@ -599,37 +600,28 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                         return (
                           <>
                             {/* PDF viewer */}
-                            <div
-                              className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative select-none"
-                              style={{ height: '50vh', minHeight: '340px' }}
-                            >
-                              {blobLoading && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
-                                  <Loader2 className="w-8 h-8 animate-spin text-blue-800 mb-3" />
-                                  <p className="text-sm text-gray-500 font-medium">Rendering PDF…</p>
-                                </div>
-                              )}
-                              {!blobLoading && blobError && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center z-10">
-                                  <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
-                                  <p className="text-red-700 font-bold text-sm">Failed to render PDF</p>
-                                  <p className="text-red-500 text-xs mt-1">Please go back and check your entries.</p>
-                                </div>
-                              )}
-                              {!blobLoading && !blobError && url && (
-                                <>
-                                  <div className="absolute top-0 left-0 w-full pointer-events-none" style={{ height: '115%' }}>
-                                    <iframe src={`${url}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-none" title="Generated CV Preview" />
+                            {!blobLoading && !blobError && url ? (
+                              <PdfPreview url={url} />
+                            ) : (
+                              <div
+                                className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative select-none"
+                                style={{ height: '50vh', minHeight: '340px' }}
+                              >
+                                {blobLoading && (
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10">
+                                    <Loader2 className="w-8 h-8 animate-spin text-blue-800 mb-3" />
+                                    <p className="text-sm text-gray-500 font-medium">Rendering PDF…</p>
                                   </div>
-                                  {/* Gradient mask to hide the bottom and show it's a partial preview */}
-                                  <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-gray-50 via-white/80 to-transparent pointer-events-none flex items-end justify-center pb-6 z-20">
-                                    <span className="bg-gray-900/10 text-gray-600 px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md">
-                                      Preview (Partial)
-                                    </span>
+                                )}
+                                {!blobLoading && blobError && (
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center z-10">
+                                    <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+                                    <p className="text-red-700 font-bold text-sm">Failed to render PDF</p>
+                                    <p className="text-red-500 text-xs mt-1">Please go back and check your entries.</p>
                                   </div>
-                                </>
-                              )}
-                            </div>
+                                )}
+                              </div>
+                            )}
 
                             {/* Save to Django CTA */}
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-3">
