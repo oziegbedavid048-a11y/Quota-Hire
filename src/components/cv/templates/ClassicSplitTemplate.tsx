@@ -59,14 +59,7 @@ export const ClassicSplitTemplate = ({ data }: { data: CVData }) => (
       {/* ── Sidebar ── */}
       <View style={s.sidebar}>
         <View style={s.sbHeader}>
-          {data.passportUrl
-            ? <Image source={{ uri: data.passportUrl }} style={s.avatar} />
-            : <View style={[s.avatar, { backgroundColor: '#6b7280', alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ fontSize: 20, color: WHITE, fontFamily: 'Helvetica-Bold' }}>
-                  {(data.name || 'U').charAt(0)}
-                </Text>
-              </View>
-          }
+          {data.passportUrl && <Image source={{ uri: data.passportUrl }} style={s.avatar} />}
           <Text style={s.sbName}>{data.name}</Text>
           <Text style={s.sbRole}>{data.headline}</Text>
         </View>
