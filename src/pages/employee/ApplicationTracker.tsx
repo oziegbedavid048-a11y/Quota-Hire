@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppContext } from '../../context/AppContext';
 import { Building2, Calendar, MapPin, ChevronDown, Search, Filter, Inbox, Briefcase } from 'lucide-react';
