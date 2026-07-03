@@ -58,6 +58,32 @@ from django.views.decorators.cache import cache_page
 logger = logging.getLogger(__name__)
 
 from datetime import timedelta
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+
+
+# ── Custom Throttle Classes ───────────────────────────────────────────────────
+
+class RegisterThrottle(AnonRateThrottle):
+    """Limits new account creation to 10 per IP per hour.
+    Prevents email bombing via mass fake-account registration.
+    """
+    scope = 'register'
+
+
+class AuthEmailThrottle(AnonRateThrottle):
+    """Limits verification and password-reset email sends to 5 per IP per hour.
+    Prevents inbox flooding of real users via the open email endpoints.
+    """
+    scope = 'auth_email'
+
+
+class UploadThrottle(UserRateThrottle):
+    """Limits file uploads (avatar, resume) to 20 per authenticated user per hour.
+    Prevents storage exhaustion attacks.
+    """
+    scope = 'upload'
+
+
 from .models import (
     CustomUser, EmployeeProfile, CompanyProfile, Job, Application,
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
@@ -231,6 +257,7 @@ class RegisterView(generics.CreateAPIView):
     queryset            = CustomUser.objects.all()
     serializer_class    = RegisterSerializer
     permission_classes  = [permissions.AllowAny]
+    throttle_classes    = [RegisterThrottle]  # 10 new accounts/IP/hour
 
     def perform_create(self, serializer):
         from django.db import transaction
@@ -361,15 +388,38 @@ class CompanyProfileView(generics.RetrieveUpdateAPIView):
 class AvatarUploadView(APIView):
     """POST /api/profile/avatar/ — upload a new avatar/logo."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [UploadThrottle]  # 20 uploads/user/hour
+
+    # Allowed MIME types for avatar images
+    ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/gif'}
+    MAX_AVATAR_SIZE_MB  = 5
 
     def post(self, request):
         if 'avatar' not in request.FILES:
             return Response({'error': 'No image file provided.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        avatar_file = request.FILES['avatar']
+
+        # Validate file size (max 5 MB)
+        max_bytes = self.MAX_AVATAR_SIZE_MB * 1024 * 1024
+        if avatar_file.size > max_bytes:
+            return Response(
+                {'error': f'Image is too large. Maximum size is {self.MAX_AVATAR_SIZE_MB} MB.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate MIME type reported by the browser
+        content_type = avatar_file.content_type or ''
+        if content_type not in self.ALLOWED_IMAGE_TYPES:
+            return Response(
+                {'error': 'Invalid file type. Only JPEG, PNG, WebP, and GIF images are accepted.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user = request.user
-        user.avatar = request.FILES['avatar']
+        user.avatar = avatar_file
         user.save(update_fields=['avatar'])
-        
+
         avatar_url = request.build_absolute_uri(user.avatar.url)
         return Response({'avatarUrl': avatar_url, 'message': 'Avatar updated successfully!'})
 
@@ -501,7 +551,6 @@ class JobListCreateView(generics.ListCreateAPIView):
         return [permissions.AllowAny()]
 
     def create(self, request, *args, **kwargs):
-        print("INCOMING JOB DATA:", request.data)
         return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -559,8 +608,9 @@ class VerifyEmailView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class SendVerificationEmailView(APIView):
-    permission_classes = []
+    permission_classes     = []
     authentication_classes = []
+    throttle_classes       = [AuthEmailThrottle]  # 5 emails/IP/hour
 
     def post(self, request):
         email = request.data.get('email')
@@ -599,8 +649,9 @@ class SendVerificationEmailView(APIView):
         return Response({'message': 'Verification email sent'}, status=status.HTTP_200_OK)
 
 class ForgotPasswordView(APIView):
-    permission_classes = []
+    permission_classes     = []
     authentication_classes = []
+    throttle_classes       = [AuthEmailThrottle]  # 5 reset emails/IP/hour
 
     def post(self, request):
         email = request.data.get('email')
@@ -714,6 +765,7 @@ class JobStatusUpdateView(APIView):
 class DashboardAnalyticsView(APIView):
     """GET /api/dashboard/analytics/ — Returns chart data and stats for dashboards."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [UserRateThrottle]  # uses default 'user' scope: 1000/day
 
     def get(self, request):
         user = request.user
@@ -1001,6 +1053,15 @@ class ResumeUploadView(APIView):
     structured profile fields, saves the file, and returns parsed data.
     """
     permission_classes = [IsEmployee]
+    throttle_classes   = [UploadThrottle]  # 20 uploads/user/hour
+
+    # Allowed MIME types for resume documents
+    ALLOWED_RESUME_TYPES = {
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  # .docx
+        'application/msword',  # .doc
+    }
+    MAX_RESUME_SIZE_MB = 10
 
     def post(self, request):
         if 'resume' not in request.FILES:
@@ -1009,9 +1070,26 @@ class ResumeUploadView(APIView):
         resume_file = request.FILES['resume']
         filename = resume_file.name.lower()
 
+        # Validate extension (first line of defence)
         if not (filename.endswith('.pdf') or filename.endswith('.docx') or filename.endswith('.doc')):
             return Response(
                 {'error': 'Only PDF, DOC, and DOCX files are accepted.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate MIME type reported by the browser
+        content_type = resume_file.content_type or ''
+        if content_type not in self.ALLOWED_RESUME_TYPES:
+            return Response(
+                {'error': 'Invalid file type. Only PDF, DOC, and DOCX files are accepted.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file size (max 10 MB)
+        max_bytes = self.MAX_RESUME_SIZE_MB * 1024 * 1024
+        if resume_file.size > max_bytes:
+            return Response(
+                {'error': f'File is too large. Maximum resume size is {self.MAX_RESUME_SIZE_MB} MB.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -1157,11 +1235,12 @@ class ResumeProxyView(APIView):
             return response
 
         except Exception as e:
-            import traceback
-            error_details = traceback.format_exc()
-            import logging
-            logging.error(f"Error reading resume: {error_details}")
-            return Response({'error': str(e), 'details': error_details}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Log full traceback server-side only — never expose to API clients
+            logger.error("Error reading resume for application pk=%s: %s", pk, e, exc_info=True)
+            return Response(
+                {'error': 'Unable to retrieve resume. Please try again later.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 # ── Generated CV Views ────────────────────────────────────────────────────────

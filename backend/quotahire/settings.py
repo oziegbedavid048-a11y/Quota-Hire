@@ -159,7 +159,11 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '200/day',
-        'user': '1000/day'
+        'user': '1000/day',
+        # Targeted throttles used by custom throttle classes in views.py:
+        'register': '10/hour',           # max 10 new accounts per IP per hour
+        'auth_email': '5/hour',          # max 5 verification/reset emails per IP per hour
+        'upload': '20/hour',             # max 20 file uploads per user per hour
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -167,7 +171,10 @@ REST_FRAMEWORK = {
 
 # ── Simple JWT ───────────────────────────────────────────────────────────────
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    # 30 minutes: reduces exposure window if a token is stolen.
+    # The frontend uses the refresh token (30 days) to get new access tokens
+    # silently — users will not notice the shorter access token lifetime.
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -212,3 +219,19 @@ CV_DOWNLOAD_FEE_EUR = float(config('CV_DOWNLOAD_FEE_EUR', default='1.50'))
 # Approximate NGN per EUR — used to compute a floor kobo amount for validation
 NGN_PER_EUR = int(config('NGN_PER_EUR', default='1650'))
 
+# ── Production Security Headers ───────────────────────────────────────────────
+# Only enforce HTTPS/security headers in production (not in local dev)
+if not DEBUG:
+    # Force all HTTP traffic to HTTPS
+    SECURE_SSL_REDIRECT = True
+    # Tell browsers to only use HTTPS for 1 year (prevents SSL stripping)
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    # Prevent browsers from MIME-sniffing (e.g., executing an HTML file served as text)
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    # Session and CSRF cookies only sent over HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Prevent your site from being embedded in iframes on other domains (clickjacking)
+    X_FRAME_OPTIONS = 'DENY'
