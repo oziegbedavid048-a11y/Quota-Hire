@@ -251,7 +251,11 @@ def handle_application_post_save(sender, instance, created, **kwargs):
         user=employee_name,
         title=notif_title,
         message=notif_message,
+        job_title=instance.job.title,
+        is_remote=instance.job.is_remote,
+        employment_type=instance.job.employment_type
     )
+
     _send_email_safe(
         to_email=employee_user.email,
         subject=f"{notif_title} — Quota Hire",

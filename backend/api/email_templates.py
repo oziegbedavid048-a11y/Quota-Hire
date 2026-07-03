@@ -52,13 +52,6 @@ LOGO_SVG = """\
 def _build_email(*, title, body_html):
     """Assembles the complete HTML email document."""
     return (
-        "<!DOCTYPE html>"
-        '<html lang="en">'
-        "<head>"
-        '<meta charset="UTF-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1.0">'
-        '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">'
-        f"<title>{title}</title>"
         "<style>"
         "body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}"
         "table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}"
@@ -107,8 +100,6 @@ def _build_email(*, title, body_html):
         ".hdr,.bdy,.ftr{padding-left:24px!important;padding-right:24px!important;}"
         "h1{font-size:20px!important;}}"
         "</style>"
-        "</head>"
-        "<body>"
         '<div class="wrap"><div class="card">'
         '<div class="hdr">' + LOGO_SVG + "</div>"
         '<div class="bdy">' + body_html + "</div>"
@@ -119,7 +110,6 @@ def _build_email(*, title, body_html):
         '<a href="https://quotahire.org/dashboard">My Dashboard</a></p>'
         "</div>"
         "</div></div>"
-        "</body></html>"
     )
 
 
@@ -637,7 +627,7 @@ _STATUS_CONFIG = {
 }
 
 
-def get_notification_email_html(user, title, message):
+def get_notification_email_html(user, title, message, job_title=None, is_remote=False, employment_type=None):
     cfg = _STATUS_CONFIG.get(title, {})
 
     badge_html = ""
@@ -648,6 +638,64 @@ def get_notification_email_html(user, title, message):
     detail = cfg.get("detail", "")
     advice = cfg.get("advice", "")
     href, lbl = cfg.get("cta", ("https://quotahire.org/dashboard", "Go to My Dashboard"))
+
+    if job_title:
+        is_freelance_or_remote = is_remote or (employment_type and "freelance" in employment_type.lower())
+        job_display_type = "Remote/Freelance" if is_freelance_or_remote else "On-site/Full-time"
+        
+        if title == "Application Under Review":
+            intro = (
+                f"We are writing to let you know that your application for the <strong>{job_title}</strong> "
+                f"({job_display_type}) position is now being actively reviewed by the hiring team. "
+                f"This is a positive indication that your profile has passed the initial screening."
+            )
+        elif title == "Decision Pending":
+            intro = (
+                f"Thank you for your continued engagement. We are writing to inform you that you have "
+                f"successfully completed the interview stage for the <strong>{job_title}</strong> position, "
+                f"and the hiring team is now in the final stages of their deliberation."
+            )
+        elif title == "Application Accepted":
+            intro = (
+                f"We are absolutely thrilled to inform you that your application for the "
+                f"<strong>{job_title}</strong> position has been successful. The hiring team has selected "
+                f"you as their preferred candidate!"
+            )
+        elif title == "Application Update":
+            intro = (
+                f"Thank you sincerely for applying for the <strong>{job_title}</strong> position. "
+                f"After a thorough review, the hiring team has made the difficult decision to move "
+                f"forward with another candidate for this particular role."
+            )
+        elif title == "Interview Invitation":
+            intro = (
+                f"We are delighted to inform you that you have been shortlisted and invited "
+                f"for an interview for the <strong>{job_title}</strong> ({job_display_type}) position. "
+                f"This is a significant achievement and reflects the hiring team's genuine interest in your profile. "
+                f"Congratulations on reaching this stage."
+            )
+            if is_freelance_or_remote:
+                detail = (
+                    "Since this is a remote or freelance position, there is no need to travel for a physical interview. "
+                    "A representative from the company will contact you shortly to arrange a virtual follow-up interview "
+                    "or discussion. Please ensure you are actively monitoring your email inbox and Quota Hire dashboard."
+                )
+                advice = (
+                    "To prepare effectively: review the job requirements carefully, ensure you have a "
+                    "stable internet connection and a quiet environment for the call, and be ready "
+                    "to discuss your previous remote work or freelance experience. We wish you every success."
+                )
+            else:
+                detail = (
+                    "For this on-site role, a representative from the company will contact you to "
+                    "arrange the interview schedule and provide the physical location details. Please ensure you are "
+                    "actively monitoring your email inbox and Quota Hire dashboard."
+                )
+                advice = (
+                    "To prepare effectively: research the company in depth, review the job description, "
+                    "and plan your travel so you can arrive at the location on time. Dress professionally "
+                    "and bring copies of your CV. We wish you every success."
+                )
 
     body = (
         _h1(title, "An update on your Quota Hire activity") +
