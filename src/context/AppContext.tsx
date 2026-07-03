@@ -192,7 +192,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           // silently ignore polling errors
         }
       }
-    }, 20000);
+    }, 120000);
 
     return () => clearInterval(pollInterval);
   }, []);

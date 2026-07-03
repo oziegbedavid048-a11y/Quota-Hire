@@ -84,6 +84,13 @@ class UploadThrottle(UserRateThrottle):
     scope = 'upload'
 
 
+class PaymentThrottle(UserRateThrottle):
+    """Limits payment initialization to 30 requests per user per hour.
+    Prevents spamming the payment provider.
+    """
+    scope = 'payment'
+
+
 from .models import (
     CustomUser, EmployeeProfile, CompanyProfile, Job, Application,
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
@@ -605,7 +612,7 @@ class VerifyEmailView(APIView):
             return Response({'error': 'Invalid verification link'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"Email verification failed: {e}", exc_info=True)
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': 'An internal error occurred. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class SendVerificationEmailView(APIView):
     permission_classes     = []
@@ -644,7 +651,7 @@ class SendVerificationEmailView(APIView):
             )
         except Exception as e:
             logger.error(f"Failed to send manual verification email to {email}: {e}")
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': 'Failed to send verification email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
         return Response({'message': 'Verification email sent'}, status=status.HTTP_200_OK)
 
@@ -727,7 +734,7 @@ class ResetPasswordView(APIView):
             return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"Password reset failed: {e}", exc_info=True)
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': 'An internal error occurred. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class JobDetailView(generics.RetrieveAPIView):
     """GET /api/jobs/<id>/ — get a single approved job. Cached for 5 minutes."""
@@ -765,7 +772,6 @@ class JobStatusUpdateView(APIView):
 class DashboardAnalyticsView(APIView):
     """GET /api/dashboard/analytics/ — Returns chart data and stats for dashboards."""
     permission_classes = [permissions.IsAuthenticated]
-    throttle_classes   = [UserRateThrottle]  # uses default 'user' scope: 1000/day
 
     def get(self, request):
         user = request.user
@@ -1532,6 +1538,7 @@ class PaymentInitiateView(APIView):
     3. Returns: { authorization_url, reference, amount_ngn, already_paid, download_token }
     """
     permission_classes = [IsEmployee]
+    throttle_classes = [PaymentThrottle]
 
     def post(self, request):
         cv_id = request.data.get('cv_id')

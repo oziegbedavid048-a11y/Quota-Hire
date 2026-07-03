@@ -153,17 +153,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
-    ],
+    # No global throttle classes — we apply targeted throttles only on
+    # abuse-prone endpoints (register, auth emails, uploads) via per-view
+    # throttle_classes. Global throttling at 200/day anon and 1000/day user
+    # caused legitimate users to get 429 errors due to background polling.
+    'DEFAULT_THROTTLE_CLASSES': [],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '200/day',
-        'user': '1000/day',
-        # Targeted throttles used by custom throttle classes in views.py:
+        # Targeted throttles — only applied to specific views:
         'register': '10/hour',           # max 10 new accounts per IP per hour
         'auth_email': '5/hour',          # max 5 verification/reset emails per IP per hour
         'upload': '20/hour',             # max 20 file uploads per user per hour
+        'payment': '30/hour',            # max 30 payment requests per user per hour
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
