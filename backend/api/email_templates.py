@@ -709,19 +709,12 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
             },
             "content": {
                 "title": subject,
-                "body": text_content   # plain-text fallback (subject line used as body)
+                "body": text_content,
+                "html": html_content
             },
             "routing": {
                 "method": "all",
                 "channels": ["email"]
-            },
-            "channels": {
-                "email": {
-                    "override": {
-                        "subject": subject,
-                        "html": html_content
-                    }
-                }
             }
         }
     }
