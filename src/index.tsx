@@ -30,7 +30,11 @@ if (import.meta.env.VITE_SENTRY_DSN && import.meta.env.PROD) {
     tracesSampleRate: 1.0,
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
-    enableLogs: true
+    enableLogs: true,
+    ignoreErrors: [
+      // Common iOS in-app browser (Instagram/Facebook) tracking/injection error
+      "undefined is not an object (evaluating 'window.webkit.messageHandlers')"
+    ]
   });
 }
 
