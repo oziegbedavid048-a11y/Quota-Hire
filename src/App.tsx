@@ -62,6 +62,16 @@ const ProtectedRoute = ({
   return <>{children}</>;
 };
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 const AppRoutes = () => {
   const location = useLocation();
   const { appError, retryFetchData } = useAppContext();
@@ -258,6 +268,7 @@ export function App() {
     <ThemeProvider>
       <AppProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <ScrollToTop />
           <AppRoutes />
           <Toaster position="top-right" richColors closeButton theme="system" />
         </Router>
