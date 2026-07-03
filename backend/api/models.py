@@ -450,3 +450,55 @@ class DownloadToken(models.Model):
     def __str__(self):
         status = 'used' if self.used else 'active'
         return f'DownloadToken [{status}] — {self.user} | CV:{self.cv_id}'
+
+
+# ── Newsletter ────────────────────────────────────────────────────────────────
+
+class NewsletterAudience(models.TextChoices):
+    EMPLOYEES = 'employees', 'All Employees'
+    COMPANIES = 'companies', 'All Companies'
+    ALL       = 'all',       'All Users (Employees + Companies)'
+
+
+class Newsletter(models.Model):
+    """
+    Admin-composed newsletter blast.
+    Admin types a subject + plain-text body in the Django admin panel,
+    selects the target audience, then clicks "Send Newsletter" to dispatch
+    branded emails via Courier to all matching users.
+    """
+    subject    = models.CharField(
+        max_length=300,
+        help_text="Email subject line shown in the recipient's inbox."
+    )
+    body       = models.TextField(
+        help_text=(
+            "Plain text body of the newsletter. "
+            "Each new line becomes a paragraph in the email. "
+            "No HTML needed — the system wraps it in the Quota Hire brand template automatically."
+        )
+    )
+    audience   = models.CharField(
+        max_length=20,
+        choices=NewsletterAudience.choices,
+        default=NewsletterAudience.ALL,
+        help_text="Who should receive this newsletter?"
+    )
+    sent_at    = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Automatically set when the newsletter is dispatched."
+    )
+    recipients_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of emails successfully dispatched in the last send."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Newsletter'
+        verbose_name_plural = 'Newsletters'
+        ordering            = ['-created_at']
+
+    def __str__(self):
+        status = f'Sent to {self.recipients_count}' if self.sent_at else 'Draft'
+        return f'[{status}] {self.subject}'

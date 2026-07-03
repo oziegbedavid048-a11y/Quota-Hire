@@ -604,6 +604,21 @@ class VerifyEmailView(APIView):
             except CustomUser.DoesNotExist:
                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
+            # Send the welcome email now that the user has verified their email
+            try:
+                from .email_templates import get_welcome_email_html, send_courier_email
+                display_name = user.get_full_name() or user.username
+                html_content = get_welcome_email_html(user=display_name)
+                send_courier_email(
+                    to_email=user.email,
+                    subject="Welcome to Quota Hire! Your account is verified ✅",
+                    text_content=f"Hi {display_name}, your Quota Hire account is now verified. Complete your profile at https://quotahire.org/dashboard",
+                    html_content=html_content,
+                )
+            except Exception as e:
+                logger.warning(f"Welcome email failed for {user.email}: {e}")
+                # Non-critical — do not block the verification response
+
             return Response({'message': 'Email verified successfully'}, status=status.HTTP_200_OK)
             
         except jwt.ExpiredSignatureError:

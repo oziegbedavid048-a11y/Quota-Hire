@@ -23,6 +23,8 @@ from .models import (
     GeneratedCV,
     PaymentTransaction,
     DownloadToken,
+    Newsletter,
+    NewsletterAudience,
 )
 
 
@@ -590,3 +592,256 @@ class DownloadTokenAdmin(admin.ModelAdmin):
     def token_short(self, obj):
         return obj.token[:20] + '…' if len(obj.token) > 20 else obj.token
 
+
+# ── Newsletter Admin ──────────────────────────────────────────────────────────
+
+class NewsletterAdminForm(forms.ModelForm):
+    """Custom form with a larger, more user-friendly body textarea."""
+    body = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 18,
+            'cols': 80,
+            'style': 'font-size:14px;line-height:1.6;font-family:Georgia,serif;',
+            'placeholder': (
+                'Write your newsletter here in plain text.\n\n'
+                'Each line break becomes a new paragraph in the email.\n\n'
+                'Example:\n'
+                'We are excited to share some updates with you...\n\n'
+                'This month we have added new features including...\n\n'
+                'We hope you enjoy the platform!\n\n'
+                'Warm regards,\nThe Quota Hire Team'
+            )
+        }),
+        help_text=(
+            'Write in plain text. Each new line becomes a paragraph in the branded email. '
+            'No HTML required. The system will automatically wrap this in the '
+            'Quota Hire email template with your logo and colours.'
+        )
+    )
+
+    class Meta:
+        model = Newsletter
+        fields = '__all__'
+
+
+@admin.register(Newsletter)
+class NewsletterAdmin(admin.ModelAdmin):
+    """
+    Admin panel for composing and sending newsletters.
+
+    HOW TO USE:
+    1. Click '+ Add Newsletter'
+    2. Fill in the Subject, write your plain-text body, and choose your Audience
+    3. Save the newsletter (it starts as a Draft)
+    4. From the newsletter list, tick the checkbox and select '📧 Send Newsletter'
+       — OR — open the newsletter and click the big green 'Send Newsletter Now' button
+    5. The system will dispatch branded emails to all matching users via Courier
+    """
+    form            = NewsletterAdminForm
+    list_display    = ('subject', 'audience_badge', 'recipients_count', 'status_badge', 'created_at', 'send_button')
+    list_filter     = ('audience', 'created_at')
+    search_fields   = ('subject', 'body')
+    ordering        = ('-created_at',)
+    readonly_fields = ('sent_at', 'recipients_count', 'created_at', 'send_now_button')
+    actions         = ['send_newsletter_action']
+
+    fieldsets = (
+        ('📝 Compose Newsletter', {
+            'fields': ('subject', 'body', 'audience'),
+            'description': (
+                '<div style="background:#f0faf0;border-left:4px solid #1A6515;'
+                'padding:12px 16px;border-radius:6px;margin-bottom:16px;">'
+                '<strong style="color:#1A6515;">ℹ️ How to send:</strong><br>'
+                'Fill in the fields below, save, then click the green '
+                '<strong>Send Newsletter Now</strong> button that appears below, '
+                'or use the list action checkbox after saving.'
+                '</div>'
+            )
+        }),
+        ('📊 Send Status', {
+            'fields': ('send_now_button', 'sent_at', 'recipients_count', 'created_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    # ── Display helpers ───────────────────────────────────────────────────────
+
+    @admin.display(description='Audience')
+    def audience_badge(self, obj):
+        colours = {
+            NewsletterAudience.EMPLOYEES: '#3b82f6',
+            NewsletterAudience.COMPANIES: '#10b981',
+            NewsletterAudience.ALL:       '#8b5cf6',
+        }
+        colour = colours.get(obj.audience, '#64748b')
+        label = obj.get_audience_display()
+        return format_html(
+            '<span style="background:{};color:#fff;padding:2px 10px;'
+            'border-radius:20px;font-size:11px;font-weight:600">{}</span>',
+            colour, label
+        )
+
+    @admin.display(description='Status')
+    def status_badge(self, obj):
+        if obj.sent_at:
+            return format_html(
+                '<span style="background:#10b981;color:#fff;padding:2px 10px;'
+                'border-radius:20px;font-size:11px;font-weight:600">✅ Sent</span>'
+            )
+        return format_html(
+            '<span style="background:#f59e0b;color:#fff;padding:2px 10px;'
+            'border-radius:20px;font-size:11px;font-weight:600">📝 Draft</span>'
+        )
+
+    @admin.display(description='Send')
+    def send_button(self, obj):
+        url = reverse('admin:api_newsletter_change', args=[obj.id])
+        return format_html(
+            '<a class="button" style="background:#1A6515;color:white;padding:4px 12px;'
+            'border-radius:4px;font-weight:bold;text-decoration:none;font-size:11px;" '
+            'href="{}">📧 Open</a>',
+            url
+        )
+
+    @admin.display(description='Send Newsletter Now')
+    def send_now_button(self, obj):
+        if not obj.pk:
+            return format_html(
+                '<span style="color:#94a3b8;">Save first, then the Send button will appear here.</span>'
+            )
+        url = reverse('admin:api_newsletter_send', args=[obj.id])
+        return format_html(
+            '<a class="button" style="background:linear-gradient(to right,#1A6515,#15750a);'
+            'color:white;padding:10px 24px;border-radius:8px;font-weight:800;'
+            'text-decoration:none;font-size:14px;display:inline-block;'
+            'box-shadow:0 4px 12px rgba(26,101,21,0.3);" href="{}">'
+            '📧 Send Newsletter Now</a>',
+            url
+        )
+
+    # ── Custom URLs ───────────────────────────────────────────────────────────
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<int:pk>/send/',
+                self.admin_site.admin_view(self.send_newsletter_view),
+                name='api_newsletter_send'
+            ),
+        ]
+        return custom_urls + urls
+
+    # ── Core send logic ───────────────────────────────────────────────────────
+
+    def _dispatch_newsletter(self, newsletter_obj):
+        """
+        Queries users based on audience, sends each a branded email via Courier.
+        Returns (sent_count, failed_count, error_list).
+        """
+        from django.utils import timezone
+        from .email_templates import get_newsletter_email_html, send_courier_email
+        from .models import CustomUser
+
+        audience = newsletter_obj.audience
+
+        if audience == NewsletterAudience.EMPLOYEES:
+            users = CustomUser.objects.filter(role='employee', is_active=True, email_verified=True)
+        elif audience == NewsletterAudience.COMPANIES:
+            users = CustomUser.objects.filter(role='company', is_active=True, email_verified=True)
+        else:  # ALL
+            users = CustomUser.objects.filter(
+                role__in=['employee', 'company'],
+                is_active=True,
+                email_verified=True
+            )
+
+        html_content = get_newsletter_email_html(
+            subject=newsletter_obj.subject,
+            plain_body=newsletter_obj.body,
+        )
+
+        sent = 0
+        failed = 0
+        errors = []
+
+        for user in users:
+            try:
+                send_courier_email(
+                    to_email=user.email,
+                    subject=newsletter_obj.subject,
+                    text_content=newsletter_obj.body[:200],
+                    html_content=html_content,
+                )
+                sent += 1
+            except Exception as exc:
+                failed += 1
+                errors.append(f"{user.email}: {exc}")
+
+        # Update the newsletter record
+        newsletter_obj.sent_at = timezone.now()
+        newsletter_obj.recipients_count = sent
+        newsletter_obj.save(update_fields=['sent_at', 'recipients_count'])
+
+        return sent, failed, errors
+
+    # ── Action: send from list ────────────────────────────────────────────────
+
+    @admin.action(description='📧 Send Newsletter to selected audience')
+    def send_newsletter_action(self, request, queryset):
+        total_sent = 0
+        total_failed = 0
+
+        for newsletter in queryset:
+            sent, failed, errors = self._dispatch_newsletter(newsletter)
+            total_sent += sent
+            total_failed += failed
+            if errors:
+                import logging
+                logging.getLogger(__name__).error(
+                    "Newsletter '%s' send errors: %s", newsletter.subject, errors
+                )
+
+        if total_sent:
+            self.message_user(
+                request,
+                f'✅ Newsletter dispatched successfully to {total_sent} recipient(s).'
+                + (f' ⚠️ {total_failed} failed — check server logs.' if total_failed else '')
+            )
+        else:
+            self.message_user(
+                request,
+                f'⚠️ No emails were sent. {total_failed} error(s) occurred — check server logs.',
+                level='WARNING'
+            )
+
+    # ── View: send from detail page button ───────────────────────────────────
+
+    def send_newsletter_view(self, request, pk):
+        from django.http import HttpResponseRedirect
+        from django.contrib import messages
+
+        try:
+            newsletter = Newsletter.objects.get(pk=pk)
+        except Newsletter.DoesNotExist:
+            messages.error(request, 'Newsletter not found.')
+            return HttpResponseRedirect(reverse('admin:api_newsletter_changelist'))
+
+        sent, failed, errors = self._dispatch_newsletter(newsletter)
+
+        if sent > 0:
+            messages.success(
+                request,
+                f'✅ Newsletter "{newsletter.subject}" dispatched to {sent} recipient(s) successfully!'
+                + (f' ⚠️ {failed} failed — check server logs.' if failed else '')
+            )
+        else:
+            messages.error(
+                request,
+                f'❌ Newsletter send failed — no emails were sent. {failed} error(s). Check server logs.'
+            )
+
+        return HttpResponseRedirect(
+            reverse('admin:api_newsletter_change', args=[pk])
+        )
