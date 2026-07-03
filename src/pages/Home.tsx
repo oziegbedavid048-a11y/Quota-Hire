@@ -603,22 +603,24 @@ export const Home = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                {/* Google Play Button */}
-                <a
-                  href="https://play.google.com"
-                  rel="noopener noreferrer"
-                  className="group flex items-center gap-4 bg-neutral-900 dark:bg-white/10 hover:bg-neutral-800 dark:hover:bg-white/20 border border-neutral-700 dark:border-white/20 text-white rounded-2xl px-6 py-4 transition-all duration-300 hover:shadow-[0_0_25px_rgba(217,104,32,0.2)] hover:border-accent-500/50">
-                  <svg className="w-8 h-8 flex-shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Google Play Button - Coming Soon */}
+                <div className="relative flex items-center gap-4 bg-neutral-900/50 dark:bg-white/5 border border-neutral-700/50 dark:border-white/10 text-white/60 rounded-2xl px-6 py-4 cursor-not-allowed select-none">
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                    <span className="bg-accent-600 text-white text-xs font-bold px-3 py-0.5 rounded-full shadow-md whitespace-nowrap">
+                      Coming Soon
+                    </span>
+                  </div>
+                  <svg className="w-8 h-8 flex-shrink-0 opacity-40 grayscale" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M3.18 1.47C2.84 1.84 2.64 2.42 2.64 3.18V20.82C2.64 21.58 2.84 22.16 3.18 22.53L3.26 22.61L13.28 12.59V12.41L3.26 2.39L3.18 1.47Z" fill="#00D2FF"/>
                     <path d="M16.6 15.93L13.27 12.6V12.4L16.6 9.07L16.7 9.13L20.63 11.37C21.75 12.01 21.75 12.99 20.63 13.63L16.7 15.87L16.6 15.93Z" fill="#FFD700"/>
                     <path d="M16.7 15.87L13.27 12.5L3.18 22.53C3.54 22.92 4.12 22.97 4.76 22.62L16.7 15.87Z" fill="#FF3D00"/>
                     <path d="M16.7 9.13L4.76 2.38C4.12 2.03 3.54 2.08 3.18 2.47L13.27 12.5L16.7 9.13Z" fill="#00E676"/>
                   </svg>
-                  <div className="text-left">
-                    <div className="text-xs text-neutral-400 dark:text-neutral-300 leading-none mb-0.5">Get it on</div>
-                    <div className="text-base font-semibold text-white leading-tight">Google Play</div>
+                  <div className="text-left opacity-40">
+                    <div className="text-xs leading-none mb-0.5">Get it on</div>
+                    <div className="text-base font-semibold leading-tight">Google Play</div>
                   </div>
-                </a>
+                </div>
 
                 {/* App Store - Coming Soon */}
                 <div className="relative flex items-center gap-4 bg-neutral-900/50 dark:bg-white/5 border border-neutral-700/50 dark:border-white/10 text-white/60 rounded-2xl px-6 py-4 cursor-not-allowed select-none">
@@ -639,7 +641,7 @@ export const Home = () => {
 
               <p className="mt-5 text-sm text-neutral-500 dark:text-neutral-500 flex items-center gap-2">
                 <span className="inline-block w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-                Android app available now · iOS launching Q3 2025
+                Mobile apps launching Q3 2025
               </p>
             </motion.div>
           </div>
