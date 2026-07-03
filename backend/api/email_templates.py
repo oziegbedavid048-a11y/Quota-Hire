@@ -398,7 +398,11 @@ def get_newsletter_email_html(subject: str, plain_body: str) -> str:
 def send_courier_email(to_email: str, subject: str, text_content: str, html_content: str) -> bool:
     """
     Sends an email via the Courier REST API.
-    Uses 'html' property to send raw HTML, bypassing the default 'Hello World' brand wrapper.
+    Uses channel override to send raw HTML, bypassing the default brand template wrapper.
+
+    The Courier `message.content.body` only accepts plain text.
+    To deliver a fully custom HTML email we use `message.channels.email.override`
+    which lets us supply `subject` and `html_body` directly.
     """
     url = "https://api.courier.com/send"
 
@@ -409,11 +413,19 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
             },
             "content": {
                 "title": subject,
-                "body": html_content
+                "body": text_content   # plain-text fallback (subject line used as body)
             },
             "routing": {
                 "method": "all",
                 "channels": ["email"]
+            },
+            "channels": {
+                "email": {
+                    "override": {
+                        "subject": subject,
+                        "html_body": html_content
+                    }
+                }
             }
         }
     }
