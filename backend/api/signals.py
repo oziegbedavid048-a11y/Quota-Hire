@@ -25,11 +25,12 @@ logger = logging.getLogger(__name__)
 
 # ── Helper: fire email without breaking the calling transaction ───────────────
 
-def _send_email_safe(to_email: str, subject: str, html_content: str):
+def _send_email_safe(to_email: str, subject: str, html_content: str, text_content: str = None):
     """Send a Courier email, catching and logging any failure."""
     try:
         from .email_templates import send_courier_email
-        text_content = subject  # plain-text fallback is just the subject
+        if not text_content:
+            text_content = subject  # plain-text fallback is just the subject
         send_courier_email(
             to_email=to_email,
             subject=subject,
@@ -255,6 +256,7 @@ def handle_application_post_save(sender, instance, created, **kwargs):
         to_email=employee_user.email,
         subject=f"{notif_title} — Quota Hire",
         html_content=html,
+        text_content=notif_message,
     )
 
 

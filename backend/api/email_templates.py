@@ -719,7 +719,7 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
                 "email": {
                     "override": {
                         "subject": subject,
-                        "html_body": html_content
+                        "html": html_content
                     }
                 }
             }
