@@ -203,6 +203,7 @@ if SENTRY_DSN:
         # of sampled transactions.
         # We recommend adjusting this value in production.
         profiles_sample_rate=1.0,
+        ignore_errors=[SystemExit],
     )
 
 # ── PostHog Configuration ────────────────────────────────────────────────────

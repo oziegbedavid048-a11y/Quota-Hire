@@ -122,6 +122,8 @@ export const EmployeeProfilePage = () => {
       }
       await updateProfile(payload);
       closeSection();
+    } catch (error) {
+      // Error is handled in context
     } finally {
       setSaving(false);
     }
@@ -137,6 +139,8 @@ export const EmployeeProfilePage = () => {
       await changePassword({ old_password: passwordData.old_password, new_password: passwordData.new_password });
       closeSection();
       setPasswordData({ old_password: '', new_password: '', confirm_password: '' });
+    } catch (error) {
+      // Error is handled in context
     } finally {
       setSaving(false);
     }
