@@ -409,7 +409,7 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
             },
             "content": {
                 "title": subject,
-                "html": html_content
+                "body": html_content
             },
             "routing": {
                 "method": "all",
