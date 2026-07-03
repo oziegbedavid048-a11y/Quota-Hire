@@ -110,7 +110,7 @@ def handle_job_post_save(sender, instance, created, **kwargs):
     if instance.status == JobStatus.APPROVED:
         Notification.objects.create(
             user=company_user,
-            title="Job Approved ✅",
+            title="Job Approved",
             message=(
                 f"Your job posting '{instance.title}' has been approved and is now live on Quota Hire."
             )
@@ -204,12 +204,12 @@ def handle_application_post_save(sender, instance, created, **kwargs):
 
     STATUS_MESSAGES = {
         ApplicationStatus.UNDER_REVIEW: (
-            "Application Under Review 👀",
+            "Application Under Review",
             f"Your application for '{instance.job.title}' is now under review. "
             "The hiring team is looking through your profile."
         ),
         ApplicationStatus.INTERVIEW: (
-            "Interview Invitation 🎉",
+            "Interview Invitation",
             f"Great news! You've been selected for an interview for '{instance.job.title}'. "
             "The company will reach out to you with further details."
         ),
@@ -219,7 +219,7 @@ def handle_application_post_save(sender, instance, created, **kwargs):
             "You will hear back very soon."
         ),
         ApplicationStatus.ACCEPTED: (
-            "Application Accepted 🏆",
+            "Application Accepted",
             f"Congratulations! Your application for '{instance.job.title}' has been accepted. "
             "The company will be in touch with next steps."
         ),
