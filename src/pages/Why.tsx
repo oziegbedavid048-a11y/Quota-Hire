@@ -200,7 +200,7 @@ export const Why = () => {
                 <div className="md:w-1/2 md:pr-16 text-left md:text-right">
                   <div className="md:hidden block w-12 h-12 bg-accent-100 dark:bg-accent-900/30 text-accent-600 rounded-full flex items-center justify-center mb-4 font-bold">P1</div>
                   <h3 className="text-3xl font-display font-bold text-neutral-900 dark:text-white mb-4">Phase 1: Pre-Boarding</h3>
-                  <p className="text-accent-600 dark:text-accent-400 font-bold mb-4 tracking-wide uppercase text-sm">Days -5 to 0</p>
+                  <p className="text-accent-600 dark:text-accent-400 font-bold mb-4 tracking-wide uppercase text-sm">Days 0 to 5</p>
                   <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed">
                     Quotahire handles contracts, NDAs, KYC, and KPI design. Employer sets up tools: CRM, email, WhatsApp Business. We align on targets before Day 1.
                   </p>
