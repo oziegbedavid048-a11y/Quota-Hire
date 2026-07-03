@@ -31,4 +31,7 @@ db.sqlite3
 
 # Env
 .env
+.env.production
+.env.local
+.env.*.local
 backend/.env
