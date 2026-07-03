@@ -52,6 +52,13 @@ LOGO_SVG = """\
 def _build_email(*, title, body_html):
     """Assembles the complete HTML email document."""
     return (
+        "<!DOCTYPE html>"
+        '<html lang="en">'
+        "<head>"
+        '<meta charset="UTF-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1.0">'
+        '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">'
+        f"<title>{title}</title>"
         "<style>"
         "body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}"
         "table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}"
@@ -100,6 +107,8 @@ def _build_email(*, title, body_html):
         ".hdr,.bdy,.ftr{padding-left:24px!important;padding-right:24px!important;}"
         "h1{font-size:20px!important;}}"
         "</style>"
+        "</head>"
+        "<body>"
         '<div class="wrap"><div class="card">'
         '<div class="hdr">' + LOGO_SVG + "</div>"
         '<div class="bdy">' + body_html + "</div>"
@@ -110,6 +119,7 @@ def _build_email(*, title, body_html):
         '<a href="https://quotahire.org/dashboard">My Dashboard</a></p>'
         "</div>"
         "</div></div>"
+        "</body></html>"
     )
 
 

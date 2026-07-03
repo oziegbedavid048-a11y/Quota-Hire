@@ -258,7 +258,7 @@ def handle_application_post_save(sender, instance, created, **kwargs):
 
     _send_email_safe(
         to_email=employee_user.email,
-        subject=f"{notif_title} — Quota Hire",
+        subject=f"{notif_title} - Quota Hire",
         html_content=html,
         text_content=notif_message,
     )
