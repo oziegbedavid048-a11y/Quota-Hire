@@ -74,6 +74,12 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
     inlines = [EmployeeProfileInline, CompanyProfileInline]
+    actions = ['mark_as_verified']
+
+    @admin.action(description='✅ Mark selected users as email verified')
+    def mark_as_verified(self, request, queryset):
+        updated = queryset.update(email_verified=True)
+        self.message_user(request, f'Successfully marked {updated} user(s) as email verified.')
 
     @admin.display(description='Role Badge')
     def role_badge(self, obj):
