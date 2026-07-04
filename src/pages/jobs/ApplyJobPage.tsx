@@ -128,7 +128,8 @@ export const ApplyJobPage = () => {
   );
 
   // A resume must be selected (profile resume or a generated CV) before submitting
-  const hasNoResume = !profile?.resumeUrl && savedCvs.length === 0 && !generatedCvId;
+  const isResumeSelected = Boolean((!generatedCvId && profile?.resumeUrl) || generatedCvId);
+  const hasNoResume = !isResumeSelected;
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();

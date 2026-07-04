@@ -183,6 +183,17 @@ export const JobDetail = () => {
               </p>
             </section>
 
+            {job.company_about && (
+              <section>
+                <h2 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mb-5 pb-3 border-b border-neutral-100 dark:border-neutral-800">
+                  About the Company
+                </h2>
+                <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed whitespace-pre-line text-sm sm:text-[15px]">
+                  {job.company_about}
+                </p>
+              </section>
+            )}
+
             {job.requirements && job.requirements.length > 0 && (
               <section>
                 <h2 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white mb-5 pb-3 border-b border-neutral-100 dark:border-neutral-800">

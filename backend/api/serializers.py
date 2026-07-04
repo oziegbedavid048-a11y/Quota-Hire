@@ -90,12 +90,16 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
 
 class CompanyProfileSerializer(serializers.ModelSerializer):
     description = serializers.CharField(max_length=2000, allow_blank=True, required=False)
+    about_company = serializers.CharField(max_length=5000, allow_blank=True, required=False)
 
     class Meta:
         model  = CompanyProfile
-        fields = ('company_name', 'website', 'industry', 'description', 'logo_url', 'contact_email', 'contact_phone')
+        fields = ('company_name', 'website', 'industry', 'description', 'about_company', 'logo_url', 'contact_email', 'contact_phone')
 
     def validate_description(self, value):
+        return sanitize_text(value)
+
+    def validate_about_company(self, value):
         return sanitize_text(value)
 
 
@@ -202,6 +206,7 @@ class JobSerializer(serializers.ModelSerializer):
     company_id       = serializers.SerializerMethodField()
     company_is_verified = serializers.SerializerMethodField()
     company_logo_url = serializers.SerializerMethodField()
+    company_about    = serializers.SerializerMethodField()
     applicants_count = serializers.SerializerMethodField()
     description      = serializers.CharField(max_length=5000, allow_blank=True, required=False)
 
@@ -212,9 +217,9 @@ class JobSerializer(serializers.ModelSerializer):
             'title', 'description', 'requirements', 'employment_type',
             'is_remote', 'location', 'salary_range', 'commission_range', 'currency',
             'contact_email', 'contact_phone', 'whatsapp_number', 'company_address', 'custom_company_name',
-            'external_apply_url', 'status', 'package', 'applicants_count', 'created_at',
+            'external_apply_url', 'status', 'package', 'applicants_count', 'created_at', 'job_code', 'company_about',
         )
-        read_only_fields = ('id', 'status', 'created_at')
+        read_only_fields = ('id', 'status', 'created_at', 'job_code', 'company_about')
 
     def validate_description(self, value):
         return sanitize_text(value)
@@ -251,6 +256,12 @@ class JobSerializer(serializers.ModelSerializer):
 
     def get_applicants_count(self, obj):
         return obj.applications.count()
+
+    def get_company_about(self, obj):
+        try:
+            return obj.company.company_profile.about_company
+        except Exception:
+            return ""
 
 
 # ── Application Serializers ───────────────────────────────────────────────────

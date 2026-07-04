@@ -43,6 +43,7 @@ export interface CompanyProfile extends User {
   website?: string;
   industry?: string;
   description?: string;
+  aboutCompany?: string;
   logoUrl?: string;
 }
 
@@ -66,6 +67,8 @@ export interface Job {
   package?: string;
   status: JobStatus;
   external_apply_url?: string;
+  job_code?: string;
+  company_about?: string;
   createdAt: string;
 }
 

@@ -12,7 +12,8 @@ export const CompanySetup = () => {
     companyName: '',
     website: '',
     industry: '',
-    description: ''
+    description: '',
+    aboutCompany: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,9 +22,14 @@ export const CompanySetup = () => {
 
   useEffect(() => {
     if (currentUser && 'companyName' in currentUser && currentUser.companyName) {
+      const companyProf = currentUser as any;
       setFormData((prev) => ({
         ...prev,
-        companyName: currentUser.companyName
+        companyName: companyProf.companyName || '',
+        website: companyProf.website || '',
+        industry: companyProf.industry || '',
+        description: companyProf.description || '',
+        aboutCompany: companyProf.aboutCompany || '',
       }));
     }
   }, [currentUser]);
@@ -46,6 +52,7 @@ export const CompanySetup = () => {
         website: formData.website,
         industry: formData.industry,
         description: formData.description,
+        aboutCompany: formData.aboutCompany,
         setupCompleted: true
       });
       setIsLoading(false);
@@ -208,11 +215,23 @@ export const CompanySetup = () => {
                   <div>
                     <label className="block text-sm font-bold mb-2 text-neutral-700 dark:text-neutral-300 ml-1">Company Description</label>
                     <textarea
-                      className="w-full input-soft resize-none min-h-[160px]"
+                      className="w-full input-soft resize-none min-h-[100px] mb-4"
                       placeholder="Tell candidates about your mission, culture, and what makes your sales team unique..."
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={6}
+                      rows={4}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold mb-2 text-neutral-700 dark:text-neutral-300 ml-1">About Company (Compulsory Profile Field)</label>
+                    <textarea
+                      className="w-full input-soft resize-none min-h-[100px]"
+                      placeholder="Enter a detailed overview of the company history and background..."
+                      value={formData.aboutCompany}
+                      onChange={(e) => setFormData({ ...formData, aboutCompany: e.target.value })}
+                      rows={4}
                       required
                     />
                   </div>

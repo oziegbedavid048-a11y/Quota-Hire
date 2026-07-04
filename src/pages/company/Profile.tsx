@@ -31,6 +31,7 @@ export const CompanyProfilePage = () => {
         industry: profile.industry || '',
         website: profile.website || '',
         description: profile.description || '',
+        aboutCompany: profile.aboutCompany || '',
       });
     }
   }, [profile]);
@@ -242,6 +243,19 @@ export const CompanyProfilePage = () => {
                     value={formData.description || ''}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     placeholder="Describe your company, mission, and culture..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">About Company (Compulsory Profile Field)</label>
+                  <textarea 
+                    disabled={!isEditing}
+                    rows={6}
+                    className="input-soft w-full resize-none disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
+                    value={formData.aboutCompany || ''}
+                    onChange={(e) => setFormData({...formData, aboutCompany: e.target.value})}
+                    placeholder="Detailed company overview, background, and history..."
+                    required
                   />
                 </div>
               </div>

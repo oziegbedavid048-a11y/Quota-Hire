@@ -119,6 +119,7 @@ export const CompanyDashboardPage = () => {
     { label: 'Company Name', done: !!company?.companyName },
     { label: 'Industry', done: !!company?.industry },
     { label: 'Company Description', done: !!company?.description },
+    { label: 'About Company', done: !!company?.aboutCompany },
     { label: 'Active Job Posted', done: activeJobs.length > 0 },
     { label: 'Profile Verified', done: !!company?.isVerified },
   ];

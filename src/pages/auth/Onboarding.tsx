@@ -53,7 +53,13 @@ export const Onboarding = () => {
 
       await fetchData(false);
       toast.success('Profile setup complete!');
-      navigate('/dashboard');
+      const savedCode = sessionStorage.getItem('redirect_job_code');
+      if (savedCode) {
+        sessionStorage.removeItem('redirect_job_code');
+        navigate(`/jobs?code=${savedCode}`);
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       toast.error('Failed to save profile');
     } finally {

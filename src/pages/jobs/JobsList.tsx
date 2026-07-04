@@ -1,14 +1,30 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, MapPin, Banknote, Briefcase, Filter, BadgeCheck, TrendingUp } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAppContext } from '../../context/AppContext';
 export const JobsList = () => {
-  const { jobs } = useAppContext();
+  const { jobs, currentUser, loading } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [visibleCount, setVisibleCount] = useState(5);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const code = queryParams.get('code');
+    if (code) {
+      if (!loading && !currentUser) {
+        sessionStorage.setItem('redirect_job_code', code);
+        navigate('/signup?role=employee');
+      } else {
+        setSearchTerm(code);
+      }
+    }
+  }, [location.search, currentUser, loading, navigate]);
   const formatRelativeTime = (dateString?: string) => {
     if (!dateString) return 'Recent';
     const date = new Date(dateString);
@@ -29,7 +45,8 @@ export const JobsList = () => {
     const matchesSearch =
       job.title.toLowerCase().includes(term) ||
       (job.companyName && job.companyName.toLowerCase().includes(term)) ||
-      (job.location && job.location.toLowerCase().includes(term));
+      (job.location && job.location.toLowerCase().includes(term)) ||
+      (job.job_code && job.job_code.toLowerCase().includes(term));
       
     const matchesType = filterType === 'All' ? true : 
       (job.employment_type === filterType || (filterType === 'Remote' && job.isRemote));

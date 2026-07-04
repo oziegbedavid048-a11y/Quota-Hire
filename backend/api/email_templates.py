@@ -278,7 +278,9 @@ def get_job_submitted_email_html(user, job_title):
 # 5. JOB APPROVED
 # =============================================================================
 
-def get_job_approved_email_html(user, job_title):
+def get_job_approved_email_html(user, job_title, job_code):
+    frontend_url = getattr(settings, 'FRONTEND_URL', 'https://quotahire.org').strip()
+    share_link = f"{frontend_url}/jobs?code={job_code}"
     body = (
         _h1("Your Job Listing is Now Live!") +
         _p(f"Hi <strong>{user}</strong>,") +
@@ -288,11 +290,13 @@ def get_job_approved_email_html(user, job_title):
             "It is now live and fully visible to our community of active job seekers on Quota Hire."
         ) +
         _dbox("Live Job", job_title) +
+        _dbox("Unique Job Code", job_code) +
         _p(
-            "You will receive a notification as soon as candidates start applying. "
-            "You can review, shortlist, and manage all applicants directly from your dashboard."
+            "Share this job code or the direct link below with candidates so they can find and apply for your role easily. "
+            "If they do not have a Quota Hire account yet, they will be guided to sign up first:"
         ) +
-        _cta("https://quotahire.org/dashboard", "Manage My Applications") +
+        _p(f'Shareable Link: <a href="{share_link}" style="color:#1A6515; font-weight:bold; word-break:break-all;">{share_link}</a>') +
+        _cta(share_link, "View Live Job Listing") +
         _signoff()
     )
     return _build_email(title="Your job listing is now live - Quota Hire", body_html=body)
@@ -484,6 +488,13 @@ def get_notification_email_html(user, title, message, job_title=None, is_remote=
 
     if detail:
         body += _p(detail)
+
+    if title in ["Application Under Review", "Interview Invitation", "Decision Pending", "Application Accepted"]:
+        body += _p(
+            "<strong>Reminder:</strong> Please make sure you have the CV or resume that you used to apply "
+            "for this role prepared. We highly recommend downloading a copy of the specific CV you submitted "
+            "from your Quota Hire profile dashboard, as the hiring team may request it during the recruitment process."
+        )
 
     body += (
         _cta(href, lbl) +

@@ -167,16 +167,16 @@ class JobAdminForm(forms.ModelForm):
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
     form = JobAdminForm
-    list_display    = ('title', 'company_name_display', 'package', 'status', 'status_badge', 'employment_type', 'is_remote', 'location', 'created_at', 'edit_button')
+    list_display    = ('title', 'job_code', 'company_name_display', 'package', 'status', 'status_badge', 'employment_type', 'is_remote', 'location', 'created_at', 'edit_button')
     list_display_links = ('title', 'edit_button')
     list_filter     = ('status', 'package', 'is_remote', 'created_at')
-    search_fields   = ('title', 'description', 'company__email', 'location')
+    search_fields   = ('title', 'description', 'company__email', 'location', 'job_code')
     ordering        = ('-created_at',)
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'job_code')
     actions         = ['approve_jobs', 'reject_jobs', 'close_jobs']
 
     fieldsets = (
-        ('Job Details', {'fields': ('company', 'title', 'description', 'requirements_text', 'requirements')}),
+        ('Job Details', {'fields': ('company', 'job_code', 'title', 'description', 'requirements_text', 'requirements')}),
         ('Location & Pay', {'fields': ('employment_type', 'is_remote', 'location', 'currency', 'salary_range', 'commission_range')}),
         ('Contact Info (Hidden from users)', {'fields': ('custom_company_name', 'company_address', 'contact_email', 'contact_phone', 'whatsapp_number')}),
         ('Status & Package', {'fields': ('status', 'package')}),

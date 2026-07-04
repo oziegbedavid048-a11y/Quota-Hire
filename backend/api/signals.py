@@ -120,6 +120,7 @@ def handle_job_post_save(sender, instance, created, **kwargs):
         html = get_job_approved_email_html(
             user=company_name,
             job_title=instance.title,
+            job_code=instance.job_code,
         )
         _send_email_safe(
             to_email=company_user.email,

@@ -60,7 +60,7 @@ class CustomUser(AbstractUser):
         if self.role == UserRole.COMPANY:
             try:
                 prof = self.company_profile
-                return bool(prof.company_name and prof.industry and prof.description and self.location)
+                return bool(prof.company_name and prof.industry and prof.description and prof.about_company and self.location)
             except Exception:
                 return False
         elif self.role == UserRole.EMPLOYEE:
@@ -127,6 +127,7 @@ class CompanyProfile(models.Model):
     website      = models.URLField(blank=True)
     industry     = models.CharField(max_length=100, blank=True)
     description  = models.TextField(blank=True)
+    about_company = models.TextField(blank=True)
     logo_url     = models.URLField(blank=True)
     contact_email = models.EmailField(blank=True, null=True)
     contact_phone = models.CharField(max_length=50, blank=True)
@@ -183,6 +184,7 @@ class Job(models.Model):
     external_apply_url = models.URLField(max_length=1000, blank=True, null=True, help_text="Link to external company website for applying")
     status           = models.CharField(max_length=20, choices=JobStatus.choices, default=JobStatus.PENDING)
     package          = models.CharField(max_length=50, choices=JobPackage.choices, blank=True)
+    job_code         = models.CharField(max_length=50, unique=True, blank=True, null=True)
     created_at       = models.DateTimeField(auto_now_add=True)
     updated_at       = models.DateTimeField(auto_now=True)
 
@@ -190,6 +192,17 @@ class Job(models.Model):
         verbose_name        = 'Job'
         verbose_name_plural = 'Jobs'
         ordering            = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if not self.job_code:
+            import random
+            import string
+            while True:
+                code = 'QH-' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                if not Job.objects.filter(job_code=code).exists():
+                    self.job_code = code
+                    break
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.title} @ {self.company_name}'

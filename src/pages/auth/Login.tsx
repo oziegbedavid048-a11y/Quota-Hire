@@ -44,8 +44,17 @@ export const Login = () => {
 
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.role === 'admin') navigate('/admin');
-      else navigate('/dashboard');
+      if (currentUser.role === 'admin') {
+        navigate('/admin');
+      } else {
+        const savedCode = sessionStorage.getItem('redirect_job_code');
+        if (savedCode) {
+          sessionStorage.removeItem('redirect_job_code');
+          navigate(`/jobs?code=${savedCode}`);
+        } else {
+          navigate('/dashboard');
+        }
+      }
     }
   }, [currentUser, navigate]);
 
