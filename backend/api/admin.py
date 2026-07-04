@@ -54,8 +54,8 @@ class CustomUserAdmin(UserAdmin):
     Admin for all users — shows role, setup status, creation date.
     Inline profile shows automatically based on role.
     """
-    list_display    = ('email', 'get_full_name', 'role', 'role_badge', 'setup_completed', 'is_active', 'created_at')
-    list_filter     = ('role', 'setup_completed', 'is_active', 'is_staff', 'created_at')
+    list_display    = ('email', 'get_full_name', 'role', 'role_badge', 'setup_completed', 'email_verified', 'is_active', 'created_at')
+    list_filter     = ('role', 'setup_completed', 'email_verified', 'is_active', 'is_staff', 'created_at')
     search_fields   = ('email', 'first_name', 'last_name', 'username')
     ordering        = ('-created_at',)
     readonly_fields = ('created_at',)
@@ -63,7 +63,7 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = (
         ('Account',       {'fields': ('username', 'email', 'password')}),
         ('Personal Info', {'fields': ('first_name', 'last_name')}),
-        ('Role & Status', {'fields': ('role', 'setup_completed', 'is_active', 'is_staff', 'is_superuser')}),
+        ('Role & Status', {'fields': ('role', 'setup_completed', 'email_verified', 'is_active', 'is_staff', 'is_superuser')}),
         ('Groups',        {'fields': ('groups', 'user_permissions'), 'classes': ('collapse',)}),
         ('Timestamps',    {'fields': ('created_at', 'last_login', 'date_joined'), 'classes': ('collapse',)}),
     )
