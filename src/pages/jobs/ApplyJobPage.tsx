@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Building, Briefcase, MapPinned, FileText,
-  GraduationCap, PenTool, Loader2, ChevronDown
+  PenTool, Loader2, ChevronDown
 } from 'lucide-react';
 import { EmployeeProfile } from '../../types';
 import { useAppContext } from '../../context/AppContext';
@@ -126,6 +126,9 @@ export const ApplyJobPage = () => {
     formData.postalCode.trim() &&
     formData.streetAddress.trim()
   );
+
+  // A resume must be selected (profile resume or a generated CV) before submitting
+  const hasNoResume = !profile?.resumeUrl && savedCvs.length === 0 && !generatedCvId;
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -409,10 +412,10 @@ export const ApplyJobPage = () => {
                           <button
                             type="button"
                             onClick={() => setIsResumeSelectOpen(!isResumeSelectOpen)}
-                            className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-neutral-200 dark:border-neutral-700 hover:border-accent-500 dark:hover:border-accent-500 bg-white dark:bg-neutral-800 transition-all focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                            className="w-full flex items-center justify-between p-3.5 rounded-xl border-2 border-neutral-200 dark:border-neutral-700 hover:border-accent-500 dark:hover:border-accent-500 bg-white dark:bg-neutral-800 transition-all focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 gap-2"
                           >
-                            <div className="flex items-center gap-3">
-                              <FileText size={18} className="text-accent-600" />
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <FileText size={18} className="text-accent-600 shrink-0" />
                               <span className="text-sm font-bold text-neutral-900 dark:text-white truncate">
                                 {(!generatedCvId && profile?.resumeUrl)
                                   ? 'Attached Profile Resume'
@@ -423,7 +426,7 @@ export const ApplyJobPage = () => {
                                       : 'Select a Resume'}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-700/50 px-2.5 py-1 rounded-md">
+                            <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-700/50 px-2.5 py-1 rounded-md shrink-0">
                               <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300">Select</span>
                               <ChevronDown size={14} className={`text-neutral-500 transition-transform ${isResumeSelectOpen ? 'rotate-180' : ''}`} />
                             </div>
@@ -526,12 +529,24 @@ export const ApplyJobPage = () => {
                   >
                     ← Edit Details
                   </button>
-                  <button
-                    onClick={handleSubmit}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-accent-600 hover:bg-accent-700 active:scale-95 text-white px-8 py-3.5 rounded-xl font-bold text-sm shadow-md transition-all"
-                  >
-                    Submit Application
-                  </button>
+                  <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
+                    {hasNoResume && (
+                      <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 text-center sm:text-right">
+                        ⚠️ Please upload a resume or generate a tailored CV before submitting.
+                      </p>
+                    )}
+                    <button
+                      onClick={handleSubmit}
+                      disabled={hasNoResume}
+                      className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-bold text-sm shadow-md transition-all ${
+                        hasNoResume
+                          ? 'bg-neutral-300 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 cursor-not-allowed'
+                          : 'bg-accent-600 hover:bg-accent-700 active:scale-95 text-white'
+                      }`}
+                    >
+                      Submit Application
+                    </button>
+                  </div>
                 </div>
               </div>
             </>

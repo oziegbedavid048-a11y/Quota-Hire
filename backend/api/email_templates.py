@@ -1,7 +1,7 @@
 """
 Quota Hire - Professional Email Templates
 
-- Concise, straight-to-the-point messaging — only the essential information.
+- Concise yet professional messaging — 3 to 4 sentences per email.
 - Logo is embedded as an inline SVG in the email header.
 - Subjects use ASCII-safe characters only to prevent encoding issues.
 - Emails are delivered via Elastic Email SMTP using Django's send_mail.
@@ -71,7 +71,7 @@ def _build_email(*, title, body_html):
         "h1{font-size:20px;font-weight:700;color:#111111;margin:0 0 4px;letter-spacing:-0.3px;line-height:1.3;}"
         ".sub{font-size:13px;color:#71717a;margin:0 0 20px;}"
         "hr{border:none;border-top:1px solid #e4e4e7;margin:20px 0;}"
-        "p{font-size:15px;line-height:1.7;color:#3f3f46;margin:0 0 16px;}"
+        "p{font-size:15px;line-height:1.7;color:#3f3f46;margin:0 0 14px;}"
         ".dbox{background-color:#f0fdf4;border-left:4px solid #1A6515;"
         "border-radius:6px;padding:14px 18px;margin:18px 0;}"
         ".dlbl{font-size:11px;font-weight:600;color:#1A6515;text-transform:uppercase;"
@@ -106,7 +106,10 @@ def _build_email(*, title, body_html):
         '<div class="bdy">' + body_html + "</div>"
         '<div class="ftr">'
         "<p>&copy; 2026 Quota Hire. All rights reserved.</p>"
-        '<p><a href="https://quotahire.org">quotahire.org</a></p>'
+        '<p>You are receiving this because you have an account on '
+        '<a href="https://quotahire.org">quotahire.org</a>.</p>'
+        '<p><a href="https://quotahire.org">Visit Platform</a> &nbsp;&middot;&nbsp; '
+        '<a href="https://quotahire.org/dashboard">My Dashboard</a></p>'
         "</div>"
         "</div></div>"
         "</body></html>"
@@ -146,7 +149,7 @@ def _cta(href, label):
 def _lf(url):
     return (
         '<div class="lf">'
-        "<p>Or copy this link into your browser:</p>"
+        "<p>If the button above does not work, copy and paste this link into your browser:</p>"
         f'<a href="{url}">{url}</a>'
         "</div>"
     )
@@ -159,7 +162,7 @@ def _hr():
 def _signoff():
     return (
         '<p style="margin-top:24px;font-size:14px;color:#3f3f46;">'
-        'The Quota Hire Team</p>'
+        'Warm regards,<br><strong>The Quota Hire Team</strong></p>'
     )
 
 
@@ -169,12 +172,17 @@ def _signoff():
 
 def get_verification_email_html(user, redirect):
     body = (
-        _h1("Verify Your Email Address") +
+        _h1("Verify Your Email Address", "One step away from your Quota Hire account") +
         _p(f"Hi <strong>{user}</strong>,") +
-        _p("Click the button below to verify your email and activate your Quota Hire account.") +
-        _cta(redirect, "Verify My Email") +
-        _p('<span style="color:#71717a;font-size:13px;">This link expires in <strong>24 hours</strong>. '
-           'If you did not create an account, ignore this email.</span>') +
+        _p(
+            "Thank you for registering on Quota Hire. To activate your account and gain full "
+            "access to the platform, please verify your email address by clicking the button below."
+        ) +
+        _p(
+            "This verification link is valid for <strong>24 hours</strong>. "
+            "If you did not create a Quota Hire account, please ignore this email — no action is required."
+        ) +
+        _cta(redirect, "Verify My Email Address") +
         _lf(redirect) +
         _signoff()
     )
@@ -187,12 +195,18 @@ def get_verification_email_html(user, redirect):
 
 def get_recovery_email_html(user, redirect):
     body = (
-        _h1("Reset Your Password") +
+        _h1("Reset Your Password", "A password reset was requested for your account") +
         _p(f"Hi <strong>{user}</strong>,") +
-        _p("We received a request to reset your password. Click below to create a new one.") +
+        _p(
+            "We received a request to reset the password on your Quota Hire account. "
+            "Click the button below to create a new password. "
+            "This link is valid for <strong>10 minutes</strong> and can only be used once."
+        ) +
+        _p(
+            "If you did not request a password reset, please ignore this email. "
+            "Your current password will remain unchanged and your account is secure."
+        ) +
         _cta(redirect, "Reset My Password") +
-        _p('<span style="color:#71717a;font-size:13px;">This link expires in <strong>10 minutes</strong> '
-           'and can only be used once. If you did not request this, ignore this email.</span>') +
         _lf(redirect) +
         _signoff()
     )
@@ -206,17 +220,31 @@ def get_recovery_email_html(user, redirect):
 def get_welcome_email_html(user, is_company=False):
     if is_company:
         body = (
-            _h1("Welcome to Quota Hire!") +
+            _h1("Welcome to Quota Hire!", "Your company account is now active") +
             _p(f"Hi <strong>{user}</strong>,") +
-            _p("Your company account is now active. Start by completing your profile and posting your first job.") +
-            _cta("https://quotahire.org/dashboard", "Go to Dashboard") +
+            _p(
+                "Congratulations — your email has been verified and your Quota Hire company account is fully activated. "
+                "You can now start attracting top talent by completing your company profile and posting your first job listing."
+            ) +
+            _p(
+                "Our team reviews all job listings to ensure quality, so your listing will go live shortly after submission. "
+                "Head to your dashboard to get started."
+            ) +
+            _cta("https://quotahire.org/dashboard", "Go to My Dashboard") +
             _signoff()
         )
     else:
         body = (
-            _h1("Welcome to Quota Hire!") +
+            _h1("Welcome to Quota Hire!", "Your account is fully activated") +
             _p(f"Hi <strong>{user}</strong>,") +
-            _p("Your account is now active. Complete your profile and start exploring job opportunities.") +
+            _p(
+                "Congratulations — your email has been verified and your Quota Hire account is ready. "
+                "We are excited to help you find your next great career opportunity from our growing list of verified employers."
+            ) +
+            _p(
+                "Complete your profile, upload your CV, and start exploring job listings tailored to your skills. "
+                "A complete profile increases your visibility to employers significantly."
+            ) +
             _cta("https://quotahire.org/dashboard", "Complete My Profile") +
             _signoff()
         )
@@ -229,11 +257,18 @@ def get_welcome_email_html(user, is_company=False):
 
 def get_job_submitted_email_html(user, job_title):
     body = (
-        _h1("Job Listing Submitted") +
+        _h1("Job Listing Submitted for Review") +
         _p(f"Hi <strong>{user}</strong>,") +
-        _p("Your job listing has been submitted for review. We'll notify you once it goes live.") +
+        _p(
+            "Your job listing has been successfully submitted and is now in our review queue. "
+            "Our team carefully reviews every listing to ensure it meets our platform standards before going live."
+        ) +
         _dbox("Submitted Job", job_title) +
-        _cta("https://quotahire.org/dashboard", "View Dashboard") +
+        _p(
+            "You will receive an email confirmation the moment your listing is approved and live. "
+            "This typically takes 1 to 6 hours during business hours."
+        ) +
+        _cta("https://quotahire.org/dashboard", "View My Dashboard") +
         _signoff()
     )
     return _build_email(title="Job listing submitted - Quota Hire", body_html=body)
@@ -245,12 +280,19 @@ def get_job_submitted_email_html(user, job_title):
 
 def get_job_approved_email_html(user, job_title):
     body = (
-        _h1("Your Job Listing is Live!") +
+        _h1("Your Job Listing is Now Live!") +
         _p(f"Hi <strong>{user}</strong>,") +
         _badge("Approved &amp; Published", "green") +
-        _p("Your job listing has been approved and is now live on Quota Hire.") +
+        _p(
+            "Your job listing has been reviewed and approved. "
+            "It is now live and fully visible to our community of active job seekers on Quota Hire."
+        ) +
         _dbox("Live Job", job_title) +
-        _cta("https://quotahire.org/dashboard", "Manage Applications") +
+        _p(
+            "You will receive a notification as soon as candidates start applying. "
+            "You can review, shortlist, and manage all applicants directly from your dashboard."
+        ) +
+        _cta("https://quotahire.org/dashboard", "Manage My Applications") +
         _signoff()
     )
     return _build_email(title="Your job listing is now live - Quota Hire", body_html=body)
@@ -262,14 +304,23 @@ def get_job_approved_email_html(user, job_title):
 
 def get_job_rejected_email_html(user, job_title):
     body = (
-        _h1("Job Listing Needs Revision") +
+        _h1("Your Job Listing Needs Revision") +
         _p(f"Hi <strong>{user}</strong>,") +
         _badge("Needs Revision", "yellow") +
-        _p("Your job listing was not approved. Please review and update it before resubmitting.") +
-        _dbox("Listing", job_title) +
+        _p(
+            "Thank you for submitting your job listing on Quota Hire. "
+            "After a careful review, our team was unable to approve it in its current form."
+        ) +
+        _dbox("Listing Requiring Revision", job_title) +
+        _p(
+            "Common reasons include an incomplete job description, missing compensation details, or content that does not meet our guidelines. "
+            "Please log in to your dashboard, update the listing, and resubmit — our team will prioritise your re-review."
+        ) +
+        _p(
+            'If you need guidance on what to correct, contact us at '
+            '<a href="mailto:noreply@quotahire.org" style="color:#1A6515;">noreply@quotahire.org</a>.'
+        ) +
         _cta("https://quotahire.org/dashboard", "Revise &amp; Resubmit") +
-        _p('<span style="color:#71717a;font-size:13px;">Need help? Contact us at '
-           '<a href="mailto:noreply@quotahire.org" style="color:#1A6515;">noreply@quotahire.org</a>.</span>') +
         _signoff()
     )
     return _build_email(title="Job listing needs revision - Quota Hire", body_html=body)
@@ -281,10 +332,17 @@ def get_job_rejected_email_html(user, job_title):
 
 def get_application_confirmed_email_html(user, job_title):
     body = (
-        _h1("Application Submitted!") +
+        _h1("Application Submitted Successfully!") +
         _p(f"Hi <strong>{user}</strong>,") +
-        _p("Your application has been successfully submitted. We'll notify you of any updates.") +
+        _p(
+            "Your application has been successfully submitted through Quota Hire and this email serves as your official confirmation. "
+            "The hiring team has received your application and it is now in their review queue."
+        ) +
         _dbox("Position Applied For", job_title) +
+        _p(
+            "You will receive a separate email notification at each stage of the recruitment process, "
+            "so you are always kept informed. You can also track your application status at any time from your dashboard."
+        ) +
         _cta("https://quotahire.org/dashboard", "Track My Application") +
         _signoff()
     )
@@ -298,28 +356,73 @@ def get_application_confirmed_email_html(user, job_title):
 _STATUS_CONFIG = {
     "Application Under Review": {
         "badge": ("Under Review", "blue"),
-        "message": "Your application is currently being reviewed by the hiring team.",
-        "cta": ("https://quotahire.org/dashboard", "View Application"),
+        "subtitle": "Your application is being evaluated by the hiring team",
+        "intro": (
+            "We are pleased to let you know that your application is now being actively reviewed by the hiring team. "
+            "This is a positive sign that your profile has passed the initial screening stage."
+        ),
+        "detail": (
+            "No action is required from you at this stage. "
+            "Please ensure your contact details are up to date and your notifications are enabled, "
+            "as the hiring team may reach out to you directly. You will be notified immediately when your status changes."
+        ),
+        "cta": ("https://quotahire.org/dashboard", "View Application Status"),
     },
     "Interview Invitation": {
         "badge": ("Interview Invited", "green"),
-        "message": "Congratulations! You have been shortlisted for an interview. The company will contact you with details.",
-        "cta": ("https://quotahire.org/dashboard", "View Details"),
+        "subtitle": "Congratulations — you have been shortlisted for an interview",
+        "intro": (
+            "We are delighted to inform you that you have been shortlisted and invited for an interview for this position. "
+            "This is a significant achievement and reflects the hiring team's genuine interest in your profile and experience."
+        ),
+        "detail": (
+            "A representative from the company will contact you to confirm the interview format, date, and time. "
+            "Please monitor your email inbox and Quota Hire dashboard closely and respond promptly to any outreach from the employer. "
+            "We wish you every success — prepare well, be confident, and bring your best self."
+        ),
+        "cta": ("https://quotahire.org/dashboard", "View Interview Details"),
     },
     "Decision Pending": {
         "badge": ("Decision Pending", "yellow"),
-        "message": "You have completed the interview stage. The hiring team is making their final decision.",
+        "subtitle": "The hiring team is making their final decision",
+        "intro": (
+            "Thank you for your continued engagement with this opportunity. "
+            "You have successfully completed the interview stage and the hiring team is now in the final stages of their deliberation."
+        ),
+        "detail": (
+            "A decision is expected very soon and you will be notified the moment it is made. "
+            "Please continue to monitor your email and Quota Hire dashboard closely. "
+            "We appreciate your patience and look forward to sharing the outcome with you shortly."
+        ),
         "cta": ("https://quotahire.org/dashboard", "View My Applications"),
     },
     "Application Accepted": {
         "badge": ("Accepted", "green"),
-        "message": "Congratulations! Your application has been accepted. The company will be in touch with next steps.",
+        "subtitle": "Congratulations — your application has been successful!",
+        "intro": (
+            "We are absolutely thrilled to inform you that your application has been successful. "
+            "The hiring team has made their final decision and selected you as their preferred candidate for this position — congratulations!"
+        ),
+        "detail": (
+            "A company representative will be contacting you very shortly to discuss the offer details, including your start date and contract terms. "
+            "Please ensure you are available and responsive to their communication. "
+            "We wish you a successful and fulfilling career ahead — well done from the entire Quota Hire team."
+        ),
         "cta": ("https://quotahire.org/dashboard", "View Offer Details"),
     },
     "Application Update": {
         "badge": ("Application Closed", "gray"),
-        "message": "After careful review, the hiring team has decided to move forward with another candidate. Keep applying — the right role is out there!",
-        "cta": ("https://quotahire.org", "Browse More Jobs"),
+        "subtitle": "An update on your recent application",
+        "intro": (
+            "Thank you sincerely for applying through Quota Hire and for the time and effort you invested in this opportunity. "
+            "After a careful review of all applications, the hiring team has decided to move forward with another candidate for this role."
+        ),
+        "detail": (
+            "Please be assured this outcome does not reflect on your overall skills, potential, or professional value. "
+            "We sincerely encourage you not to be discouraged — keep your profile updated and continue exploring other relevant "
+            "opportunities on the platform. The right role for you is out there and we remain committed to helping you find it."
+        ),
+        "cta": ("https://quotahire.org", "Browse More Opportunities"),
     },
 }
 
@@ -331,11 +434,45 @@ def get_notification_email_html(user, title, message, job_title=None, is_remote=
     if cfg.get("badge"):
         badge_html = _badge(*cfg["badge"])
 
-    body_message = cfg.get("message", message)
-    href, lbl = cfg.get("cta", ("https://quotahire.org/dashboard", "Go to Dashboard"))
+    subtitle = cfg.get("subtitle", "")
+    intro = cfg.get("intro", message)
+    detail = cfg.get("detail", "")
+    href, lbl = cfg.get("cta", ("https://quotahire.org/dashboard", "Go to My Dashboard"))
+
+    # Personalise intro with job title if available
+    if job_title and title == "Application Under Review":
+        intro = (
+            f"We are pleased to let you know that your application for the <strong>{job_title}</strong> position "
+            f"is now being actively reviewed by the hiring team. "
+            f"This is a positive sign that your profile has passed the initial screening stage."
+        )
+    elif job_title and title == "Interview Invitation":
+        is_remote_role = is_remote or (employment_type and "freelance" in employment_type.lower())
+        role_type = "remote/freelance" if is_remote_role else "on-site"
+        intro = (
+            f"We are delighted to inform you that you have been shortlisted and invited for an interview for the "
+            f"<strong>{job_title}</strong> ({role_type}) position. "
+            f"This reflects the hiring team's genuine interest in your profile — congratulations on reaching this stage."
+        )
+    elif job_title and title == "Decision Pending":
+        intro = (
+            f"You have successfully completed the interview stage for the <strong>{job_title}</strong> position "
+            f"and the hiring team is now in the final stages of their deliberation. "
+            f"A decision is expected very soon and you will be notified the moment it is made."
+        )
+    elif job_title and title == "Application Accepted":
+        intro = (
+            f"We are absolutely thrilled to inform you that your application for the <strong>{job_title}</strong> position "
+            f"has been successful. The hiring team has selected you as their preferred candidate — congratulations!"
+        )
+    elif job_title and title == "Application Update":
+        intro = (
+            f"Thank you sincerely for applying for the <strong>{job_title}</strong> position through Quota Hire. "
+            f"After careful consideration, the hiring team has decided to move forward with another candidate for this role."
+        )
 
     body = (
-        _h1(title) +
+        _h1(title, subtitle) +
         _p(f"Hi <strong>{user}</strong>,") +
         badge_html
     )
@@ -343,8 +480,12 @@ def get_notification_email_html(user, title, message, job_title=None, is_remote=
     if job_title:
         body += _dbox("Position", job_title)
 
+    body += _p(intro)
+
+    if detail:
+        body += _p(detail)
+
     body += (
-        _p(body_message) +
         _cta(href, lbl) +
         _signoff()
     )
@@ -361,7 +502,7 @@ def get_newsletter_email_html(subject, plain_body):
     inner = "".join(_p(para) for para in paragraphs)
 
     body = (
-        _h1(subject) +
+        _h1(subject, "An important update from the Quota Hire team") +
         _hr() +
         inner +
         _hr() +

@@ -32,9 +32,26 @@ if (import.meta.env.VITE_SENTRY_DSN && import.meta.env.PROD) {
     replaysOnErrorSampleRate: 1.0,
     enableLogs: true,
     ignoreErrors: [
-      // Common iOS in-app browser (Instagram/Facebook) tracking/injection error
-      "undefined is not an object (evaluating 'window.webkit.messageHandlers')"
-    ]
+      // iOS in-app browser (Instagram/Facebook) webkit tracking injection error
+      "undefined is not an object (evaluating 'window.webkit.messageHandlers')",
+      // Android in-app browser (Facebook/Instagram) Java WebView bridge errors
+      "Error invoking postMessage: Java object is gone",
+      "Java object is gone",
+      "postMessage",
+    ],
+    beforeSend(event) {
+      // Drop any error originating from Facebook/Instagram in-app browser
+      // injected scripts (iabjs://, fbios://, etc.) — these are not our code.
+      const frames = event.exception?.values?.[0]?.stacktrace?.frames || [];
+      const isInjectedScript = frames.some(
+        (f) =>
+          f.filename?.startsWith('iabjs://') ||
+          f.filename?.startsWith('fbios://') ||
+          f.filename?.includes('navigation_performance_logger')
+      );
+      if (isInjectedScript) return null;
+      return event;
+    },
   });
 }
 

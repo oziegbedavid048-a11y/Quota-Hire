@@ -280,9 +280,75 @@ class ApplicationAdmin(admin.ModelAdmin):
     list_filter     = ('status', 'applied_at')
     search_fields   = ('employee__email', 'job__title', 'cover_letter')
     ordering        = ('-applied_at',)
-    readonly_fields = ('applied_at', 'updated_at')
+    readonly_fields = (
+        'applied_at', 'updated_at',
+        'applicant_email', 'applicant_phone', 'applicant_location',
+        'applicant_address', 'applicant_linkedin',
+    )
     actions         = ['mark_under_review', 'mark_interview', 'mark_decision', 'accept_applications', 'reject_applications']
     inlines         = [GeneratedCVInline]
+
+    fieldsets = (
+        ('Applicant Contact Information', {
+            'fields': (
+                'applicant_email', 'applicant_phone',
+                'applicant_location', 'applicant_address', 'applicant_linkedin',
+            ),
+            'description': (
+                '<div style="background:#eff6ff;border-left:4px solid #3b82f6;'
+                'padding:10px 14px;border-radius:4px;margin-bottom:8px;font-size:13px;">'
+                'Contact details submitted by the applicant at the time of application.</div>'
+            ),
+        }),
+        ('Application Details', {
+            'fields': ('employee', 'job', 'status', 'cover_letter', 'applied_at', 'updated_at'),
+        }),
+    )
+
+    # ── Contact info read-only helpers ────────────────────────────────────────
+
+    @admin.display(description='Email')
+    def applicant_email(self, obj):
+        email = obj.employee.email
+        return format_html('<a href="mailto:{0}">{0}</a>', email)
+
+    @admin.display(description='Phone Number')
+    def applicant_phone(self, obj):
+        try:
+            phone = obj.employee.employee_profile.phone_number
+            return phone or format_html('<span style="color:#94a3b8;">Not provided</span>')
+        except Exception:
+            return format_html('<span style="color:#94a3b8;">Not provided</span>')
+
+    @admin.display(description='City / Country')
+    def applicant_location(self, obj):
+        try:
+            p = obj.employee.employee_profile
+            parts = [p.city, p.country]
+            loc = ', '.join(x for x in parts if x)
+            return loc or format_html('<span style="color:#94a3b8;">Not provided</span>')
+        except Exception:
+            return format_html('<span style="color:#94a3b8;">Not provided</span>')
+
+    @admin.display(description='Street Address / Postal Code')
+    def applicant_address(self, obj):
+        try:
+            p = obj.employee.employee_profile
+            parts = [p.street_address, p.postal_code]
+            addr = ', '.join(x for x in parts if x)
+            return addr or format_html('<span style="color:#94a3b8;">Not provided</span>')
+        except Exception:
+            return format_html('<span style="color:#94a3b8;">Not provided</span>')
+
+    @admin.display(description='LinkedIn')
+    def applicant_linkedin(self, obj):
+        try:
+            url = obj.employee.employee_profile.linkedin_url
+            if url:
+                return format_html('<a href="{}" target="_blank">{}</a>', url, url)
+        except Exception:
+            pass
+        return format_html('<span style="color:#94a3b8;">Not provided</span>')
 
     @admin.display(description='CV')
     def cv_link(self, obj):
