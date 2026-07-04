@@ -14,8 +14,6 @@ import {
   MapPin,
   BarChart3,
   Target,
-  Zap,
-  Building2,
   BadgeCheck,
   ChevronRight,
   Star,
@@ -178,6 +176,8 @@ export const CompanyDashboardPage = () => {
             <img
               src={`${import.meta.env.BASE_URL}images/post_job_recruiter.png`}
               alt="Company 3D Illustration"
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-contain drop-shadow-2xl animate-float"
             />
           </div>

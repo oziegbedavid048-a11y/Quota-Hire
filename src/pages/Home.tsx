@@ -241,6 +241,10 @@ export const Home = () => {
                 <img
                   src={`${import.meta.env.BASE_URL}talent_realistic.jpg`}
                   alt="Sales professional working"
+                  loading="lazy"
+                  decoding="async"
+                  width={600}
+                  height={256}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
 
               </div>
@@ -288,6 +292,10 @@ export const Home = () => {
                 <img
                   src={`${import.meta.env.BASE_URL}company_realistic.jpg`}
                   alt="Hiring manager reviewing candidates"
+                  loading="lazy"
+                  decoding="async"
+                  width={600}
+                  height={256}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
 
               </div>
@@ -479,19 +487,19 @@ export const Home = () => {
                   quote: 'Closed my OTE within 60 days of starting. Quota Hire actually screened for the qualities that matter.',
                   name: 'Marcus Reed',
                   designation: 'Enterprise AE @ Northwind Cloud',
-                  src: 'https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?w=400&q=80'
+                  src: 'https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?w=120&h=120&q=75&fit=crop&auto=format&fm=webp'
                 },
                 {
                   quote: 'We hired three reps in a quarter — every one is in the top half of the team. Their vetting works.',
                   name: 'Priya Kapoor',
                   designation: 'VP Sales @ Helios SaaS',
-                  src: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80'
+                  src: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&h=120&q=75&fit=crop&auto=format&fm=webp'
                 },
                 {
                   quote: 'The generated CV got me into rooms my old resume never did. The process was incredibly smooth.',
                   name: 'Jordan Chen',
                   designation: 'Senior SDR',
-                  src: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&q=80'
+                  src: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&h=120&q=75&fit=crop&auto=format&fm=webp'
                 }
               ]}
               autoplay={true}

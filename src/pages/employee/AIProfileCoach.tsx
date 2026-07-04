@@ -80,6 +80,8 @@ export const AIProfileCoach = () => {
                 <img
                   src={`${import.meta.env.BASE_URL}images/ai_coach_orb.png`}
                   alt="AI Coach 3D Character"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-contain drop-shadow-xl animate-float"
                 />
               </div>

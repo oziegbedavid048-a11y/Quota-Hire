@@ -13,16 +13,27 @@
     @apply transition-colors duration-300;
   }
   body {
-    /* Warm-to-green gradient matching the dashboard hero card — used site-wide */
-    background: linear-gradient(135deg, #fffbeb 0%, #f4fbf2 100%);
-    background-attachment: fixed;
+    /* FIX: background-attachment:fixed forces a GPU repaint on every scroll frame.
+       Replaced with a position:fixed ::before pseudo-element — promoted to its own
+       composited layer, zero repaint cost. Visually identical. */
+    background: transparent;
     @apply text-ink font-sans antialiased selection:bg-accent-200 selection:text-accent-900 transition-colors duration-300;
   }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(135deg, #fffbeb 0%, #f4fbf2 100%);
+    pointer-events: none;
+    /* GPU-composited layer — transition on theme switch */
+    transition: background 300ms ease;
+  }
   .dark body {
-    /* Dark version: warm amber tint fading into deep green tint */
-    background: linear-gradient(135deg, #1c1508 0%, #050f03 100%);
-    background-attachment: fixed;
     @apply text-neutral-50 selection:bg-accent-900 selection:text-accent-100;
+  }
+  .dark body::before {
+    background: linear-gradient(135deg, #1c1508 0%, #050f03 100%);
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display tracking-tight text-neutral-900;
@@ -95,4 +106,18 @@
 .animate-marquee {
   animation: marquee 25s linear infinite;
   white-space: nowrap;
+}
+
+/* Blob animation — replaces Framer Motion infinite rotate on AnimatedBackground.
+   Runs on the GPU compositor thread with zero JS overhead. */
+@keyframes blob-float {
+  0%, 100% { transform: scale(1) translateY(0px); opacity: 0.15; }
+  50% { transform: scale(1.08) translateY(-8px); opacity: 0.22; }
+}
+.animate-blob {
+  animation: blob-float 20s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.animation-delay-5000 {
+  animation-delay: 5s;
 }

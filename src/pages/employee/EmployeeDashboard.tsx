@@ -11,7 +11,6 @@ import {
   TrendingUp,
   CheckCircle2,
   Target,
-  Zap,
   Activity,
   FileText
 } from 'lucide-react';
@@ -24,7 +23,6 @@ import {
 import { useAppContext } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
 import { calculateProfileStrength } from '../../utils/profile';
-import { toast } from 'sonner';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -63,7 +61,7 @@ interface Props {
 
 export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Props) => {
   const navigate = useNavigate();
-  const { jobs, applications, applyForJob, toggleSavedJob, savedJobs } = useAppContext();
+  const { jobs, applications, toggleSavedJob, savedJobs } = useAppContext();
 
   const approvedJobs = jobs.filter((j: any) => j.status === 'approved');
   const profileScore = calculateProfileStrength(user);
@@ -101,10 +99,6 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
 
   const firstName = user?.name?.split(' ')[0] || 'there';
 
-  const handleQuickApply = (e: React.MouseEvent, jobId: string, jobTitle: string) => {
-    e.stopPropagation();
-    applyForJob(jobId, `Applying for ${jobTitle}`);
-  };
 
   const handleSaveJob = (e: React.MouseEvent, jobId: string) => {
     e.stopPropagation();
@@ -165,6 +159,8 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
             <img
               src={`${import.meta.env.BASE_URL}images/employee_welcome.png`}
               alt="Welcome 3D Character"
+              loading="eager"
+              decoding="async"
               className="w-full h-full object-contain drop-shadow-2xl animate-float"
             />
           </div>

@@ -145,52 +145,52 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // Background polling for real-time updates (notifications + jobs + applications)
     const pollInterval = setInterval(async () => {
       const token = localStorage.getItem('access_token');
-      if (token) {
-        try {
-          // Always refresh notifications
-          const notifData = await apiFetch('/notifications/') || [];
-          const notifs = Array.isArray(notifData) ? notifData : (notifData?.results || []);
+      // FIX: Skip polling entirely when the tab is hidden (user switched to another tab)
+      // and when there is no auth token. This was firing 3 sequential API calls every
+      // 2 minutes regardless — even in background tabs.
+      if (!token || document.hidden) return;
+      try {
+        // FIX: Run all 3 poll requests in parallel instead of sequentially
+        const [notifData, jobsData, appsResult] = await Promise.all([
+          apiFetch('/notifications/').catch(() => []),
+          apiFetch('/jobs/').catch(() => null),
+          apiFetch('/applications/').catch(() => []),
+        ]);
 
-          // Refresh jobs so admin-approved/rejected jobs appear immediately
-          const jobsData = await apiFetch('/jobs/');
-          const jobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
-          const normalizedJobs = jobs.map((j: any) => ({
-            id: j.id.toString(),
-            companyId: j.company?.toString() || j.company_name,
-            companyName: j.company_name,
-            companyLogoUrl: j.company_logo_url,
-            companyIsVerified: true,
-            title: j.title,
-            description: j.description,
-            requirements: j.requirements || [],
-            employment_type: j.employment_type,
-            isRemote: j.is_remote,
-            location: j.location,
-            currency: j.currency,
-            salaryRange: j.salary_range,
-            commissionRange: j.commission_range,
-            status: j.status,
-            createdAt: j.created_at,
-          }));
+        const notifs = Array.isArray(notifData) ? notifData : (notifData?.results || []);
+        const jobsRaw = jobsData ? (Array.isArray(jobsData) ? jobsData : (jobsData?.results || [])) : null;
+        const applications: any[] = Array.isArray(appsResult) ? appsResult : (appsResult?.results || []);
 
-          // Refresh applications so status changes from admin/company propagate
-          let applications: any[] = [];
-          try {
-            const appsData = await apiFetch('/applications/');
-            applications = Array.isArray(appsData) ? appsData : (appsData?.results || []);
-          } catch (_) { /* company accounts may get empty, that's OK */ }
+        const normalizedJobs = jobsRaw ? jobsRaw.map((j: any) => ({
+          id: j.id.toString(),
+          companyId: j.company?.toString() || j.company_name,
+          companyName: j.company_name,
+          companyLogoUrl: j.company_logo_url,
+          companyIsVerified: true,
+          title: j.title,
+          description: j.description,
+          requirements: j.requirements || [],
+          employment_type: j.employment_type,
+          isRemote: j.is_remote,
+          location: j.location,
+          currency: j.currency,
+          salaryRange: j.salary_range,
+          commissionRange: j.commission_range,
+          status: j.status,
+          createdAt: j.created_at,
+          job_code: j.job_code,
+        })) : null;
 
-          setState(prev => ({
-            ...prev,
-            notifications: notifs.map((n: any) => ({ ...n, id: n.id.toString(), createdAt: n.created_at })) as any,
-            jobs: normalizedJobs,
-            applications: applications.length > 0
-              ? applications.map((a: any) => ({ id: a.id.toString(), ...a })) as any
-              : prev.applications,
-          }));
-        } catch (e) {
-          // silently ignore polling errors
-        }
+        setState(prev => ({
+          ...prev,
+          notifications: notifs.map((n: any) => ({ ...n, id: n.id.toString(), createdAt: n.created_at })) as any,
+          ...(normalizedJobs ? { jobs: normalizedJobs } : {}),
+          applications: applications.length > 0
+            ? applications.map((a: any) => ({ id: a.id.toString(), ...a })) as any
+            : prev.applications,
+        }));
+      } catch (e) {
+        // silently ignore polling errors
       }
     }, 120000);
 
@@ -202,48 +202,59 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (showLoading) {
         setState(prev => ({ ...prev, loading: true }));
       }
-      
-      // Fetch public jobs
-      const jobsData = await apiFetch('/jobs/');
-      const jobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
 
       const token = localStorage.getItem('access_token');
+
       if (!token) {
-          // Unauthenticated view
-          setState(prev => ({ ...prev, jobs, loading: false, appError: null }));
-          return;
+        // Unauthenticated: only fetch public jobs
+        const jobsData = await apiFetch('/jobs/');
+        const jobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
+        setState(prev => ({ ...prev, jobs, loading: false, appError: null }));
+        return;
       }
 
-      // Fetch private data
-      const user = await apiFetch('/auth/me/');
-      
+      // FIX: Run jobs + user fetch in parallel (both are independent)
+      const [jobsData, user] = await Promise.all([
+        apiFetch('/jobs/'),
+        apiFetch('/auth/me/'),
+      ]);
+      const jobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
+
       let profileData = null;
       let applications: any[] = [];
       let notifications: any[] = [];
       let savedJobs: string[] = [];
       let savedJobDates: Record<string, string> = {};
 
+      // FIX: Run role-specific data + notifications in parallel
       if (user.role === 'employee') {
-          profileData = await apiFetch('/profile/employee/');
-          const appsData = await apiFetch('/applications/');
-          applications = Array.isArray(appsData) ? appsData : (appsData?.results || []);
-          
-          user.saved_jobs = user.saved_jobs || [];
-          savedJobs = user.saved_jobs.map((j: any) => String(j.id || j));
-          user.saved_jobs.forEach((j: any) => {
-              if (j.id && j.saved_at) {
-                  savedJobDates[String(j.id)] = j.saved_at;
-              }
-          });
-          
-      } else if (user.role === 'company') {
-          profileData = await apiFetch('/profile/company/');
-          // Currently, API doesn't have a direct /applications/ for companies returning all,
-          // but we will keep state empty or fetch specific later.
-      }
+        const [empProfile, appsData, notifData] = await Promise.all([
+          apiFetch('/profile/employee/'),
+          apiFetch('/applications/'),
+          apiFetch('/notifications/').catch(() => []),
+        ]);
+        profileData = empProfile;
+        applications = Array.isArray(appsData) ? appsData : (appsData?.results || []);
+        notifications = Array.isArray(notifData) ? notifData : (notifData?.results || []);
 
-      const notifData = await apiFetch('/notifications/') || [];
-      notifications = Array.isArray(notifData) ? notifData : (notifData?.results || []);
+        user.saved_jobs = user.saved_jobs || [];
+        savedJobs = user.saved_jobs.map((j: any) => String(j.id || j));
+        user.saved_jobs.forEach((j: any) => {
+          if (j.id && j.saved_at) {
+            savedJobDates[String(j.id)] = j.saved_at;
+          }
+        });
+      } else if (user.role === 'company') {
+        const [compProfile, notifData] = await Promise.all([
+          apiFetch('/profile/company/'),
+          apiFetch('/notifications/').catch(() => []),
+        ]);
+        profileData = compProfile;
+        notifications = Array.isArray(notifData) ? notifData : (notifData?.results || []);
+      } else {
+        const notifData = await apiFetch('/notifications/').catch(() => []);
+        notifications = Array.isArray(notifData) ? notifData : (notifData?.results || []);
+      }
 
       // Map Django data back to frontend expected structure
       const currentUserData = {
@@ -298,6 +309,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           commissionRange: j.commission_range,
           status: j.status,
           createdAt: j.created_at,
+          job_code: j.job_code,
       }));
 
       setState(prev => ({

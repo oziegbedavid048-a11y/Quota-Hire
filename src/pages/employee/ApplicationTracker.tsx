@@ -77,6 +77,8 @@ export const ApplicationTracker = () => {
           <img
             src={`${import.meta.env.BASE_URL}images/tracker_illustration.png`}
             alt="Application Tracker Illustration"
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-contain drop-shadow-xl"
           />
         </div>

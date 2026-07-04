@@ -13,6 +13,8 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
   const isDark = theme === 'dark';
   const isDarkRef = useRef(isDark);
   const isPausedRef = useRef(isPaused);
+  // Track whether the RAF loop is currently running so we don't start it twice
+  const isAnimatingRef = useRef(false);
 
   useEffect(() => {
     isDarkRef.current = isDark;
@@ -29,6 +31,7 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
     uniforms: any;
     animationId: number;
   } | null>(null);
+
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
@@ -85,37 +88,21 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
     const scene = new THREE.Scene();
     const geometry = new THREE.PlaneGeometry(2, 2);
     const uniforms = {
-      time: {
-        type: 'f',
-        value: 1.0
-      },
-      resolution: {
-        type: 'v2',
-        value: new THREE.Vector2()
-      },
-      isDark: {
-        type: 'f',
-        value: isDarkRef.current ? 1.0 : 0.0
-      },
-      uPauseAmount: {
-        type: 'f',
-        value: 0.0
-      }
+      time: { type: 'f', value: 1.0 },
+      resolution: { type: 'v2', value: new THREE.Vector2() },
+      isDark: { type: 'f', value: isDarkRef.current ? 1.0 : 0.0 },
+      uPauseAmount: { type: 'f', value: 0.0 }
     };
-    const material = new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader,
-      fragmentShader
-    });
+    const material = new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader });
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true
-    });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    // Ensure the canvas itself fills the container via CSS, regardless of
-    // the buffer dimensions Three.js sets via setSize().
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+
+    // ── FIX #1: Cap pixel ratio at 1.5 ──────────────────────────────────────
+    // Full DPR (e.g. 3.0 on iPhone) forces rendering 9x the pixels for no
+    // visible quality benefit at 60fps. 1.5 is a great balance.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
     const canvas = renderer.domElement;
     canvas.style.display = 'block';
     canvas.style.width = '100%';
@@ -124,32 +111,31 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
     canvas.style.top = '0';
     canvas.style.left = '0';
     container.appendChild(canvas);
+
     const resize = () => {
       const width = container.clientWidth || window.innerWidth;
       const height = container.clientHeight || window.innerHeight;
       if (width === 0 || height === 0) return;
-      
-      const dpr = window.devicePixelRatio || 1;
+      // ── FIX #1b: also cap DPR in resize ────────────────────────────────
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       renderer.setPixelRatio(dpr);
       renderer.setSize(width, height, false);
-      
-      // Keep CSS sizing at 100% — only the drawing-buffer matters here.
       canvas.style.width = '100%';
       canvas.style.height = '100%';
       uniforms.resolution.value.x = width * dpr;
       uniforms.resolution.value.y = height * dpr;
     };
-    // ResizeObserver handles layout changes (including the initial layout
-    // that may not be measurable synchronously inside useEffect).
+
     const ro = new ResizeObserver(() => resize());
     ro.observe(container);
-    // Belt-and-suspenders: also resize on window changes and on next frame.
     window.addEventListener('resize', resize, false);
     requestAnimationFrame(resize);
     resize();
+
     const animate = () => {
+      if (!isAnimatingRef.current) return; // stop loop cleanly
       const animationId = requestAnimationFrame(animate);
-      
+
       if (isPausedRef.current) {
         uniforms.uPauseAmount.value = Math.min(1.0, uniforms.uPauseAmount.value + 0.05);
       } else {
@@ -166,23 +152,43 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
         sceneRef.current.animationId = animationId;
       }
     };
-    sceneRef.current = {
-      camera,
-      scene,
-      renderer,
-      uniforms,
-      animationId: 0
-    };
+
+    sceneRef.current = { camera, scene, renderer, uniforms, animationId: 0 };
+
+    // ── FIX #2: IntersectionObserver — stop RAF when off-screen ─────────────
+    // When the shader canvas scrolls out of view, the RAF loop is cancelled
+    // completely. The GPU goes idle. When it comes back into view, the loop
+    // restarts exactly where it left off — the user sees no visual glitch.
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          if (!isAnimatingRef.current) {
+            isAnimatingRef.current = true;
+            animate();
+          }
+        } else {
+          isAnimatingRef.current = false;
+          if (sceneRef.current) {
+            cancelAnimationFrame(sceneRef.current.animationId);
+          }
+        }
+      },
+      { threshold: 0 }
+    );
+    io.observe(container);
+
+    // Start the loop immediately (canvas IS visible on mount)
+    isAnimatingRef.current = true;
     animate();
+
     return () => {
+      isAnimatingRef.current = false;
+      io.disconnect();
       ro.disconnect();
       window.removeEventListener('resize', resize);
       if (sceneRef.current) {
         cancelAnimationFrame(sceneRef.current.animationId);
-        if (
-        container &&
-        sceneRef.current.renderer.domElement.parentNode === container)
-        {
+        if (container && sceneRef.current.renderer.domElement.parentNode === container) {
           container.removeChild(sceneRef.current.renderer.domElement);
         }
         sceneRef.current.renderer.dispose();
@@ -191,6 +197,7 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
       }
     };
   }, []);
+
   return (
     <div
       ref={containerRef}
