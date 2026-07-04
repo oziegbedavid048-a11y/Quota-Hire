@@ -94,7 +94,7 @@ def handle_job_post_save(sender, instance, created, **kwargs):
         )
         _send_email_safe(
             to_email=company_user.email,
-            subject=f"Job submitted for review — {instance.title}",
+            subject=f"Job submitted for review - {instance.title}",
             html_content=html,
         )
         return  # Skip status-change logic for brand-new jobs
@@ -123,7 +123,7 @@ def handle_job_post_save(sender, instance, created, **kwargs):
         )
         _send_email_safe(
             to_email=company_user.email,
-            subject=f"Your job is live — {instance.title}",
+            subject=f"Your job is live - {instance.title}",
             html_content=html,
         )
 
@@ -143,7 +143,7 @@ def handle_job_post_save(sender, instance, created, **kwargs):
         )
         _send_email_safe(
             to_email=company_user.email,
-            subject=f"Your job listing needs revision — {instance.title}",
+            subject=f"Your job listing needs revision - {instance.title}",
             html_content=html,
         )
 
@@ -193,7 +193,7 @@ def handle_application_post_save(sender, instance, created, **kwargs):
         )
         _send_email_safe(
             to_email=employee_user.email,
-            subject=f"Application submitted — {instance.job.title}",
+            subject=f"Application submitted - {instance.job.title}",
             html_content=html,
         )
         return  # Skip status-change logic for new applications

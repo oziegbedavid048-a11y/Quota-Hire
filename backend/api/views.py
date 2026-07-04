@@ -599,6 +599,8 @@ class VerifyEmailView(APIView):
             # Verification is handled implicitly by successful login if needed, or we could add an is_verified field
             try:
                 user = CustomUser.objects.get(email=email)
+                if user.email_verified:
+                    return Response({'message': 'Email already verified'}, status=status.HTTP_200_OK)
                 user.email_verified = True
                 user.save(update_fields=['email_verified'])
             except CustomUser.DoesNotExist:
@@ -608,10 +610,11 @@ class VerifyEmailView(APIView):
             try:
                 from .email_templates import get_welcome_email_html, send_courier_email
                 display_name = user.get_full_name() or user.username
-                html_content = get_welcome_email_html(user=display_name)
+                is_company = user.role == 'company'
+                html_content = get_welcome_email_html(user=display_name, is_company=is_company)
                 send_courier_email(
                     to_email=user.email,
-                    subject="Welcome to Quota Hire! Your account is verified ✅",
+                    subject="Welcome - Quota Hire",
                     text_content=f"Hi {display_name}, your Quota Hire account is now verified. Complete your profile at https://quotahire.org/dashboard",
                     html_content=html_content,
                 )

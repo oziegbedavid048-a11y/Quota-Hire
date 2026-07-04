@@ -262,50 +262,42 @@ def get_recovery_email_html(user, redirect):
 # 3. WELCOME EMAIL (sent after email verification)
 # =============================================================================
 
-def get_welcome_email_html(user):
-    body = (
-        _h1("Welcome to Quota Hire",
-            "Your account is now fully activated and ready to use") +
-        _p(f"Dear <strong>{user}</strong>,") +
-        _p(
-            "Congratulations. Your email has been successfully verified and your Quota Hire "
-            "account is now fully active. We are genuinely delighted to have you as part of "
-            "our growing professional community."
-        ) +
-        _p(
-            "Quota Hire is built to bridge the gap between talented professionals and "
-            "forward-thinking organisations. Whether you are seeking your next career opportunity "
-            "or looking to hire exceptional talent for your company, our platform provides "
-            "the tools, visibility, and connections you need to succeed."
-        ) +
-        _hr() +
-        _p("<strong>Here is how to get the most out of Quota Hire:</strong>") +
-        _steps([
-            "<strong>Complete your profile</strong> - A fully completed profile dramatically "
-            "increases your visibility to employers and ensures our platform can match you "
-            "with the most relevant opportunities. Add your photo, skills, experience, and education.",
-            "<strong>Upload your CV</strong> - Ensure your CV is current, clearly formatted, "
-            "and highlights your most significant achievements and qualifications. "
-            "Employers can request access to your CV during the application review process.",
-            "<strong>Set your job preferences</strong> - Specify your preferred industries, "
-            "locations, and role types so we can surface the most relevant listings for you.",
-            "<strong>Explore and apply</strong> - Browse our curated listings from verified "
-            "employers and submit targeted applications. Track every application in real time "
-            "from your personal dashboard.",
-            "<strong>Stay informed</strong> - Keep your notification settings updated so you "
-            "never miss an update on your applications, new job listings, or platform news.",
-        ]) +
-        _cta("https://quotahire.org/dashboard", "Complete My Profile Now") +
-        _p(
-            "If you need any assistance at any stage of your journey on Quota Hire, "
-            "our support team is always available at "
-            "<a href='mailto:support.qutahire@gmail.com' style='color:#1A6515;'>support.qutahire@gmail.com</a>. "
-            "We are committed to ensuring your experience on the platform is smooth, "
-            "productive, and rewarding. We wish you every success."
-        ) +
-        _signoff()
-    )
-    return _build_email(title="Welcome to Quota Hire", body_html=body)
+def get_welcome_email_html(user, is_company=False):
+    if is_company:
+        body = (
+            _h1("Welcome to Quota Hire", "Your company account is fully activated") +
+            _p(f"Dear <strong>{user}</strong>,") +
+            _p(
+                "Congratulations. Your email has been verified and your Quota Hire company account is ready. "
+                "We are delighted to have your organisation on our platform."
+            ) +
+            _p("<strong>Next Steps:</strong>") +
+            _steps([
+                "<strong>Complete your company profile</strong> - Add your logo and details to attract top talent.",
+                "<strong>Post a job</strong> - Create your first job listing to start receiving applications.",
+                "<strong>Review candidates</strong> - Manage all your applicants easily from your dashboard."
+            ]) +
+            _cta("https://quotahire.org/dashboard", "Go to Dashboard") +
+            _signoff()
+        )
+    else:
+        body = (
+            _h1("Welcome to Quota Hire", "Your account is fully activated") +
+            _p(f"Dear <strong>{user}</strong>,") +
+            _p(
+                "Congratulations. Your email has been verified and your Quota Hire account is ready. "
+                "We are excited to help you find your next great career opportunity."
+            ) +
+            _p("<strong>Next Steps:</strong>") +
+            _steps([
+                "<strong>Complete your profile</strong> - Add your skills and experience to stand out.",
+                "<strong>Upload your CV</strong> - Ensure employers can see your latest qualifications.",
+                "<strong>Explore and apply</strong> - Browse curated listings and apply to jobs."
+            ]) +
+            _cta("https://quotahire.org/dashboard", "Complete My Profile") +
+            _signoff()
+        )
+    return _build_email(title="Welcome - Quota Hire", body_html=body)
 
 
 # =============================================================================
