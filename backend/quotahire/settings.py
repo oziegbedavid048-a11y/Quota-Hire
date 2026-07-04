@@ -187,9 +187,15 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://quotahire.org,http://quotahire.org,https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-# ── Courier API Settings ──────────────────────────────────────────────────────
-COURIER_AUTH_TOKEN = config('COURIER_AUTH_TOKEN', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default="quotahire.recruit@gmail.com")
+# ── Elastic Email SMTP Settings ───────────────────────────────────────────────
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.elasticemail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=2525, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Quota Hire <noreply@quotahire.org>')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # ── Sentry Configuration ─────────────────────────────────────────────────────
 SENTRY_DSN = config('SENTRY_DSN', default=None)
