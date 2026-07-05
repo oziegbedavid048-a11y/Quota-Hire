@@ -53,7 +53,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             if not user.check_password(password):
                 raise AuthenticationFailed('Password incorrect')
             if not user.email_verified and not user.is_staff and not user.is_superuser:
-                raise AuthenticationFailed('Please verify your email address before logging in.')
+                raise AuthenticationFailed('The account with this email is not verified.')
 
         try:
             data = super().validate(attrs)

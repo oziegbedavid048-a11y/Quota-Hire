@@ -6,24 +6,65 @@ import { Logo } from '../../components/ui/Logo';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://quotahire-backend.onrender.com/api';
 
-const Particle = ({ delay }: { delay: number }) => (
-  <motion.div
-    className="absolute w-2 h-2 rounded-full bg-accent-400/60"
-    initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-    animate={{
-      scale: [0, 1, 0],
-      x: (Math.random() - 0.5) * 120,
-      y: (Math.random() - 0.5) * 120,
-      opacity: [1, 0.8, 0],
-    }}
-    transition={{ duration: 1.2, delay, ease: 'easeOut' }}
-  />
-);
+const GlitterParticle = ({ index }: { index: number }) => {
+  const randomXStart = Math.random() * 100;
+  const randomXEnd = randomXStart + (Math.random() - 0.5) * 20;
+  const randomSize = Math.random() * 8 + 4;
+  const randomDuration = Math.random() * 3 + 2.5;
+  const randomDelay = Math.random() * 0.5;
+  const randomRotate = Math.random() * 360;
+
+  const colors = [
+    '#FFD700', // Gold
+    '#F59E0B', // Amber
+    '#34D399', // Emerald
+    '#60A5FA', // Blue
+    '#A78BFA', // Purple
+    '#F472B6', // Pink
+    '#2DD4BF', // Teal
+  ];
+  const randomColor = colors[index % colors.length];
+
+  return (
+    <motion.div
+      className="fixed pointer-events-none z-50"
+      style={{
+        width: randomSize,
+        height: randomSize,
+        backgroundColor: randomColor,
+        left: `${randomXStart}%`,
+        top: -20,
+        borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+      }}
+      initial={{ y: -20, opacity: 1, rotate: randomRotate }}
+      animate={{
+        y: '105vh',
+        x: `${randomXEnd}%`,
+        opacity: [1, 1, 0.9, 0],
+        rotate: randomRotate + 1080,
+      }}
+      transition={{
+        duration: randomDuration,
+        delay: randomDelay,
+        ease: [0.25, 0.46, 0.45, 0.94],
+      }}
+    />
+  );
+};
+
+const GlitterShower = () => {
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+      {Array.from({ length: 60 }).map((_, i) => (
+        <GlitterParticle key={i} index={i} />
+      ))}
+    </div>
+  );
+};
 
 export const VerifyEmail = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
-  const [showParticles, setShowParticles] = useState(false);
   const location = useLocation();
   const hasAttempted = useRef(false);
 
@@ -55,7 +96,6 @@ export const VerifyEmail = () => {
         }
 
         setStatus('success');
-        setTimeout(() => setShowParticles(true), 100);
       } catch (error: any) {
         setStatus('error');
         setErrorMessage(
@@ -71,6 +111,7 @@ export const VerifyEmail = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-neutral-50 dark:bg-neutral-950 font-body py-16 px-4">
+      {status === 'success' && <GlitterShower />}
       {/* Background gradients */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
@@ -89,7 +130,7 @@ export const VerifyEmail = () => {
           {/* Top accent bar */}
           <div className={`h-1.5 w-full transition-all duration-700 ${
             status === 'success'
-              ? 'bg-gradient-to-r from-emerald-400 via-accent-500 to-teal-400'
+              ? 'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400'
               : status === 'error'
               ? 'bg-gradient-to-r from-red-400 to-orange-400'
               : 'bg-gradient-to-r from-accent-400 to-purple-400 animate-pulse'
@@ -154,80 +195,65 @@ export const VerifyEmail = () => {
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                   className="space-y-6"
                 >
-                  {/* Success icon with burst particles */}
+                  {/* Animated Success Icon with Pulse Rings */}
                   <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
-                    {showParticles && Array.from({ length: 10 }).map((_, i) => (
-                      <Particle key={i} delay={i * 0.05} />
-                    ))}
+                    <motion.div
+                      className="absolute inset-0 rounded-full bg-emerald-500/10 dark:bg-emerald-500/5"
+                      animate={{ scale: [1, 1.25, 1], opacity: [0.6, 1, 0.6] }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <motion.div
+                      className="absolute -inset-3 rounded-full bg-emerald-500/5"
+                      animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
+                      transition={{ duration: 2.5, delay: 0.5, repeat: Infinity, ease: "easeInOut" }}
+                    />
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-                      className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-xl shadow-emerald-500/30"
+                      className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-xl shadow-emerald-500/20 z-10"
                     >
-                      <motion.div
-                        initial={{ pathLength: 0, opacity: 0 }}
-                        animate={{ pathLength: 1, opacity: 1 }}
-                        transition={{ duration: 0.4, delay: 0.3 }}
-                      >
-                        <CheckCircle2 size={44} className="text-white" strokeWidth={2.5} />
-                      </motion.div>
+                      <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+                        <motion.path
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{ duration: 0.6, ease: "easeInOut", delay: 0.3 }}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
                     </motion.div>
                   </div>
 
-                  <div>
+                  <div className="space-y-3">
                     <motion.h3
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
-                      className="text-2xl font-extrabold text-neutral-900 dark:text-white mb-2"
+                      className="text-2xl font-extrabold text-neutral-900 dark:text-white"
                     >
-                      Email Verified! 🎉
+                      Verified Successfully!
                     </motion.h3>
                     <motion.p
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
-                      className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed"
+                      className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mx-auto"
                     >
-                      Your email address has been successfully verified. You're all set to access
-                      all features of <span className="font-semibold text-accent-600 dark:text-accent-400">Quota Hire</span>.
+                      Your email has been verified successfully. You can now log in using the login button below.
                     </motion.p>
                   </div>
 
-                  {/* Success checklist */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/40 rounded-2xl p-4 text-left space-y-2"
-                  >
-                    {['Identity confirmed', 'Account activated', 'Full access unlocked'].map((item, i) => (
-                      <motion.div
-                        key={item}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.45 + i * 0.08 }}
-                        className="flex items-center gap-2.5 text-sm text-emerald-700 dark:text-emerald-400 font-medium"
-                      >
-                        <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
-                          <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                            <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </div>
-                        {item}
-                      </motion.div>
-                    ))}
-                  </motion.div>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
+                    transition={{ delay: 0.5 }}
+                    className="pt-2"
                   >
                     <Link to="/login">
-                      <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-accent-500/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-accent-500/40">
-                        Continue to Login
+                      <button className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-emerald-500/35">
+                        Log In Now
                         <ArrowRight size={18} />
                       </button>
                     </Link>
