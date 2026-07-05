@@ -97,6 +97,27 @@ def handle_job_post_save(sender, instance, created, **kwargs):
             subject=f"Job submitted for review - {instance.title}",
             html_content=html,
         )
+
+        # If created directly as approved, send approval notification and email immediately
+        if instance.status == JobStatus.APPROVED:
+            Notification.objects.create(
+                user=company_user,
+                title="Job Approved",
+                message=(
+                    f"Your job posting '{instance.title}' has been approved and is now live on Quota Hire."
+                )
+            )
+            from .email_templates import get_job_approved_email_html
+            html_approved = get_job_approved_email_html(
+                user=company_name,
+                job_title=instance.title,
+                job_code=instance.job_code,
+            )
+            _send_email_safe(
+                to_email=company_user.email,
+                subject=f"Your job is live - {instance.title}",
+                html_content=html_approved,
+            )
         return  # Skip status-change logic for brand-new jobs
 
     # ── Status changes on existing jobs ───────────────────────────────────

@@ -14,6 +14,7 @@ import json
 
 from .models import (
     CustomUser,
+    UserRole,
     EmployeeProfile,
     CompanyProfile,
     Job,
@@ -161,6 +162,11 @@ class JobAdminForm(forms.ModelForm):
         if 'requirements' in self.fields:
             self.fields['requirements'].required = False
             self.fields['requirements'].widget = forms.HiddenInput()
+
+        # Customize company choice dropdown to show company name and email
+        if 'company' in self.fields:
+            self.fields['company'].queryset = CustomUser.objects.filter(role=UserRole.COMPANY)
+            self.fields['company'].label_from_instance = lambda obj: f"{getattr(getattr(obj, 'company_profile', None), 'company_name', obj.get_full_name() or obj.username)} ({obj.email})"
 
     def clean(self):
         cleaned_data = super().clean()
