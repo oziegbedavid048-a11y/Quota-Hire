@@ -1,7 +1,7 @@
 """
 Quota Hire — Django Signals
 
-Creates in-app Notification records AND sends branded Elastic Email SMTP emails for every
+Creates in-app Notification records AND sends branded Sender.net SMTP emails for every
 key platform event:
 
   1. User created          → welcome notification (email sent after verification, see views.py)
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ── Helper: fire email without breaking the calling transaction ───────────────
 
 def _send_email_safe(to_email: str, subject: str, html_content: str, text_content: str = None):
-    """Send a transactional email via Elastic Email SMTP, catching and logging any failure."""
+    """Send a transactional email via Sender.net SMTP, catching and logging any failure."""
     try:
         from .email_templates import send_courier_email
         if not text_content:

@@ -204,14 +204,14 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://quotahire.org,http://quotahire.org,https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-# ── Elastic Email SMTP Settings ───────────────────────────────────────────────
+# ── Sender.net SMTP Settings ──────────────────────────────────────────────────
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.elasticemail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=2525, cast=int)
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.sender.net')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Quota Hire <noreply@quotahire.org>')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Quota Hire <support@quotahire.org>')
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # ── Sentry Configuration ─────────────────────────────────────────────────────

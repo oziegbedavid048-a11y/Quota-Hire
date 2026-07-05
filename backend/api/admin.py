@@ -707,7 +707,7 @@ class NewsletterAdmin(admin.ModelAdmin):
     3. Save the newsletter (it starts as a Draft)
     4. From the newsletter list, tick the checkbox and select 'Send Newsletter'
        — OR — open the newsletter and click the green 'Send Newsletter Now' button
-    5. The system will dispatch branded emails to all matching users via Elastic Email SMTP
+    5. The system will dispatch branded emails to all matching users via Sender.net SMTP
     """
     form            = NewsletterAdminForm
     list_display    = ('subject', 'audience_badge', 'recipients_count', 'status_badge', 'created_at', 'send_button')
@@ -809,7 +809,7 @@ class NewsletterAdmin(admin.ModelAdmin):
 
     def _dispatch_newsletter(self, newsletter_obj):
         """
-        Queries users based on audience, sends each a branded email via Elastic Email SMTP.
+        Queries users based on audience, sends each a branded email via Sender.net SMTP.
         Returns (sent_count, failed_count, error_list).
         """
         from django.utils import timezone

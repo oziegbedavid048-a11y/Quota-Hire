@@ -498,7 +498,7 @@ class Newsletter(models.Model):
     Admin-composed newsletter blast.
     Admin types a subject + plain-text body in the Django admin panel,
     selects the target audience, then clicks "Send Newsletter" to dispatch
-    branded emails via Elastic Email SMTP to all matching users.
+    branded emails via Sender.net SMTP to all matching users.
     """
     subject    = models.CharField(
         max_length=300,

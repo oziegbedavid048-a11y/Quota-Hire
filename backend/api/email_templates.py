@@ -4,7 +4,7 @@ Quota Hire - Professional Email Templates
 - Concise yet professional messaging — 3 to 4 sentences per email.
 - Logo is embedded as an inline SVG in the email header.
 - Subjects use ASCII-safe characters only to prevent encoding issues.
-- Emails are delivered via Elastic Email SMTP using Django's send_mail.
+- Emails are delivered via Sender.net SMTP using Django's send_mail.
 """
 
 from django.core.mail import EmailMultiAlternatives
@@ -524,7 +524,7 @@ def get_newsletter_email_html(subject, plain_body):
 
 
 # =============================================================================
-# ELASTIC EMAIL SMTP SENDER
+# SENDER.NET SMTP SENDER
 # =============================================================================
 
 def send_courier_email(to_email: str, subject: str, text_content: str, html_content: str) -> bool:

@@ -17,11 +17,11 @@ def send_courier_email_task(to_email, subject, text_content, html_content):
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
-        logger.info("Async email sent via Elastic Email to %s (subject=%r)", to_email, subject)
+        logger.info("Async email sent via Sender.net to %s (subject=%r)", to_email, subject)
         return True
     except Exception as e:
         logger.error(
-            "Async Elastic Email send failed (to=%s subject=%r): %s",
+            "Async Sender.net email send failed (to=%s subject=%r): %s",
             to_email, subject, e, exc_info=True,
         )
         raise
