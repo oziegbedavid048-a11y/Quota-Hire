@@ -60,7 +60,7 @@ class CustomUser(AbstractUser):
         if self.role == UserRole.COMPANY:
             try:
                 prof = self.company_profile
-                return bool(prof.company_name and prof.industry and prof.description and prof.about_company and self.location)
+                return bool(prof.company_name and prof.industry and prof.about_company and self.location)
             except Exception:
                 return False
         elif self.role == UserRole.EMPLOYEE:
@@ -126,7 +126,6 @@ class CompanyProfile(models.Model):
     company_name = models.CharField(max_length=200)
     website      = models.URLField(blank=True)
     industry     = models.CharField(max_length=100, blank=True)
-    description  = models.TextField(blank=True)
     about_company = models.TextField(blank=True)
     logo_url     = models.URLField(blank=True)
     contact_email = models.EmailField(blank=True, null=True)
@@ -154,6 +153,19 @@ class JobPackage(models.TextChoices):
     PIPELINE  = 'pipeline',  'Quota Hire Pipeline'
     HUNTERS   = 'hunters',   'Quota Hire Commission Hunters'
     SALES_OPS = 'sales_ops', 'Quota Hire Sales Ops'
+
+
+class JobQuerySet(models.QuerySet):
+    def delete(self):
+        return self.update(is_deleted=True)
+
+
+class JobManager(models.Manager):
+    def get_queryset(self):
+        return JobQuerySet(self.model, using=self._db).filter(is_deleted=False)
+
+    def all_with_deleted(self):
+        return JobQuerySet(self.model, using=self._db)
 
 
 class Job(models.Model):
@@ -185,13 +197,20 @@ class Job(models.Model):
     status           = models.CharField(max_length=20, choices=JobStatus.choices, default=JobStatus.PENDING)
     package          = models.CharField(max_length=50, choices=JobPackage.choices, blank=True)
     job_code         = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    is_deleted       = models.BooleanField(default=False)
     created_at       = models.DateTimeField(auto_now_add=True)
     updated_at       = models.DateTimeField(auto_now=True)
+
+    objects = JobManager()
 
     class Meta:
         verbose_name        = 'Job'
         verbose_name_plural = 'Jobs'
         ordering            = ['-created_at']
+
+    def delete(self, using=None, keep_parents=False):
+        self.is_deleted = True
+        self.save(update_fields=['is_deleted'])
 
     def save(self, *args, **kwargs):
         if not self.job_code:
@@ -199,7 +218,8 @@ class Job(models.Model):
             import string
             while True:
                 code = 'QH-' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-                if not Job.objects.filter(job_code=code).exists():
+                # Use all_with_deleted to make sure we don't duplicate code even for deleted jobs
+                if not Job.objects.all_with_deleted().filter(job_code=code).exists():
                     self.job_code = code
                     break
         super().save(*args, **kwargs)

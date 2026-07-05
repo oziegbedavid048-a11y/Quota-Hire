@@ -116,7 +116,6 @@ export const CompanyDashboardPage = () => {
   const completionItems = [
     { label: 'Company Name', done: !!company?.companyName },
     { label: 'Industry', done: !!company?.industry },
-    { label: 'Company Description', done: !!company?.description },
     { label: 'About Company', done: !!company?.aboutCompany },
     { label: 'Active Job Posted', done: activeJobs.length > 0 },
     { label: 'Profile Verified', done: !!company?.isVerified },
@@ -317,7 +316,7 @@ export const CompanyDashboardPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Recent Job Listings */}
-        <motion.div variants={itemVariants} className="lg:col-span-2 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-6 shadow-sm">
+        <motion.div variants={itemVariants} className={`${completionScore < 100 ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-6 shadow-sm`}>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-extrabold text-neutral-900 dark:text-white">Your Active Roles</h2>
             <button onClick={() => navigate('/company/jobs')} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
@@ -373,46 +372,48 @@ export const CompanyDashboardPage = () => {
         </motion.div>
 
         {/* Right Side Panel */}
-        <div className="space-y-6">
+        {completionScore < 100 && (
+          <div className="space-y-6">
 
-          {/* Profile Completion */}
-          <motion.div variants={itemVariants} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
-                <Target size={16} className="text-blue-500" /> Profile Score
-              </h2>
-              <span className="text-lg font-extrabold text-blue-600">{completionScore}%</span>
-            </div>
-            <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-2.5 mb-5 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${completionScore}%` }}
-                transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
-              />
-            </div>
-            <div className="space-y-2.5">
-              {completionItems.map((item) => (
-                <div key={item.label} className="flex items-center gap-2.5">
-                  <CheckCircle2 size={15} className={item.done ? 'text-emerald-500' : 'text-neutral-200 dark:text-neutral-700'} />
-                  <span className={`text-xs font-semibold ${item.done ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-400'}`}>
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {completionScore < 100 && (
-              <button
-                onClick={() => navigate('/company/profile')}
-                className="mt-4 w-full text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 py-2 rounded-xl transition-colors"
-              >
-                Complete Profile →
-              </button>
-            )}
-          </motion.div>
+            {/* Profile Completion */}
+            <motion.div variants={itemVariants} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <Target size={16} className="text-blue-500" /> Profile Score
+                </h2>
+                <span className="text-lg font-extrabold text-blue-600">{completionScore}%</span>
+              </div>
+              <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-2.5 mb-5 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${completionScore}%` }}
+                  transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
+                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
+                />
+              </div>
+              <div className="space-y-2.5">
+                {completionItems.map((item) => (
+                  <div key={item.label} className="flex items-center gap-2.5">
+                    <CheckCircle2 size={15} className={item.done ? 'text-emerald-500' : 'text-neutral-200 dark:text-neutral-700'} />
+                    <span className={`text-xs font-semibold ${item.done ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-400'}`}>
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {completionScore < 100 && (
+                <button
+                  onClick={() => navigate('/company/profile')}
+                  className="mt-4 w-full text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 py-2 rounded-xl transition-colors"
+                >
+                  Complete Profile →
+                </button>
+              )}
+            </motion.div>
 
 
-        </div>
+          </div>
+        )}
       </div>
 
     </motion.div>

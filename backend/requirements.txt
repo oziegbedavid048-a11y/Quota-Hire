@@ -15,3 +15,5 @@ sentry-sdk
 posthog
 PyMuPDF
 python-docx
+celery
+redis

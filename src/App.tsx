@@ -25,6 +25,7 @@ import ResumeUpload from './pages/employee/ResumeUpload';
 import { CompanySetup } from './pages/company/Setup';
 import { Dashboard } from './pages/Dashboard';
 import { CompanyProfilePage } from './pages/company/Profile';
+import { PublicProfile } from './pages/company/PublicProfile';
 import { PostJob } from './pages/company/PostJob';
 import { JobApplicants } from './pages/company/JobApplicants';
 import { ApplicantProfilePage } from './pages/company/ApplicantProfilePage';
@@ -108,6 +109,7 @@ const AppRoutes = () => {
           <Route path="/jobs" element={<UnifiedDashboardLayout><JobsList /></UnifiedDashboardLayout>} />
           <Route path="/jobs/:id" element={<UnifiedDashboardLayout><JobDetail /></UnifiedDashboardLayout>} />
           <Route path="/jobs/:id/apply" element={<UnifiedDashboardLayout><ApplyJobPage /></UnifiedDashboardLayout>} />
+          <Route path="/company/:id" element={<UnifiedDashboardLayout><PublicProfile /></UnifiedDashboardLayout>} />
 
           {/* Employee Routes */}
           <Route

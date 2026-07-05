@@ -91,6 +91,13 @@ class PaymentThrottle(UserRateThrottle):
     scope = 'payment'
 
 
+class ApplyThrottle(UserRateThrottle):
+    """Limits job applications to 10 per authenticated user per hour.
+    Prevents spamming job applications.
+    """
+    scope = 'apply'
+
+
 from .models import (
     CustomUser, EmployeeProfile, CompanyProfile, Job, Application,
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
@@ -102,6 +109,7 @@ from .serializers import (
     UserSerializer,
     EmployeeProfileSerializer,
     CompanyProfileSerializer,
+    CompanyPublicProfileSerializer,
     JobSerializer,
     ApplicationSerializer,
     NotificationSerializer,
@@ -548,7 +556,7 @@ class JobListCreateView(generics.ListCreateAPIView):
     """
     serializer_class = JobSerializer
 
-    @method_decorator(cache_page(60 * 5))
+    @method_decorator(cache_page(60))
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
@@ -760,7 +768,7 @@ class JobDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     queryset           = Job.objects.filter(status='approved')
 
-    @method_decorator(cache_page(60 * 5))
+    @method_decorator(cache_page(60))
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
@@ -951,6 +959,7 @@ class SavedJobToggleView(APIView):
 class ApplyForJobView(APIView):
     """POST /api/jobs/<id>/apply/ — employee applies for a job."""
     permission_classes = [IsEmployee]
+    throttle_classes   = [ApplyThrottle]
 
     def post(self, request, pk):
         try:
@@ -1828,4 +1837,13 @@ class PaystackWebhookView(APIView):
 
         # Always return 200 to acknowledge receipt
         return HttpResponse(status=200)
+
+
+class CompanyPublicProfileView(generics.RetrieveAPIView):
+    """GET /api/company/<id>/ — get public details of a company (anonymous/public)."""
+    queryset = CompanyProfile.objects.all()
+    serializer_class = CompanyPublicProfileSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = 'user_id'
+
 

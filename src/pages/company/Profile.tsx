@@ -30,7 +30,6 @@ export const CompanyProfilePage = () => {
         companyName: profile.companyName,
         industry: profile.industry || '',
         website: profile.website || '',
-        description: profile.description || '',
         aboutCompany: profile.aboutCompany || '',
       });
     }
@@ -232,18 +231,6 @@ export const CompanyProfilePage = () => {
                       placeholder="https://"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Company Description</label>
-                  <textarea 
-                    disabled={!isEditing}
-                    rows={6}
-                    className="input-soft w-full resize-none disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
-                    value={formData.description || ''}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Describe your company, mission, and culture..."
-                  />
                 </div>
 
                 <div>

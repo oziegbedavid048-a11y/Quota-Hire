@@ -272,7 +272,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               companyName: profileData.company_name || '',
               website: profileData.website || '',
               industry: profileData.industry || '',
-              description: profileData.description || '',
+              aboutCompany: profileData.about_company || '',
               logoUrl: profileData.logo_url || user.avatarUrl || '',
           } : {}),
           ...(user.role === 'employee' && profileData ? {
@@ -294,7 +294,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const normalizedJobs = jobs.map((j: any) => ({
           id: j.id.toString(),
-          companyId: j.company?.toString() || j.company_name,
+          companyId: j.company_id?.toString() || j.company?.toString() || j.company_name,
           companyName: j.company_name,
           companyLogoUrl: j.company_logo_url,
           companyIsVerified: true,
@@ -525,7 +525,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (profileData.companyName !== undefined) payload.company_name = profileData.companyName;
       if (profileData.website !== undefined) payload.website = profileData.website;
       if (profileData.industry !== undefined) payload.industry = profileData.industry;
-      if (profileData.description !== undefined) payload.description = profileData.description;
+      if (profileData.aboutCompany !== undefined) payload.about_company = profileData.aboutCompany;
       if (profileData.contactEmail !== undefined) payload.contact_email = profileData.contactEmail;
       if (profileData.contactPhone !== undefined) payload.contact_phone = profileData.contactPhone;
 

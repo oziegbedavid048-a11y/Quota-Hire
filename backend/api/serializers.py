@@ -89,18 +89,21 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
 
 
 class CompanyProfileSerializer(serializers.ModelSerializer):
-    description = serializers.CharField(max_length=2000, allow_blank=True, required=False)
     about_company = serializers.CharField(max_length=5000, allow_blank=True, required=False)
 
     class Meta:
         model  = CompanyProfile
-        fields = ('company_name', 'website', 'industry', 'description', 'about_company', 'logo_url', 'contact_email', 'contact_phone')
-
-    def validate_description(self, value):
-        return sanitize_text(value)
+        fields = ('company_name', 'website', 'industry', 'about_company', 'logo_url', 'contact_email', 'contact_phone')
 
     def validate_about_company(self, value):
         return sanitize_text(value)
+
+
+class CompanyPublicProfileSerializer(serializers.ModelSerializer):
+    """Serializer for public company profiles — hides all contact phone and email fields."""
+    class Meta:
+        model  = CompanyProfile
+        fields = ('id', 'company_name', 'website', 'industry', 'about_company', 'logo_url')
 
 
 # ── User Serializers ──────────────────────────────────────────────────────────

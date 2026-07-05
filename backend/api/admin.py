@@ -42,7 +42,7 @@ class CompanyProfileInline(admin.StackedInline):
     model       = CompanyProfile
     can_delete  = False
     verbose_name_plural = 'Company Profile'
-    fields = ('company_name', 'website', 'industry', 'description', 'logo_url')
+    fields = ('company_name', 'website', 'industry', 'about_company', 'logo_url')
     extra = 0
 
 

@@ -42,7 +42,6 @@ export interface CompanyProfile extends User {
   companyName: string;
   website?: string;
   industry?: string;
-  description?: string;
   aboutCompany?: string;
   logoUrl?: string;
 }

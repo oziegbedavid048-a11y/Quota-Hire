@@ -101,6 +101,15 @@ else:
 # Custom User Model
 AUTH_USER_MODEL = 'api.CustomUser'
 
+# Celery Configurations
+CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_ALWAYS_EAGER = DEBUG
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -164,6 +173,7 @@ REST_FRAMEWORK = {
         'auth_email': '5/hour',          # max 5 verification/reset emails per IP per hour
         'upload': '20/hour',             # max 20 file uploads per user per hour
         'payment': '30/hour',            # max 30 payment requests per user per hour
+        'apply': '10/hour',              # max 10 job applications per user per hour
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,

@@ -23,6 +23,7 @@ urlpatterns = [
     # ── Profiles ──────────────────────────────────────────────────────────────
     path('profile/employee/',       views.EmployeeProfileView.as_view(),         name='profile-employee'),
     path('profile/company/',        views.CompanyProfileView.as_view(),          name='profile-company'),
+    path('company/<int:user_id>/',  views.CompanyPublicProfileView.as_view(),    name='company-public-profile'),
     path('profile/avatar/',         views.AvatarUploadView.as_view(),            name='profile-avatar'),
     path('profile/ai-analysis/',    views.AIAnalysisView.as_view(),              name='profile-ai-analysis'),
 

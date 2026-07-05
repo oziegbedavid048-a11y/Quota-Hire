@@ -4,11 +4,17 @@ import { motion } from 'framer-motion';
 import { Search, MapPin, Banknote, Briefcase, Filter, BadgeCheck, TrendingUp } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAppContext } from '../../context/AppContext';
+import { worldCurrencies, convertSalary, getCurrencySymbol } from '../../utils/currencies';
 export const JobsList = () => {
   const { jobs, currentUser, loading } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All');
   const [visibleCount, setVisibleCount] = useState(5);
+  const [displayCurrency, setDisplayCurrency] = useState(() => localStorage.getItem('display_currency') || 'Original');
+
+  useEffect(() => {
+    localStorage.setItem('display_currency', displayCurrency);
+  }, [displayCurrency]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -113,6 +119,23 @@ export const JobsList = () => {
                 <option value="Full-time">Full-time</option>
               </select>
             </div>
+
+            {/* Currency conversion selector */}
+            <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 px-3 py-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 w-full sm:w-auto">
+              <Banknote size={16} className="text-neutral-400 shrink-0" />
+              <select 
+                className="bg-transparent text-sm text-neutral-900 dark:text-neutral-100 outline-none cursor-pointer border-none p-0 w-full sm:w-auto"
+                value={displayCurrency}
+                onChange={(e) => setDisplayCurrency(e.target.value)}
+              >
+                <option value="Original">Original Currency</option>
+                {worldCurrencies.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -173,10 +196,14 @@ export const JobsList = () => {
                             {job.title}
                           </h3>
                           <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-sm text-neutral-600 dark:text-neutral-400 font-medium">
-                            <span className="flex items-center gap-1 truncate max-w-full">
+                            <Link 
+                              to={`/company/${job.companyId}`}
+                              className="hover:text-accent-600 transition-colors flex items-center gap-1 truncate max-w-full"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <span className="truncate">{job.companyName}</span>
                               {job.companyIsVerified && <BadgeCheck size={14} className="text-blue-500 shrink-0" />}
-                            </span>
+                            </Link>
                             <span className="hidden md:inline text-neutral-300 dark:text-neutral-600 shrink-0">•</span>
                             <span className="text-neutral-500 text-xs md:text-sm flex items-center gap-1 shrink-0">
                               <MapPin size={14} /> {job.location || 'Flexible'}
@@ -193,16 +220,26 @@ export const JobsList = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 mb-4 mt-2">
-                      {job.salaryRange && (
-                        <span className="inline-flex items-center gap-1.5 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-lg">
-                          <Banknote size={14} /> {job.salaryRange}
-                        </span>
-                      )}
-                      {job.commissionRange && (
-                        <span className="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-lg">
-                          <TrendingUp size={14} /> OTE {job.commissionRange}
-                        </span>
-                      )}
+                      {job.salaryRange && (() => {
+                        const targetCurrency = displayCurrency === 'Original' ? (job.currency || 'USD') : displayCurrency;
+                        const converted = convertSalary(job.salaryRange, job.currency || 'USD', targetCurrency);
+                        const symbol = getCurrencySymbol(targetCurrency);
+                        return (
+                          <span className="inline-flex items-center gap-1.5 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-lg">
+                            <Banknote size={14} /> {symbol} {converted}
+                          </span>
+                        );
+                      })()}
+                      {job.commissionRange && (() => {
+                        const targetCurrency = displayCurrency === 'Original' ? (job.currency || 'USD') : displayCurrency;
+                        const converted = convertSalary(job.commissionRange, job.currency || 'USD', targetCurrency);
+                        const symbol = getCurrencySymbol(targetCurrency);
+                        return (
+                          <span className="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-lg">
+                            <TrendingUp size={14} /> OTE {symbol} {converted}
+                          </span>
+                        );
+                      })()}
                       {!job.salaryRange && !job.commissionRange && (
                         <span className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded-lg">
                           <Banknote size={14} /> Competitive

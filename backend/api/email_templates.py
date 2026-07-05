@@ -529,31 +529,9 @@ def get_newsletter_email_html(subject, plain_body):
 
 def send_courier_email(to_email: str, subject: str, text_content: str, html_content: str) -> bool:
     """
-    Sends a transactional email via Elastic Email SMTP using Django's built-in
-    EmailMultiAlternatives. The HTML body is attached as the primary alternative;
-    text_content serves as the plain-text fallback for email clients that do
-    not render HTML.
-
-    Configuration is driven entirely by Django settings:
-      EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD,
-      EMAIL_USE_TLS, DEFAULT_FROM_EMAIL
+    Dispatches the email sending task to Celery's task queue so it is sent
+    asynchronously without blocking the HTTP request thread.
     """
-    from_email = settings.DEFAULT_FROM_EMAIL
-
-    try:
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=from_email,
-            to=[to_email],
-        )
-        msg.attach_alternative(html_content, "text/html")
-        msg.send(fail_silently=False)
-        logger.info("Email sent via Elastic Email to %s (subject=%r)", to_email, subject)
-        return True
-    except Exception as e:
-        logger.error(
-            "Elastic Email send failed (to=%s subject=%r): %s",
-            to_email, subject, e, exc_info=True,
-        )
-        raise
+    from .tasks import send_courier_email_task
+    send_courier_email_task.delay(to_email, subject, text_content, html_content)
+    return True
