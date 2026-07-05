@@ -531,7 +531,31 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
     """
     Dispatches the email sending task to Celery's task queue so it is sent
     asynchronously without blocking the HTTP request thread.
+    If Celery or Redis is unreachable/down, falls back to synchronous sending to ensure delivery.
     """
-    from .tasks import send_courier_email_task
-    send_courier_email_task.delay(to_email, subject, text_content, html_content)
-    return True
+    try:
+        from .tasks import send_courier_email_task
+        send_courier_email_task.delay(to_email, subject, text_content, html_content)
+        return True
+    except Exception as e:
+        logger.error(
+            "Failed to dispatch email asynchronously via Celery (Redis down?): %s. "
+            "Falling back to synchronous send.", e, exc_info=True
+        )
+        try:
+            from django.core.mail import EmailMultiAlternatives
+            from django.conf import settings
+            
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=text_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[to_email],
+            )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=False)
+            logger.info("Sent email synchronously as a fallback to %s (subject=%r)", to_email, subject)
+            return True
+        except Exception as sync_exc:
+            logger.error("Synchronous fallback email send failed: %s", sync_exc, exc_info=True)
+            return False

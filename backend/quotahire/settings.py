@@ -117,6 +117,26 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=DEBUG, cast=bool)
 
+# Prevent Celery task publishing from hanging indefinitely if Redis is down/slow
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    'socket_timeout': 5.0,
+    'socket_connect_timeout': 5.0,
+    'max_retries': 2,
+    'interval_start': 0,
+    'interval_step': 0.2,
+    'interval_max': 0.5,
+}
+
+# Configure SSL options for Celery/Kombu connection if using rediss://
+if REDIS_URL and REDIS_URL.startswith('rediss://'):
+    import ssl
+    CELERY_BROKER_USE_SSL = {
+        'ssl_cert_reqs': ssl.CERT_NONE
+    }
+    CELERY_REDIS_BACKEND_USE_SSL = {
+        'ssl_cert_reqs': ssl.CERT_NONE
+    }
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
