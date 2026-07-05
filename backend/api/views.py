@@ -276,42 +276,51 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         from django.db import transaction
-        from rest_framework.exceptions import ValidationError
-        
+
+        # ── Step 1: Create the user in its own transaction ─────────────────────
+        # The email send must NEVER block or roll back the account creation.
+        # Even if Celery/Redis/SMTP is down, the user record must persist so
+        # they can request a verification resend later.
+        with transaction.atomic():
+            user = serializer.save()
+
+        # ── Step 2: Send the verification email OUTSIDE the transaction ────────
+        # Any exception here is caught and logged only — it never raises back
+        # to the caller, so the HTTP 201 response is always returned to the user.
         try:
-            with transaction.atomic():
-                user = serializer.save()
-                
-                # Automatically trigger verification email
-                from django.conf import settings
-                from .email_templates import get_verification_email_html, send_courier_email
-                import datetime
-                import jwt
-                
-                token = jwt.encode({
-                    'email': user.email,
-                    'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
-                }, settings.SECRET_KEY, algorithm='HS256')
-                
-                frontend_url = settings.FRONTEND_URL.strip()
-                verify_link = f"{frontend_url}/verify-email?token={token}"
-                display_name = user.get_full_name() or user.username
-                
-                html_content = get_verification_email_html(user=display_name, redirect=verify_link)
-                text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
-                
-                send_courier_email(
-                    to_email=user.email,
-                    subject="Verify your email for Quota Hire",
-                    text_content=text_content,
-                    html_content=html_content
-                )
-                
+            from django.conf import settings
+            from .email_templates import get_verification_email_html, send_courier_email
+            import datetime
+            import jwt
+
+            token = jwt.encode({
+                'email': user.email,
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+            }, settings.SECRET_KEY, algorithm='HS256')
+
+            frontend_url = settings.FRONTEND_URL.strip()
+            verify_link = f"{frontend_url}/verify-email?token={token}"
+            display_name = user.get_full_name() or user.username
+
+            html_content = get_verification_email_html(user=display_name, redirect=verify_link)
+            text_content = (
+                f"Hi {display_name},\n\n"
+                f"Please verify your email for Quota Hire using this link:\n{verify_link}"
+            )
+
+            send_courier_email(
+                to_email=user.email,
+                subject="Verify your email for Quota Hire",
+                text_content=text_content,
+                html_content=html_content,
+            )
         except Exception as e:
-            logger.error(f"Registration failed - Could not send verification email to {serializer.validated_data.get('email')}: {e}")
-            raise ValidationError({
-                "email": "We couldn't send a verification email to this address. Please ensure the email is valid and try again later."
-            })
+            # Log the failure but DO NOT raise — the account was created successfully.
+            # The user will see a "check your email" screen and can request a resend.
+            logger.error(
+                "Verification email send failed for %s: %s",
+                user.email, e, exc_info=True,
+            )
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):

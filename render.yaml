@@ -23,10 +23,20 @@ services:
       - key: CSRF_TRUSTED_ORIGINS
         value: "https://quotahire-backend.onrender.com,https://quotahire.org"
       - key: EMAIL_HOST
-        value: "smtp.gmail.com"
+        value: "smtp.sender.net"
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_HOST_USER
+        value: "Quotahire Backend_dRl0LE"
+      # EMAIL_HOST_PASSWORD must be set in Render Dashboard (secret)
+      - key: DEFAULT_FROM_EMAIL
+        value: "Quota Hire <support@quotahire.org>"
+      # CELERY_TASK_ALWAYS_EAGER: runs Celery tasks synchronously in the web process.
+      # This ensures emails are sent immediately without a separate Celery worker service.
+      # Remove this if you add a dedicated Celery worker service on a paid plan.
+      - key: CELERY_TASK_ALWAYS_EAGER
         value: "True"
       # ── Paystack Payment Gateway ──────────────────────────────────────────
       # IMPORTANT: Set these in the Render Dashboard → Environment → Secret Files
