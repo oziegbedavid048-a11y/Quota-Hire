@@ -1839,11 +1839,46 @@ class PaystackWebhookView(APIView):
         return HttpResponse(status=200)
 
 
-class CompanyPublicProfileView(generics.RetrieveAPIView):
-    """GET /api/company/<id>/ — get public details of a company (anonymous/public)."""
-    queryset = CompanyProfile.objects.all()
-    serializer_class = CompanyPublicProfileSerializer
+class CompanyPublicProfileView(APIView):
+    """GET /api/company/<lookup_val>/ — get public details of a company (supports user_id or external company name)."""
     permission_classes = [permissions.AllowAny]
-    lookup_field = 'user_id'
+
+    def get(self, request, lookup_val):
+        # 1. Try to parse lookup_val as user_id (integer)
+        try:
+            user_id = int(lookup_val)
+            profile = CompanyProfile.objects.filter(user_id=user_id).first()
+            if profile:
+                serializer = CompanyPublicProfileSerializer(profile, context={'request': request})
+                return Response(serializer.data)
+        except ValueError:
+            pass
+
+        # 2. Check if lookup_val starts with 'external-' or look up by name
+        company_name = lookup_val
+        if lookup_val.startswith('external-'):
+            from urllib.parse import unquote
+            company_name = unquote(lookup_val[9:])
+
+        # 3. Try to find a matching database CompanyProfile by name (case-insensitive)
+        profile = CompanyProfile.objects.filter(company_name__iexact=company_name).first()
+        if profile:
+            serializer = CompanyPublicProfileSerializer(profile, context={'request': request})
+            return Response(serializer.data)
+
+        # 4. Check if there is any Job with this custom_company_name
+        job = Job.objects.all_with_deleted().filter(custom_company_name__iexact=company_name).first()
+        if job:
+            return Response({
+                'id': f'external-{company_name}',
+                'company_name': job.custom_company_name,
+                'website': job.external_apply_url or '',
+                'industry': 'Technology' if 'tech' in job.title.lower() or 'saas' in job.title.lower() else 'Sales',
+                'about_company': '',  # Compulsory About Company field is empty/blank for incomplete external profiles
+                'logo_url': ''
+            })
+
+        return Response({'error': 'Company profile not found'}, status=404)
+
 
 

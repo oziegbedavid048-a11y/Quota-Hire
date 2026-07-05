@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { worldCurrencies, convertSalary } from '../../utils/currencies';
+import { worldCurrencies } from '../../utils/currencies';
 
 const getCurrencySymbol = (code?: string) => {
   if (!code) return '$';
@@ -195,30 +195,18 @@ const SavedJobCard = ({
           </span>
 
           {/* Salary / Commission */}
-          {job.salaryRange && (() => {
-            const displayCurrency = localStorage.getItem('display_currency') || 'Original';
-            const targetCurrency = displayCurrency === 'Original' ? (job.currency || 'USD') : displayCurrency;
-            const converted = convertSalary(job.salaryRange, job.currency || 'USD', targetCurrency);
-            const symbol = getCurrencySymbol(targetCurrency);
-            return (
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-lg border border-green-100 dark:border-green-900/30">
-                <Banknote size={11} className="flex-shrink-0" />
-                {symbol} {converted}
-              </span>
-            );
-          })()}
-          {job.commissionRange && (() => {
-            const displayCurrency = localStorage.getItem('display_currency') || 'Original';
-            const targetCurrency = displayCurrency === 'Original' ? (job.currency || 'USD') : displayCurrency;
-            const converted = convertSalary(job.commissionRange, job.currency || 'USD', targetCurrency);
-            const symbol = getCurrencySymbol(targetCurrency);
-            return (
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-lg border border-amber-100 dark:border-amber-900/30">
-                <TrendingUp size={11} className="flex-shrink-0" />
-                OTE {symbol} {converted}
-              </span>
-            );
-          })()}
+          {job.salaryRange && (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-lg border border-green-100 dark:border-green-900/30">
+              <Banknote size={11} className="flex-shrink-0" />
+              {getCurrencySymbol(job.currency)}{job.salaryRange}
+            </span>
+          )}
+          {job.commissionRange && (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1 rounded-lg border border-amber-100 dark:border-amber-900/30">
+              <TrendingUp size={11} className="flex-shrink-0" />
+              OTE {getCurrencySymbol(job.currency)}{job.commissionRange}
+            </span>
+          )}
         </div>
 
         {/* Requirements preview */}

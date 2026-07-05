@@ -10,7 +10,7 @@ import { useAppContext } from '../../context/AppContext';
 import { toast } from 'sonner';
 import { calculateProfileStrength } from '../../utils/profile';
 import { EmployeeProfile } from '../../types';
-import { worldCurrencies, convertSalary, getCurrencySymbol } from '../../utils/currencies';
+import { getCurrencySymbol } from '../../utils/currencies';
 
 export const JobDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,11 +19,6 @@ export const JobDetail = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasAppliedLocal, setHasAppliedLocal] = useState(false);
-  const [displayCurrency, setDisplayCurrency] = useState(() => localStorage.getItem('display_currency') || 'Original');
-
-  useEffect(() => {
-    localStorage.setItem('display_currency', displayCurrency);
-  }, [displayCurrency]);
 
   const job = jobs.find((j) => String(j.id) === String(id));
 
@@ -156,26 +151,16 @@ export const JobDetail = () => {
                 <Briefcase size={13} className="shrink-0" /> {job.employment_type}
               </span>
             ) : null}
-            {job.salaryRange && (() => {
-              const targetCurrency = displayCurrency === 'Original' ? (job.currency || 'USD') : displayCurrency;
-              const converted = convertSalary(job.salaryRange, job.currency || 'USD', targetCurrency);
-              const symbol = getCurrencySymbol(targetCurrency);
-              return (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs sm:text-sm font-bold rounded-xl">
-                  <Banknote size={13} className="shrink-0" /> {symbol} {converted}
-                </span>
-              );
-            })()}
-            {job.commissionRange && (() => {
-              const targetCurrency = displayCurrency === 'Original' ? (job.currency || 'USD') : displayCurrency;
-              const converted = convertSalary(job.commissionRange, job.currency || 'USD', targetCurrency);
-              const symbol = getCurrencySymbol(targetCurrency);
-              return (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs sm:text-sm font-bold rounded-xl">
-                  <TrendingUp size={13} className="shrink-0" /> OTE {symbol} {converted}
-                </span>
-              );
-            })()}
+            {job.salaryRange && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs sm:text-sm font-bold rounded-xl">
+                <Banknote size={13} className="shrink-0" /> {getCurrencySymbol(job.currency)}{job.salaryRange}
+              </span>
+            )}
+            {job.commissionRange && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs sm:text-sm font-bold rounded-xl">
+                <TrendingUp size={13} className="shrink-0" /> OTE {getCurrencySymbol(job.currency)}{job.commissionRange}
+              </span>
+            )}
             {!job.salaryRange && !job.commissionRange && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-xs sm:text-sm font-bold rounded-xl">
                 <Banknote size={13} className="shrink-0" /> Competitive
@@ -233,58 +218,34 @@ export const JobDetail = () => {
           {/* ── RIGHT SIDEBAR ── */}
           <div className="space-y-5 lg:space-y-6">
             <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-2xl p-5 sm:p-6 shadow-sm">
-              <h3 className="font-extrabold text-neutral-900 dark:text-white mb-5 flex items-center justify-between text-sm sm:text-base">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                    <Banknote size={16} className="text-green-600 dark:text-green-400" />
-                  </div>
-                  Compensation
+              <h3 className="font-extrabold text-neutral-900 dark:text-white mb-5 flex items-center gap-2 text-sm sm:text-base">
+                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                  <Banknote size={16} className="text-green-600 dark:text-green-400" />
                 </div>
-                <select
-                  className="bg-neutral-50 dark:bg-neutral-800 text-[11px] font-bold text-neutral-500 rounded px-2 py-1 outline-none border border-neutral-200 dark:border-neutral-700 cursor-pointer"
-                  value={displayCurrency}
-                  onChange={(e) => setDisplayCurrency(e.target.value)}
-                >
-                  <option value="Original">Original</option>
-                  {worldCurrencies.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.code} ({c.symbol})
-                    </option>
-                  ))}
-                </select>
+                Compensation
               </h3>
               <div className="space-y-4">
-                {job.salaryRange ? (() => {
-                  const targetCurrency = displayCurrency === 'Original' ? (job.currency || 'USD') : displayCurrency;
-                  const converted = convertSalary(job.salaryRange, job.currency || 'USD', targetCurrency);
-                  const symbol = getCurrencySymbol(targetCurrency);
-                  return (
-                    <div>
-                      <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Base Salary</p>
+                {job.salaryRange ? (
+                  <div>
+                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">Base Salary</p>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-xs font-black text-neutral-400">{job.currency || 'USD'}</span>
+                      <p className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">{getCurrencySymbol(job.currency)}{job.salaryRange}</p>
+                    </div>
+                  </div>
+                ) : null}
+                {job.commissionRange ? (
+                  <div className={job.salaryRange ? 'pt-4 border-t border-neutral-100 dark:border-neutral-800' : ''}>
+                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">OTE / Commission</p>
+                    <div className="flex items-center gap-2">
+                      <TrendingUp size={14} className="text-amber-500" />
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-xs font-black text-neutral-400">{targetCurrency}</span>
-                        <p className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">{symbol} {converted}</p>
+                        <span className="text-xs font-black text-neutral-400">{job.currency || 'USD'}</span>
+                        <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400">{getCurrencySymbol(job.currency)}{job.commissionRange}</p>
                       </div>
                     </div>
-                  );
-                })() : null}
-                {job.commissionRange ? (() => {
-                  const targetCurrency = displayCurrency === 'Original' ? (job.currency || 'USD') : displayCurrency;
-                  const converted = convertSalary(job.commissionRange, job.currency || 'USD', targetCurrency);
-                  const symbol = getCurrencySymbol(targetCurrency);
-                  return (
-                    <div className={job.salaryRange ? 'pt-4 border-t border-neutral-100 dark:border-neutral-800' : ''}>
-                      <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1.5">OTE / Commission</p>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp size={14} className="text-amber-500" />
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-xs font-black text-neutral-400">{targetCurrency}</span>
-                          <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400">{symbol} {converted}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })() : null}
+                  </div>
+                ) : null}
                 {!job.salaryRange && !job.commissionRange && (
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">Competitive salary — details discussed during interview.</p>
                 )}

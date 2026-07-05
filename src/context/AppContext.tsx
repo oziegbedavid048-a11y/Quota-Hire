@@ -294,7 +294,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const normalizedJobs = jobs.map((j: any) => ({
           id: j.id.toString(),
-          companyId: j.company_id?.toString() || j.company?.toString() || j.company_name,
+          companyId: j.custom_company_name ? `external-${encodeURIComponent(j.custom_company_name)}` : (j.company_id?.toString() || j.company?.toString() || j.company_name),
           companyName: j.company_name,
           companyLogoUrl: j.company_logo_url,
           companyIsVerified: true,

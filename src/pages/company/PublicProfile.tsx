@@ -54,26 +54,26 @@ export const PublicProfile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-12 relative overflow-hidden flex items-center justify-center">
+      <div className="min-h-screen py-12 relative overflow-hidden flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
         <AnimatedBackground />
-        <div className="w-16 h-16 border-4 border-accent-200 border-t-accent-600 rounded-full animate-spin"></div>
+        <div className="w-12 h-12 border-2 border-accent-200 border-t-accent-600 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen py-12 relative overflow-hidden flex flex-col items-center justify-center">
+      <div className="min-h-screen py-12 relative overflow-hidden flex flex-col items-center justify-center bg-neutral-50 dark:bg-neutral-950">
         <AnimatedBackground />
-        <div className="card-soft p-8 text-center max-w-md relative z-10">
-          <Building2 className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Profile Not Found</h2>
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center max-w-md relative z-10 shadow-sm">
+          <Building2 className="w-10 h-10 text-neutral-400 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">Profile Not Found</h2>
+          <p className="text-neutral-500 dark:text-neutral-400 text-xs mb-6">
             {error || "The company profile you are trying to view doesn't exist or is currently unavailable."}
           </p>
           <button
             onClick={handleBack}
-            className="btn-soft bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-6 py-2.5"
+            className="w-full bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 py-2.5 rounded-xl text-xs font-bold transition-colors"
           >
             Go Back
           </button>
@@ -83,31 +83,29 @@ export const PublicProfile = () => {
   }
 
   return (
-    <div className="min-h-screen py-8 relative overflow-hidden">
+    <div className="min-h-screen py-8 relative overflow-hidden bg-neutral-50 dark:bg-neutral-950">
       <AnimatedBackground />
 
-      <div className="container mx-auto px-4 max-w-4xl relative z-10">
+      <div className="container mx-auto px-4 max-w-3xl relative z-10">
         <button
           onClick={handleBack}
-          className="mb-8 inline-flex items-center text-sm font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors bg-white dark:bg-neutral-900 px-5 py-2.5 rounded-full shadow-soft border border-neutral-100 dark:border-neutral-800"
+          className="mb-6 inline-flex items-center text-xs font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors bg-white dark:bg-neutral-900 px-4 py-2 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800"
         >
-          <ArrowLeft size={16} className="mr-2" />
+          <ArrowLeft size={14} className="mr-1.5" />
           Go Back
         </button>
 
-        {/* Hero Card */}
+        {/* Profile Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="card-soft p-6 md:p-8 lg:p-10 mb-8 bg-gradient-to-br from-white via-white/80 to-accent-50/10 dark:from-neutral-900 dark:via-neutral-900/80 dark:to-accent-950/5 backdrop-blur-md relative overflow-hidden"
+          transition={{ duration: 0.4 }}
+          className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 md:p-8 shadow-sm space-y-6"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-accent-500/5 dark:bg-accent-500/10 rounded-full blur-[80px] pointer-events-none" />
-          <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-warm-500/5 dark:bg-warm-500/10 rounded-full blur-[100px] pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 text-center md:text-left">
+          {/* Header Layout */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left border-b border-neutral-100 dark:border-neutral-800 pb-6">
             {/* Logo */}
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-[24px] bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 dark:text-accent-400 font-extrabold text-3xl sm:text-4xl shadow-inner-soft shrink-0 border border-neutral-100 dark:border-neutral-800/50 overflow-hidden">
+            <div className="w-20 h-20 rounded-2xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-400 dark:text-neutral-500 font-extrabold text-2xl border border-neutral-200 dark:border-neutral-700/50 overflow-hidden shrink-0">
               {profile.logoUrl ? (
                 <img src={profile.logoUrl} alt={profile.companyName} className="w-full h-full object-cover" />
               ) : (
@@ -116,25 +114,25 @@ export const PublicProfile = () => {
             </div>
 
             {/* Profile details */}
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-                <span className="inline-flex items-center gap-1 text-xs font-extrabold text-accent-600 dark:text-accent-400 bg-accent-50 dark:bg-accent-950/40 px-3 py-1 rounded-full border border-accent-100/50 dark:border-accent-900/20">
-                  <Building2 size={12} /> Company Profile
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                  Hiring Company
                 </span>
-                <span className="inline-flex items-center gap-1 text-xs font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-3 py-1 rounded-full border border-blue-100/50 dark:border-blue-900/20">
-                  <BadgeCheck size={12} /> Verified
+                <span className="inline-flex items-center text-[10px] font-extrabold uppercase tracking-wider text-blue-500 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded border border-blue-100/50 dark:border-blue-900/20">
+                  <BadgeCheck size={10} className="mr-0.5" /> Verified
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-display font-black text-neutral-900 dark:text-white tracking-tight mb-3 truncate">
+              <h1 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white tracking-tight truncate">
                 {profile.companyName}
               </h1>
 
               {/* Tags */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
                 {profile.industry && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-100 dark:border-neutral-700">
-                    <Tag size={12} className="text-neutral-400" /> {profile.industry}
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-600 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-850 px-2.5 py-1 rounded-lg border border-neutral-200/50 dark:border-neutral-800">
+                    <Building2 size={11} className="text-neutral-400" /> {profile.industry}
                   </span>
                 )}
                 {profile.website && (
@@ -142,31 +140,26 @@ export const PublicProfile = () => {
                     href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-accent-600 dark:text-neutral-300 dark:hover:text-accent-400 bg-neutral-50 dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-100 dark:border-neutral-700 transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-600 hover:text-accent-600 dark:text-neutral-400 dark:hover:text-accent-400 bg-neutral-50 dark:bg-neutral-850 px-2.5 py-1 rounded-lg border border-neutral-200/50 dark:border-neutral-800 transition-colors"
                   >
-                    <Globe size={12} className="text-neutral-400" /> Visit Website
+                    <Globe size={11} className="text-neutral-400" /> {profile.website.replace(/^https?:\/\/(www\.)?/, '')}
                   </a>
                 )}
               </div>
             </div>
           </div>
-        </motion.div>
 
-        {/* About Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="card-soft p-6 md:p-8 lg:p-10"
-        >
-          <h2 className="text-lg font-black text-neutral-900 dark:text-white mb-6 border-b border-neutral-100 dark:border-neutral-800 pb-3 flex items-center gap-2">
-            <span className="w-1.5 h-6 bg-accent-500 rounded-full" />
-            About the Company
-          </h2>
-
-          <div className="text-neutral-600 dark:text-neutral-300 text-sm sm:text-base leading-relaxed whitespace-pre-wrap font-medium">
-            {profile.aboutCompany || "No detailed description provided by the company."}
-          </div>
+          {/* About Section - Rendered only if aboutCompany has content */}
+          {profile.aboutCompany && profile.aboutCompany.trim().length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-xs font-black uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                About the Company
+              </h2>
+              <p className="text-neutral-600 dark:text-neutral-300 text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap font-medium">
+                {profile.aboutCompany}
+              </p>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>
