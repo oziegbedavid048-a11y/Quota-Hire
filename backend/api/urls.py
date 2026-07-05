@@ -23,7 +23,6 @@ urlpatterns = [
     # ── Profiles ──────────────────────────────────────────────────────────────
     path('profile/employee/',       views.EmployeeProfileView.as_view(),         name='profile-employee'),
     path('profile/company/',        views.CompanyProfileView.as_view(),          name='profile-company'),
-    path('company/<str:lookup_val>/',  views.CompanyPublicProfileView.as_view(),    name='company-public-profile'),
     path('profile/avatar/',         views.AvatarUploadView.as_view(),            name='profile-avatar'),
     path('profile/ai-analysis/',    views.AIAnalysisView.as_view(),              name='profile-ai-analysis'),
 
@@ -58,6 +57,7 @@ urlpatterns = [
     path('company/applications/<int:pk>/', views.CompanyApplicationDetailView.as_view(), name='company-application-detail'),
     path('company/applications/<int:pk>/shortlist/', views.ShortlistApplicantView.as_view(), name='company-shortlist-applicant'),
     path('company/applications/<int:pk>/resume/', views.ResumeProxyView.as_view(), name='company-resume-proxy'),
+    path('company/<str:lookup_val>/',  views.CompanyPublicProfileView.as_view(),    name='company-public-profile'),
 
     # ── Notifications ─────────────────────────────────────────────────────────
     path('notifications/',                  views.NotificationListView.as_view(),      name='notifications'),
