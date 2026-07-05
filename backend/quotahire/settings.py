@@ -82,6 +82,13 @@ DATABASES = {
 # Caching (Redis)
 REDIS_URL = config('REDIS_URL', default=None)
 if REDIS_URL:
+    # If using SSL-enabled Redis (rediss://), redis-py requires specifying ssl_cert_reqs.
+    # We append ssl_cert_reqs=none to disable verification and avoid certificate trust/handshake
+    # failures in containerized/production environments like Render.
+    if REDIS_URL.startswith('rediss://') and 'ssl_cert_reqs' not in REDIS_URL:
+        separator = '&' if '?' in REDIS_URL else '?'
+        REDIS_URL = f"{REDIS_URL}{separator}ssl_cert_reqs=none"
+
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
@@ -102,8 +109,8 @@ else:
 AUTH_USER_MODEL = 'api.CustomUser'
 
 # Celery Configurations
-CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_BROKER_URL = REDIS_URL if REDIS_URL else 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = REDIS_URL if REDIS_URL else 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
