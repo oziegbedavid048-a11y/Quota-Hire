@@ -49,6 +49,22 @@ class CompanyProfileInline(admin.StackedInline):
 
 # ── Custom User Admin ─────────────────────────────────────────────────────────
 
+class SendCustomEmailForm(forms.Form):
+    subject = forms.CharField(
+        max_length=200, 
+        required=True,
+        widget=forms.TextInput(attrs={'placeholder': 'Enter email subject...'})
+    )
+    message_body = forms.CharField(
+        required=True,
+        widget=forms.Textarea(attrs={'placeholder': 'Write your message here...'})
+    )
+    attachment = forms.FileField(
+        required=False,
+        help_text="Optional: Attach any document (PDF, DOCX) or image (PNG, JPG)."
+    )
+
+
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     """
@@ -75,12 +91,68 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
     inlines = [EmployeeProfileInline, CompanyProfileInline]
-    actions = ['mark_as_verified']
+    actions = ['mark_as_verified', 'send_custom_email']
 
     @admin.action(description='✅ Mark selected users as email verified')
     def mark_as_verified(self, request, queryset):
         updated = queryset.update(email_verified=True)
         self.message_user(request, f'Successfully marked {updated} user(s) as email verified.')
+
+    @admin.action(description='✉️ Send custom email to selected users')
+    def send_custom_email(self, request, queryset):
+        if 'apply' in request.POST:
+            form = SendCustomEmailForm(request.POST, request.FILES)
+            if form.is_valid():
+                subject = form.cleaned_data['subject']
+                body = form.cleaned_data['message_body']
+                attachment = request.FILES.get('attachment')
+                
+                from django.core.mail import EmailMultiAlternatives
+                from django.conf import settings
+                from .email_templates import get_custom_admin_email_html
+                import logging
+                
+                logger = logging.getLogger(__name__)
+                html_content = get_custom_admin_email_html(body)
+                
+                sent_count = 0
+                error_count = 0
+                for user in queryset:
+                    try:
+                        msg = EmailMultiAlternatives(
+                            subject=subject,
+                            body=body,
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            to=[user.email]
+                        )
+                        msg.attach_alternative(html_content, "text/html")
+                        if attachment:
+                            attachment.seek(0)
+                            msg.attach(attachment.name, attachment.read(), attachment.content_type)
+                        msg.send(fail_silently=False)
+                        sent_count += 1
+                    except Exception as e:
+                        logger.error(f"Failed to send custom email to {user.email}: {e}", exc_info=True)
+                        error_count += 1
+                
+                if sent_count > 0:
+                    self.message_user(request, f"Successfully sent custom email to {sent_count} user(s).")
+                if error_count > 0:
+                    from django.contrib import messages
+                    self.message_user(request, f"Failed to send email to {error_count} user(s). Check logs for details.", level=messages.ERROR)
+                
+                return None
+        else:
+            form = SendCustomEmailForm()
+            
+        from django.shortcuts import render
+        return render(request, 'admin/send_email.html', {
+            'users': queryset,
+            'form': form,
+            'opts': self.model._meta,
+            'selected_ids': request.POST.getlist(admin.ACTION_CHECKBOX_NAME),
+            'select_across': request.POST.get('select_across', '0')
+        })
 
     @admin.display(description='Role Badge')
     def role_badge(self, obj):

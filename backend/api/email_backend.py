@@ -86,6 +86,38 @@ class ZeptoMailBackend(BaseEmailBackend):
         if text_body:
             payload["textbody"] = text_body
 
+        # Process attachments if present
+        if getattr(message, 'attachments', None):
+            import base64
+            import mimetypes
+            from email.mime.base import MIMEBase
+            
+            payload["attachments"] = []
+            for attachment in message.attachments:
+                if isinstance(attachment, tuple):
+                    filename, content, mimetype = attachment
+                    # Convert content to bytes if string
+                    if isinstance(content, str):
+                        content_bytes = content.encode('utf-8')
+                    else:
+                        content_bytes = content
+                    
+                    encoded_content = base64.b64encode(content_bytes).decode('utf-8')
+                    payload["attachments"].append({
+                        "name": filename,
+                        "content": encoded_content,
+                        "mime_type": mimetype or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+                    })
+                elif isinstance(attachment, MIMEBase):
+                    filename = attachment.get_filename() or "attachment"
+                    content_bytes = attachment.get_payload(decode=True)
+                    encoded_content = base64.b64encode(content_bytes).decode('utf-8')
+                    payload["attachments"].append({
+                        "name": filename,
+                        "content": encoded_content,
+                        "mime_type": attachment.get_content_type()
+                    })
+
         # Setup Authorization Header correctly
         auth_header = self.api_key.strip()
         if not auth_header.startswith("Zoho-enczapikey"):

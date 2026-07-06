@@ -559,3 +559,33 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
         except Exception as sync_exc:
             logger.error("Synchronous fallback email send failed: %s", sync_exc, exc_info=True)
             return False
+
+
+def get_custom_admin_email_html(plain_body):
+    """
+    Renders a plain HTML body featuring only the paragraph-separated 
+    message text and the standard platform footer. No heavy design headers.
+    """
+    paragraphs = [p.strip() for p in plain_body.strip().split("\n") if p.strip()]
+    inner = "".join(f"<p>{para}</p>" for para in paragraphs)
+    
+    body = (
+        "<!DOCTYPE html>"
+        '<html lang="en">'
+        "<head>"
+        '<meta charset="UTF-8">'
+        '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">'
+        "</head>"
+        '<body style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.7;color:#3f3f46;padding:20px;max-width:600px;margin:0 auto;">'
+        f"<div>{inner}</div>"
+        '<hr style="border:none;border-top:1px solid #e4e4e7;margin:30px 0 20px;">'
+        '<div style="font-size:12px;color:#a1a1aa;line-height:1.6;text-align:center;">'
+        "<p>&copy; 2026 Quota Hire. All rights reserved.</p>"
+        '<p>You are receiving this because you have an account on '
+        '<a href="https://quotahire.org" style="color:#71717a;text-decoration:underline;">quotahire.org</a>.</p>'
+        '<p><a href="https://quotahire.org" style="color:#71717a;text-decoration:underline;">Visit Platform</a> &nbsp;&middot;&nbsp; '
+        '<a href="https://quotahire.org/dashboard" style="color:#71717a;text-decoration:underline;">My Dashboard</a></p>'
+        "</div>"
+        "</body></html>"
+    )
+    return body

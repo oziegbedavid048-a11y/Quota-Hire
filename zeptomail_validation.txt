@@ -1,0 +1,10 @@
+Quota Hire is a recruitment platform. We use ZeptoMail strictly for user-triggered transactional emails: account verification, password resets, and job application statuses. No marketing.
+
+Sample Email Template (Account Verification):
+
+Subject: Verify your email - Quota Hire
+
+Body:
+Hi {{User_Name}},
+Please verify your email address by clicking the link below to activate your Quota Hire account. This link is valid for 24 hours.
+[ Verify My Email Address ]
