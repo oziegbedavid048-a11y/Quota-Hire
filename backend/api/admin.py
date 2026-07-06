@@ -145,12 +145,13 @@ class CustomUserAdmin(UserAdmin):
         else:
             form = SendCustomEmailForm()
             
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
         from django.shortcuts import render
         return render(request, 'admin/send_email.html', {
             'users': queryset,
             'form': form,
             'opts': self.model._meta,
-            'selected_ids': request.POST.getlist(admin.ACTION_CHECKBOX_NAME),
+            'selected_ids': request.POST.getlist(ACTION_CHECKBOX_NAME),
             'select_across': request.POST.get('select_across', '0')
         })
 
