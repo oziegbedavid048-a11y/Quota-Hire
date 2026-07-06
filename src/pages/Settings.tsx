@@ -2,18 +2,16 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Lock, Trash2, Save, Eye, EyeOff,
-  Shield, ShieldCheck, AlertTriangle, Phone,
-  Settings as SettingsIcon, CheckCircle2, Bell,
+  Shield, AlertTriangle, Phone,
+  Settings as SettingsIcon, CheckCircle2,
 } from 'lucide-react';
 import { useAppContext, apiFetch } from '../context/AppContext';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 type Tab = 'account' | 'security';
 
 export const Settings = () => {
-  const { currentUser, updateProfile, changePassword, logout } = useAppContext();
-  const navigate = useNavigate();
+  const { currentUser, updateProfile, changePassword } = useAppContext();
 
   const [activeTab, setActiveTab] = useState<Tab>('account');
 
@@ -96,9 +94,12 @@ export const Settings = () => {
     setIsDeleting(true);
     try {
       await apiFetch('/auth/delete/', { method: 'DELETE' });
-      logout();
-      navigate('/');
       toast.success('Your account has been deleted.');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      setTimeout(() => {
+        window.location.href = import.meta.env.BASE_URL || '/';
+      }, 1500);
     } catch {
       toast.error('Could not delete account. Please try again.');
       setIsDeleting(false);
@@ -118,35 +119,7 @@ export const Settings = () => {
   const inputCls = 'w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 px-4 py-3 text-sm font-medium text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:ring-2 focus:ring-accent-500 focus:border-transparent outline-none transition';
   const labelCls = 'block text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2';
 
-  const securityFeatures = [
-    {
-      icon: Shield,
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-      iconColor: 'text-blue-600 dark:text-blue-400',
-      title: 'Login Sessions',
-      desc: 'You are currently active on this device.',
-      badge: 'Active',
-      badgeCls: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
-    },
-    {
-      icon: ShieldCheck,
-      iconBg: 'bg-purple-100 dark:bg-purple-900/30',
-      iconColor: 'text-purple-600 dark:text-purple-400',
-      title: 'Two-Factor Authentication',
-      desc: 'Add an extra layer of security to your account.',
-      badge: 'Coming Soon',
-      badgeCls: 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500',
-    },
-    {
-      icon: Bell,
-      iconBg: 'bg-orange-100 dark:bg-orange-900/30',
-      iconColor: 'text-orange-600 dark:text-orange-400',
-      title: 'Login Alerts',
-      desc: 'Get notified when a new sign-in happens.',
-      badge: 'Coming Soon',
-      badgeCls: 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500',
-    },
-  ];
+
 
   return (
     <div className="min-h-screen pb-20">
@@ -465,35 +438,7 @@ export const Settings = () => {
                 </div>
               </div>
 
-              {/* Additional Security Card */}
-              <div className="bg-white dark:bg-neutral-900 rounded-2xl sm:rounded-3xl border border-neutral-200 dark:border-neutral-800 p-5 sm:p-8 shadow-sm">
-                <h2 className="text-base sm:text-lg font-extrabold text-neutral-900 dark:text-white flex items-center gap-2 mb-4 sm:mb-6">
-                  <ShieldCheck size={18} className="text-accent-500 shrink-0" />
-                  Additional Security
-                </h2>
 
-                <div className="space-y-3">
-                  {securityFeatures.map((feat) => (
-                    <div
-                      key={feat.title}
-                      className="flex items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${feat.iconBg}`}>
-                          <feat.icon size={18} className={feat.iconColor} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-white leading-tight">{feat.title}</p>
-                          <p className="text-xs text-neutral-500 mt-0.5 hidden sm:block">{feat.desc}</p>
-                        </div>
-                      </div>
-                      <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${feat.badgeCls}`}>
-                        {feat.badge}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </motion.div>
           )}
 

@@ -274,6 +274,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               industry: profileData.industry || '',
               aboutCompany: profileData.about_company || '',
               logoUrl: profileData.logo_url || user.avatarUrl || '',
+              phoneNumber: profileData.contact_phone || '',
           } : {}),
           ...(user.role === 'employee' && profileData ? {
               title: profileData.title || '',
@@ -517,7 +518,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (profileData.education !== undefined) payload.education = profileData.education;
       if (profileData.skills !== undefined) payload.skills = profileData.skills;
       if (profileData.experienceYears !== undefined) payload.experience_years = profileData.experienceYears;
-      if (profileData.phoneNumber !== undefined) payload.phone_number = profileData.phoneNumber;
+      if (profileData.phoneNumber !== undefined) {
+        if (state.currentUser.role === 'company') {
+          payload.contact_phone = profileData.phoneNumber;
+        } else {
+          payload.phone_number = profileData.phoneNumber;
+        }
+      }
       if (profileData.country !== undefined) payload.country = profileData.country;
       if (profileData.city !== undefined) payload.city = profileData.city;
       
