@@ -9,8 +9,7 @@ import {
   Save,
   X,
   Building2,
-  Globe,
-  Tag
+  Globe
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { CompanyProfile } from '../../types';
@@ -61,7 +60,7 @@ export const CompanyProfilePage = () => {
           Back to Dashboard
         </button>
 
-        {/* Hero Banner */}
+        {/* Hero Banner with Profile Pic, Name, and Industry */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -86,170 +85,166 @@ export const CompanyProfilePage = () => {
               Keep your company details updated to attract the best talent. Verified companies receive 3x more applications.
             </p>
           </div>
-          <div className="w-32 h-32 md:w-40 md:h-40 shrink-0">
-            <img
-              src={`${import.meta.env.BASE_URL}images/company_profile.png`}
-              alt="Profile 3D Illustration"
-              className="w-full h-full object-contain drop-shadow-xl animate-float"
-            />
+          
+          <div className="flex flex-col items-center shrink-0 gap-3 relative z-10">
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 group">
+              <div className="w-full h-full rounded-[32px] bg-white dark:bg-neutral-800 flex items-center justify-center text-accent-600 dark:text-accent-400 font-extrabold text-2xl shadow-soft border border-neutral-200/50 dark:border-neutral-700/50 overflow-hidden transition-all duration-300">
+                {profile.logoUrl ? (
+                  <img src={profile.logoUrl} alt={profile.companyName || 'Company'} className="w-full h-full object-cover" />
+                ) : (
+                  (profile.companyName || 'C').charAt(0).toUpperCase()
+                )}
+              </div>
+              <label className="absolute -bottom-2 -right-2 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 p-2.5 rounded-xl cursor-pointer shadow-md transition-transform hover:scale-110 duration-200">
+                <Camera size={16} />
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      updateProfileImage(file);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+
+            <div className="text-center">
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center justify-center gap-1">
+                {profile.companyName}
+                {profile.isVerified && <BadgeCheck className="text-blue-500 w-5 h-5 shrink-0" />}
+              </h2>
+              {profile.industry && (
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 font-semibold">
+                  {profile.industry}
+                </p>
+              )}
+            </div>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Sticky Profile Card */}
-          <div className="lg:col-span-1 space-y-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-soft p-6 lg:p-8 lg:sticky lg:top-24 text-center">
-              <div className="relative w-32 h-32 mx-auto mb-6 group">
-                <div className="w-full h-full rounded-[32px] bg-accent-100 dark:bg-accent-900/40 flex items-center justify-center text-accent-600 dark:text-accent-400 font-extrabold text-2xl shadow-inner-soft overflow-hidden transition-all duration-300">
-                  {profile.logoUrl ? (
-                    <img src={profile.logoUrl} alt={profile.companyName || 'Company'} className="w-full h-full object-cover" />
-                  ) : (
-                    (profile.companyName || 'C').charAt(0).toUpperCase()
-                  )}
-                </div>
-                <label className="absolute -bottom-3 -right-3 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white p-3 rounded-2xl cursor-pointer shadow-soft transition-transform hover:scale-110 duration-200">
-                  <Camera size={20} />
+        {/* Main Content Forms */}
+        <div className="max-w-3xl mx-auto space-y-6">
+          
+          {/* Section 1: User/Company Information */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="card-soft p-6 md:p-8 lg:p-10"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
+                <User className="text-accent-500" /> Account Details
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Login Email</label>
                   <input 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        updateProfileImage(file);
-                      }
-                    }}
+                    type="email" 
+                    disabled 
+                    className="input-soft w-full bg-neutral-50 dark:bg-neutral-900/50 text-neutral-400 cursor-not-allowed"
+                    value={profile.email}
                   />
-                </label>
-              </div>
-
-              <h1 className="text-2xl font-display font-extrabold text-neutral-900 dark:text-white flex items-center justify-center gap-2 mb-2">
-                {profile.companyName}
-                {profile.isVerified && <BadgeCheck className="text-blue-500 w-6 h-6 shrink-0" />}
-              </h1>
-              
-              {profile.industry && (
-                 <span className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-xl">
-                   <Tag size={14} /> {profile.industry}
-                 </span>
-              )}
-            </motion.div>
-          </div>
-
-          {/* Right Column - Main Content Forms */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Section 1: User/Company Information */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="card-soft p-6 md:p-8 lg:p-10">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <User className="text-accent-500" /> Account Details
-                </h2>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Login Email</label>
-                    <input 
-                      type="email" 
-                      disabled 
-                      className="input-soft w-full bg-neutral-50 dark:bg-neutral-900/50 text-neutral-400 cursor-not-allowed"
-                      value={profile.email}
-                    />
-                  </div>
-                  <div>
-                     <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Account Created</label>
-                     <input 
-                      type="text" 
-                      disabled 
-                      className="input-soft w-full bg-neutral-50 dark:bg-neutral-900/50 text-neutral-400 cursor-not-allowed"
-                      value={new Date(profile.createdAt).toLocaleDateString()}
-                    />
-                  </div>
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Account Created</label>
+                   <input 
+                    type="text" 
+                    disabled 
+                    className="input-soft w-full bg-neutral-50 dark:bg-neutral-900/50 text-neutral-400 cursor-not-allowed"
+                    value={new Date(profile.createdAt).toLocaleDateString()}
+                  />
                 </div>
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
 
-            {/* Section 2: Company Profile Information */}
-            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="card-soft p-6 md:p-8 lg:p-10">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <Building2 className="text-accent-500" /> Company Profile
-                </h2>
-                {!isEditing ? (
-                  <button onClick={() => setIsEditing(true)} className="text-sm font-bold text-accent-600 hover:text-accent-700 dark:text-accent-400 px-3 py-1.5 bg-accent-50 dark:bg-accent-900/20 rounded-lg">
-                    Edit Info
+          {/* Section 2: Company Profile Information */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: 0.1 }} 
+            className="card-soft p-6 md:p-8 lg:p-10"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
+                <Building2 className="text-accent-500" /> Company Profile
+              </h2>
+              {!isEditing ? (
+                <button onClick={() => setIsEditing(true)} className="text-sm font-bold text-accent-600 hover:text-accent-700 dark:text-accent-400 px-3 py-1.5 bg-accent-50 dark:bg-accent-900/20 rounded-lg">
+                  Edit Info
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setIsEditing(false)} className="p-1.5 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">
+                    <X size={18} />
                   </button>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setIsEditing(false)} className="p-1.5 text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg">
-                      <X size={18} />
-                    </button>
-                    <button onClick={handleSaveProfile} className="flex items-center gap-1.5 text-sm font-bold text-white bg-neutral-900 dark:bg-white dark:text-neutral-900 px-3 py-1.5 rounded-lg shadow-sm">
-                      <Save size={14} /> Save
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Company Name</label>
-                    <input 
-                      type="text" 
-                      disabled={!isEditing}
-                      className="input-soft w-full disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
-                      value={formData.companyName || ''}
-                      onChange={(e) => setFormData({...formData, companyName: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Industry</label>
-                    <input 
-                      type="text" 
-                      disabled={!isEditing}
-                      className="input-soft w-full disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
-                      value={formData.industry || ''}
-                      onChange={(e) => setFormData({...formData, industry: e.target.value})}
-                      placeholder="e.g. SaaS, FinTech"
-                    />
-                  </div>
+                  <button onClick={handleSaveProfile} className="flex items-center gap-1.5 text-sm font-bold text-white bg-neutral-900 dark:bg-white dark:text-neutral-900 px-3 py-1.5 rounded-lg shadow-sm">
+                    <Save size={14} /> Save
+                  </button>
                 </div>
-
+              )}
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Website</label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
-                    <input 
-                      type="url" 
-                      disabled={!isEditing}
-                      className="input-soft w-full pl-10 disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
-                      value={formData.website || ''}
-                      onChange={(e) => setFormData({...formData, website: e.target.value})}
-                      placeholder="https://"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">About Company (Compulsory Profile Field)</label>
-                  <textarea 
+                  <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Company Name</label>
+                  <input 
+                    type="text" 
                     disabled={!isEditing}
-                    rows={6}
-                    className="input-soft w-full resize-none disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
-                    value={formData.aboutCompany || ''}
-                    onChange={(e) => setFormData({...formData, aboutCompany: e.target.value})}
-                    placeholder="Detailed company overview, background, and history..."
-                    required
+                    className="input-soft w-full disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
+                    value={formData.companyName || ''}
+                    onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Industry</label>
+                  <input 
+                    type="text" 
+                    disabled={!isEditing}
+                    className="input-soft w-full disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
+                    value={formData.industry || ''}
+                    onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                    placeholder="e.g. SaaS, FinTech"
                   />
                 </div>
               </div>
 
-            </motion.div>
+              <div>
+                <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Website</label>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
+                  <input 
+                    type="url" 
+                    disabled={!isEditing}
+                    className="input-soft w-full pl-10 disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
+                    value={formData.website || ''}
+                    onChange={(e) => setFormData({...formData, website: e.target.value})}
+                    placeholder="https://"
+                  />
+                </div>
+              </div>
 
-          </div>
+              <div>
+                <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">About Company (Compulsory Profile Field)</label>
+                <textarea 
+                  disabled={!isEditing}
+                  rows={6}
+                  className="input-soft w-full resize-none disabled:bg-neutral-50 disabled:dark:bg-neutral-900/50"
+                  value={formData.aboutCompany || ''}
+                  onChange={(e) => setFormData({...formData, aboutCompany: e.target.value})}
+                  placeholder="Detailed company overview, background, and history..."
+                  required
+                />
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     </div>
