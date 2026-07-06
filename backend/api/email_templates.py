@@ -574,9 +574,13 @@ def get_custom_admin_email_html(plain_body, attachment_name=None, attachment_is_
     attachment_html = ""
     if attachment_name:
         if attachment_is_image:
-            # Display inline image before the footer
+            # Display image sign and inline image before the footer
             attachment_html = (
-                '<div style="margin-top:20px;">'
+                '<div style="margin-top:20px; padding:12px 16px; background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; display:inline-block; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
+                '<span style="font-size:14px; font-weight:600; color:#111827;">📎 Attached image:</span>'
+                f'<span style="font-size:14px; color:#4b5563; margin-left:8px;">{attachment_name}</span>'
+                '</div>'
+                '<div style="margin-top:12px;">'
                 '<img src="cid:attached_image" alt="Attached Image" style="max-width:100%; height:auto; display:block; border-radius:6px; border:1px solid #e4e4e7;">'
                 '</div>'
             )
