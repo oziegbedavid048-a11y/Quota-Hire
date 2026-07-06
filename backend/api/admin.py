@@ -100,7 +100,7 @@ class CustomUserAdmin(UserAdmin):
 
     @admin.action(description='✉️ Send custom email to selected users')
     def send_custom_email(self, request, queryset):
-        if 'apply' in request.POST:
+        if 'form_submitted' in request.POST:
             form = SendCustomEmailForm(request.POST, request.FILES)
             if form.is_valid():
                 subject = form.cleaned_data['subject']

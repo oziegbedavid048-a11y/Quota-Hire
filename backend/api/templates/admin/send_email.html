@@ -124,6 +124,7 @@
 
     <form action="" method="post" enctype="multipart/form-data">
         {% csrf_token %}
+        <input type="hidden" name="form_submitted" value="1" />
         
         {% for field in form %}
             <div class="form-row">
@@ -153,4 +154,31 @@
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const subjectInput = document.getElementById('id_subject');
+        if (subjectInput) {
+            // 1. Prevent Enter key from submitting the form when in the Subject field
+            subjectInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            
+            // 2. Intercept paste events to strip newlines (which trigger Enter / submit)
+            subjectInput.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                const cleanText = text.replace(/[\r\n]+/g, ' ').trim();
+                
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                this.value = this.value.substring(0, start) + cleanText + this.value.substring(end);
+                this.selectionStart = this.selectionEnd = start + cleanText.length;
+            });
+        }
+    });
+</script>
 {% endblock %}
