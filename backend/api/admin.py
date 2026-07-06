@@ -113,7 +113,26 @@ class CustomUserAdmin(UserAdmin):
                 import logging
                 
                 logger = logging.getLogger(__name__)
-                html_content = get_custom_admin_email_html(body)
+                
+                # Check if the attachment is an image
+                attachment_name = None
+                attachment_is_image = False
+                if attachment:
+                    attachment_name = attachment.name
+                    content_type = attachment.content_type or ""
+                    if content_type.startswith("image/"):
+                        attachment_is_image = True
+                    else:
+                        import mimetypes
+                        guessed_type, _ = mimetypes.guess_type(attachment.name)
+                        if guessed_type and guessed_type.startswith("image/"):
+                            attachment_is_image = True
+                
+                html_content = get_custom_admin_email_html(
+                    body, 
+                    attachment_name=attachment_name, 
+                    attachment_is_image=attachment_is_image
+                )
                 
                 sent_count = 0
                 error_count = 0
@@ -128,7 +147,22 @@ class CustomUserAdmin(UserAdmin):
                         msg.attach_alternative(html_content, "text/html")
                         if attachment:
                             attachment.seek(0)
-                            msg.attach(attachment.name, attachment.read(), attachment.content_type)
+                            if attachment_is_image:
+                                from email.mime.base import MIMEBase
+                                from email import encoders
+                                import mimetypes
+                                
+                                ctype = attachment.content_type or mimetypes.guess_type(attachment.name)[0] or "image/png"
+                                maintype, subtype = ctype.split('/')
+                                
+                                part = MIMEBase(maintype, subtype)
+                                part.set_payload(attachment.read())
+                                encoders.encode_base64(part)
+                                part.add_header('Content-ID', '<attached_image>')
+                                part.add_header('Content-Disposition', 'inline', filename=attachment.name)
+                                msg.attach(part)
+                            else:
+                                msg.attach(attachment.name, attachment.read(), attachment.content_type)
                         msg.send(fail_silently=False)
                         sent_count += 1
                     except Exception as e:

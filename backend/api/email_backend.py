@@ -93,6 +93,8 @@ class ZeptoMailBackend(BaseEmailBackend):
             from email.mime.base import MIMEBase
             
             payload["attachments"] = []
+            payload["inline_images"] = []
+            
             for attachment in message.attachments:
                 if isinstance(attachment, tuple):
                     filename, content, mimetype = attachment
@@ -112,11 +114,30 @@ class ZeptoMailBackend(BaseEmailBackend):
                     filename = attachment.get_filename() or "attachment"
                     content_bytes = attachment.get_payload(decode=True)
                     encoded_content = base64.b64encode(content_bytes).decode('utf-8')
-                    payload["attachments"].append({
-                        "name": filename,
-                        "content": encoded_content,
-                        "mime_type": attachment.get_content_type()
-                    })
+                    
+                    cid = attachment.get('Content-ID')
+                    disposition = attachment.get('Content-Disposition', '')
+                    
+                    # If this is an inline image with a Content-ID header
+                    if cid and (attachment.get_content_maintype() == 'image' or 'inline' in disposition):
+                        clean_cid = cid.strip('<>')
+                        payload["inline_images"].append({
+                            "content": encoded_content,
+                            "mime_type": attachment.get_content_type(),
+                            "cid": clean_cid
+                        })
+                    else:
+                        payload["attachments"].append({
+                            "name": filename,
+                            "content": encoded_content,
+                            "mime_type": attachment.get_content_type()
+                        })
+            
+            # Clean up empty arrays from the payload
+            if not payload["attachments"]:
+                del payload["attachments"]
+            if not payload["inline_images"]:
+                del payload["inline_images"]
 
         # Setup Authorization Header correctly
         auth_header = self.api_key.strip()
