@@ -98,7 +98,6 @@ export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail, isPaid 
       if (!reference || !access_code) { setError("Failed to initiate payment. Please try again."); return; }
       setCurrentReference(reference); setModalState("popup_open");
       await openPaystackPopup({
-        email: userEmail,
         accessCode: access_code,
         onSuccess: async () => { await verifyAndDownload(reference); },
         onClose: () => { setModalState("cancelled"); },

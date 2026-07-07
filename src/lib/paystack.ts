@@ -19,7 +19,6 @@ export interface PaystackSuccessResponse {
 }
 
 export interface PaystackPopupOptions {
-  email: string;
   accessCode: string;
   /** Called when user completes payment — reference is safe to verify server-side */
   onSuccess: (response: PaystackSuccessResponse) => void;
@@ -34,7 +33,7 @@ declare global {
   }
 }
 
-const PAYSTACK_JS_URL = 'https://js.paystack.co/v1/inline.js';
+const PAYSTACK_JS_URL = 'https://js.paystack.co/v2/inline.js';
 let sdkLoaded = false;
 let sdkLoading = false;
 const pendingCallbacks: Array<() => void> = [];
@@ -82,20 +81,16 @@ function loadPaystackSDK(): Promise<void> {
 export async function openPaystackPopup(opts: PaystackPopupOptions): Promise<void> {
   await loadPaystackSDK();
 
-  const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string;
-  if (!publicKey) {
-    throw new Error('VITE_PAYSTACK_PUBLIC_KEY is not set in your environment variables.');
-  }
-
-  const handler = window.PaystackPop.setup({
-    key: publicKey,
-    email: opts.email,
-    access_code: opts.accessCode,
-    onClose: opts.onClose,
-    callback: (response: PaystackSuccessResponse) => {
-      opts.onSuccess(response);
+  const popup = new window.PaystackPop();
+  popup.resumeTransaction(opts.accessCode, {
+    onSuccess: (transaction: any) => {
+      opts.onSuccess(transaction as PaystackSuccessResponse);
+    },
+    onCancel: () => {
+      opts.onClose();
+    },
+    onClose: () => {
+      opts.onClose();
     },
   });
-
-  handler.openIframe();
 }
