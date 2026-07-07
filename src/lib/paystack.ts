@@ -19,6 +19,7 @@ export interface PaystackSuccessResponse {
 }
 
 export interface PaystackPopupOptions {
+  email: string;
   accessCode: string;
   /** Called when user completes payment — reference is safe to verify server-side */
   onSuccess: (response: PaystackSuccessResponse) => void;
@@ -88,6 +89,7 @@ export async function openPaystackPopup(opts: PaystackPopupOptions): Promise<voi
 
   const handler = window.PaystackPop.setup({
     key: publicKey,
+    email: opts.email,
     access_code: opts.accessCode,
     onClose: opts.onClose,
     callback: (response: PaystackSuccessResponse) => {
