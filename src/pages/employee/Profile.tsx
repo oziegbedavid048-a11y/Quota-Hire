@@ -28,6 +28,7 @@ import { EmployeeProfile } from '../../types';
 import { calculateProfileStrength } from '../../utils/profile';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 import { PaymentModal } from '../../components/ui/PaymentModal';
+import { ImageCropperModal } from '../../components/ui/ImageCropperModal';
 import { toast } from 'sonner';
 
 /* ─── Section edit modal ──────────────────────────────────────────────── */
@@ -68,6 +69,21 @@ export const EmployeeProfilePage = () => {
   // Payment modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedCV, setSelectedCV] = useState<{ id: number; name: string; isPaid?: boolean } | null>(null);
+
+  // Image crop & loading states
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState<string>('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const handleCropComplete = async (croppedFile: File) => {
+    setCropImageSrc(null);
+    setIsUploadingImage(true);
+    try {
+      await updateProfileImage(croppedFile);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   const fetchGeneratedCVs = () => {
     setCvsLoading(true);
@@ -473,22 +489,45 @@ export const EmployeeProfilePage = () => {
               {/* Avatar */}
               <div className="relative shrink-0">
                 <div
-                  className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-neutral-800 dark:bg-neutral-700 flex items-center justify-center text-white font-extrabold text-2xl sm:text-3xl overflow-hidden cursor-pointer ring-4 ring-white dark:ring-neutral-900 shadow-lg hover:ring-accent-400 transition-all"
-                  onClick={() => fileRef.current?.click()}
+                  className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full bg-neutral-800 dark:bg-neutral-700 flex items-center justify-center text-white font-extrabold text-2xl sm:text-3xl overflow-hidden cursor-pointer ring-4 ring-white dark:ring-neutral-900 shadow-lg hover:ring-accent-400 transition-all relative"
+                  onClick={() => !isUploadingImage && fileRef.current?.click()}
                 >
-                  {profile.avatarUrl
-                    ? <img src={profile.avatarUrl} alt={profile.name || 'User'} className="w-full h-full object-cover" />
-                    : initials
-                  }
+                  {profile.avatarUrl ? (
+                    <img 
+                      src={profile.avatarUrl} 
+                      alt={profile.name || 'User'} 
+                      className={`w-full h-full object-cover transition-opacity ${isUploadingImage ? 'opacity-40' : ''}`} 
+                    />
+                  ) : (
+                    initials
+                  )}
+                  {isUploadingImage && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
                 </div>
                 <button
+                  disabled={isUploadingImage}
                   onClick={() => fileRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-8 h-8 sm:w-9 sm:h-9 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full flex items-center justify-center shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors"
+                  className="absolute bottom-0 right-0 w-8 h-8 sm:w-9 sm:h-9 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full flex items-center justify-center shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <Camera size={14} className="text-neutral-500" />
                 </button>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) updateProfileImage(f); }} />
+                <input 
+                  ref={fileRef} 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setCropFileName(f.name);
+                      setCropImageSrc(URL.createObjectURL(f));
+                    }
+                    e.target.value = '';
+                  }} 
+                />
               </div>
 
               {/* Info */}
@@ -673,6 +712,17 @@ export const EmployeeProfilePage = () => {
           cvName={selectedCV.name}
           userEmail={profile.email || ''}
           isPaid={selectedCV.isPaid}
+        />
+      )}
+
+      {/* ── Crop Modal ── */}
+      {cropImageSrc && (
+        <ImageCropperModal
+          isOpen={!!cropImageSrc}
+          imageSrc={cropImageSrc}
+          fileName={cropFileName}
+          onClose={() => setCropImageSrc(null)}
+          onCropComplete={handleCropComplete}
         />
       )}
     </div>

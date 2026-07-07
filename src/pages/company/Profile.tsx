@@ -14,6 +14,8 @@ import {
 import { useAppContext } from '../../context/AppContext';
 import { CompanyProfile } from '../../types';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
+import { ImageCropperModal } from '../../components/ui/ImageCropperModal';
+import { Loader2 } from 'lucide-react';
 
 export const CompanyProfilePage = () => {
   const { currentUser, updateProfileImage, updateProfile } = useAppContext();
@@ -22,6 +24,21 @@ export const CompanyProfilePage = () => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<CompanyProfile>>({});
+
+  // Crop & upload loading states
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState<string>('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  const handleCropComplete = async (croppedFile: File) => {
+    setCropImageSrc(null);
+    setIsUploadingImage(true);
+    try {
+      await updateProfileImage(croppedFile);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -88,24 +105,38 @@ export const CompanyProfilePage = () => {
           
           <div className="flex flex-col items-center shrink-0 gap-3 relative z-10">
             <div className="relative w-28 h-28 sm:w-32 sm:h-32 group">
-              <div className="w-full h-full rounded-[32px] bg-white dark:bg-neutral-800 flex items-center justify-center text-accent-600 dark:text-accent-400 font-extrabold text-2xl shadow-soft border border-neutral-200/50 dark:border-neutral-700/50 overflow-hidden transition-all duration-300">
+              <div className="w-full h-full rounded-[32px] bg-white dark:bg-neutral-800 flex items-center justify-center text-accent-600 dark:text-accent-400 font-extrabold text-2xl shadow-soft border border-neutral-200/50 dark:border-neutral-700/50 overflow-hidden transition-all duration-300 relative">
                 {profile.logoUrl ? (
-                  <img src={profile.logoUrl} alt={profile.companyName || 'Company'} className="w-full h-full object-cover" />
+                  <img 
+                    src={profile.logoUrl} 
+                    alt={profile.companyName || 'Company'} 
+                    className={`w-full h-full object-cover transition-opacity ${isUploadingImage ? 'opacity-40' : ''}`} 
+                  />
                 ) : (
                   (profile.companyName || 'C').charAt(0).toUpperCase()
                 )}
+                {isUploadingImage && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-[32px]">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                )}
               </div>
-              <label className="absolute -bottom-2 -right-2 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 p-2.5 rounded-xl cursor-pointer shadow-md transition-transform hover:scale-110 duration-200">
+              <label 
+                className={`absolute -bottom-2 -right-2 bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-100 text-white dark:text-neutral-900 p-2.5 rounded-xl cursor-pointer shadow-md transition-transform hover:scale-110 duration-200 ${isUploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
+              >
                 <Camera size={16} />
                 <input 
                   type="file" 
                   accept="image/*" 
                   className="hidden" 
+                  disabled={isUploadingImage}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      updateProfileImage(file);
+                      setCropFileName(file.name);
+                      setCropImageSrc(URL.createObjectURL(file));
                     }
+                    e.target.value = '';
                   }}
                 />
               </label>
@@ -247,6 +278,17 @@ export const CompanyProfilePage = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* ── Crop Modal ── */}
+      {cropImageSrc && (
+        <ImageCropperModal
+          isOpen={!!cropImageSrc}
+          imageSrc={cropImageSrc}
+          fileName={cropFileName}
+          onClose={() => setCropImageSrc(null)}
+          onCropComplete={handleCropComplete}
+        />
+      )}
     </div>
   );
 };

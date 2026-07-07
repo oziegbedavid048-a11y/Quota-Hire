@@ -5,6 +5,7 @@ import { User, ChevronRight, Upload, Target, Check } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { toast } from 'sonner';
+import { ImageCropperModal } from '../../components/ui/ImageCropperModal';
 
 export const Onboarding = () => {
   const { currentUser, fetchData, updateProfileImage } = useAppContext();
@@ -16,6 +17,15 @@ export const Onboarding = () => {
   const [skills, setSkills] = useState('');
   const [bio, setBio] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+
+  // Crop states
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState<string>('');
+
+  const handleCropComplete = (croppedFile: File) => {
+    setAvatarFile(croppedFile);
+    setCropImageSrc(null);
+  };
 
   // Skip onboarding if not logged in or admin
   if (!currentUser || currentUser.role === 'admin') {
@@ -70,14 +80,19 @@ export const Onboarding = () => {
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setAvatarFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      setCropFileName(file.name);
+      setCropImageSrc(URL.createObjectURL(file));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setAvatarFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setCropFileName(file.name);
+      setCropImageSrc(URL.createObjectURL(file));
     }
+    e.target.value = '';
   };
 
   const variants = {
@@ -173,7 +188,7 @@ export const Onboarding = () => {
               <div className="flex gap-4 mt-8">
                 <Button variant="outline" onClick={() => setStep(1)} className="w-1/3">Back</Button>
                 <Button onClick={handleNext} className="w-2/3 bg-accent-600 hover:bg-accent-700 text-white">
-                  Skip for now
+                  {avatarFile ? 'Continue' : 'Skip for now'}
                 </Button>
               </div>
             </motion.div>
@@ -214,6 +229,16 @@ export const Onboarding = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {cropImageSrc && (
+        <ImageCropperModal
+          isOpen={!!cropImageSrc}
+          imageSrc={cropImageSrc}
+          fileName={cropFileName}
+          onClose={() => setCropImageSrc(null)}
+          onCropComplete={handleCropComplete}
+        />
+      )}
     </div>
   );
 };
