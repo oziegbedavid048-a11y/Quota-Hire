@@ -19,16 +19,11 @@ export interface PaystackSuccessResponse {
 }
 
 export interface PaystackPopupOptions {
-  email: string;
-  /** Amount in kobo (NGN × 100) */
-  amountKobo: number;
-  reference: string;
+  accessCode: string;
   /** Called when user completes payment — reference is safe to verify server-side */
   onSuccess: (response: PaystackSuccessResponse) => void;
   /** Called when user closes popup without paying */
   onClose: () => void;
-  /** Optional: a human-readable label shown in the Paystack popup */
-  label?: string;
 }
 
 declare global {
@@ -93,12 +88,7 @@ export async function openPaystackPopup(opts: PaystackPopupOptions): Promise<voi
 
   const handler = window.PaystackPop.setup({
     key: publicKey,
-    email: opts.email,
-    amount: opts.amountKobo,
-    ref: opts.reference,
-    currency: 'NGN',
-    channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer', 'apple_pay'],
-    label: opts.label ?? 'Quota Hire — Document Download',
+    access_code: opts.accessCode,
     onClose: opts.onClose,
     callback: (response: PaystackSuccessResponse) => {
       opts.onSuccess(response);

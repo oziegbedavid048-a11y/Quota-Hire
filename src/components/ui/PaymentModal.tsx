@@ -94,12 +94,11 @@ export function PaymentModal({ isOpen, onClose, cvId, cvName, userEmail, isPaid 
         toast.info("You already paid. Downloading now...");
         await downloadWithToken(result.download_token); return;
       }
-      const { reference, amount_kobo } = result;
-      if (!reference) { setError("Failed to initiate payment. Please try again."); return; }
+      const { reference, access_code } = result;
+      if (!reference || !access_code) { setError("Failed to initiate payment. Please try again."); return; }
       setCurrentReference(reference); setModalState("popup_open");
       await openPaystackPopup({
-        email: userEmail, amountKobo: amount_kobo, reference,
-        label: `Quota Hire CV \u2014 ${cvName}`,
+        accessCode: access_code,
         onSuccess: async () => { await verifyAndDownload(reference); },
         onClose: () => { setModalState("cancelled"); },
       });
