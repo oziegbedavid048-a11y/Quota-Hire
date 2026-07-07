@@ -72,7 +72,16 @@ def handle_job_post_save(sender, instance, created, **kwargs):
     • New job   → notify company that it was submitted for review
     • Approved  → notify company that it is now live
     • Rejected  → notify company that it needs revision
+
+    Cache: always invalidates the public job-list cache and this job's detail
+    cache so any status change is reflected immediately on the live site.
+    This covers the Django admin panel, API views, and all other save paths.
     """
+    # ── Cache invalidation (runs first, before any notification logic) ────────
+    # safe — if Redis is down, cache_utils logs a warning and continues
+    from .cache_utils import invalidate_jobs_cache
+    invalidate_jobs_cache(job_pk=instance.pk)
+
     company_user = instance.company
     company_name = company_user.get_full_name() or company_user.username
 

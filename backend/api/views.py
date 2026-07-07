@@ -53,7 +53,6 @@ from collections import Counter
 from django.utils import timezone
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 
 logger = logging.getLogger(__name__)
 
@@ -560,13 +559,37 @@ class CompanyJobsView(generics.ListAPIView):
 
 class JobListCreateView(generics.ListCreateAPIView):
     """
-    GET  /api/jobs/ — list approved jobs (public). Cached for 5 minutes.
+    GET  /api/jobs/ — list approved jobs (public).
+        - Cached 60 s for unfiltered and remote-filtered requests (page 1 only).
+        - Search queries (?search=) always bypass cache to prevent unbounded
+          Redis key growth from search-as-you-type inputs.
+        - Cache is invalidated immediately on any Job save via signals.py.
     POST /api/jobs/ — post a new job (company only, starts as pending).
     """
     serializer_class = JobSerializer
 
-    @method_decorator(cache_page(60))
     def get(self, request, *args, **kwargs):
+        from .cache_utils import jobs_list_key, safe_get, safe_set, JOBS_LIST_TTL
+        search = request.query_params.get('search', '')
+        remote = request.query_params.get('remote', '')
+        page   = request.query_params.get('page', '1')
+
+        # Only cache: no free-text search, and only page 1 (the most-visited page).
+        # Pages 2+ go direct to DB — they’re rarely hit and the count/next/previous
+        # URLs in the paginated response would be wrong if served from a page-1 cache.
+        use_cache = (not search) and (page == '1')
+
+        if use_cache:
+            cache_key = jobs_list_key(remote=remote)
+            cached = safe_get(cache_key)
+            if cached is not None:
+                return Response(cached)
+            response = super().get(request, *args, **kwargs)
+            if response.status_code == 200:
+                safe_set(cache_key, response.data, ttl=JOBS_LIST_TTL)
+            return response
+
+        # Search or paginated requests — always fresh from the database
         return super().get(request, *args, **kwargs)
 
     def get_permissions(self):
@@ -772,14 +795,27 @@ class ResetPasswordView(APIView):
             return Response({'error': 'An internal error occurred. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class JobDetailView(generics.RetrieveAPIView):
-    """GET /api/jobs/<id>/ — get a single approved job. Cached for 5 minutes."""
+    """
+    GET /api/jobs/<id>/ — get a single approved job.
+    Cached 60 s. Cache is cleared immediately when the job’s status changes
+    via JobStatusUpdateView or the Django admin (signals.py handles both).
+    """
     serializer_class   = JobSerializer
     permission_classes = [permissions.AllowAny]
     queryset           = Job.objects.filter(status='approved')
 
-    @method_decorator(cache_page(60))
     def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+        from .cache_utils import job_detail_key, safe_get, safe_set, JOB_DETAIL_TTL
+        pk = self.kwargs.get('pk')
+        cache_key = job_detail_key(pk)
+        cached = safe_get(cache_key)
+        if cached is not None:
+            return Response(cached)
+        response = super().get(request, *args, **kwargs)
+        # Only cache 200 OK — don’t cache 404s for non-approved/missing jobs
+        if response.status_code == 200:
+            safe_set(cache_key, response.data, ttl=JOB_DETAIL_TTL)
+        return response
 
 
 class JobStatusUpdateView(APIView):
@@ -799,6 +835,12 @@ class JobStatusUpdateView(APIView):
 
         job.status = new_status
         job.save(update_fields=['status'])
+
+        # Immediately clear the public job-list cache and this job’s detail cache
+        # so the status change is visible to users within the same request cycle.
+        from .cache_utils import invalidate_jobs_cache
+        invalidate_jobs_cache(job_pk=pk)
+
         return Response(JobSerializer(job).data)
 
 
@@ -809,8 +851,16 @@ class DashboardAnalyticsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        from .cache_utils import dashboard_key, safe_get, safe_set, DASHBOARD_TTL
         user = request.user
-        
+
+        # Return cached analytics for this user if available (60 s TTL).
+        # Cache is per-user so company A never sees company B’s data.
+        cache_key = dashboard_key(user.pk, user.role)
+        cached = safe_get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         if user.role == 'employee':
             my_apps = Application.objects.filter(employee=user)
             all_jobs = Job.objects.filter(status='approved')
@@ -881,12 +931,14 @@ class DashboardAnalyticsView(APIView):
                     'interviews': week_apps.filter(status='accepted').count()
                 })
 
-            return Response({
+            data = {
                 'marketInsightsData': market_insights,
                 'skillMatchData': skill_match,
                 'applicationActivityData': app_activity,
                 'activeApps': my_apps.count()
-            })
+            }
+            safe_set(cache_key, data, ttl=DASHBOARD_TTL)
+            return Response(data)
 
         elif user.role == 'company':
             active_jobs = Job.objects.filter(company=user, status='approved')
@@ -922,13 +974,15 @@ class DashboardAnalyticsView(APIView):
                 except:
                     pass
 
-            return Response({
+            data = {
                 'applicantVelocityData': applicant_velocity,
                 'jobPerformanceData': job_performance,
                 'activeRolesCount': active_jobs.count(),
                 'totalApplicantsCount': all_apps.count(),
                 'topMatchesCount': top_matches
-            })
+            }
+            safe_set(cache_key, data, ttl=DASHBOARD_TTL)
+            return Response(data)
 
         return Response({'error': 'Invalid role'}, status=400)
 
@@ -1520,47 +1574,50 @@ def _make_download_token(user_id, cv_id, transaction_id):
 def _get_live_eur_ngn_rate() -> float:
     """
     Fetches the live EUR → NGN exchange rate from a free public API.
-    Results are cached for 1 hour so we don't hammer the API.
-    Falls back to the NGN_PER_EUR setting if the API is unavailable.
 
-    Free API used: https://open.er-api.com/v6/latest/EUR
-    No API key required. Rate limit: 1,500 req/month on the free tier.
-    Cache means we only call it once per hour regardless of traffic.
+    Improvements over the original:
+      - Stampede-safe: uses a Redis atomic lock (cache.add / SET NX) so only
+        ONE concurrent payment request calls the external API on cache miss.
+        All others use the fallback rate while the lock-holder fetches.
+      - Failure-safe: Redis down or API timeout → returns NGN_PER_EUR setting
+        instead of propagating an exception up through the payment flow.
+
+    Free API: https://open.er-api.com/v6/latest/EUR  (1,500 req/month free)
+    With the stampede lock, the worst case is 1 external call per cache miss,
+    not N calls where N = concurrent payment requests at that moment.
     """
-    from django.core.cache import cache
+    from .cache_utils import safe_get_or_set, RATE_TTL
 
     CACHE_KEY = 'eur_ngn_rate'
-    CACHE_TTL = 3600  # 1 hour
+    fallback  = float(settings.NGN_PER_EUR)
 
-    cached = cache.get(CACHE_KEY)
-    if cached is not None:
-        return float(cached)
+    def _fetch_from_api():
+        try:
+            req = urllib.request.Request(
+                'https://open.er-api.com/v6/latest/EUR',
+                headers={'User-Agent': 'QuotaHire/1.0'},
+                method='GET',
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json_module.loads(resp.read().decode('utf-8'))
+            if data.get('result') == 'success':
+                rate = float(data['rates'].get('NGN', fallback))
+                if 500 <= rate <= 5000:
+                    logger.info('Live EUR/NGN rate fetched: %s', rate)
+                    return rate
+                logger.warning(
+                    'EUR/NGN rate %s outside sanity range [500–5000], using fallback %s',
+                    rate, fallback
+                )
+        except Exception as exc:
+            logger.warning(
+                'Could not fetch live EUR/NGN rate: %s. Using fallback %s',
+                exc, fallback
+            )
+        return fallback
 
-    fallback = float(settings.NGN_PER_EUR)
-    try:
-        req = urllib.request.Request(
-            'https://open.er-api.com/v6/latest/EUR',
-            headers={'User-Agent': 'QuotaHire/1.0'},
-            method='GET',
-        )
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json_module.loads(resp.read().decode('utf-8'))
-
-        if data.get('result') == 'success':
-            rate = float(data['rates'].get('NGN', fallback))
-            # Sanity check: rate should be between 500 and 5000
-            if 500 <= rate <= 5000:
-                cache.set(CACHE_KEY, rate, CACHE_TTL)
-                logger.info(f'Live EUR/NGN rate fetched: {rate}')
-                return rate
-            else:
-                logger.warning(f'EUR/NGN rate {rate} out of sanity range, using fallback {fallback}')
-    except Exception as e:
-        logger.warning(f'Could not fetch live EUR/NGN rate: {e}. Using fallback {fallback}')
-
-    # Cache the fallback too (shorter TTL so we retry sooner)
-    cache.set(CACHE_KEY, fallback, 300)  # retry in 5 min
-    return fallback
+    result = safe_get_or_set(CACHE_KEY, _fetch_from_api, ttl=RATE_TTL, lock_ttl=10)
+    return float(result) if result is not None else fallback
 
 
 class PaymentInitiateView(APIView):
