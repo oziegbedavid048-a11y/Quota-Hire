@@ -70,27 +70,10 @@ export const Home = () => {
             }}
             className="max-w-5xl mx-auto">
 
-            <motion.span
-              initial={{
-                opacity: 0,
-                y: 20
-              }}
-              animate={{
-                opacity: 1,
-                y: 0
-              }}
-              transition={{
-                duration: 0.6
-              }}
-              className="inline-block py-1.5 px-4 rounded-full bg-white/80 dark:bg-neutral-900/80 text-neutral-900 dark:text-neutral-200 text-sm font-medium mb-8 border border-neutral-200 dark:border-neutral-800 backdrop-blur-md shadow-sm">
-
-              The Future Of Sales Recruting Globally
-            </motion.span>
-
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-8 tracking-tighter text-neutral-900 dark:text-white drop-shadow-sm leading-tight">
-              Hire the closers. <br />
+              The future of <br className="hidden sm:inline" />
               <span className="text-accent-600 dark:text-accent-400">
-                Land the quota.
+                sales recruiting globally.
               </span>
             </h1>
 
@@ -647,10 +630,7 @@ export const Home = () => {
                 </div>
               </div>
 
-              <p className="mt-5 text-sm text-neutral-500 dark:text-neutral-500 flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
-                Mobile apps launching Q3 2025
-              </p>
+
             </motion.div>
           </div>
         </div>
