@@ -78,7 +78,15 @@ export const Why = () => {
                 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
                 className="md:w-1/2 w-full"
               >
-                <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800" alt="Business Struggle" className="w-full rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500" />
+                <motion.img 
+                  src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800" 
+                  alt="Business Struggle" 
+                  initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                  whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                  viewport={{ once: false, amount: 0.3 }}
+                  transition={{ duration: 0.6 }}
+                  className="w-full rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer" 
+                />
               </motion.div>
             </div>
 
@@ -106,7 +114,15 @@ export const Why = () => {
                 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
                 className="md:w-1/2 w-full"
               >
-                <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=800" alt="The Vision" className="w-full rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500" />
+                <motion.img 
+                  src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=800" 
+                  alt="The Vision" 
+                  initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                  whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                  viewport={{ once: false, amount: 0.3 }}
+                  transition={{ duration: 0.6 }}
+                  className="w-full rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer" 
+                />
               </motion.div>
             </div>
 
@@ -209,10 +225,14 @@ export const Why = () => {
                   <span className="text-sm font-bold text-neutral-900 dark:text-white">01</span>
                 </div>
                 <div className="md:w-1/2 md:pl-16 w-full">
-                  <img 
+                  <motion.img 
                     src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=800" 
                     alt="Phase 1: Pre-Boarding" 
-                    className="w-full object-cover rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500"
+                    initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                    whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                    viewport={{ once: false, amount: 0.3 }}
+                    transition={{ duration: 0.6 }}
+                    className="w-full object-cover rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer"
                   />
                 </div>
               </div>
@@ -231,10 +251,14 @@ export const Why = () => {
                   <span className="text-sm font-bold text-neutral-900 dark:text-white">02</span>
                 </div>
                 <div className="md:w-1/2 md:pr-16 w-full">
-                  <img 
+                  <motion.img 
                     src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800" 
                     alt="Phase 2: Foundation" 
-                    className="w-full object-cover rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500"
+                    initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                    whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                    viewport={{ once: false, amount: 0.3 }}
+                    transition={{ duration: 0.6 }}
+                    className="w-full object-cover rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer"
                   />
                 </div>
               </div>
@@ -253,10 +277,14 @@ export const Why = () => {
                   <span className="text-sm font-bold text-neutral-900 dark:text-white">03</span>
                 </div>
                 <div className="md:w-1/2 md:pl-16 w-full">
-                  <img 
+                  <motion.img 
                     src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=800" 
                     alt="Phase 3: Ramp & Accountability" 
-                    className="w-full object-cover rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500"
+                    initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                    whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                    viewport={{ once: false, amount: 0.3 }}
+                    transition={{ duration: 0.6 }}
+                    className="w-full object-cover rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer"
                   />
                 </div>
               </div>
@@ -275,10 +303,14 @@ export const Why = () => {
                   <Target className="text-white w-5 h-5" />
                 </div>
                 <div className="md:w-1/2 md:pr-16 w-full">
-                  <img 
+                  <motion.img 
                     src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800" 
                     alt="Phase 4: Scale" 
-                    className="w-full object-cover rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500"
+                    initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                    whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                    viewport={{ once: false, amount: 0.3 }}
+                    transition={{ duration: 0.6 }}
+                    className="w-full object-cover rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer"
                   />
                 </div>
               </div>
@@ -326,7 +358,15 @@ export const Why = () => {
                 initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeIn}
                 className="md:w-1/2 w-full"
               >
-                <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800" alt="Investment Case" className="w-full rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500" />
+                <motion.img 
+                  src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800" 
+                  alt="Investment Case" 
+                  initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                  whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                  viewport={{ once: false, amount: 0.3 }}
+                  transition={{ duration: 0.6 }}
+                  className="w-full rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer" 
+                />
               </motion.div>
             </div>
 

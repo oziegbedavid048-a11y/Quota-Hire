@@ -80,10 +80,14 @@ export const About = () => {
                   <span className="text-sm font-bold text-neutral-900 dark:text-white">2023</span>
                 </div>
                 <div className="md:w-1/2 md:pl-16 w-full">
-                  <img 
+                  <motion.img 
                     src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&q=80&w=800" 
                     alt="The problem sketch" 
-                    className="rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500"
+                    initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                    whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                    viewport={{ once: false, amount: 0.3 }}
+                    transition={{ duration: 0.6 }}
+                    className="rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer"
                   />
                 </div>
               </div>
@@ -101,10 +105,14 @@ export const About = () => {
                   <span className="text-sm font-bold text-neutral-900 dark:text-white">2024</span>
                 </div>
                 <div className="md:w-1/2 md:pr-16 w-full">
-                  <img 
+                  <motion.img 
                     src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=800" 
                     alt="The solution sketch" 
-                    className="rounded-2xl shadow-elevated grayscale opacity-80 group-hover:grayscale-0 transition-all duration-500"
+                    initial={{ filter: "grayscale(100%)", opacity: 0.8 }}
+                    whileInView={{ filter: "grayscale(0%)", opacity: 1 }}
+                    viewport={{ once: false, amount: 0.3 }}
+                    transition={{ duration: 0.6 }}
+                    className="rounded-2xl shadow-elevated transition-all duration-300 hover:scale-[1.02] cursor-pointer"
                   />
                 </div>
               </div>
