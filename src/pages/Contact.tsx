@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Mail, MapPin, Phone, Clock } from 'lucide-react';
+import { Mail, MapPin, Phone } from 'lucide-react';
 import { useScreenInit } from '../useScreenInit';
 import { ShaderAnimation } from '../components/ui/ShaderAnimation';
 
@@ -73,16 +73,7 @@ export const Contact = () => {
               </p>
             </div>
 
-            {/* Support Hours Card */}
-            <div className="p-5 sm:p-6 bg-accent-600/5 dark:bg-accent-400/5 rounded-3xl border border-accent-600/10 dark:border-accent-400/10 space-y-3 max-w-md mx-auto text-left">
-              <div className="flex items-center gap-2 text-accent-600 dark:text-accent-400 font-bold">
-                <Clock className="w-5 h-5 flex-shrink-0" />
-                <span className="text-base">Support Hours</span>
-              </div>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                Our platform support is online 24/7. Account management and recruiting specialists are available Monday – Friday, 9:00 AM – 5:00 PM across all office timezones.
-              </p>
-            </div>
+
           </motion.div>
         </div>
       </section>
