@@ -3,11 +3,21 @@ Quota Hire — API URL Routing
 """
 
 from django.urls import path
+from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from . import views
 
+# Simple health-check view — no auth required, instant response.
+# Use this URL with a free ping service (e.g. UptimeRobot, cron-job.org)
+# to keep the Render free-tier backend awake and prevent cold starts.
+# Ping target: https://quotahire-backend.onrender.com/api/ping/
+def ping(request):
+    return JsonResponse({"status": "ok"})
+
 urlpatterns = [
+    path('ping/', ping, name='ping'),
+
     # ── Auth ─────────────────────────────────────────────────────────────────
     path('auth/register/',          views.RegisterView.as_view(),                name='auth-register'),
     path('auth/login/',             views.CustomTokenObtainPairView.as_view(),   name='auth-login'),

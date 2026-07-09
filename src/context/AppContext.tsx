@@ -20,37 +20,84 @@ export class ApiError extends Error {
   }
 }
 
+// 10-second timeout wrapper — prevents a sleeping Render backend from
+// hanging the page indefinitely with no visible feedback.
+const fetchWithTimeout = (url: string, options: RequestInit, timeoutMs = 10000): Promise<Response> => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
+};
+
+// Attempt to silently refresh the access token using the stored refresh token.
+// Returns the new access token on success, or null if refresh fails.
+const tryRefreshToken = async (): Promise<string | null> => {
+  const refresh = localStorage.getItem('refresh_token');
+  if (!refresh) return null;
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.access) {
+      localStorage.setItem('access_token', data.access);
+      // If the backend rotates refresh tokens, save the new one too
+      if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+      return data.access;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 // Global fetch wrapper for Django API
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('access_token');
+  let token = localStorage.getItem('access_token');
 
-  const headers: any = {
-    ...options.headers,
+  const buildHeaders = (tk: string | null) => {
+    const h: any = { ...options.headers };
+    if (!(options.body instanceof FormData)) h['Content-Type'] = 'application/json';
+    if (tk) h['Authorization'] = `Bearer ${tk}`;
+    return h;
   };
-
-  // Only add content type if we aren't sending FormData
-  if (!(options.body instanceof FormData)) {
-      headers['Content-Type'] = 'application/json';
-  }
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   let response;
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
-  } catch (error) {
+    response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`, { ...options, headers: buildHeaders(token) });
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new ApiError('The server took too long to respond. It may be starting up — please try again in a moment.', 0);
+    }
     throw new ApiError('We couldn\'t connect to the server. Please check your internet connection.', 0);
   }
 
+  // ── JWT Auto-Refresh ──────────────────────────────────────────────────────
+  // If we got a 401 and we have a refresh token, try to get a new access token
+  // silently before giving up. This prevents unexpected logouts when the 30-min
+  // access token expires while the user is still active.
   if (response.status === 401 && token) {
-      // Basic token expiration handling - logout user if token is invalid/expired
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      // Retry the original request with the fresh token
+      try {
+        response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`, { ...options, headers: buildHeaders(newToken) });
+      } catch (error: any) {
+        if (error?.name === 'AbortError') {
+          throw new ApiError('The server took too long to respond.', 0);
+        }
+        throw new ApiError('We couldn\'t connect to the server.', 0);
+      }
+    } else {
+      // Refresh also failed — session is truly expired, log the user out
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       const baseUrl = import.meta.env.BASE_URL || '/';
       window.location.href = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}login`;
       throw new ApiError('Session expired. Please log in again.', 401);
+    }
   }
 
   if (!response.ok) {
@@ -118,7 +165,9 @@ const defaultState: AppState = {
   notifications: [],
   savedJobs: [],
   savedJobDates: {},
-  loading: true,
+  // FIX: Start as false so the UI renders immediately for unauthenticated users.
+  // fetchData() sets it to true only when a logged-in user triggers a full reload.
+  loading: false,
   appError: null,
 };
 
@@ -131,13 +180,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const init = async () => {
       const token = localStorage.getItem('access_token');
       if (token) {
+        // Authenticated user: fetch full data (loading will be set true inside fetchData)
         try {
             await fetchData();
         } catch (e) {
             setState(prev => ({ ...prev, loading: false }));
         }
       } else {
-        setState(prev => ({ ...prev, loading: false }));
+        // Unauthenticated user: load public jobs in the background — DO NOT block the UI.
+        // The page renders immediately, jobs populate when the backend responds.
+        // loading stays false so users see the page instantly even if backend is slow.
+        fetchPublicJobsInBackground();
       }
     };
     init();
@@ -197,6 +250,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(pollInterval);
   }, []);
 
+  // Non-blocking background fetch for public jobs (unauthenticated visitors).
+  // This never sets loading=true so the page always shows instantly.
+  const fetchPublicJobsInBackground = async () => {
+    try {
+      const jobsData = await apiFetch('/jobs/').catch(() => null);
+      if (!jobsData) return; // backend still waking up — silently ignore
+      const jobsRaw = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
+      const jobs = jobsRaw.map((j: any) => ({
+        id: j.id.toString(),
+        companyId: j.custom_company_name ? `external-${encodeURIComponent(j.custom_company_name)}` : (j.company_id?.toString() || j.company?.toString() || j.company_name),
+        companyName: j.company_name,
+        companyLogoUrl: j.company_logo_url,
+        companyIsVerified: true,
+        title: j.title,
+        description: j.description,
+        requirements: j.requirements || [],
+        employment_type: j.employment_type,
+        isRemote: j.is_remote,
+        location: j.location,
+        currency: j.currency,
+        salaryRange: j.salary_range,
+        commissionRange: j.commission_range,
+        status: j.status,
+        createdAt: j.created_at,
+        job_code: j.job_code,
+      }));
+      setState(prev => ({ ...prev, jobs, appError: null }));
+    } catch {
+      // Silently ignore — page already visible, jobs will show as empty
+    }
+  };
+
   const fetchData = async (showLoading: boolean = true) => {
     try {
       if (showLoading) {
@@ -206,10 +291,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const token = localStorage.getItem('access_token');
 
       if (!token) {
-        // Unauthenticated: only fetch public jobs
-        const jobsData = await apiFetch('/jobs/');
-        const jobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
-        setState(prev => ({ ...prev, jobs, loading: false, appError: null }));
+        // Unauthenticated: fetch public jobs in background (non-blocking)
+        setState(prev => ({ ...prev, loading: false }));
+        fetchPublicJobsInBackground();
         return;
       }
 

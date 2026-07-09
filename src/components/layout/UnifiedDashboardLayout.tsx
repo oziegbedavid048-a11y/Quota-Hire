@@ -234,10 +234,12 @@ export default function UnifiedDashboardLayout({ children }: { children: React.R
 
   useEffect(() => {
     setIsNavigating(true);
-    const timer = setTimeout(() => setIsNavigating(false), 800); // Shorter skeleton time for snappy feel
+    // Shorter skeleton — feels snappier and doesn't block the page for authenticated users
+    const timer = setTimeout(() => setIsNavigating(false), 400);
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
+  // For public/unauthenticated pages, render children immediately with no skeleton
   if (!loading && !currentUser) return <>{children}</>;
 
   return (
