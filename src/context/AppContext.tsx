@@ -410,10 +410,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         appError: null
       }));
     } catch (error: any) {
+      const wasAuthenticated = !!localStorage.getItem('access_token');
       setState(prev => ({ 
         ...prev, 
         loading: false,
-        appError: error.message || "We couldn't connect to the server."
+        // Only surface the error screen for authenticated users whose session
+        // data failed. Unauthenticated visitors should never see "Connection Lost"
+        // — they just get an empty jobs list and can browse normally.
+        appError: wasAuthenticated ? (error.message || "We couldn't connect to the server.") : null
       }));
     }
   };

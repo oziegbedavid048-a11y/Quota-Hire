@@ -75,7 +75,7 @@ const ScrollToTop = () => {
 
 const AppRoutes = () => {
   const location = useLocation();
-  const { appError, retryFetchData } = useAppContext();
+  const { appError, retryFetchData, currentUser } = useAppContext();
 
   React.useEffect(() => {
     // Preload illustrations on app load so they display instantly
@@ -85,7 +85,10 @@ const AppRoutes = () => {
   const isDashboardRoute = location.pathname.includes('/dashboard') || location.pathname.includes('/admin') || location.pathname.includes('/employee/') || location.pathname.includes('/company/') || location.pathname.startsWith('/jobs') || location.pathname.includes('/notifications') || location.pathname.includes('/saved-jobs') || location.pathname === '/settings';
   const isAuthRoute = location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/forgot-password' || location.pathname === '/reset-password' || location.pathname === '/verify-email';
   
-  if (appError) {
+  // Only block the entire UI for authenticated users whose data fails to load.
+  // Unauthenticated visitors should ALWAYS see the page — even if the backend
+  // is sleeping or slow. They'll just see an empty jobs list, which is fine.
+  if (appError && currentUser) {
     return <GlobalErrorState error={appError} onRetry={retryFetchData} />;
   }
   
