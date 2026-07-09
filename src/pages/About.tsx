@@ -38,7 +38,7 @@ export const About = () => {
           </motion.div>
           <motion.h1 
             initial="hidden" animate="visible" variants={fadeIn}
-            className="text-5xl sm:text-6xl md:text-7xl font-serif font-extrabold text-neutral-900 dark:text-white mb-6 tracking-tight leading-[1.1]"
+            className="text-5xl sm:text-6xl md:text-7xl font-display font-extrabold text-neutral-900 dark:text-white mb-6 tracking-tight leading-[1.1]"
           >
             Redefining How <br className="hidden md:block"/>
             <span className="text-accent-600 dark:text-accent-400">Sales Talent</span> is Hired.
@@ -71,7 +71,7 @@ export const About = () => {
               <div className="flex flex-col md:flex-row items-center justify-between gap-12 group">
                 <div className="md:w-1/2 md:pr-16 text-right md:text-right text-left">
                   <div className="md:hidden block w-12 h-12 bg-accent-100 dark:bg-accent-900/30 text-accent-600 rounded-full flex items-center justify-center mb-4 font-bold">2023</div>
-                  <h3 className="text-3xl font-serif font-bold text-neutral-900 dark:text-white mb-4">The Broken System</h3>
+                  <h3 className="text-3xl font-display font-bold text-neutral-900 dark:text-white mb-4">The Broken System</h3>
                   <p className="text-lg text-neutral-600 dark:text-neutral-400">
                     We noticed that incredible sales professionals were struggling to find roles that matched their caliber, while companies were wasting millions on mis-hires. The traditional recruiting model was fundamentally broken, optimizing for quantity over quality.
                   </p>
@@ -96,7 +96,7 @@ export const About = () => {
               <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-12 group">
                 <div className="md:w-1/2 md:pl-16 text-left">
                   <div className="md:hidden block w-12 h-12 bg-accent-100 dark:bg-accent-900/30 text-accent-600 rounded-full flex items-center justify-center mb-4 font-bold">2024</div>
-                  <h3 className="text-3xl font-serif font-bold text-neutral-900 dark:text-white mb-4">The Solution</h3>
+                  <h3 className="text-3xl font-display font-bold text-neutral-900 dark:text-white mb-4">The Solution</h3>
                   <p className="text-lg text-neutral-600 dark:text-neutral-400">
                     We designed a platform that flipped the script. Instead of hiding data, we brought it to the forefront. We created a vetting process that verified past performance, ensuring that when an introduction is made, both parties are already aligned.
                   </p>
@@ -121,7 +121,7 @@ export const About = () => {
               <div className="flex flex-col md:flex-row items-center justify-between gap-12 group">
                 <div className="md:w-1/2 md:pr-16 text-right md:text-right text-left">
                   <div className="md:hidden block w-12 h-12 bg-accent-100 dark:bg-accent-900/30 text-accent-600 rounded-full flex items-center justify-center mb-4 font-bold">Now</div>
-                  <h3 className="text-3xl font-serif font-bold text-neutral-900 dark:text-white mb-4">The New Standard</h3>
+                  <h3 className="text-3xl font-display font-bold text-neutral-900 dark:text-white mb-4">The New Standard</h3>
                   <p className="text-lg text-neutral-600 dark:text-neutral-400">
                     Today, Quota Hire is the premier destination for elite sales talent. We've replaced the noise with signal, helping hundreds of companies build high-performing revenue teams efficiently and transparently.
                   </p>
@@ -150,7 +150,7 @@ export const About = () => {
             <span className="inline-block py-1.5 px-4 rounded-full bg-accent-50 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 text-sm font-semibold uppercase tracking-[0.2em] mb-6">
               Our Manifesto
             </span>
-            <h2 className="text-4xl md:text-6xl font-serif font-bold text-neutral-900 dark:text-white">What We Believe</h2>
+            <h2 className="text-4xl md:text-6xl font-display font-bold text-neutral-900 dark:text-white">What We Believe</h2>
           </div>
           
           <motion.div 
@@ -163,7 +163,7 @@ export const About = () => {
             {/* Card 1 */}
             <motion.div variants={fadeIn} className="bg-white/30 dark:bg-neutral-900/30 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 p-10 rounded-[2rem] shadow-soft hover:shadow-elevated hover:border-accent-200 dark:hover:border-accent-800/50 transition-all duration-300 group">
               <div className="text-7xl font-display font-black text-accent-100 dark:text-accent-900/30 mb-6 group-hover:text-accent-200 dark:group-hover:text-accent-800/60 transition-colors">01</div>
-              <h3 className="text-2xl font-serif font-bold text-neutral-900 dark:text-white mb-4">Transparency is Non-Negotiable</h3>
+              <h3 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-4">Transparency is Non-Negotiable</h3>
               <p className="text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed">
                 We believe candidates deserve to know the OTE, quota expectations, and product-market fit before the first interview. Hidden compensation is a relic of the past.
               </p>
@@ -172,7 +172,7 @@ export const About = () => {
             {/* Card 2 (Staggered down on desktop) */}
             <motion.div variants={fadeIn} className="bg-white/30 dark:bg-neutral-900/30 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 p-10 rounded-[2rem] shadow-soft hover:shadow-elevated hover:border-accent-200 dark:hover:border-accent-800/50 transition-all duration-300 group md:translate-y-16">
               <div className="text-7xl font-display font-black text-accent-100 dark:text-accent-900/30 mb-6 group-hover:text-accent-200 dark:group-hover:text-accent-800/60 transition-colors">02</div>
-              <h3 className="text-2xl font-serif font-bold text-neutral-900 dark:text-white mb-4">Numbers Speak Louder</h3>
+              <h3 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-4">Numbers Speak Louder</h3>
               <p className="text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed">
                 Sales is a science. We value verifiable track records, W-2s, and club attainment over resume buzzwords and charismatic fluff. Performance is our currency.
               </p>
@@ -181,7 +181,7 @@ export const About = () => {
             {/* Card 3 */}
             <motion.div variants={fadeIn} className="bg-white/30 dark:bg-neutral-900/30 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 p-10 rounded-[2rem] shadow-soft hover:shadow-elevated hover:border-accent-200 dark:hover:border-accent-800/50 transition-all duration-300 group">
               <div className="text-7xl font-display font-black text-accent-100 dark:text-accent-900/30 mb-6 group-hover:text-accent-200 dark:group-hover:text-accent-800/60 transition-colors">03</div>
-              <h3 className="text-2xl font-serif font-bold text-neutral-900 dark:text-white mb-4">Eliminate the Middleman</h3>
+              <h3 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-4">Eliminate the Middleman</h3>
               <p className="text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed">
                 Third-party recruiters slow down the process and misalign incentives. We provide direct access between top-tier talent and hiring managers.
               </p>
@@ -190,7 +190,7 @@ export const About = () => {
             {/* Card 4 (Staggered down on desktop) */}
             <motion.div variants={fadeIn} className="bg-white/30 dark:bg-neutral-900/30 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 p-10 rounded-[2rem] shadow-soft hover:shadow-elevated hover:border-accent-200 dark:hover:border-accent-800/50 transition-all duration-300 group md:translate-y-16">
               <div className="text-7xl font-display font-black text-accent-100 dark:text-accent-900/30 mb-6 group-hover:text-accent-200 dark:group-hover:text-accent-800/60 transition-colors">04</div>
-              <h3 className="text-2xl font-serif font-bold text-neutral-900 dark:text-white mb-4">Mutual Respect</h3>
+              <h3 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-4">Mutual Respect</h3>
               <p className="text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed">
                 Companies respect talent by providing honest data. Talent respects companies by bringing verifiable excellence. We facilitate high-trust introductions.
               </p>
