@@ -271,6 +271,8 @@ NGN_PER_EUR = int(config('NGN_PER_EUR', default='1650'))
 # ── Production Security Headers ───────────────────────────────────────────────
 # Only enforce HTTPS/security headers in production (not in local dev)
 if not DEBUG:
+    # Trust the X-Forwarded-Proto header from Render's load balancer to know the request is secure
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     # Force all HTTP traffic to HTTPS
     SECURE_SSL_REDIRECT = True
     # Tell browsers to only use HTTPS for 1 year (prevents SSL stripping)
