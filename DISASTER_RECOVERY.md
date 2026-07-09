@@ -1,11 +1,11 @@
-# Quota Hire — Disaster Recovery Plan
+# Quota Hire ï¿½ Disaster Recovery Plan
 
 ## Recovery Objectives
 
 | Metric | Target | What it means |
 |--------|--------|----------------|
-| **RPO** (Recovery Point Objective) | 24 hours | Maximum data we can afford to lose |
-| **RTO** (Recovery Time Objective) | 60 minutes | Maximum time to restore the system |
+| RPO (Recovery Point Objective) | 24 hours | Maximum data we can afford to lose |
+| RTO (Recovery Time Objective) | 60 minutes | Maximum time to restore the system |
 
 ---
 
@@ -14,8 +14,8 @@
 | Component | Provider | Backup? |
 |-----------|----------|---------|
 | Database | Xata (PostgreSQL) | Automatic daily snapshots, 7-day retention |
-| Backend | Render (Free Tier) | Stateless — redeploy from GitHub |
-| Frontend | Render (Static) | Stateless — redeploy from GitHub |
+| Backend | Render (Free Tier) | Stateless ï¿½ redeploy from GitHub |
+| Frontend | Render (Static) | Stateless ï¿½ redeploy from GitHub |
 | File Storage | Cloudinary | Cloudinary manages backups |
 | Secrets | Render Dashboard env vars | Must be re-entered manually if lost |
 
