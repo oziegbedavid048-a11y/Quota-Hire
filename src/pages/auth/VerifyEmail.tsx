@@ -1,63 +1,56 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, AlertTriangle, Mail, ArrowRight, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Mail, ArrowRight, RefreshCw } from 'lucide-react';
 import { Logo } from '../../components/ui/Logo';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://quotahire-backend.onrender.com/api';
 
-const GlitterParticle = ({ index }: { index: number }) => {
-  const randomXStart = Math.random() * 100;
-  const randomXEnd = randomXStart + (Math.random() - 0.5) * 20;
-  const randomSize = Math.random() * 8 + 4;
-  const randomDuration = Math.random() * 3 + 2.5;
-  const randomDelay = Math.random() * 0.5;
-  const randomRotate = Math.random() * 360;
-
-  const colors = [
-    '#FFD700', // Gold
-    '#F59E0B', // Amber
-    '#34D399', // Emerald
-    '#60A5FA', // Blue
-    '#A78BFA', // Purple
-    '#F472B6', // Pink
-    '#2DD4BF', // Teal
-  ];
-  const randomColor = colors[index % colors.length];
-
+const AnimatedEmailSuccessIcon = () => {
   return (
-    <motion.div
-      className="fixed pointer-events-none z-50"
-      style={{
-        width: randomSize,
-        height: randomSize,
-        backgroundColor: randomColor,
-        left: `${randomXStart}%`,
-        top: -20,
-        borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-      }}
-      initial={{ y: -20, opacity: 1, rotate: randomRotate }}
-      animate={{
-        y: '105vh',
-        x: `${randomXEnd}%`,
-        opacity: [1, 1, 0.9, 0],
-        rotate: randomRotate + 1080,
-      }}
-      transition={{
-        duration: randomDuration,
-        delay: randomDelay,
-        ease: [0.25, 0.46, 0.45, 0.94],
-      }}
-    />
-  );
-};
+    <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+      {/* Outer neutral border circle */}
+      <div className="absolute inset-0 rounded-full border border-neutral-200 dark:border-neutral-800" />
+      
+      {/* Mail Envelope & Checkmark */}
+      <div className="relative">
+        <motion.svg
+          width="36"
+          height="36"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-neutral-500 dark:text-neutral-400"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </motion.svg>
 
-const GlitterShower = () => {
-  return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-      {Array.from({ length: 60 }).map((_, i) => (
-        <GlitterParticle key={i} index={i} />
-      ))}
+        {/* Small overlay Checkmark badge in neutral tones */}
+        <motion.div
+          className="absolute -bottom-2 -right-2 w-6 h-6 rounded-full bg-neutral-900 dark:bg-neutral-100 flex items-center justify-center shadow-md border border-neutral-200 dark:border-neutral-800"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 15 }}
+        >
+          <svg className="w-3 h-3 text-white dark:text-neutral-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+            <motion.path
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.3, ease: "easeInOut", delay: 0.5 }}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        </motion.div>
+      </div>
     </div>
   );
 };
@@ -111,7 +104,6 @@ export const VerifyEmail = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-neutral-50 dark:bg-neutral-950 font-body py-16 px-4">
-      {status === 'success' && <GlitterShower />}
       {/* Background gradients */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
@@ -130,22 +122,24 @@ export const VerifyEmail = () => {
           {/* Top accent bar */}
           <div className={`h-1.5 w-full transition-all duration-700 ${
             status === 'success'
-              ? 'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400'
+              ? 'bg-transparent'
               : status === 'error'
               ? 'bg-gradient-to-r from-red-400 to-orange-400'
               : 'bg-gradient-to-r from-accent-400 to-purple-400 animate-pulse'
           }`} />
 
           <div className="p-8 sm:p-10 text-center">
-            {/* Logo */}
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
-              className="w-14 h-14 mx-auto mb-6"
-            >
-              <Logo size={56} />
-            </motion.div>
+            {/* Logo - Hidden on success */}
+            {status !== 'success' && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
+                className="w-14 h-14 mx-auto mb-6"
+              >
+                <Logo size={56} />
+              </motion.div>
+            )}
 
             <AnimatePresence mode="wait">
               {/* Loading */}
@@ -189,71 +183,42 @@ export const VerifyEmail = () => {
               {status === 'success' && (
                 <motion.div
                   key="success"
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="space-y-6"
+                  className="space-y-8"
                 >
-                  {/* Animated Success Icon with Pulse Rings */}
-                  <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
-                    <motion.div
-                      className="absolute inset-0 rounded-full bg-emerald-500/10 dark:bg-emerald-500/5"
-                      animate={{ scale: [1, 1.25, 1], opacity: [0.6, 1, 0.6] }}
-                      transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <motion.div
-                      className="absolute -inset-3 rounded-full bg-emerald-500/5"
-                      animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
-                      transition={{ duration: 2.5, delay: 0.5, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-                      className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-xl shadow-emerald-500/20 z-10"
-                    >
-                      <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                        <motion.path
-                          initial={{ pathLength: 0 }}
-                          animate={{ pathLength: 1 }}
-                          transition={{ duration: 0.6, ease: "easeInOut", delay: 0.3 }}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </motion.div>
-                  </div>
+                  <AnimatedEmailSuccessIcon />
 
                   <div className="space-y-3">
                     <motion.h3
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.2 }}
-                      className="text-2xl font-extrabold text-neutral-900 dark:text-white"
+                      className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight"
                     >
-                      Verified Successfully!
+                      Email Verified Successfully
                     </motion.h3>
                     <motion.p
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
-                      className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mx-auto"
+                      className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-sm mx-auto font-medium"
                     >
-                      Your email has been verified successfully. You can now log in using the login button below.
+                      Your account email has been verified. You can now access your professional portal.
                     </motion.p>
                   </div>
 
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
+                    transition={{ delay: 0.4 }}
                     className="pt-2"
                   >
                     <Link to="/login">
-                      <button className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg shadow-emerald-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-emerald-500/35">
-                        Log In Now
+                      <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 text-white font-bold py-4 px-6 rounded-xl shadow-xl hover:shadow-accent-500/30 transition-all duration-300 hover:-translate-y-0.5">
+                        Log In to Your Account
                         <ArrowRight size={18} />
                       </button>
                     </Link>
