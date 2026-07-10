@@ -21,7 +21,9 @@ urlpatterns = [
     # ── Auth ─────────────────────────────────────────────────────────────────
     path('auth/register/',          views.RegisterView.as_view(),                name='auth-register'),
     path('auth/login/',             views.CustomTokenObtainPairView.as_view(),   name='auth-login'),
+    path('auth/google/',            views.GoogleLoginView.as_view(),             name='auth-google'),
     path('auth/refresh/',           TokenRefreshView.as_view(),                  name='auth-refresh'),
+
     path('auth/me/',                views.MeView.as_view(),                      name='auth-me'),
     path('auth/change-password/',   views.ChangePasswordView.as_view(),          name='auth-change-password'),
     path('auth/delete/',            views.DeleteAccountView.as_view(),           name='auth-delete'),

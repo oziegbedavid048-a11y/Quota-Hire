@@ -286,3 +286,7 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     # Prevent your site from being embedded in iframes on other domains (clickjacking)
     X_FRAME_OPTIONS = 'DENY'
+
+# ── Google OAuth Configuration ────────────────────────────────────────────────
+GOOGLE_WEB_CLIENT_ID = config('GOOGLE_WEB_CLIENT_ID', default='')
+

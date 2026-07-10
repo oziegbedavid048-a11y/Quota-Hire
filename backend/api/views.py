@@ -327,6 +327,115 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
+class GoogleLoginView(APIView):
+    """
+    POST /api/auth/google/
+    Verifies a Google OAuth ID Token (JWT) sent from the client.
+    Logs in the user (if exists) or signs them up directly.
+    Returns access + refresh SimpleJWT tokens.
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, request):
+        token = request.data.get('token')
+        role = request.data.get('role', 'employee')  # 'employee' or 'company'
+        if not token:
+            return Response({'error': 'Google token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if role not in ['employee', 'company']:
+            role = 'employee'
+
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+            from django.conf import settings
+            from rest_framework_simplejwt.tokens import RefreshToken
+            from .models import CustomUser, EmployeeProfile, CompanyProfile
+
+            # 1. Verify the Google Token
+            client_id = getattr(settings, 'GOOGLE_WEB_CLIENT_ID', '')
+            if not client_id:
+                logger.error("GOOGLE_WEB_CLIENT_ID is not configured in settings.")
+                return Response({'error': 'Server configuration error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                google_requests.Request(),
+                client_id
+            )
+
+            # 2. Extract profile details
+            email = idinfo.get('email')
+            if not email:
+                return Response({'error': 'Email not provided by Google'}, status=status.HTTP_400_BAD_REQUEST)
+
+            name = idinfo.get('name', '')
+            first_name = idinfo.get('given_name', '')
+            last_name = idinfo.get('family_name', '')
+
+            # 3. Match or Create User in database
+            user = CustomUser.objects.filter(email=email).first()
+            created = False
+
+            if not user:
+                # Username must be unique, we default to the email address
+                user = CustomUser.objects.create_user(
+                    username=email,
+                    email=email,
+                    password=CustomUser.objects.make_random_password(),
+                    role=role,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email_verified=True,  # Google verified it!
+                )
+                created = True
+
+                # Auto-create the matching profile just like RegisterSerializer does:
+                if user.role == 'employee':
+                    EmployeeProfile.objects.create(
+                        user=user,
+                        phone_number='',
+                        city='',
+                        country=''
+                    )
+                elif user.role == 'company':
+                    comp_name = name if name else email.split('@')[0]
+                    CompanyProfile.objects.create(
+                        user=user,
+                        company_name=comp_name,
+                        contact_phone=''
+                    )
+            else:
+                # If they already exist, we make sure they are marked verified
+                if not user.email_verified:
+                    user.email_verified = True
+                    user.save(update_fields=['email_verified'])
+
+            # 4. Generate SimpleJWT access & refresh tokens
+            refresh = RefreshToken.for_user(user)
+
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'is_new_user': created,
+                'user': {
+                    'id': str(user.id),
+                    'email': user.email,
+                    'role': user.role,
+                    'name': user.get_full_name() or user.email,
+                }
+            }, status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            logger.warning(f"Google Token Verification failed: {e}")
+            return Response({'error': 'Invalid Google Token'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error during Google authentication: {e}", exc_info=True)
+            return Response({'error': 'An unexpected error occurred during Google sign-in'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
 class MeView(generics.RetrieveUpdateAPIView):
     """GET/PUT /api/auth/me/ — get or update the currently logged-in user."""
     serializer_class   = UserSerializer

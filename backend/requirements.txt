@@ -17,3 +17,4 @@ PyMuPDF
 python-docx
 celery
 redis
+google-auth

@@ -137,6 +137,7 @@ interface AppState {
 
 interface AppContextType extends AppState {
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (token: string, role?: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (user: any) => Promise<void>;
   fetchData: (showLoading?: boolean) => Promise<void>;
@@ -443,6 +444,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loginWithGoogle = async (token: string, role?: string) => {
+    try {
+      const body: any = { token };
+      if (role) {
+        body.role = role;
+      }
+      const data = await apiFetch('/auth/google/', {
+          method: 'POST',
+          body: JSON.stringify(body)
+      });
+      
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+
+      await fetchData();
+      toast.success(data.is_new_user ? 'Google Sign-up successful!' : 'Welcome back!');
+    } catch (error: any) {
+      toast.error(`${error.message || 'Failed to login with Google'}`);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -726,6 +749,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       value={{
         ...state,
         login,
+        loginWithGoogle,
         logout,
         register,
         fetchData,
