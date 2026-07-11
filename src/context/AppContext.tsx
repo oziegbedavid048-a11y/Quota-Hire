@@ -458,6 +458,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem('access_token', data.access);
       localStorage.setItem('refresh_token', data.refresh);
 
+      if (data.is_new_user) {
+        localStorage.setItem('needs_onboarding', 'true');
+      }
+
       await fetchData();
       toast.success(data.is_new_user ? 'Google Sign-up successful!' : 'Welcome back!');
     } catch (error: any) {
@@ -488,6 +492,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               country: userData.country || '',
           })
       });
+
+      localStorage.setItem('needs_onboarding', 'true');
 
       // Django register automatically creates the base profile and sends a verification email.
       // We do NOT auto-login here, so the signup component can show the verification modal.

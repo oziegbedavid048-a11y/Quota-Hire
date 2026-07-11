@@ -93,6 +93,8 @@ export const Login = () => {
     if (currentUser) {
       if (currentUser.role === 'admin') {
         navigate('/admin');
+      } else if (localStorage.getItem('needs_onboarding') === 'true' && !currentUser.setupCompleted) {
+        navigate('/onboarding');
       } else {
         const savedCode = sessionStorage.getItem('redirect_job_code');
         if (savedCode) {
