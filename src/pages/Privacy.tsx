@@ -1,0 +1,224 @@
+import { motion } from 'framer-motion';
+import { ShieldCheck } from 'lucide-react';
+import { useScreenInit } from '../useScreenInit';
+import { ShaderAnimation } from '../components/ui/ShaderAnimation';
+
+const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } };
+
+export const Privacy = () => {
+  useScreenInit();
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-neutral-950 relative overflow-hidden">
+      <ShaderAnimation isPaused={false} />
+
+      {/* ── Hero ── */}
+      <section className="pt-32 pb-12 relative z-10">
+        <div className="container mx-auto px-4 max-w-3xl text-center">
+          <motion.div
+            initial="hidden" animate="visible" variants={fadeUp}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-neutral-900/80 text-neutral-700 dark:text-neutral-300 text-sm font-medium mb-6 border border-neutral-200 dark:border-neutral-800 backdrop-blur-md shadow-sm"
+          >
+            <ShieldCheck size={14} className="text-accent-500" />
+            Legal
+          </motion.div>
+
+          <motion.h1
+            initial="hidden" animate="visible" variants={fadeUp}
+            transition={{ duration: 0.55, delay: 0.05 }}
+            className="text-4xl sm:text-5xl md:text-6xl font-display font-extrabold text-neutral-900 dark:text-white mb-4 tracking-tight leading-[1.1]"
+          >
+            Privacy Policy
+          </motion.h1>
+
+          <motion.p
+            initial="hidden" animate="visible" variants={fadeUp}
+            transition={{ duration: 0.55, delay: 0.1 }}
+            className="text-neutral-500 dark:text-neutral-400 text-sm"
+          >
+            Last updated: July 11, 2026
+          </motion.p>
+        </div>
+      </section>
+
+      {/* ── Body ── */}
+      <motion.section
+        initial="hidden" animate="visible" variants={fadeUp}
+        transition={{ duration: 0.6, delay: 0.15 }}
+        className="relative z-10 pb-24"
+      >
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="prose prose-neutral dark:prose-invert max-w-none
+            prose-h2:text-2xl prose-h2:font-bold prose-h2:text-accent-600 dark:prose-h2:text-accent-400 prose-h2:mt-12 prose-h2:mb-4
+            prose-h3:text-lg prose-h3:font-semibold prose-h3:text-neutral-800 dark:prose-h3:text-neutral-100 prose-h3:mt-8 prose-h3:mb-3
+            prose-h4:text-base prose-h4:font-semibold prose-h4:text-neutral-700 dark:prose-h4:text-neutral-200 prose-h4:mt-6 prose-h4:mb-2
+            prose-p:text-neutral-600 dark:prose-p:text-neutral-400 prose-p:leading-relaxed
+            prose-li:text-neutral-600 dark:prose-li:text-neutral-400
+            prose-a:text-accent-600 dark:prose-a:text-accent-400 prose-a:no-underline hover:prose-a:underline
+            prose-strong:text-neutral-800 dark:prose-strong:text-neutral-100
+            rounded-2xl bg-white/60 dark:bg-neutral-900/60 backdrop-blur-sm border border-neutral-200 dark:border-neutral-800 px-6 py-10 sm:px-10 shadow-sm"
+          >
+            <p>This Privacy Policy describes Our policies and procedures on the collection, use and disclosure of Your information when You use the Service and tells You about Your privacy rights and how the law protects You.</p>
+            <p>We use Your Personal Data to provide and improve the Service. By using the Service, You agree to the collection and use of information in accordance with this Privacy Policy.</p>
+
+            <h2>Interpretation and Definitions</h2>
+            <h3>Interpretation</h3>
+            <p>The words whose initial letters are capitalized have meanings defined under the following conditions. The following definitions shall have the same meaning regardless of whether they appear in singular or in plural.</p>
+            <h3>Definitions</h3>
+            <p>For the purposes of this Privacy Policy:</p>
+            <ul>
+              <li><p><strong>Account</strong> means a unique account created for You to access our Service or parts of our Service.</p></li>
+              <li><p><strong>Affiliate</strong> means an entity that controls, is controlled by, or is under common control with a party, where &quot;control&quot; means ownership of 50% or more of the shares, equity interest or other securities entitled to vote for election of directors or other managing authority.</p></li>
+              <li><p><strong>Company</strong> (referred to as either &quot;the Company&quot;, &quot;We&quot;, &quot;Us&quot; or &quot;Our&quot; in this Privacy Policy) refers to Quota Hire, 128 City Road London, EC1V 2NX.</p></li>
+              <li><p><strong>Cookies</strong> are small files that are placed on Your computer, mobile device or any other device by a website, containing the details of Your browsing history on that website among its many uses.</p></li>
+              <li><p><strong>Country</strong> refers to: United Kingdom</p></li>
+              <li><p><strong>Device</strong> means any device that can access the Service such as a computer, a cell phone or a digital tablet.</p></li>
+              <li><p><strong>Personal Data</strong> (or &quot;Personal Information&quot;) is any information that relates to an identified or identifiable individual. We use &quot;Personal Data&quot; and &quot;Personal Information&quot; interchangeably unless a law uses a specific term.</p></li>
+              <li><p><strong>Service</strong> refers to the Website.</p></li>
+              <li><p><strong>Service Provider</strong> means any natural or legal person who processes the data on behalf of the Company. It refers to third-party companies or individuals employed by the Company to facilitate the Service, to provide the Service on behalf of the Company, to perform services related to the Service or to assist the Company in analyzing how the Service is used.</p></li>
+              <li><p><strong>Usage Data</strong> refers to data collected automatically, either generated by the use of the Service or from the Service infrastructure itself (for example, the duration of a page visit).</p></li>
+              <li><p><strong>Website</strong> refers to Quota Hire, accessible from <a href="https://quotahire.org" rel="external nofollow noopener" target="_blank">https://quotahire.org</a>.</p></li>
+              <li><p><strong>You</strong> means the individual accessing or using the Service, or the company, or other legal entity on behalf of which such individual is accessing or using the Service, as applicable.</p></li>
+            </ul>
+
+            <h2>Collecting and Using Your Personal Data</h2>
+            <h3>Types of Data Collected</h3>
+            <h4>Personal Data</h4>
+            <p>While using Our Service, We may ask You to provide Us with certain personally identifiable information that can be used to contact or identify You. Personally identifiable information may include, but is not limited to:</p>
+            <ul>
+              <li>Email address</li>
+              <li>First name and last name</li>
+              <li>Phone number</li>
+            </ul>
+
+            <h4>Usage Data</h4>
+            <p>Usage Data is collected automatically when using the Service.</p>
+            <p>Usage Data may include information such as Your Device's Internet Protocol address (e.g. IP address), browser type, browser version, the pages of our Service that You visit, the time and date of Your visit, the time spent on those pages, unique device identifiers and other diagnostic data.</p>
+            <p>When You access the Service by or through a mobile device, We may collect certain information automatically, including, but not limited to, the type of mobile device You use, Your mobile device's unique ID, the IP address of Your mobile device, Your mobile operating system, the type of mobile Internet browser You use, unique device identifiers and other diagnostic data.</p>
+            <p>We may also collect information that Your browser sends whenever You visit Our Service or when You access the Service by or through a mobile device.</p>
+
+            <h4>Tracking Technologies and Cookies</h4>
+            <p>We use Cookies and similar tracking technologies to track the activity on Our Service and store certain information. Tracking technologies We use include beacons, tags, and scripts to collect and track information and to improve and analyze Our Service. The technologies We use may include:</p>
+            <ul>
+              <li><strong>Cookies or Browser Cookies.</strong> A cookie is a small file placed on Your Device. You can instruct Your browser to refuse all Cookies or to indicate when a Cookie is being sent. However, if You do not accept Cookies, You may not be able to use some parts of our Service.</li>
+              <li><strong>Web Beacons.</strong> Certain sections of our Service and our emails may contain small electronic files known as web beacons (also referred to as clear gifs, pixel tags, and single-pixel gifs) that permit the Company, for example, to count users who have visited those pages or opened an email and for other related website statistics (for example, recording the popularity of a certain section and verifying system and server integrity).</li>
+            </ul>
+            <p>Cookies can be &quot;Persistent&quot; or &quot;Session&quot; Cookies. Persistent Cookies remain on Your personal computer or mobile device when You go offline, while Session Cookies are deleted as soon as You close Your web browser.</p>
+            <p>Where required by law, we use non-essential cookies (such as analytics, advertising, and remarketing cookies) only with Your consent. You can withdraw or change Your consent at any time using Our cookie preferences tool (if available) or through Your browser/device settings. Withdrawing consent does not affect the lawfulness of processing based on consent before its withdrawal.</p>
+            <p>We use both Session and Persistent Cookies for the purposes set out below:</p>
+            <ul>
+              <li>
+                <p><strong>Necessary / Essential Cookies</strong></p>
+                <p>Type: Session Cookies &nbsp;·&nbsp; Administered by: Us</p>
+                <p>Purpose: These Cookies are essential to provide You with services available through the Website and to enable You to use some of its features. They help to authenticate users and prevent fraudulent use of user accounts. Without these Cookies, the services that You have asked for cannot be provided, and We only use these Cookies to provide You with those services.</p>
+              </li>
+              <li>
+                <p><strong>Cookies Policy / Notice Acceptance Cookies</strong></p>
+                <p>Type: Persistent Cookies &nbsp;·&nbsp; Administered by: Us</p>
+                <p>Purpose: These Cookies identify if users have accepted the use of cookies on the Website.</p>
+              </li>
+              <li>
+                <p><strong>Functionality Cookies</strong></p>
+                <p>Type: Persistent Cookies &nbsp;·&nbsp; Administered by: Us</p>
+                <p>Purpose: These Cookies allow Us to remember choices You make when You use the Website, such as remembering your login details or language preference. The purpose of these Cookies is to provide You with a more personal experience and to avoid You having to re-enter your preferences every time You use the Website.</p>
+              </li>
+            </ul>
+
+            <h3>Use of Your Personal Data</h3>
+            <p>The Company may use Personal Data for the following purposes:</p>
+            <ul>
+              <li><p><strong>To provide and maintain our Service</strong>, including to monitor the usage of our Service.</p></li>
+              <li><p><strong>To manage Your Account:</strong> to manage Your registration as a user of the Service. The Personal Data You provide can give You access to different functionalities of the Service that are available to You as a registered user.</p></li>
+              <li><p><strong>For the performance of a contract:</strong> the development, compliance and undertaking of the purchase contract for the products, items or services You have purchased or of any other contract with Us through the Service.</p></li>
+              <li><p><strong>To contact You:</strong> To contact You by email, telephone calls, SMS, or other equivalent forms of electronic communication regarding updates or informative communications related to the functionalities, products or contracted services, including security updates.</p></li>
+              <li><p><strong>To provide You</strong> with news, special offers, and general information about other goods, services and events which We offer that are similar to those that you have already purchased or inquired about unless You have opted not to receive such information.</p></li>
+              <li><p><strong>To manage Your requests:</strong> To attend and manage Your requests to Us.</p></li>
+              <li><p><strong>For business transfers:</strong> We may use Your Personal Data to evaluate or conduct a merger, divestiture, restructuring, reorganization, dissolution, or other sale or transfer of some or all of Our assets.</p></li>
+              <li><p><strong>For other purposes</strong>: We may use Your information for other purposes, such as data analysis, identifying usage trends, determining the effectiveness of our promotional campaigns and to evaluate and improve our Service, products, services, marketing and your experience.</p></li>
+            </ul>
+            <p>We may share Your Personal Data in the following situations:</p>
+            <ul>
+              <li><strong>With Service Providers:</strong> We may share Your Personal Data with Service Providers to monitor and analyze the use of our Service, to contact You.</li>
+              <li><strong>For business transfers:</strong> We may share or transfer Your Personal Data in connection with, or during negotiations of, any merger, sale of Company assets, financing, or acquisition of all or a portion of Our business to another company.</li>
+              <li><strong>With Affiliates:</strong> We may share Your Personal Data with Our affiliates, in which case we will require those affiliates to honor this Privacy Policy.</li>
+              <li><strong>With business partners:</strong> We may share Your Personal Data with Our business partners to offer You certain products, services or promotions.</li>
+              <li><strong>With other users:</strong> When You share Personal Data or otherwise interact in the public areas with other users, such information may be viewed by all users and may be publicly distributed outside.</li>
+              <li><strong>With Your consent</strong>: We may disclose Your Personal Data for any other purpose with Your consent.</li>
+            </ul>
+
+            <h3>Retention of Your Personal Data</h3>
+            <p>The Company will retain Your Personal Data only for as long as is necessary for the purposes set out in this Privacy Policy. We will retain and use Your Personal Data to the extent necessary to comply with our legal obligations, resolve disputes, and enforce our legal agreements and policies.</p>
+            <p>We apply different retention periods to different categories of Personal Data based on the purpose of processing and legal obligations:</p>
+            <ul>
+              <li>
+                <p>Account Information</p>
+                <ul><li>User Accounts: retained for the duration of your account relationship plus up to 24 months after account closure.</li></ul>
+              </li>
+              <li>
+                <p>Customer Support Data</p>
+                <ul>
+                  <li>Support tickets and correspondence: up to 24 months from the date of ticket closure.</li>
+                  <li>Chat transcripts: up to 24 months for quality assurance and staff training purposes.</li>
+                </ul>
+              </li>
+              <li>
+                <p>Usage Data</p>
+                <ul>
+                  <li>Website analytics data (cookies, IP addresses, device identifiers): up to 24 months from the date of collection.</li>
+                  <li>Server logs (IP addresses, access times): up to 24 months for security monitoring and troubleshooting purposes.</li>
+                </ul>
+              </li>
+            </ul>
+            <p>We may retain Personal Data beyond the periods stated above for legal obligations, legal claims, your explicit request, or technical limitations (e.g., encrypted backup systems).</p>
+
+            <h3>Transfer of Your Personal Data</h3>
+            <p>Your information, including Personal Data, is processed at the Company's operating offices and in any other places where the parties involved in the processing are located. It means that this information may be transferred to — and maintained on — computers located outside of Your state, province, country or other governmental jurisdiction where the data protection laws may differ from those of Your jurisdiction.</p>
+            <p>Where required by applicable law, We will ensure that international transfers of Your Personal Data are subject to appropriate safeguards. No transfer of Your Personal Data will take place to an organization or a country unless there are adequate controls in place.</p>
+
+            <h3>Delete Your Personal Data</h3>
+            <p>You have the right to delete or request that We assist in deleting the Personal Data that We have collected about You.</p>
+            <p>You may update, amend, or delete Your information at any time by signing in to Your Account and visiting the account settings section. You may also contact Us to request access to, correct, or delete any Personal Data that You have provided to Us.</p>
+            <p>Please note, however, that We may need to retain certain information when we have a legal obligation or lawful basis to do so.</p>
+
+            <h3>Disclosure of Your Personal Data</h3>
+            <h4>Business Transactions</h4>
+            <p>If the Company is involved in a merger, acquisition or asset sale, Your Personal Data may be transferred. We will provide notice before Your Personal Data is transferred and becomes subject to a different Privacy Policy.</p>
+            <h4>Law enforcement</h4>
+            <p>Under certain circumstances, the Company may be required to disclose Your Personal Data if required to do so by law or in response to valid requests by public authorities (e.g. a court or a government agency).</p>
+            <h4>Other legal requirements</h4>
+            <p>The Company may disclose Your Personal Data in the good faith belief that such action is necessary to:</p>
+            <ul>
+              <li>Comply with a legal obligation</li>
+              <li>Protect and defend the rights or property of the Company</li>
+              <li>Prevent or investigate possible wrongdoing in connection with the Service</li>
+              <li>Protect the personal safety of Users of the Service or the public</li>
+              <li>Protect against legal liability</li>
+            </ul>
+
+            <h3>Security of Your Personal Data</h3>
+            <p>The security of Your Personal Data is important to Us, but remember that no method of transmission over the Internet, or method of electronic storage is 100% secure. While We strive to use commercially reasonable means to protect Your Personal Data, We cannot guarantee its absolute security.</p>
+
+            <h2>Children's Privacy</h2>
+            <p>Our Service does not address anyone under the age of 16. We do not knowingly collect personally identifiable information from anyone under the age of 16. If You are a parent or guardian and You are aware that Your child has provided Us with Personal Data, please contact Us. If We become aware that We have collected Personal Data from anyone under the age of 16 without verification of parental consent, We take steps to remove that information from Our servers.</p>
+
+            <h2>Links to Other Websites</h2>
+            <p>Our Service may contain links to other websites that are not operated by Us. If You click on a third party link, You will be directed to that third party's site. We strongly advise You to review the Privacy Policy of every site You visit.</p>
+            <p>We have no control over and assume no responsibility for the content, privacy policies or practices of any third party sites or services.</p>
+
+            <h2>Changes to this Privacy Policy</h2>
+            <p>We may update Our Privacy Policy from time to time. We will notify You of any changes by posting the new Privacy Policy on this page.</p>
+            <p>We will let You know via email and/or a prominent notice on Our Service, prior to the change becoming effective and update the &quot;Last updated&quot; date at the top of this Privacy Policy.</p>
+            <p>You are advised to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.</p>
+
+            <h2>Contact Us</h2>
+            <p>If you have any questions about this Privacy Policy, You can contact us:</p>
+            <ul>
+              <li>By email: <a href="mailto:info@quotahire.org">info@quotahire.org</a></li>
+            </ul>
+          </div>
+        </div>
+      </motion.section>
+    </div>
+  );
+};

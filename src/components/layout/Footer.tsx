@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
 import { Logo } from '../ui/Logo';
+import { openCookieBanner } from '../ui/CookieBanner';
+
 
 interface FooterLink {
 	title: string;
@@ -40,10 +42,11 @@ const footerLinks: FooterSection[] = [
 		links: [
 			{ title: 'About Us', href: '/about' },
 			{ title: 'Why Quotahire', href: '/why' },
-
 			{ title: 'Contact', href: '/contact' },
+			{ title: 'Privacy Policy', href: '/privacy' },
 		],
 	},
+
 	{
 		label: 'Social',
 		links: [
@@ -92,6 +95,18 @@ export const Footer = () => {
 											</Link>
 										</li>
 									))}
+									{section.label === 'Company' && (
+										<li>
+											<button
+												id="footer-cookie-settings"
+												onClick={openCookieBanner}
+												className="hover:text-accent-600 dark:hover:text-accent-400 inline-flex items-center transition-colors duration-300"
+											>
+												Cookie Settings
+											</button>
+										</li>
+									)}
+
 								</ul>
 							</div>
 						</AnimatedContainer>

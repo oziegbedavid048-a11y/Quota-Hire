@@ -40,6 +40,8 @@ import { ApplicationTracker } from './pages/employee/ApplicationTracker';
 import { SavedJobs } from './pages/jobs/SavedJobs';
 
 import { Contact } from './pages/Contact';
+import { Privacy } from './pages/Privacy';
+
 import { CVGeneratorPage } from './pages/employee/CVGeneratorPage';
 import { Why } from './pages/Why';
 
@@ -47,6 +49,7 @@ import UnifiedDashboardLayout from './components/layout/UnifiedDashboardLayout';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { GlobalErrorState } from './components/ui/GlobalErrorState';
 import { Settings } from './pages/Settings';
+import { CookieBanner } from './components/ui/CookieBanner';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({
@@ -103,6 +106,8 @@ const AppRoutes = () => {
           <Route path="/why" element={<Why />} />
 
           <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<Privacy />} />
+
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -276,6 +281,7 @@ export function App() {
           <ScrollToTop />
           <AppRoutes />
           <Toaster position="top-right" richColors closeButton theme="system" />
+          <CookieBanner />
         </Router>
       </AppProvider>
     </ThemeProvider>);

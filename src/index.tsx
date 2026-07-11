@@ -59,9 +59,13 @@ if (import.meta.env.VITE_SENTRY_DSN && import.meta.env.PROD) {
 if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
   posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
     api_host: import.meta.env.VITE_POSTHOG_HOST,
-    person_profiles: 'identified_only'
+    person_profiles: 'identified_only',
+    // Do not track anything until the user accepts via the cookie banner.
+    // The CookieBanner component calls posthog.opt_in_capturing() on accept.
+    opt_out_capturing_by_default: true,
   });
 }
+
 
 import { SmoothScroll } from "./components/ui/SmoothScroll";
 
