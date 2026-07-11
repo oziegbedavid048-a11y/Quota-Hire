@@ -57,7 +57,7 @@ export const Home = () => {
 
       {/* Shader Animation Hero */}
       <section className="relative z-10 min-h-[90vh] flex items-center justify-center overflow-hidden">
-        <div className="relative z-10 container mx-auto px-4 text-center pt-20">
+        <div className="relative z-10 container mx-auto px-4 text-center pt-10">
           <motion.div
             initial={{
               opacity: 0
@@ -70,7 +70,7 @@ export const Home = () => {
             }}
             className="max-w-5xl mx-auto">
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-8 tracking-tighter text-neutral-900 dark:text-white drop-shadow-sm leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold mb-8 tracking-tighter text-neutral-900 dark:text-white drop-shadow-sm leading-tight uppercase">
               The future of <br className="hidden sm:inline" />
               <span className="text-accent-600 dark:text-accent-400">
                 sales recruiting globally.
@@ -147,7 +147,7 @@ export const Home = () => {
             <span className="block text-accent-600 dark:text-accent-400 text-sm font-semibold uppercase tracking-[0.2em] mb-4">
               The Revenue Reality
             </span>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-medium text-neutral-900 dark:text-white mb-6 tracking-tight">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-neutral-900 dark:text-white mb-6 tracking-tight">
               Aligning Sales Structure with Revenue Targets
             </h2>
             <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
