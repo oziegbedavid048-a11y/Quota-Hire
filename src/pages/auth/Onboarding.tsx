@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, ChevronRight, Target, Check, MapPin, Phone, Briefcase, Building, Globe, Image as ImageIcon } from 'lucide-react';
+import { User, Target, Check, MapPin, Phone, Briefcase, Building, Globe, Image as ImageIcon } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { useAppContext, apiFetch } from '../../context/AppContext';
@@ -163,60 +163,17 @@ export const Onboarding = () => {
 
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div key="step1" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.3 }} className="space-y-6 text-center">
-              <div className="mb-8">
+            <motion.div key="step1" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
+              <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-accent-100 dark:bg-accent-900/50 text-accent-600 dark:text-accent-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   {isEmployee ? <User size={32} /> : <Building size={32} />}
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-display font-bold text-neutral-900 dark:text-white mb-2">
                   Welcome to Quota Hire!
                 </h1>
-                <p className="text-neutral-500 dark:text-neutral-400 text-sm sm:text-base">
-                  {isEmployee ? "Let's set up your profile to match you with top companies." : "Let's set up your company profile to attract top talent."}
+                <p className="text-neutral-500 dark:text-neutral-400 text-sm sm:text-base mb-6">
+                  {isEmployee ? "Let's set up your contact details to match you with top companies." : "Let's set up your basic information to attract top talent."}
                 </p>
-              </div>
-
-              {/* Optional Photo Upload */}
-              <div className="max-w-md mx-auto">
-                <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-3 text-left">
-                  {isEmployee ? 'Profile Picture (Optional)' : 'Company Logo (Optional)'}
-                </label>
-                <div className="border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-2xl p-6 sm:p-8 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer group relative flex flex-col items-center">
-                  <input type="file" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" />
-                  
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4 group-hover:scale-105 transition-transform overflow-hidden shadow-sm">
-                    {avatarFile ? (
-                      <img src={URL.createObjectURL(avatarFile)} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <ImageIcon size={32} className="text-neutral-400" />
-                    )}
-                  </div>
-                  
-                  <p className="text-sm font-medium text-neutral-900 dark:text-white mb-1">
-                    {avatarFile ? 'Change Photo' : 'Click to upload'}
-                  </p>
-                  <p className="text-xs text-neutral-500">Supports JPG, PNG (Max 5MB)</p>
-                </div>
-              </div>
-
-              <div className="pt-4 max-w-md mx-auto">
-                <Button onClick={handleNext} className="w-full bg-accent-600 hover:bg-accent-700 text-white flex items-center justify-center py-3.5 rounded-xl font-bold text-base shadow-lg shadow-accent-600/20">
-                  Continue <ChevronRight size={18} className="ml-2" />
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {step === 2 && (
-            <motion.div key="step2" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <MapPin size={32} />
-                </div>
-                <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-2">
-                  {isEmployee ? 'Contact & Location' : 'Basic Information'}
-                </h2>
-                <p className="text-neutral-500 dark:text-neutral-400 text-sm sm:text-base">How can people reach you?</p>
               </div>
 
               <div className="space-y-5 max-w-md mx-auto">
@@ -273,17 +230,16 @@ export const Onboarding = () => {
                 )}
               </div>
 
-              <div className="flex flex-col-reverse sm:flex-row gap-3 pt-6 max-w-md mx-auto">
-                <Button variant="outline" onClick={() => setStep(1)} className="w-full sm:w-1/3 py-3.5 rounded-xl font-bold">Back</Button>
-                <Button onClick={handleNext} className="w-full sm:w-2/3 bg-accent-600 hover:bg-accent-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-accent-600/20">
+              <div className="pt-6 max-w-md mx-auto">
+                <Button onClick={handleNext} className="w-full bg-accent-600 hover:bg-accent-700 text-white flex items-center justify-center py-3.5 rounded-xl font-bold text-base shadow-lg shadow-accent-600/20">
                   Continue
                 </Button>
               </div>
             </motion.div>
           )}
 
-          {step === 3 && (
-            <motion.div key="step3" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
+          {step === 2 && (
+            <motion.div key="step2" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.3 }} className="space-y-6">
               <div className="text-center mb-8">
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Target size={32} />
@@ -346,6 +302,49 @@ export const Onboarding = () => {
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row gap-3 pt-6 max-w-md mx-auto">
+                <Button variant="outline" onClick={() => setStep(1)} className="w-full sm:w-1/3 py-3.5 rounded-xl font-bold">Back</Button>
+                <Button onClick={handleNext} className="w-full sm:w-2/3 bg-accent-600 hover:bg-accent-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-accent-600/20">
+                  Continue
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 3 && (
+            <motion.div key="step3" variants={variants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.3 }} className="space-y-6 text-center">
+              <div className="mb-8">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <ImageIcon size={32} />
+                </div>
+                <h2 className="text-2xl font-display font-bold text-neutral-900 dark:text-white mb-2">
+                  {isEmployee ? 'Profile Picture (Optional)' : 'Company Logo (Optional)'}
+                </h2>
+                <p className="text-neutral-500 dark:text-neutral-400 text-sm sm:text-base">
+                  Profiles with pictures get significantly more views.
+                </p>
+              </div>
+
+              {/* Optional Photo Upload */}
+              <div className="max-w-md mx-auto">
+                <div className="border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-2xl p-6 sm:p-8 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer group relative flex flex-col items-center">
+                  <input type="file" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" />
+                  
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-4 group-hover:scale-105 transition-transform overflow-hidden shadow-sm">
+                    {avatarFile ? (
+                      <img src={URL.createObjectURL(avatarFile)} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon size={32} className="text-neutral-400" />
+                    )}
+                  </div>
+                  
+                  <p className="text-sm font-medium text-neutral-900 dark:text-white mb-1">
+                    {avatarFile ? 'Change Photo' : 'Click to upload'}
+                  </p>
+                  <p className="text-xs text-neutral-500">Supports JPG, PNG (Max 5MB)</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row gap-3 pt-8 max-w-md mx-auto">
                 <Button variant="outline" onClick={() => setStep(2)} className="w-full sm:w-1/3 py-3.5 rounded-xl font-bold">Back</Button>
                 <Button 
                   onClick={handleFinish} 
