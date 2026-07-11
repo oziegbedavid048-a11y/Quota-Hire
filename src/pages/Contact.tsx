@@ -110,7 +110,7 @@ export const Contact = () => {
                 
                 <div className="space-y-3.5 text-sm text-neutral-600 dark:text-neutral-400">
                   <p className="leading-relaxed">
-                    12 Broadgate<br/>London, EC2M 2QS<br/>United Kingdom
+                    128 City Road<br/>London, EC1V 2NX<br/>United Kingdom
                   </p>
                   <p className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-accent-500" />
@@ -133,7 +133,7 @@ export const Contact = () => {
               >
                 <iframe
                   title="London Office Map"
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=-0.086%2C51.517%2C-0.080%2C51.521&layer=mapnik&marker=51.519%2C-0.083"
+                  src="https://www.openstreetmap.org/export/embed.html?bbox=-0.095%2C51.522%2C-0.083%2C51.530&layer=mapnik&marker=51.5262%2C-0.0898"
                   className="w-full h-full border-0 dark:invert-[0.9] dark:hue-rotate-[180deg]"
                   loading="lazy"
                 />
