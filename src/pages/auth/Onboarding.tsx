@@ -67,7 +67,7 @@ export const Onboarding = () => {
       // 2. Update Profile
       if (isEmployee) {
         await apiFetch('/profile/employee/', {
-          method: 'PUT',
+          method: 'PATCH',
           body: JSON.stringify({
             title: title,
             bio: bio,
@@ -79,7 +79,7 @@ export const Onboarding = () => {
         });
       } else {
         await apiFetch('/profile/company/', {
-          method: 'PUT',
+          method: 'PATCH',
           body: JSON.stringify({
             company_name: companyName,
             contact_phone: phone,
@@ -93,7 +93,7 @@ export const Onboarding = () => {
       // 3. Mark as setup completed
       const location = isEmployee ? [city, country].filter(Boolean).join(', ') : '';
       await apiFetch('/auth/me/', {
-        method: 'PUT',
+        method: 'PATCH',
         body: JSON.stringify({ 
           setup_completed: true,
           ...(location ? { location } : {})
