@@ -380,10 +380,11 @@ class GoogleLoginView(APIView):
 
             if not user:
                 # Username must be unique, we default to the email address
+                import secrets
                 user = CustomUser.objects.create_user(
                     username=email,
                     email=email,
-                    password=CustomUser.objects.make_random_password(),
+                    password=secrets.token_urlsafe(16),
                     role=role,
                     first_name=first_name,
                     last_name=last_name,
