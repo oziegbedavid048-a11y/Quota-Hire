@@ -27,6 +27,7 @@ export const Login = () => {
   const [globalError, setGlobalError] = useState('');
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTime, setLockoutTime] = useState(0);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { login, loginWithGoogle, currentUser } = useAppContext();
   const navigate = useNavigate();
   const googleInitRef = useRef(false);
@@ -41,9 +42,13 @@ export const Login = () => {
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
           callback: async (response: any) => {
             try {
+              setIsGoogleLoading(true);
+              setGlobalError('');
               await loginWithGoogle(response.credential);
             } catch (err) {
               console.error("Google sign-in error", err);
+            } finally {
+              setIsGoogleLoading(false);
             }
           },
         });
@@ -169,7 +174,12 @@ export const Login = () => {
           className="w-full max-w-md flex-shrink-0 relative z-10 lg:ml-auto"
         >
           <div className="bg-white/40 dark:bg-neutral-900/40 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/60 dark:border-white/10 p-8 sm:p-10 relative overflow-hidden pointer-events-auto">
-
+            {isGoogleLoading && (
+              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm">
+                <Loader2 size={40} className="animate-spin text-accent-600 dark:text-accent-400 mb-4" />
+                <p className="text-neutral-900 dark:text-white font-bold animate-pulse">Verifying with Google...</p>
+              </div>
+            )}
             {/* Shine */}
             <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/40 to-transparent pointer-events-none rounded-t-[2.5rem]" />
 

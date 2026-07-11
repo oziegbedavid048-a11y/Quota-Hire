@@ -407,6 +407,21 @@ class GoogleLoginView(APIView):
                         company_name=comp_name,
                         contact_phone=''
                     )
+
+                # Send the welcome email now that the user has signed up via Google
+                try:
+                    from .email_templates import get_welcome_email_html, send_courier_email
+                    display_name = user.get_full_name() or user.username
+                    is_company = user.role == 'company'
+                    html_content = get_welcome_email_html(user=display_name, is_company=is_company)
+                    send_courier_email(
+                        to_email=user.email,
+                        subject="Welcome - Quota Hire",
+                        text_content=f"Hi {display_name}, your Quota Hire account is now verified. Complete your profile at https://quotahire.org/dashboard",
+                        html_content=html_content,
+                    )
+                except Exception as e:
+                    logger.warning(f"Welcome email failed for Google sign-up {user.email}: {e}")
             else:
                 # If they already exist, we make sure they are marked verified
                 if not user.email_verified:

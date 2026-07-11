@@ -465,7 +465,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await fetchData();
       toast.success(data.is_new_user ? 'Google Sign-up successful!' : 'Welcome back!');
     } catch (error: any) {
-      toast.error(`${error.message || 'Failed to login with Google'}`);
+      toast.error('Something went wrong. Please try again.');
       throw error;
     }
   };
