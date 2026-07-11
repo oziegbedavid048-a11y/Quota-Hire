@@ -70,11 +70,12 @@ export const Signup = () => {
 
   const [globalError, setGlobalError] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [step, setStep] = useState(1);
   const { register: registerUser, loginWithGoogle, currentUser } = useAppContext();
   const navigate = useNavigate();
   const googleInitRef = useRef(false);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<SignupFormValues>({
+  const { register, handleSubmit, watch, setValue, trigger, formState: { errors, isSubmitting } } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       role: initialRole,
@@ -146,6 +147,19 @@ export const Signup = () => {
     }
   }, [loginWithGoogle, watchRole]);
 
+  const handleNextStep = async () => {
+    const fieldsToValidate = watchRole === 'employee' 
+      ? ['firstName', 'lastName', 'email', 'phone'] 
+      : ['companyName', 'email', 'phone'];
+    
+    // @ts-ignore
+    const isStep1Valid = await trigger(fieldsToValidate);
+    
+    if (isStep1Valid) {
+      setStep(2);
+    }
+  };
+
   const onSubmit = async (data: SignupFormValues) => {
     setGlobalError('');
     try {
@@ -191,15 +205,6 @@ export const Signup = () => {
         Back to Home
       </Link>
 
-      {/*
-        ─── Layout strategy ───────────────────────────────────────────
-        The CARD is the centered anchor (max-w-xl, centered by flex).
-        The 3D figure + copy panel is absolutely positioned starting
-        from the card's RIGHT edge (left-full), so it NEVER affects
-        the card's centering or causes left-side overflow.
-        The page's overflow-hidden clips anything that exits the viewport.
-        ──────────────────────────────────────────────────────────────
-      */}
       <div className="flex flex-col lg:flex-row items-center justify-center relative z-10 w-full max-w-[1200px] mx-auto">
 
         {/* ── SIGNUP CARD ── */}
@@ -283,16 +288,17 @@ export const Signup = () => {
                 />
               </div>
 
-              <div className="space-y-4 sm:space-y-5">
-                <AnimatePresence mode="popLayout">
-                  {watchRole === 'company' ? (
-                    <motion.div
-                      key="companyFields"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3 }}
-                    >
+              <AnimatePresence mode="wait">
+                {step === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-4 sm:space-y-5"
+                  >
+                    {watchRole === 'company' ? (
                       <GlassInput
                         label="Company Name"
                         icon={<Building size={20} />}
@@ -300,122 +306,142 @@ export const Signup = () => {
                         error={errors.companyName?.message}
                         disabled={isSubmitting}
                       />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="employeeFields"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.3 }}
-                      className="flex flex-col sm:flex-row gap-4 sm:gap-5"
+                    ) : (
+                      <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                        <div className="flex-1">
+                          <GlassInput
+                            label="First Name"
+                            icon={<User size={20} />}
+                            {...register("firstName")}
+                            error={errors.firstName?.message}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <GlassInput
+                            label="Last Name"
+                            icon={<User size={20} />}
+                            {...register("lastName")}
+                            error={errors.lastName?.message}
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <GlassInput
+                      label="Email Address"
+                      icon={<Mail size={20} />}
+                      type="email"
+                      {...register("email")}
+                      error={errors.email?.message}
+                      disabled={isSubmitting}
+                    />
+
+                    <GlassInput
+                      label="Phone Number"
+                      icon={<Phone size={20} />}
+                      type="tel"
+                      placeholder="+1 (555) 000-0000"
+                      {...register("phone")}
+                      disabled={isSubmitting}
+                    />
+
+                    <Button
+                      type="button"
+                      onClick={handleNextStep}
+                      className="w-full py-3.5 sm:py-4 mt-4 sm:mt-6 rounded-xl text-sm sm:text-base font-bold text-white shadow-xl transition-all duration-300 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 hover:shadow-accent-500/30 hover:-translate-y-0.5"
                     >
+                      Continue
+                    </Button>
+                  </motion.div>
+                )}
+
+                {step === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-4 sm:space-y-5"
+                  >
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
                       <div className="flex-1">
                         <GlassInput
-                          label="First Name"
-                          icon={<User size={20} />}
-                          {...register("firstName")}
-                          error={errors.firstName?.message}
+                          label="City"
+                          icon={<MapPin size={20} />}
+                          type="text"
+                          placeholder="e.g. New York"
+                          {...register("city")}
                           disabled={isSubmitting}
                         />
                       </div>
                       <div className="flex-1">
                         <GlassInput
-                          label="Last Name"
-                          icon={<User size={20} />}
-                          {...register("lastName")}
-                          error={errors.lastName?.message}
+                          label="Country"
+                          icon={<MapPin size={20} />}
+                          type="text"
+                          placeholder="e.g. United States"
+                          {...register("country")}
                           disabled={isSubmitting}
                         />
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </div>
 
-                <GlassInput
-                  label="Email Address"
-                  icon={<Mail size={20} />}
-                  type="email"
-                  {...register("email")}
-                  error={errors.email?.message}
-                  disabled={isSubmitting}
-                />
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+                      <div className="flex-1">
+                        <GlassInput
+                          label="Password"
+                          icon={<Lock size={20} />}
+                          type="password"
+                          {...register("password")}
+                          error={errors.password?.message}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <GlassInput
+                          label="Confirm Password"
+                          icon={<Lock size={20} />}
+                          type="password"
+                          {...register("passwordConfirm")}
+                          error={errors.passwordConfirm?.message}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </div>
 
-                {/* Phone Number */}
-                <GlassInput
-                  label="Phone Number"
-                  icon={<Phone size={20} />}
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  {...register("phone")}
-                  disabled={isSubmitting}
-                />
+                    {watchPassword && (
+                      <PasswordStrengthMeter password={watchPassword} />
+                    )}
 
-                {/* City + Country */}
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                  <div className="flex-1">
-                    <GlassInput
-                      label="City"
-                      icon={<MapPin size={20} />}
-                      type="text"
-                      placeholder="e.g. New York"
-                      {...register("city")}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <GlassInput
-                      label="Country"
-                      icon={<MapPin size={20} />}
-                      type="text"
-                      placeholder="e.g. United States"
-                      {...register("country")}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-                  <div className="flex-1">
-                    <GlassInput
-                      label="Password"
-                      icon={<Lock size={20} />}
-                      type="password"
-                      {...register("password")}
-                      error={errors.password?.message}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <GlassInput
-                      label="Confirm Password"
-                      icon={<Lock size={20} />}
-                      type="password"
-                      {...register("passwordConfirm")}
-                      error={errors.passwordConfirm?.message}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-
-                {watchPassword && (
-                  <PasswordStrengthMeter password={watchPassword} />
+                    <div className="flex gap-3 mt-4 sm:mt-6">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setStep(1)}
+                        className="w-1/3 py-3.5 sm:py-4 rounded-xl text-sm sm:text-base font-bold"
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-2/3 py-3.5 sm:py-4 rounded-xl text-sm sm:text-base font-bold text-white shadow-xl transition-all duration-300 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 hover:shadow-accent-500/30 hover:-translate-y-0.5"
+                      >
+                        {isSubmitting ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <Loader2 size={20} className="animate-spin" /> Creating account...
+                          </span>
+                        ) : (
+                          "Create Account"
+                        )}
+                      </Button>
+                    </div>
+                  </motion.div>
                 )}
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3.5 sm:py-4 mt-4 sm:mt-6 rounded-xl text-sm sm:text-base font-bold text-white shadow-xl transition-all duration-300 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 hover:shadow-accent-500/30 hover:-translate-y-0.5"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 size={20} className="animate-spin" /> Creating account...
-                  </span>
-                ) : (
-                  "Create Secure Account"
-                )}
-              </Button>
+              </AnimatePresence>
             </form>
 
             {/* Google Signup Divider */}

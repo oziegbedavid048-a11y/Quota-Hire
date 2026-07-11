@@ -264,7 +264,7 @@ export const Login = () => {
                     <Loader2 size={20} className="animate-spin" /> Authenticating...
                   </span>
                 ) : (
-                  "Secure Sign In"
+                  "Sign In"
                 )}
               </Button>
             </form>
