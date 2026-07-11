@@ -13,18 +13,15 @@ export const CookieBanner: React.FC = () => {
   useEffect(() => {
     const stored = localStorage.getItem(CONSENT_KEY) as ConsentState | null;
     if (stored === 'accepted') {
-      // Restore consent on every page load
       posthog.opt_in_capturing();
     } else if (stored === 'declined') {
       posthog.opt_out_capturing();
     } else {
-      // No stored preference — show the banner after a short delay
       const timer = setTimeout(() => setVisible(true), 1200);
       return () => clearTimeout(timer);
     }
   }, []);
 
-  // Allow other parts of the app to open the banner again (e.g., footer "Cookie settings" link)
   useEffect(() => {
     const handler = () => setVisible(true);
     window.addEventListener('qh:open-cookie-banner', handler);
@@ -51,82 +48,89 @@ export const CookieBanner: React.FC = () => {
           role="dialog"
           aria-label="Cookie consent"
           aria-modal="false"
-          initial={{ y: 120, opacity: 0 }}
+          initial={{ y: '110%', opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 120, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-          className="fixed bottom-5 left-1/2 z-[9999] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2"
+          exit={{ y: '110%', opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 30 }}
+          className={[
+            'fixed z-[9999]',
+            'bottom-0 left-0 right-0',
+            'sm:bottom-4 sm:left-auto sm:right-4',
+            'p-3 sm:p-0',
+            'w-full sm:w-[360px] sm:max-w-[calc(100vw-2rem)]',
+          ].join(' ')}
         >
-          {/* Glass card */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/80 shadow-2xl backdrop-blur-xl dark:bg-neutral-950/85">
-            {/* Accent gradient strip at top */}
-            <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-accent-400 via-accent-500 to-accent-600" />
+          {/* Card — styled with the website's exact background colors & gradient */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#fffbeb]/95 to-[#f4fbf2]/95 dark:from-[#1c1508]/95 dark:to-[#050f03]/95 backdrop-blur-md border border-[#e5f6e2] dark:border-accent-950/40 shadow-elevated">
+            
+            {/* Accent top gradient line */}
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent-400 to-accent-600" />
 
-            <div className="px-5 py-5 sm:px-6">
-              {/* Header row */}
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-500/20 text-accent-400">
-                  <Cookie size={18} />
+            {/* Absolute close button to maximize horizontal space for text on mobile */}
+            <button
+              id="cookie-banner-dismiss"
+              onClick={handleDecline}
+              aria-label="Dismiss and decline cookies"
+              className="absolute top-3 right-3 rounded-lg p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-white/5 transition-colors"
+            >
+              <X size={14} />
+            </button>
+
+            <div className="p-4 pt-5 sm:p-5 sm:pt-6">
+              
+              {/* Content Header */}
+              <div className="flex items-start gap-3 pr-6">
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-100/55 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400">
+                  <Cookie size={16} />
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white">
-                    We use analytics cookies 🍪
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white leading-snug">
+                    We value your privacy 🍪
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed text-neutral-400">
-                    QuotaHire uses{' '}
+                  <p className="mt-1.5 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
+                    We use{' '}
                     <a
                       href="https://posthog.com/privacy"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="underline underline-offset-2 hover:text-accent-400 transition-colors"
+                      className="text-accent-600 dark:text-accent-400 hover:underline font-medium underline-offset-2"
                     >
                       PostHog
                     </a>{' '}
-                    to understand how visitors use the site — no ads, no
-                    third-party selling. Accepting helps us improve the product.
-                    You can change your mind at any time via the footer.
+                    analytics to improve QuotaHire — no ads, no data selling.
+                    Change choice anytime in footer.
                   </p>
                 </div>
-
-                {/* Dismiss button (treated as decline) */}
-                <button
-                  id="cookie-banner-dismiss"
-                  onClick={handleDecline}
-                  aria-label="Dismiss and decline cookies"
-                  className="ml-2 shrink-0 rounded-lg p-1.5 text-neutral-500 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  <X size={15} />
-                </button>
               </div>
 
-              {/* Feature pills */}
-              <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
-                <span className="flex items-center gap-1.5 rounded-full border border-neutral-700 bg-neutral-800/60 px-3 py-1 text-neutral-300">
-                  <BarChart2 size={11} className="text-accent-400" />
-                  Usage analytics only
+              {/* Badges/Pills */}
+              <div className="mt-3.5 flex flex-wrap gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent-50/70 dark:bg-accent-900/20 border border-accent-100/60 dark:border-accent-800 text-accent-700 dark:text-accent-300 px-2 py-0.5 text-[10px] font-medium">
+                  <BarChart2 size={9} />
+                  Analytics only
                 </span>
-                <span className="flex items-center gap-1.5 rounded-full border border-neutral-700 bg-neutral-800/60 px-3 py-1 text-neutral-300">
-                  <ShieldCheck size={11} className="text-accent-400" />
-                  No ads or data selling
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent-50/70 dark:bg-accent-900/20 border border-accent-100/60 dark:border-accent-800 text-accent-700 dark:text-accent-300 px-2 py-0.5 text-[10px] font-medium">
+                  <ShieldCheck size={9} />
+                  No data selling
                 </span>
               </div>
 
-              {/* Action buttons */}
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              {/* Actions: Stacks on very small viewports (<350px) to prevent button compression */}
+              <div className="mt-4 flex flex-col min-[350px]:flex-row gap-2">
                 <button
                   id="cookie-banner-decline"
                   onClick={handleDecline}
-                  className="w-full rounded-xl border border-neutral-700 bg-transparent px-5 py-2.5 text-sm font-medium text-neutral-300 transition-all hover:border-neutral-500 hover:text-white sm:w-auto"
+                  className="flex-1 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all text-center"
                 >
                   Decline
                 </button>
                 <button
                   id="cookie-banner-accept"
                   onClick={handleAccept}
-                  className="w-full rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent-500/25 transition-all hover:bg-accent-600 hover:shadow-accent-600/30 sm:w-auto"
+                  className="flex-1 rounded-xl bg-accent-600 hover:bg-accent-700 px-3 py-2 text-xs font-semibold text-white shadow-sm active:scale-95 transition-all text-center"
                 >
-                  Accept analytics
+                  Accept
                 </button>
               </div>
             </div>
@@ -138,15 +142,10 @@ export const CookieBanner: React.FC = () => {
 };
 
 /**
- * Programmatically re-open the banner.
- * Use this from your footer "Cookie settings" link so users can change their mind.
- *
- * Example:
- *   import { openCookieBanner } from '../ui/CookieBanner';
- *   <button onClick={openCookieBanner}>Cookie settings</button>
+ * Re-open the cookie banner (e.g. from a footer "Cookie settings" link).
+ * Clears the stored preference so the user can change their choice.
  */
 export const openCookieBanner = () => {
-  // Clear stored preference so the banner shows fresh
   localStorage.removeItem('qh_cookie_consent');
   window.dispatchEvent(new Event('qh:open-cookie-banner'));
 };
