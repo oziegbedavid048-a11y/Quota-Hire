@@ -561,37 +561,53 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
             return False
 
 
-def get_custom_admin_email_html(plain_body, attachment_name=None, attachment_is_image=False):
+def get_custom_admin_email_html(plain_body, attachment_name=None, attachment_is_image=False, attachments=None):
     """
     Renders a plain HTML body featuring only the paragraph-separated 
     message text and the standard platform footer. No heavy design headers.
-    If an attachment is present, it displays it (either inline image or attachment link) 
+    If attachments are present, displays them (either inline image or attachment link) 
     before the footer.
     """
     paragraphs = [p.strip() for p in plain_body.strip().split("\n") if p.strip()]
     inner = "".join(f"<p>{para}</p>" for para in paragraphs)
     
-    attachment_html = ""
-    if attachment_name:
-        if attachment_is_image:
-            # Display image sign and inline image before the footer
-            attachment_html = (
+    # Maintain backward compatibility with single attachment params
+    unified_attachments = []
+    if attachments:
+        unified_attachments.extend(attachments)
+    elif attachment_name:
+        unified_attachments.append({
+            'name': attachment_name,
+            'is_image': attachment_is_image,
+            'cid': 'attached_image'
+        })
+    
+    attachment_html_parts = []
+    for att in unified_attachments:
+        name = att.get('name')
+        is_image = att.get('is_image', False)
+        cid = att.get('cid')
+        
+        if is_image and cid:
+            part_html = (
                 '<div style="margin-top:20px; padding:12px 16px; background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; display:inline-block; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
                 '<span style="font-size:14px; font-weight:600; color:#111827;">📎 Attached image:</span>'
-                f'<span style="font-size:14px; color:#4b5563; margin-left:8px;">{attachment_name}</span>'
+                f'<span style="font-size:14px; color:#4b5563; margin-left:8px;">{name}</span>'
                 '</div>'
                 '<div style="margin-top:12px;">'
-                '<img src="cid:attached_image" alt="Attached Image" style="max-width:100%; height:auto; display:block; border-radius:6px; border:1px solid #e4e4e7;">'
+                f'<img src="cid:{cid}" alt="Attached Image" style="max-width:100%; height:auto; display:block; border-radius:6px; border:1px solid #e4e4e7;">'
                 '</div>'
             )
         else:
-            # Display document attachment card before the footer
-            attachment_html = (
+            part_html = (
                 '<div style="margin-top:20px; padding:12px 16px; background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; display:inline-block; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
                 '<span style="font-size:14px; font-weight:600; color:#111827;">📎 Attached file:</span>'
-                f'<span style="font-size:14px; color:#4b5563; margin-left:8px;">{attachment_name}</span>'
+                f'<span style="font-size:14px; color:#4b5563; margin-left:8px;">{name}</span>'
                 '</div>'
             )
+        attachment_html_parts.append(part_html)
+        
+    attachment_html = "".join(attachment_html_parts)
 
     body = (
         "<!DOCTYPE html>"

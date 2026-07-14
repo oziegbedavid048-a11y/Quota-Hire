@@ -127,9 +127,27 @@
         <input type="hidden" name="form_submitted" value="1" />
         
         {% for field in form %}
-            <div class="form-row">
+            <div class="form-row" {% if field.name == 'attachments' %}id="attachments-form-row"{% endif %}>
                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                 {{ field }}
+                {% if field.name == 'attachments' %}
+                    <div id="additional-attachments-container" style="margin-top: 10px;"></div>
+                    <button type="button" id="add-more-attachments-btn" style="margin-top: 8px; background: #1a6515; color: #fff; padding: 6px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s ease, transform 0.1s ease;">
+                        <span>➕</span> Add More Files
+                    </button>
+                    <style>
+                        #add-more-attachments-btn:hover {
+                            background: #155211 !important;
+                        }
+                        #add-more-attachments-btn:active {
+                            transform: scale(0.97);
+                        }
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(-6px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                    </style>
+                {% endif %}
                 {% if field.help_text %}
                     <p class="help" style="margin: 4px 0 0; font-size: 11px; color: #888;">{{ field.help_text }}</p>
                 {% endif %}
@@ -177,6 +195,59 @@
                 const end = this.selectionEnd;
                 this.value = this.value.substring(0, start) + cleanText + this.value.substring(end);
                 this.selectionStart = this.selectionEnd = start + cleanText.length;
+            });
+        }
+
+        // Dynamic multi-file attachment management
+        const addBtn = document.getElementById('add-more-attachments-btn');
+        const container = document.getElementById('additional-attachments-container');
+        
+        if (addBtn && container) {
+            addBtn.addEventListener('click', function() {
+                const wrapper = document.createElement('div');
+                wrapper.style.display = 'flex';
+                wrapper.style.alignItems = 'center';
+                wrapper.style.gap = '10px';
+                wrapper.style.marginTop = '8px';
+                wrapper.style.padding = '8px 12px';
+                wrapper.style.background = 'rgba(0, 0, 0, 0.03)';
+                wrapper.style.border = '1px dashed #ccc';
+                wrapper.style.borderRadius = '4px';
+                wrapper.style.animation = 'fadeIn 0.2s ease-out';
+                
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.name = 'attachments';
+                input.multiple = true;
+                input.style.marginTop = '0';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.innerHTML = '🗑️';
+                removeBtn.style.background = 'none';
+                removeBtn.style.border = 'none';
+                removeBtn.style.cursor = 'pointer';
+                removeBtn.style.padding = '4px 8px';
+                removeBtn.style.fontSize = '14px';
+                removeBtn.title = 'Remove this attachment field';
+                removeBtn.style.transition = 'transform 0.1s ease';
+                
+                removeBtn.addEventListener('mouseover', function() {
+                    removeBtn.style.transform = 'scale(1.15)';
+                });
+                removeBtn.addEventListener('mouseout', function() {
+                    removeBtn.style.transform = 'scale(1.0)';
+                });
+                removeBtn.addEventListener('click', function() {
+                    wrapper.style.animation = 'fadeIn 0.15s ease-in reverse';
+                    setTimeout(function() {
+                        wrapper.remove();
+                    }, 140);
+                });
+                
+                wrapper.appendChild(input);
+                wrapper.appendChild(removeBtn);
+                container.appendChild(wrapper);
             });
         }
     });

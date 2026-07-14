@@ -49,6 +49,40 @@ class CompanyProfileInline(admin.StackedInline):
 
 # ── Custom User Admin ─────────────────────────────────────────────────────────
 
+from django.utils.datastructures import MultiValueDict
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+    def value_from_datadict(self, data, files, name):
+        if isinstance(files, MultiValueDict):
+            return files.getlist(name)
+        return super().value_from_datadict(data, files, name)
+
+
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput(attrs={'multiple': True}))
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = []
+            for d in data:
+                cleaned = single_file_clean(d, initial)
+                if cleaned:
+                    result.append(cleaned)
+            if not result and self.required:
+                raise forms.ValidationError(self.error_messages['required'], code='required')
+            return result
+        else:
+            cleaned = single_file_clean(data, initial)
+            if not cleaned and self.required:
+                raise forms.ValidationError(self.error_messages['required'], code='required')
+            return [cleaned] if cleaned else []
+
+
 class SendCustomEmailForm(forms.Form):
     subject = forms.CharField(
         max_length=200, 
@@ -59,9 +93,9 @@ class SendCustomEmailForm(forms.Form):
         required=True,
         widget=forms.Textarea(attrs={'placeholder': 'Write your message here...'})
     )
-    attachment = forms.FileField(
+    attachments = MultipleFileField(
         required=False,
-        help_text="Optional: Attach any document (PDF, DOCX) or image (PNG, JPG)."
+        help_text="Optional: Attach any documents (PDF, DOCX) or images (PNG, JPG). You can select multiple files."
     )
 
 
@@ -105,7 +139,7 @@ class CustomUserAdmin(UserAdmin):
             if form.is_valid():
                 subject = form.cleaned_data['subject']
                 body = form.cleaned_data['message_body']
-                attachment = request.FILES.get('attachment')
+                attachments = form.cleaned_data.get('attachments') or []
                 
                 from django.core.mail import EmailMultiAlternatives
                 from django.conf import settings
@@ -114,11 +148,10 @@ class CustomUserAdmin(UserAdmin):
                 
                 logger = logging.getLogger(__name__)
                 
-                # Check if the attachment is an image
-                attachment_name = None
-                attachment_is_image = False
-                if attachment:
+                attachments_info = []
+                for idx, attachment in enumerate(attachments):
                     attachment_name = attachment.name
+                    attachment_is_image = False
                     content_type = attachment.content_type or ""
                     if content_type.startswith("image/"):
                         attachment_is_image = True
@@ -127,11 +160,17 @@ class CustomUserAdmin(UserAdmin):
                         guessed_type, _ = mimetypes.guess_type(attachment.name)
                         if guessed_type and guessed_type.startswith("image/"):
                             attachment_is_image = True
+                    
+                    attachments_info.append({
+                        'file': attachment,
+                        'name': attachment_name,
+                        'is_image': attachment_is_image,
+                        'cid': f"attached_image_{idx}" if attachment_is_image else None
+                    })
                 
                 html_content = get_custom_admin_email_html(
                     body, 
-                    attachment_name=attachment_name, 
-                    attachment_is_image=attachment_is_image
+                    attachments=attachments_info
                 )
                 
                 sent_count = 0
@@ -145,24 +184,27 @@ class CustomUserAdmin(UserAdmin):
                             to=[user.email]
                         )
                         msg.attach_alternative(html_content, "text/html")
-                        if attachment:
-                            attachment.seek(0)
-                            if attachment_is_image:
+                        
+                        for att_info in attachments_info:
+                            file_obj = att_info['file']
+                            file_obj.seek(0)
+                            if att_info['is_image']:
                                 from email.mime.base import MIMEBase
                                 from email import encoders
                                 import mimetypes
                                 
-                                ctype = attachment.content_type or mimetypes.guess_type(attachment.name)[0] or "image/png"
+                                ctype = file_obj.content_type or mimetypes.guess_type(file_obj.name)[0] or "image/png"
                                 maintype, subtype = ctype.split('/')
                                 
                                 part = MIMEBase(maintype, subtype)
-                                part.set_payload(attachment.read())
+                                part.set_payload(file_obj.read())
                                 encoders.encode_base64(part)
-                                part.add_header('Content-ID', '<attached_image>')
-                                part.add_header('Content-Disposition', 'inline', filename=attachment.name)
+                                part.add_header('Content-ID', f"<{att_info['cid']}>")
+                                part.add_header('Content-Disposition', 'inline', filename=file_obj.name)
                                 msg.attach(part)
                             else:
-                                msg.attach(attachment.name, attachment.read(), attachment.content_type)
+                                msg.attach(file_obj.name, file_obj.read(), file_obj.content_type)
+                                
                         msg.send(fail_silently=False)
                         sent_count += 1
                     except Exception as e:
