@@ -13,7 +13,12 @@ from . import views
 # to keep the Render free-tier backend awake and prevent cold starts.
 # Ping target: https://quotahire-backend.onrender.com/api/ping/
 def ping(request):
-    return JsonResponse({"status": "ok"})
+    import subprocess
+    try:
+        commit = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode().strip()
+    except Exception as e:
+        commit = f"unknown: {str(e)}"
+    return JsonResponse({"status": "ok", "commit": commit})
 
 urlpatterns = [
     path('ping/', ping, name='ping'),
@@ -79,5 +84,16 @@ urlpatterns = [
     path('admin/users/',            views.AdminUserListView.as_view(),           name='admin-users'),
     path('admin/jobs/',             views.AdminJobListView.as_view(),            name='admin-jobs'),
     path('admin/jobs/<int:pk>/edit/', views.AdminJobUpdateView.as_view(),        name='admin-job-update'),
+
+    # ── Community (Mobile App Only) ───────────────────────────────────────────
+    path('community/posts/', views.CommunityFeedView.as_view(), name='community-feed'),
+    path('community/posts/create/', views.CommunityPostCreateView.as_view(), name='community-post-create'),
+    path('community/posts/<int:pk>/like/', views.CommunityPostLikeView.as_view(), name='community-post-like'),
+    path('community/posts/<int:pk>/comments/', views.CommunityCommentListCreateView.as_view(), name='community-comments'),
+    path('community/polls/', views.CommunityPollListView.as_view(), name='community-polls'),
+    path('community/polls/create/', views.CommunityPollCreateView.as_view(), name='community-poll-create'),
+    path('community/polls/<int:pk>/vote/', views.CommunityPollVoteView.as_view(), name='community-poll-vote'),
+    path('community/my-posts/', views.CommunityMyPostsView.as_view(), name='community-my-posts'),
 ]
+
 
