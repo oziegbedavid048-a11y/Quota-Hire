@@ -535,3 +535,135 @@ class Newsletter(models.Model):
     def __str__(self):
         status = f'Sent to {self.recipients_count}' if self.sent_at else 'Draft'
         return f'[{status}] {self.subject}'
+
+
+# ── Community (Mobile App Only) ───────────────────────────────────────────────
+
+class CommunityCategory(models.TextChoices):
+    GENERAL   = 'general',   'General'
+    WINS      = 'wins',      'Wins'
+    QUESTIONS = 'questions', 'Questions'
+    TIPS      = 'tips',      'Tips'
+    POLLS     = 'polls',     'Polls'
+
+
+class CommunityPost(models.Model):
+    """
+    A text-only community post created by an employee.
+    No attachments — text and category only.
+    """
+    author     = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='community_posts'
+    )
+    content    = models.TextField(max_length=500)
+    category   = models.CharField(
+        max_length=20, choices=CommunityCategory.choices, default=CommunityCategory.GENERAL
+    )
+    likes      = models.ManyToManyField(
+        CustomUser, related_name='liked_posts', blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name        = 'Community Post'
+        verbose_name_plural = 'Community Posts'
+
+    def __str__(self):
+        return f'{self.author.full_name}: {self.content[:60]}'
+
+    @property
+    def likes_count(self):
+        return self.likes.count()
+
+    @property
+    def comments_count(self):
+        return self.community_comments.count()
+
+
+class CommunityComment(models.Model):
+    """A text-only reply to a community post."""
+    post       = models.ForeignKey(
+        CommunityPost, on_delete=models.CASCADE, related_name='community_comments'
+    )
+    author     = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='community_comments'
+    )
+    content    = models.TextField(max_length=300)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name        = 'Community Comment'
+        verbose_name_plural = 'Community Comments'
+
+    def __str__(self):
+        return f'{self.author.full_name} on post {self.post_id}: {self.content[:40]}'
+
+
+class CommunityPoll(models.Model):
+    """A community poll with multiple choice options."""
+    author     = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='community_polls'
+    )
+    question   = models.CharField(max_length=300)
+    category   = models.CharField(
+        max_length=20, choices=CommunityCategory.choices, default=CommunityCategory.POLLS
+    )
+    ends_at    = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name        = 'Community Poll'
+        verbose_name_plural = 'Community Polls'
+
+    def __str__(self):
+        return f'Poll by {self.author.full_name}: {self.question[:60]}'
+
+    @property
+    def total_votes(self):
+        return CommunityPollVote.objects.filter(choice__poll=self).count()
+
+
+class CommunityPollChoice(models.Model):
+    """A single choice option in a community poll."""
+    poll  = models.ForeignKey(CommunityPoll, on_delete=models.CASCADE, related_name='choices')
+    text  = models.CharField(max_length=200)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f'{self.poll_id} — {self.text}'
+
+    @property
+    def votes_count(self):
+        return self.poll_votes.count()
+
+
+class CommunityPollVote(models.Model):
+    """Records a single user's vote on a poll choice."""
+    poll   = models.ForeignKey(
+        CommunityPoll, on_delete=models.CASCADE, related_name='poll_votes'
+    )
+    choice = models.ForeignKey(
+        CommunityPollChoice, on_delete=models.CASCADE, related_name='poll_votes'
+    )
+    voter  = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='poll_votes'
+    )
+    voted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # One vote per user per poll
+        unique_together = ('poll', 'voter')
+        verbose_name        = 'Community Poll Vote'
+        verbose_name_plural = 'Community Poll Votes'
+
+    def __str__(self):
+        return f'{self.voter.full_name} voted {self.choice.text}'
+
+
