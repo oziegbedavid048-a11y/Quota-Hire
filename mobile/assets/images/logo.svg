@@ -1,0 +1,28 @@
+<svg
+  width="100"
+  height="100"
+  viewBox="0 0 100 100"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-label="Quota Hire logo"
+>
+  <!-- Outer dark green ring -->
+  <circle cx="50" cy="50" r="48" fill="#1A6515" />
+  <!-- Lime green ring -->
+  <circle cx="50" cy="50" r="35" fill="#5DDE2A" />
+  <!-- Centre dark green disc -->
+  <circle cx="50" cy="50" r="21" fill="#1A6515" />
+
+  <!-- BRIEFCASE -->
+  <path
+    d="M43.5 46 L43.5 42 Q43.5 40 50 40 Q56.5 40 56.5 42 L56.5 46"
+    stroke="white"
+    stroke-width="2.8"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <rect x="39" y="46" width="22" height="14" rx="2.5" fill="white" />
+  <rect x="39" y="52.5" width="22" height="2" rx="1" fill="#1A6515" />
+  <rect x="47" y="51" width="6" height="5.5" rx="1.5" fill="#1A6515" />
+</svg>
