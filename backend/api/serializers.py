@@ -24,6 +24,11 @@ from .models import (
     Notification,
     SavedJob,
     GeneratedCV,
+    CommunityPost,
+    CommunityComment,
+    CommunityPoll,
+    CommunityPollChoice,
+    CommunityPollVote,
 )
 
 
@@ -274,12 +279,13 @@ class JobSerializer(serializers.ModelSerializer):
 class ApplicationSerializer(serializers.ModelSerializer):
     job_title    = serializers.CharField(source='job.title', read_only=True)
     company_name = serializers.SerializerMethodField()
+    company_logo_url = serializers.SerializerMethodField()
     employee_name = serializers.SerializerMethodField()
     cover_letter = serializers.CharField(max_length=3000, allow_blank=True, required=False)
 
     class Meta:
         model  = Application
-        fields = ('id', 'job', 'job_title', 'company_name', 'employee', 'employee_name', 'status', 'cover_letter', 'applied_at')
+        fields = ('id', 'job', 'job_title', 'company_name', 'company_logo_url', 'employee', 'employee_name', 'status', 'cover_letter', 'applied_at')
         read_only_fields = ('id', 'employee', 'status', 'applied_at')
 
     def validate_cover_letter(self, value):
@@ -287,6 +293,23 @@ class ApplicationSerializer(serializers.ModelSerializer):
 
     def get_company_name(self, obj):
         return obj.job.company_name
+
+    def get_company_logo_url(self, obj):
+        request = self.context.get('request')
+        company = obj.job.company
+        if company.avatar:
+            if request:
+                return request.build_absolute_uri(company.avatar.url)
+            return company.avatar.url
+        try:
+            logo = company.company_profile.logo_url
+            if logo:
+                if request and not logo.startswith('http'):
+                    return request.build_absolute_uri(logo)
+                return logo
+        except:
+            pass
+        return None
 
     def get_employee_name(self, obj):
         return obj.employee.get_full_name() or obj.employee.username
@@ -446,3 +469,95 @@ class GeneratedCVSerializer(serializers.ModelSerializer):
         from .models import PaymentTransaction, PaymentStatus
         return PaymentTransaction.objects.filter(cv=obj, status=PaymentStatus.PAID).exists()
 
+
+# ── Community Serializers (Mobile App Only) ───────────────────────────────────
+
+class CommunityAuthorSerializer(serializers.ModelSerializer):
+    """Minimal author info shown on community posts/comments."""
+    name       = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = CustomUser
+        fields = ('id', 'name', 'avatar_url')
+
+    def get_name(self, obj):
+        return obj.get_full_name() or obj.username
+
+    def get_avatar_url(self, obj):
+        request = self.context.get('request')
+        if obj.avatar and request:
+            return request.build_absolute_uri(obj.avatar.url)
+        return None
+
+
+class CommunityCommentSerializer(serializers.ModelSerializer):
+    author = CommunityAuthorSerializer(read_only=True)
+
+    class Meta:
+        model  = CommunityComment
+        fields = ('id', 'author', 'content', 'created_at')
+        read_only_fields = ('id', 'author', 'created_at')
+
+
+class CommunityPollChoiceSerializer(serializers.ModelSerializer):
+    votes_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model  = CommunityPollChoice
+        fields = ('id', 'text', 'order', 'votes_count')
+
+
+class CommunityPollSerializer(serializers.ModelSerializer):
+    author      = CommunityAuthorSerializer(read_only=True)
+    choices     = CommunityPollChoiceSerializer(many=True, read_only=True)
+    total_votes = serializers.SerializerMethodField()
+    user_voted_choice = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = CommunityPoll
+        fields = (
+            'id', 'author', 'question', 'category', 'choices',
+            'total_votes', 'user_voted_choice', 'ends_at', 'created_at',
+        )
+        read_only_fields = ('id', 'author', 'total_votes', 'created_at')
+
+    def get_total_votes(self, obj):
+        return sum(c.votes_count for c in obj.choices.all())
+
+    def get_user_voted_choice(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        vote = CommunityPollVote.objects.filter(
+            poll=obj, voter=request.user
+        ).first()
+        return vote.choice_id if vote else None
+
+
+
+class CommunityPostSerializer(serializers.ModelSerializer):
+    author         = CommunityAuthorSerializer(read_only=True)
+    likes_count    = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
+    is_liked       = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = CommunityPost
+        fields = (
+            'id', 'author', 'content', 'category',
+            'likes_count', 'comments_count', 'is_liked', 'created_at',
+        )
+        read_only_fields = ('id', 'author', 'likes_count', 'comments_count', 'is_liked', 'created_at')
+
+    def get_likes_count(self, obj):
+        return obj.likes.count()
+
+    def get_comments_count(self, obj):
+        return obj.community_comments.count()
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.likes.filter(pk=request.user.pk).exists()

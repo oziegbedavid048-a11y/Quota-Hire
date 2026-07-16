@@ -101,6 +101,7 @@ from .models import (
     CustomUser, EmployeeProfile, CompanyProfile, Job, Application,
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
     PaymentStatus,
+    CommunityPost, CommunityComment, CommunityPoll, CommunityPollChoice, CommunityPollVote,
 )
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -113,6 +114,10 @@ from .serializers import (
     ApplicationSerializer,
     NotificationSerializer,
     GeneratedCVSerializer,
+    CommunityPostSerializer,
+    CommunityCommentSerializer,
+    CommunityPollSerializer,
+    CommunityPollChoiceSerializer,
 )
 
 # ── Resume Parsing Helpers ───────────────────────────────────────────────
@@ -2010,26 +2015,6 @@ class PaystackWebhookView(APIView):
             reference = edata.get('reference', '')
             paid_kobo = edata.get('amount', 0)
             paystack_id = str(edata.get('id', ''))
-            ps_status = edata.get('status', '')
-
-            if ps_status == 'success' and reference:
-                try:
-                    txn = PaymentTransaction.objects.get(reference=reference)
-                    if txn.status != PaymentStatus.PAID:
-                        txn.status = PaymentStatus.PAID
-                        txn.paystack_id = paystack_id
-                        txn.amount_kobo = paid_kobo
-                        txn.save(update_fields=['status', 'paystack_id', 'amount_kobo', 'updated_at'])
-                        logger.info(
-                            f'Webhook: transaction {reference} marked paid via charge.success event.'
-                        )
-                except PaymentTransaction.DoesNotExist:
-                    logger.warning(f'Webhook: unknown reference {reference}.')
-
-        # Always return 200 to acknowledge receipt
-        return HttpResponse(status=200)
-
-
 class CompanyPublicProfileView(APIView):
     """GET /api/company/<lookup_val>/ — get public details of a company (supports user_id or external company name)."""
     permission_classes = [permissions.AllowAny]
@@ -2072,4 +2057,152 @@ class CompanyPublicProfileView(APIView):
         return Response({'error': 'Company profile not found'}, status=404)
 
 
+
+# ── Community Views (Mobile App Only) ─────────────────────────────────────────
+
+class CommunityFeedView(generics.ListAPIView):
+    """GET /api/community/posts/ — posts feed for authenticated users (all roles)."""
+    serializer_class   = CommunityPostSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = CommunityPost.objects.select_related('author').prefetch_related(
+            'likes', 'community_comments'
+        )
+        category = self.request.query_params.get('category', '').strip()
+        if category == 'trending':
+            from django.db.models import Count
+            week_ago = timezone.now() - timedelta(days=7)
+            qs = qs.filter(created_at__gte=week_ago).annotate(
+                like_count=Count('likes')
+            ).order_by('-like_count', '-created_at')
+        elif category and category not in ('polls',):
+            # 'polls' is handled by the separate polls endpoint; filter everything else
+            qs = qs.filter(category=category)
+        else:
+            qs = qs.order_by('-created_at')
+        return qs
+
+
+class CommunityPostCreateView(APIView):
+    """POST /api/community/posts/create/ — body: { content, category }."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        content  = (request.data.get('content') or '').strip()
+        category = (request.data.get('category') or 'general').strip()
+        if not content:
+            return Response({'error': 'Content is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(content) > 500:
+            return Response({'error': 'Content must be 500 characters or fewer.'}, status=status.HTTP_400_BAD_REQUEST)
+        valid_categories = ('general', 'wins', 'questions', 'tips', 'polls')
+        if category not in valid_categories:
+            category = 'general'
+        post = CommunityPost.objects.create(author=request.user, content=content, category=category)
+        serializer = CommunityPostSerializer(post, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CommunityPostLikeView(APIView):
+    """POST /api/community/posts/<pk>/like/ — toggle like."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            post = CommunityPost.objects.get(pk=pk)
+        except CommunityPost.DoesNotExist:
+            return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+        if post.likes.filter(pk=user.pk).exists():
+            post.likes.remove(user)
+            liked = False
+        else:
+            post.likes.add(user)
+            liked = True
+        return Response({'liked': liked, 'likes_count': post.likes.count()})
+
+
+class CommunityCommentListCreateView(generics.ListCreateAPIView):
+    """GET/POST /api/community/posts/<pk>/comments/"""
+    serializer_class   = CommunityCommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return CommunityComment.objects.filter(post_id=self.kwargs['pk']).select_related('author')
+
+    def perform_create(self, serializer):
+        try:
+            post = CommunityPost.objects.get(pk=self.kwargs['pk'])
+        except CommunityPost.DoesNotExist:
+            raise ValidationError('Post not found.')
+        serializer.save(author=self.request.user, post=post)
+
+
+class CommunityPollListView(generics.ListAPIView):
+    """GET /api/community/polls/ — list polls, newest first."""
+    serializer_class   = CommunityPollSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return CommunityPoll.objects.select_related('author').prefetch_related(
+            'choices__poll_votes'
+        ).order_by('-created_at')
+
+
+class CommunityPollCreateView(APIView):
+    """POST /api/community/polls/create/ — body: { question, category, choices[], ends_at? }."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        question = (request.data.get('question') or '').strip()
+        category = (request.data.get('category') or 'polls').strip()
+        choices  = request.data.get('choices', [])
+        ends_at  = request.data.get('ends_at', None)
+        if not question:
+            return Response({'error': 'Question is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(choices) < 2:
+            return Response({'error': 'At least 2 choices are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(choices) > 4:
+            return Response({'error': 'Maximum 4 choices allowed.'}, status=status.HTTP_400_BAD_REQUEST)
+        poll = CommunityPoll.objects.create(
+            author=request.user, question=question, category=category, ends_at=ends_at,
+        )
+        for i, text in enumerate(choices):
+            text = str(text).strip()
+            if text:
+                CommunityPollChoice.objects.create(poll=poll, text=text, order=i)
+        serializer = CommunityPollSerializer(poll, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CommunityPollVoteView(APIView):
+    """POST /api/community/polls/<pk>/vote/ — cast or change vote. Body: { choice_id }."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        choice_id = request.data.get('choice_id')
+        if not choice_id:
+            return Response({'error': 'choice_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            poll   = CommunityPoll.objects.get(pk=pk)
+            choice = CommunityPollChoice.objects.get(pk=choice_id, poll=poll)
+        except (CommunityPoll.DoesNotExist, CommunityPollChoice.DoesNotExist):
+            return Response({'error': 'Poll or choice not found.'}, status=status.HTTP_404_NOT_FOUND)
+        user = request.user
+        # Delete existing vote (allow changing vote) then create new one
+        CommunityPollVote.objects.filter(poll=poll, voter=user).delete()
+        CommunityPollVote.objects.create(poll=poll, choice=choice, voter=user)
+        serializer = CommunityPollSerializer(poll, context={'request': request})
+        return Response(serializer.data)
+
+
+class CommunityMyPostsView(generics.ListAPIView):
+    """GET /api/community/my-posts/ — authenticated user's own posts."""
+    serializer_class   = CommunityPostSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return CommunityPost.objects.filter(
+            author=self.request.user
+        ).select_related('author').prefetch_related('likes', 'community_comments')
 
