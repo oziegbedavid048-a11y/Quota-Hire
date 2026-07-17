@@ -97,14 +97,14 @@ export default function CommunityScreen() {
   const [reportReason, setReportReason] = useState('spam');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
-  // Smart focus-based refresh: only shows skeleton on first load, silently refreshes on focus change
+  // Smart focus-based refresh: loads all posts in newest order (category="")
   useFocusEffect(
     useCallback(() => {
-      fetchFeed(activeCategory);
-    }, [activeCategory, fetchFeed])
+      fetchFeed('');
+    }, [fetchFeed])
   );
 
-  const handleRefresh = () => fetchFeed(activeCategory, true);
+  const handleRefresh = () => fetchFeed('', true);
 
   const handleLike = (id: string) => {
     toggleLike(id);
@@ -447,28 +447,17 @@ export default function CommunityScreen() {
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+
       {/* ── Community Header ── */}
       <View style={styles.communityHeader}>
-        <View>
-          <Text style={styles.communityTitle}>Community</Text>
-          <Text style={styles.communitySubtitle}>Connect, share, and grow together</Text>
-        </View>
-        <View style={styles.filterBar}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-            {CATEGORIES.map((c) => {
-              const isSelected = activeCategory === c.value;
-              return (
-                <HapticPressable
-                  key={c.value}
-                  onPress={() => { setActiveCategory(c.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                  style={[styles.chip, isSelected && styles.chipActive]}
-                >
-                  <Text style={[styles.chipLabel, isSelected && styles.chipLabelActive]}>{c.label}</Text>
-                </HapticPressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+        <Text style={styles.communityTitle}>Community</Text>
+        <Text style={styles.communitySubtitle}>Connect, share, and grow together</Text>
       </View>
 
       {/* Feed */}
@@ -479,12 +468,8 @@ export default function CommunityScreen() {
       ) : feed.length === 0 ? (
         <View style={styles.centered}>
           <Feather name="message-square" size={48} color={Palette.neutral300} />
-          <Text style={styles.emptyTitle}>{activeCategory === 'polls' ? 'No polls yet' : 'Nothing here yet'}</Text>
-          <Text style={styles.emptySubtitle}>
-            {activeCategory === 'polls'
-              ? 'Tap + to start a poll!'
-              : 'Be the first to share a thought!'}
-          </Text>
+          <Text style={styles.emptyTitle}>Nothing here yet</Text>
+          <Text style={styles.emptySubtitle}>Be the first to share a thought!</Text>
         </View>
       ) : (
         <FlatList
@@ -798,51 +783,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFBEB',
   },
-  // Community header (replaces bare filter chips)
+  // Community header
   communityHeader: {
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
     borderBottomWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingTop: 16,
+    borderColor: 'rgba(226, 232, 240, 0.4)',
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   communityTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: FontWeight.bold,
     color: Palette.neutral900,
     paddingHorizontal: 16,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   communitySubtitle: {
     fontSize: FontSize.sm,
     color: Palette.neutral500,
     paddingHorizontal: 16,
-    marginBottom: 10,
   },
-  filterBar: {
-    paddingVertical: 10,
-  },
-  filterScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.chip,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-  },
-  chipActive: {
-    backgroundColor: Palette.accent500,
-    borderColor: Palette.accent500,
-  },
-  chipLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.medium,
-    color: Palette.neutral700,
-  },
-  chipLabelActive: { color: '#fff' },
   listContainer: {
     padding: 16,
     gap: 16,
