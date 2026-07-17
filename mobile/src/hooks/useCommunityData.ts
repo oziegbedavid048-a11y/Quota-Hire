@@ -350,7 +350,7 @@ export function useCommunityData() {
         is_liked: c.is_liked ?? false,
         is_disliked: c.is_disliked ?? false,
         is_author: c.is_author ?? false,
-        parent: c.parent ?? null,
+        parent: c.parent != null ? c.parent.toString() : null,
         parent_author_name: c.parent_author_name ?? null,
       }));
     } catch (err) {
@@ -386,7 +386,7 @@ export function useCommunityData() {
         is_liked: res.is_liked ?? false,
         is_disliked: res.is_disliked ?? false,
         is_author: true,
-        parent: res.parent ?? null,
+        parent: res.parent != null ? res.parent.toString() : null,
         parent_author_name: res.parent_author_name ?? null,
       } as CommunityComment;
     } catch (err) {
