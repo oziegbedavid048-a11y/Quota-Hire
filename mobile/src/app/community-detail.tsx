@@ -2,23 +2,32 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, StyleSheet, KeyboardAvoidingView,
   Platform, ActivityIndicator, SafeAreaView, Alert, Image, Modal,
-  Pressable, Keyboard, TouchableWithoutFeedback, Clipboard,
+  Pressable, Keyboard, Easing,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ExpoClipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { SlideInDown, SlideOutDown, FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  SlideInDown, SlideOutDown, FadeIn, FadeOut,
+  withTiming, useSharedValue, useAnimatedStyle,
+} from 'react-native-reanimated';
 
 import { useCommunityData, CommunityPost, CommunityComment } from '@/hooks/useCommunityData';
 import { apiFetch } from '@/services/api';
 import { HapticPressable } from '@/components/haptic-pressable';
 import { Colors, Palette, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 type ActionSheetComment = CommunityComment & { _isAuthor: boolean };
+
+// Group top-level comments with their replies
+interface CommentGroup {
+  comment: CommunityComment;
+  replies: CommunityComment[];
+}
 
 // ─── Avatar Helper ────────────────────────────────────────────────────────────
 function AvatarImage({ author, size = 40 }: { author: any; size?: number }) {
@@ -54,6 +63,139 @@ function formatTime(dateStr: string) {
     if (hrs < 24) return `${hrs}h`;
     return `${Math.floor(hrs / 24)}d`;
   } catch { return ''; }
+}
+
+// ─── Build comment groups (top-level + nested replies) ────────────────────────
+function buildGroups(allComments: CommunityComment[]): CommentGroup[] {
+  const topLevel = allComments.filter(c => !c.parent);
+  const replies = allComments.filter(c => !!c.parent);
+  return topLevel.map(comment => ({
+    comment,
+    replies: replies.filter(r => r.parent === comment.id),
+  }));
+}
+
+// ─── Single Comment Row ───────────────────────────────────────────────────────
+function CommentRow({
+  item,
+  isReply = false,
+  onLongPress,
+  onLike,
+  onDislike,
+}: {
+  item: CommunityComment;
+  isReply?: boolean;
+  onLongPress: (c: CommunityComment) => void;
+  onLike: (c: CommunityComment) => void;
+  onDislike: (c: CommunityComment) => void;
+}) {
+  return (
+    <Pressable
+      onLongPress={() => onLongPress(item)}
+      delayLongPress={500}
+      style={[styles.commentRow, isReply && styles.replyRow]}
+    >
+      {isReply && <View style={styles.replyConnector} />}
+      <AvatarImage author={item.author} size={isReply ? 28 : 34} />
+      <View style={styles.commentBody}>
+        <View style={styles.commentMeta}>
+          <Text style={[styles.commentAuthor, isReply && { fontSize: 12 }]}>{item.author.name}</Text>
+          <Text style={styles.commentTime}>{formatTime(item.created_at)}</Text>
+        </View>
+        <Text style={[styles.commentText, isReply && { fontSize: 13 }]}>{item.content}</Text>
+      </View>
+
+      {/* Like / Dislike stacked vertically on the right */}
+      <View style={styles.commentActions}>
+        <HapticPressable onPress={() => onLike(item)} style={styles.commentActionBtn}>
+          <FontAwesome
+            name={item.is_liked ? 'thumbs-up' : 'thumbs-o-up'}
+            size={14}
+            color={item.is_liked ? Palette.accent600 : Palette.neutral400}
+          />
+          {item.likes_count > 0 && (
+            <Text style={[styles.commentActionCount, item.is_liked && { color: Palette.accent600 }]}>
+              {item.likes_count}
+            </Text>
+          )}
+        </HapticPressable>
+
+        <View style={styles.actionSpacer} />
+
+        <HapticPressable onPress={() => onDislike(item)} style={styles.commentActionBtn}>
+          <FontAwesome
+            name={item.is_disliked ? 'thumbs-down' : 'thumbs-o-down'}
+            size={14}
+            color={item.is_disliked ? Palette.red500 : Palette.neutral400}
+          />
+          {item.dislikes_count > 0 && (
+            <Text style={[styles.commentActionCount, item.is_disliked && { color: Palette.red500 }]}>
+              {item.dislikes_count}
+            </Text>
+          )}
+        </HapticPressable>
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── Comment Group (top-level + collapsible replies) ─────────────────────────
+function CommentGroupItem({
+  group,
+  onLongPress,
+  onLike,
+  onDislike,
+  onReply,
+}: {
+  group: CommentGroup;
+  onLongPress: (c: CommunityComment) => void;
+  onLike: (c: CommunityComment) => void;
+  onDislike: (c: CommunityComment) => void;
+  onReply: (c: CommunityComment) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const { comment, replies } = group;
+
+  return (
+    <View style={styles.commentGroupContainer}>
+      <CommentRow item={comment} onLongPress={onLongPress} onLike={onLike} onDislike={onDislike} />
+
+      {/* Replies section */}
+      {replies.length > 0 && (
+        <View style={styles.repliesWrapper}>
+          {/* Toggle button */}
+          <Pressable
+            onPress={() => {
+              setExpanded(e => !e);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+            style={styles.viewRepliesBtn}
+          >
+            <Feather
+              name={expanded ? 'chevron-up' : 'chevron-down'}
+              size={13}
+              color={Palette.accent600}
+            />
+            <Text style={styles.viewRepliesText}>
+              {expanded ? 'Hide' : 'View'} {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+            </Text>
+          </Pressable>
+
+          {/* Expanded replies */}
+          {expanded && replies.map(reply => (
+            <CommentRow
+              key={reply.id}
+              item={reply}
+              isReply
+              onLongPress={onLongPress}
+              onLike={onLike}
+              onDislike={onDislike}
+            />
+          ))}
+        </View>
+      )}
+    </View>
+  );
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -152,14 +294,12 @@ export default function CommunityDetailScreen() {
     setIsSubmittingComment(true);
     try {
       if (editingComment) {
-        // Edit mode
         await editComment(editingComment.id, commentText.trim());
         setComments(prev => prev.map(c =>
           c.id === editingComment.id ? { ...c, content: commentText.trim() } : c
         ));
         setEditingComment(null);
       } else {
-        // New comment / reply
         const newC = await addComment(id, commentText.trim(), replyToComment?.id);
         setComments(prev => [...prev, newC]);
         setPost(prev => prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev);
@@ -174,7 +314,6 @@ export default function CommunityDetailScreen() {
     }
   };
 
-  // Cancel edit/reply
   const cancelInputContext = () => {
     setReplyToComment(null);
     setEditingComment(null);
@@ -182,13 +321,42 @@ export default function CommunityDetailScreen() {
     Keyboard.dismiss();
   };
 
-  // Long-press on a comment → open action sheet
+  // Long press → action sheet
   const handleLongPress = (item: CommunityComment) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setActionSheet({ ...item, _isAuthor: item.is_author });
   };
 
-  // Action sheet: Reply
+  // Like/Dislike comment (optimistic)
+  const handleCommentLike = async (item: CommunityComment) => {
+    const prev = { liked: item.is_liked, disliked: item.is_disliked };
+    setComments(cs => cs.map(c => c.id !== item.id ? c : {
+      ...c,
+      is_liked: !prev.liked,
+      is_disliked: false,
+      likes_count: prev.liked ? c.likes_count - 1 : c.likes_count + 1,
+      dislikes_count: prev.disliked ? c.dislikes_count - 1 : c.dislikes_count,
+    }));
+    try { await toggleCommentLike(item.id); }
+    catch { setComments(cs => cs.map(c => c.id === item.id ? { ...c, is_liked: prev.liked, is_disliked: prev.disliked } : c)); }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleCommentDislike = async (item: CommunityComment) => {
+    const prev = { liked: item.is_liked, disliked: item.is_disliked };
+    setComments(cs => cs.map(c => c.id !== item.id ? c : {
+      ...c,
+      is_disliked: !prev.disliked,
+      is_liked: false,
+      dislikes_count: prev.disliked ? c.dislikes_count - 1 : c.dislikes_count + 1,
+      likes_count: prev.liked ? c.likes_count - 1 : c.likes_count,
+    }));
+    try { await toggleCommentDislike(item.id); }
+    catch { setComments(cs => cs.map(c => c.id === item.id ? { ...c, is_liked: prev.liked, is_disliked: prev.disliked } : c)); }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  // Action sheet actions
   const handleReply = () => {
     if (!actionSheet) return;
     setReplyToComment(actionSheet);
@@ -198,7 +366,6 @@ export default function CommunityDetailScreen() {
     setTimeout(() => inputRef.current?.focus(), 150);
   };
 
-  // Action sheet: Copy
   const handleCopy = async () => {
     if (!actionSheet) return;
     await ExpoClipboard.setStringAsync(actionSheet.content);
@@ -206,7 +373,6 @@ export default function CommunityDetailScreen() {
     Alert.alert('Copied', 'Comment text copied to clipboard.');
   };
 
-  // Action sheet: Edit (author only)
   const handleEdit = () => {
     if (!actionSheet) return;
     setEditingComment(actionSheet);
@@ -216,7 +382,6 @@ export default function CommunityDetailScreen() {
     setTimeout(() => inputRef.current?.focus(), 150);
   };
 
-  // Action sheet: Delete (author only)
   const handleDelete = () => {
     if (!actionSheet) return;
     const targetId = actionSheet.id;
@@ -234,11 +399,10 @@ export default function CommunityDetailScreen() {
             Alert.alert('Error', 'Could not delete the comment. Please try again.');
           }
         }
-      }
+      },
     ]);
   };
 
-  // Action sheet: Report (non-author only)
   const handleReport = () => {
     if (!actionSheet) return;
     const targetId = actionSheet.id;
@@ -256,7 +420,7 @@ export default function CommunityDetailScreen() {
   const submitReport = async (commentId: string, reason: string) => {
     try {
       await reportComment(commentId, reason);
-      Alert.alert('Reported', 'Thank you for your report. We will review it shortly.');
+      Alert.alert('Reported', 'Thank you. We will review the comment shortly.');
     } catch (err: any) {
       if (err?.message?.includes('already reported')) {
         Alert.alert('Already Reported', 'You have already reported this comment.');
@@ -266,110 +430,9 @@ export default function CommunityDetailScreen() {
     }
   };
 
-  // Like / Dislike a comment (optimistic)
-  const handleCommentLike = async (item: CommunityComment) => {
-    const prevLiked = item.is_liked;
-    const prevDisliked = item.is_disliked;
-    setComments(prev => prev.map(c => {
-      if (c.id !== item.id) return c;
-      return {
-        ...c,
-        is_liked: !prevLiked,
-        is_disliked: false,
-        likes_count: prevLiked ? c.likes_count - 1 : c.likes_count + 1,
-        dislikes_count: prevDisliked ? c.dislikes_count - 1 : c.dislikes_count,
-      };
-    }));
-    try {
-      await toggleCommentLike(item.id);
-    } catch {
-      // Rollback
-      setComments(prev => prev.map(c =>
-        c.id === item.id ? { ...c, is_liked: prevLiked, is_disliked: prevDisliked } : c
-      ));
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const handleCommentDislike = async (item: CommunityComment) => {
-    const prevLiked = item.is_liked;
-    const prevDisliked = item.is_disliked;
-    setComments(prev => prev.map(c => {
-      if (c.id !== item.id) return c;
-      return {
-        ...c,
-        is_disliked: !prevDisliked,
-        is_liked: false,
-        dislikes_count: prevDisliked ? c.dislikes_count - 1 : c.dislikes_count + 1,
-        likes_count: prevLiked ? c.likes_count - 1 : c.likes_count,
-      };
-    }));
-    try {
-      await toggleCommentDislike(item.id);
-    } catch {
-      setComments(prev => prev.map(c =>
-        c.id === item.id ? { ...c, is_liked: prevLiked, is_disliked: prevDisliked } : c
-      ));
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  // ─── Render each comment row ────────────────────────────────────────────────
-  const renderComment = ({ item }: { item: CommunityComment }) => (
-    <Pressable
-      onLongPress={() => handleLongPress(item)}
-      delayLongPress={1000}
-      style={styles.commentRow}
-    >
-      {/* Avatar */}
-      <AvatarImage author={item.author} size={34} />
-
-      {/* Content (left side) */}
-      <View style={styles.commentBody}>
-        {/* Reply context */}
-        {item.parent_author_name && (
-          <View style={styles.replyTag}>
-            <Feather name="corner-down-right" size={10} color={Palette.neutral400} />
-            <Text style={styles.replyTagText}>Replying to @{item.parent_author_name}</Text>
-          </View>
-        )}
-        <View style={styles.commentMeta}>
-          <Text style={styles.commentAuthor}>{item.author.name}</Text>
-          <Text style={styles.commentTime}>{formatTime(item.created_at)}</Text>
-        </View>
-        <Text style={styles.commentText}>{item.content}</Text>
-      </View>
-
-      {/* Like / Dislike (right side) */}
-      <View style={styles.commentActions}>
-        <HapticPressable onPress={() => handleCommentLike(item)} style={styles.commentActionBtn}>
-          <FontAwesome
-            name={item.is_liked ? 'thumbs-up' : 'thumbs-o-up'}
-            size={14}
-            color={item.is_liked ? Palette.accent600 : Palette.neutral400}
-          />
-          {item.likes_count > 0 && (
-            <Text style={[styles.commentActionCount, item.is_liked && { color: Palette.accent600 }]}>
-              {item.likes_count}
-            </Text>
-          )}
-        </HapticPressable>
-
-        <HapticPressable onPress={() => handleCommentDislike(item)} style={styles.commentActionBtn}>
-          <FontAwesome
-            name={item.is_disliked ? 'thumbs-down' : 'thumbs-o-down'}
-            size={14}
-            color={item.is_disliked ? Palette.red500 : Palette.neutral400}
-          />
-          {item.dislikes_count > 0 && (
-            <Text style={[styles.commentActionCount, item.is_disliked && { color: Palette.red500 }]}>
-              {item.dislikes_count}
-            </Text>
-          )}
-        </HapticPressable>
-      </View>
-    </Pressable>
-  );
+  // Build grouped data for the FlatList
+  const groups = buildGroups(comments);
+  const topLevelCount = comments.filter(c => !c.parent).length;
 
   if (isLoadingPost || !post) {
     return (
@@ -396,9 +459,22 @@ export default function CommunityDetailScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         <FlatList
-          data={comments}
-          keyExtractor={(item) => item.id}
-          renderItem={renderComment}
+          data={groups}
+          keyExtractor={(item) => item.comment.id}
+          renderItem={({ item }) => (
+            <CommentGroupItem
+              group={item}
+              onLongPress={handleLongPress}
+              onLike={handleCommentLike}
+              onDislike={handleCommentDislike}
+              onReply={(c) => {
+                setReplyToComment(c);
+                setEditingComment(null);
+                setCommentText('');
+                setTimeout(() => inputRef.current?.focus(), 150);
+              }}
+            />
+          )}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
@@ -420,10 +496,8 @@ export default function CommunityDetailScreen() {
                 </View>
               </View>
 
-              {/* Post body */}
               <Text style={styles.postBody}>{post.content}</Text>
 
-              {/* Post actions */}
               <View style={styles.cardActions}>
                 <HapticPressable onPress={handleLike} style={styles.actionButton}>
                   {post.is_liked
@@ -439,7 +513,7 @@ export default function CommunityDetailScreen() {
               </View>
 
               <Text style={styles.sectionTitle}>
-                {comments.length > 0 ? `${comments.length} Comments` : 'Comments'}
+                {topLevelCount > 0 ? `${topLevelCount} Comment${topLevelCount !== 1 ? 's' : ''}` : 'Comments'}
               </Text>
               {isLoadingComments && (
                 <ActivityIndicator size="small" color={Palette.accent500} style={{ marginTop: 12 }} />
@@ -456,10 +530,9 @@ export default function CommunityDetailScreen() {
           }
         />
 
-        {/* Comment input area */}
+        {/* Comment input */}
         {!post.comments_disabled ? (
           <View style={[styles.inputWrapper, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-            {/* Reply / Edit context bar */}
             {(replyToComment || editingComment) && (
               <View style={styles.contextBar}>
                 <Feather
@@ -477,7 +550,6 @@ export default function CommunityDetailScreen() {
                 </Pressable>
               </View>
             )}
-
             <View style={styles.replyBar}>
               <TextInput
                 ref={inputRef}
@@ -509,19 +581,28 @@ export default function CommunityDetailScreen() {
         )}
       </KeyboardAvoidingView>
 
-      {/* ── Comment Action Sheet ─────────────────────────────────────────── */}
+      {/* ── Action Sheet ──────────────────────────────────────────────────── */}
       {actionSheet && (
         <Modal transparent animationType="none" visible onRequestClose={() => setActionSheet(null)}>
-          <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(150)} style={styles.sheetOverlay}>
+          <Animated.View
+            entering={FadeIn.duration(180)}
+            exiting={FadeOut.duration(180)}
+            style={styles.sheetOverlay}
+          >
             <Pressable style={StyleSheet.absoluteFill} onPress={() => setActionSheet(null)} />
-            <Animated.View entering={SlideInDown.springify().damping(18)} exiting={SlideOutDown.duration(200)} style={[styles.actionSheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-              {/* Handle */}
+
+            {/* Smooth slide from bottom — no spring, no wobble */}
+            <Animated.View
+              entering={SlideInDown.duration(280)}
+              exiting={SlideOutDown.duration(220)}
+              style={[styles.actionSheet, { paddingBottom: Math.max(insets.bottom, 16) }]}
+            >
               <View style={styles.sheetHandle} />
 
-              {/* Comment preview */}
+              {/* Preview */}
               <View style={styles.sheetPreview}>
                 <AvatarImage author={actionSheet.author} size={28} />
-                <View style={{ flex: 1, marginLeft: 8 }}>
+                <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={styles.sheetPreviewName}>{actionSheet.author.name}</Text>
                   <Text style={styles.sheetPreviewText} numberOfLines={2}>{actionSheet.content}</Text>
                 </View>
@@ -529,7 +610,7 @@ export default function CommunityDetailScreen() {
 
               <View style={styles.sheetDivider} />
 
-              {/* Reply — always visible */}
+              {/* Reply */}
               <Pressable style={styles.sheetOption} onPress={handleReply}>
                 <View style={[styles.sheetOptionIcon, { backgroundColor: '#EFF6FF' }]}>
                   <Feather name="message-circle" size={18} color="#3B82F6" />
@@ -538,7 +619,7 @@ export default function CommunityDetailScreen() {
                 <Feather name="chevron-right" size={16} color={Palette.neutral400} />
               </Pressable>
 
-              {/* Copy — always visible */}
+              {/* Copy */}
               <Pressable style={styles.sheetOption} onPress={handleCopy}>
                 <View style={[styles.sheetOptionIcon, { backgroundColor: '#F0FDF4' }]}>
                   <Feather name="copy" size={18} color="#16A34A" />
@@ -549,7 +630,7 @@ export default function CommunityDetailScreen() {
 
               {actionSheet._isAuthor ? (
                 <>
-                  {/* Edit — author only */}
+                  {/* Edit */}
                   <Pressable style={styles.sheetOption} onPress={handleEdit}>
                     <View style={[styles.sheetOptionIcon, { backgroundColor: '#FFFBEB' }]}>
                       <Feather name="edit-2" size={18} color="#D97706" />
@@ -558,7 +639,7 @@ export default function CommunityDetailScreen() {
                     <Feather name="chevron-right" size={16} color={Palette.neutral400} />
                   </Pressable>
 
-                  {/* Delete — author only */}
+                  {/* Delete */}
                   <Pressable style={styles.sheetOption} onPress={handleDelete}>
                     <View style={[styles.sheetOptionIcon, { backgroundColor: '#FFF1F2' }]}>
                       <Feather name="trash-2" size={18} color="#EF4444" />
@@ -568,7 +649,7 @@ export default function CommunityDetailScreen() {
                   </Pressable>
                 </>
               ) : (
-                /* Report — non-author only */
+                /* Report */
                 <Pressable style={styles.sheetOption} onPress={handleReport}>
                   <View style={[styles.sheetOptionIcon, { backgroundColor: '#FFF1F2' }]}>
                     <Feather name="alert-triangle" size={18} color="#EF4444" />
@@ -587,16 +668,10 @@ export default function CommunityDetailScreen() {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFBEB',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFBEB',
-  },
+  container: { flex: 1, backgroundColor: '#FFFBEB' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFBEB' },
+
+  // Header
   header: {
     height: 56,
     flexDirection: 'row',
@@ -608,11 +683,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   backButton: { padding: 8 },
-  headerTitle: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.bold,
-    color: Palette.neutral900,
-  },
+  headerTitle: { fontSize: FontSize.base, fontWeight: FontWeight.bold, color: Palette.neutral900 },
+
+  // Post detail section
   scrollContent: { paddingBottom: 16 },
   postDetails: {
     backgroundColor: '#fff',
@@ -621,273 +694,137 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     marginBottom: 8,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   headerInfo: { flex: 1, marginLeft: 12 },
-  authorName: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-    color: Palette.neutral900,
-  },
-  timeText: {
-    fontSize: FontSize.xs,
-    color: Palette.neutral400,
-    marginTop: 2,
-  },
+  authorName: { fontSize: FontSize.base, fontWeight: FontWeight.semibold, color: Palette.neutral900 },
+  timeText: { fontSize: FontSize.xs, color: Palette.neutral400, marginTop: 2 },
   anonBadge: {
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: '#F1F5F9',
-    justifyContent: 'center', alignItems: 'center',
-    marginRight: 6,
+    justifyContent: 'center', alignItems: 'center', marginRight: 6,
   },
-  categoryBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    backgroundColor: Palette.accent50,
-  },
-  categoryText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: Palette.accent700,
-  },
-  postBody: {
-    fontSize: FontSize.lg,
-    color: Palette.neutral900,
-    lineHeight: 26,
-    marginBottom: 18,
-  },
+  categoryBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: Palette.accent50 },
+  categoryText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Palette.accent700 },
+  postBody: { fontSize: FontSize.lg, color: Palette.neutral900, lineHeight: 26, marginBottom: 18 },
   cardActions: {
-    borderTopWidth: 1,
+    borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#F1F5F9',
+    paddingVertical: 10, flexDirection: 'row', marginBottom: 18,
+  },
+  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  actionCount: { fontSize: FontSize.sm, color: Palette.neutral600, fontWeight: FontWeight.medium },
+  sectionTitle: { fontSize: FontSize.base, fontWeight: FontWeight.bold, color: Palette.neutral800 },
+
+  // Comment group container
+  commentGroupContainer: {
+    backgroundColor: '#fff',
+    marginBottom: 6,          // ← spacing between comment groups
     borderBottomWidth: 1,
-    borderColor: '#F1F5F9',
-    paddingVertical: 10,
-    flexDirection: 'row',
-    marginBottom: 18,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  actionCount: {
-    fontSize: FontSize.sm,
-    color: Palette.neutral600,
-    fontWeight: FontWeight.medium,
-  },
-  sectionTitle: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.bold,
-    color: Palette.neutral800,
+    borderBottomColor: '#F1F5F9',
   },
 
-  // ── Comment Row ───────────────────────────────────────────────────────────
+  // Comment row
   commentRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingVertical: 12,      // ← vertical breathing room
     gap: 10,
   },
-  commentBody: {
-    flex: 1,
-    paddingRight: 4,
+  replyRow: {
+    paddingLeft: 36,          // ← indent replies
+    paddingVertical: 10,
+    backgroundColor: '#FAFAFA',
   },
-  replyTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 3,
+  replyConnector: {
+    position: 'absolute',
+    left: 26,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 1,
   },
-  replyTagText: {
-    fontSize: 10,
-    color: Palette.neutral400,
-    fontStyle: 'italic',
-  },
-  commentMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 3,
-  },
-  commentAuthor: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Palette.neutral900,
-  },
-  commentTime: {
-    fontSize: 11,
-    color: Palette.neutral400,
-  },
-  commentText: {
-    fontSize: FontSize.sm,
-    color: Palette.neutral700,
-    lineHeight: 19,
-  },
+  commentBody: { flex: 1, paddingRight: 4 },
+  commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  commentAuthor: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Palette.neutral900 },
+  commentTime: { fontSize: 11, color: Palette.neutral400 },
+  commentText: { fontSize: FontSize.sm, color: Palette.neutral700, lineHeight: 19 },
 
-  // ── Like / Dislike buttons ────────────────────────────────────────────────
+  // Like / Dislike column
   commentActions: {
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 6,
     paddingTop: 2,
   },
-  commentActionBtn: {
+  commentActionBtn: { alignItems: 'center', minWidth: 28 },
+  commentActionCount: { fontSize: 10, color: Palette.neutral400, fontWeight: FontWeight.medium },
+  actionSpacer: { height: 10 },   // ← gap between thumbs-up and thumbs-down
+
+  // Replies toggle button
+  repliesWrapper: { paddingLeft: 60, paddingBottom: 6 },
+  viewRepliesBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-    minWidth: 28,
+    gap: 5,
+    paddingVertical: 6,
   },
-  commentActionCount: {
-    fontSize: 10,
-    color: Palette.neutral400,
-    fontWeight: FontWeight.medium,
+  viewRepliesText: {
+    fontSize: 12,
+    color: Palette.accent600,
+    fontWeight: FontWeight.semibold,
   },
 
-  // ── Empty state ───────────────────────────────────────────────────────────
-  emptyComments: {
-    padding: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyCommentsText: {
-    fontSize: FontSize.sm,
-    color: Palette.neutral400,
-    textAlign: 'center',
-  },
+  // Empty state
+  emptyComments: { padding: 40, justifyContent: 'center', alignItems: 'center', gap: 10 },
+  emptyCommentsText: { fontSize: FontSize.sm, color: Palette.neutral400, textAlign: 'center' },
 
-  // ── Input area ────────────────────────────────────────────────────────────
-  inputWrapper: {
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderColor: '#E2E8F0',
-  },
+  // Input area
+  inputWrapper: { backgroundColor: '#fff', borderTopWidth: 1, borderColor: '#E2E8F0' },
   contextBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: Palette.accent50,
-    borderBottomWidth: 1,
-    borderColor: '#E2E8F0',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: Palette.accent50, borderBottomWidth: 1, borderColor: '#E2E8F0',
   },
-  contextBarText: {
-    flex: 1,
-    fontSize: FontSize.xs,
-    color: Palette.accent700,
-    fontWeight: FontWeight.medium,
-  },
-  replyBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    gap: 10,
-  },
+  contextBarText: { flex: 1, fontSize: FontSize.xs, color: Palette.accent700, fontWeight: FontWeight.medium },
+  replyBar: { flexDirection: 'row', alignItems: 'center', padding: 10, gap: 10 },
   replyInput: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 14,
-    paddingTop: 8,
-    paddingBottom: 8,
-    fontSize: FontSize.sm,
-    color: Palette.neutral800,
-    backgroundColor: '#f8fafc',
+    flex: 1, minHeight: 40, maxHeight: 100,
+    borderRadius: BorderRadius.sm, borderWidth: 1, borderColor: '#CBD5E1',
+    paddingHorizontal: 14, paddingTop: 8, paddingBottom: 8,
+    fontSize: FontSize.sm, color: Palette.neutral800, backgroundColor: '#f8fafc',
   },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Palette.accent500,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Palette.accent500, justifyContent: 'center', alignItems: 'center' },
   sendBtnDisabled: { backgroundColor: '#CBD5E1' },
   disabledBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 16,
-    backgroundColor: '#F8FAFC',
-    borderTopWidth: 1,
-    borderColor: '#E2E8F0',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, padding: 16, backgroundColor: '#F8FAFC',
+    borderTopWidth: 1, borderColor: '#E2E8F0',
   },
-  disabledText: {
-    fontSize: FontSize.sm,
-    color: Palette.neutral500,
-    fontWeight: FontWeight.medium,
-  },
+  disabledText: { fontSize: FontSize.sm, color: Palette.neutral500, fontWeight: FontWeight.medium },
 
-  // ── Action Sheet ──────────────────────────────────────────────────────────
-  sheetOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
+  // Action sheet
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   actionSheet: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     paddingTop: 10,
-    paddingHorizontal: 0,
   },
   sheetHandle: {
-    width: 36, height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E2E8F0',
-    alignSelf: 'center',
-    marginBottom: 14,
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 14,
   },
   sheetPreview: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    gap: 10,
+    flexDirection: 'row', alignItems: 'flex-start',
+    paddingHorizontal: 20, paddingBottom: 14, gap: 10,
   },
-  sheetPreviewName: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Palette.neutral800,
-    marginBottom: 2,
-  },
-  sheetPreviewText: {
-    fontSize: FontSize.xs,
-    color: Palette.neutral500,
-    lineHeight: 16,
-  },
-  sheetDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginBottom: 4,
-  },
+  sheetPreviewName: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Palette.neutral800, marginBottom: 2 },
+  sheetPreviewText: { fontSize: FontSize.xs, color: Palette.neutral500, lineHeight: 16 },
+  sheetDivider: { height: 1, backgroundColor: '#F1F5F9', marginBottom: 4 },
   sheetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    gap: 14,
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 13, paddingHorizontal: 20, gap: 14,
   },
-  sheetOptionIcon: {
-    width: 38, height: 38,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sheetOptionText: {
-    flex: 1,
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.medium,
-    color: Palette.neutral900,
-  },
+  sheetOptionIcon: { width: 38, height: 38, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  sheetOptionText: { flex: 1, fontSize: FontSize.base, fontWeight: FontWeight.medium, color: Palette.neutral900 },
 });
