@@ -68,10 +68,29 @@ function formatTime(dateStr: string) {
 // ─── Build comment groups (top-level + nested replies) ────────────────────────
 function buildGroups(allComments: CommunityComment[]): CommentGroup[] {
   const topLevel = allComments.filter(c => !c.parent);
-  const replies = allComments.filter(c => !!c.parent);
+
+  // Build a map of parentId → children for O(1) lookup
+  const childMap = new Map<string, CommunityComment[]>();
+  allComments.filter(c => !!c.parent).forEach(r => {
+    const pid = r.parent!;
+    if (!childMap.has(pid)) childMap.set(pid, []);
+    childMap.get(pid)!.push(r);
+  });
+
+  // Recursively collect all descendants in insertion order
+  function getDescendants(id: string): CommunityComment[] {
+    const direct = childMap.get(id) || [];
+    const result: CommunityComment[] = [];
+    direct.forEach(child => {
+      result.push(child);
+      result.push(...getDescendants(child.id));
+    });
+    return result;
+  }
+
   return topLevel.map(comment => ({
     comment,
-    replies: replies.filter(r => r.parent === comment.id),
+    replies: getDescendants(comment.id),
   }));
 }
 
@@ -95,7 +114,6 @@ function CommentRow({
       delayLongPress={500}
       style={[styles.commentRow, isReply && styles.replyRow]}
     >
-      {isReply && <View style={styles.replyConnector} />}
       <AvatarImage author={item.author} size={isReply ? 28 : 34} />
       <View style={styles.commentBody}>
         <View style={styles.commentMeta}>
@@ -139,7 +157,7 @@ function CommentRow({
   );
 }
 
-// ─── Comment Group (top-level + collapsible replies) ─────────────────────────
+// ─── Comment Group (top-level + collapsible replies with thread line) ─────────
 function CommentGroupItem({
   group,
   onLongPress,
@@ -160,10 +178,12 @@ function CommentGroupItem({
     <View style={styles.commentGroupContainer}>
       <CommentRow item={comment} onLongPress={onLongPress} onLike={onLike} onDislike={onDislike} />
 
-      {/* Replies section */}
       {replies.length > 0 && (
         <View style={styles.repliesWrapper}>
-          {/* Toggle button */}
+          {/* Vertical thread line — positioned at centre of parent avatar */}
+          <View style={styles.threadLine} pointerEvents="none" />
+
+          {/* "View X replies" button — paddingLeft:60 aligns text with name after avatar */}
           <Pressable
             onPress={() => {
               setExpanded(e => !e);
@@ -181,16 +201,21 @@ function CommentGroupItem({
             </Text>
           </Pressable>
 
-          {/* Expanded replies */}
+          {/* Expanded replies with horizontal thread tick */}
           {expanded && replies.map(reply => (
-            <CommentRow
-              key={reply.id}
-              item={reply}
-              isReply
-              onLongPress={onLongPress}
-              onLike={onLike}
-              onDislike={onDislike}
-            />
+            <View key={reply.id} style={styles.replyWithTick}>
+              {/* Horizontal tick from thread line to avatar */}
+              <View style={styles.threadHorizontalTick} />
+              <View style={{ flex: 1 }}>
+                <CommentRow
+                  item={reply}
+                  isReply
+                  onLongPress={onLongPress}
+                  onLike={onLike}
+                  onDislike={onDislike}
+                />
+              </View>
+            </View>
           ))}
         </View>
       )}
@@ -731,18 +756,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   replyRow: {
-    paddingLeft: 36,          // ← indent replies
+    paddingLeft: 0,           // no extra indent — flush with parent
     paddingVertical: 10,
     backgroundColor: '#FAFAFA',
-  },
-  replyConnector: {
-    position: 'absolute',
-    left: 26,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 1,
   },
   commentBody: { flex: 1, paddingRight: 4 },
   commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
@@ -760,13 +776,44 @@ const styles = StyleSheet.create({
   commentActionCount: { fontSize: 10, color: Palette.neutral400, fontWeight: FontWeight.medium },
   actionSpacer: { height: 10 },   // ← gap between thumbs-up and thumbs-down
 
-  // Replies toggle button
-  repliesWrapper: { paddingLeft: 60, paddingBottom: 6 },
+  // Replies section
+  repliesWrapper: {
+    position: 'relative',
+    paddingBottom: 6,
+    backgroundColor: '#FAFAFA',
+  },
+  // Vertical thread line — runs at the centre of the parent avatar (x = 16 + 17 = 33)
+  threadLine: {
+    position: 'absolute',
+    left: 33,
+    top: 0,
+    bottom: 6,
+    width: 2,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 1,
+    zIndex: 0,
+  },
+  // Wrapper for each reply row that draws the horizontal tick
+  replyWithTick: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  // Horizontal tick from vertical line to reply avatar
+  threadHorizontalTick: {
+    width: 16,                // from x=33 to x=49 (16px tick)
+    height: 2,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 1,
+    marginTop: 24,            // vertically centres against the reply avatar
+    flexShrink: 0,
+  },
+  // "View X replies" button — paddingLeft:60 aligns chevron+text with name after avatar
   viewRepliesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    paddingLeft: 60,          // 16 padding + 34 avatar + 10 gap = aligns with name text
   },
   viewRepliesText: {
     fontSize: 12,
