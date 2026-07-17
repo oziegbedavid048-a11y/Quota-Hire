@@ -102,7 +102,7 @@ from .models import (
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
     PaymentStatus,
     CommunityPost, CommunityComment, CommunityPoll, CommunityPollChoice, CommunityPollVote,
-    CommunityReport,
+    CommunityReport, CommunityCommentReport,
 )
 
 from .serializers import (
@@ -2130,14 +2130,116 @@ class CommunityCommentListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return CommunityComment.objects.filter(post_id=self.kwargs['pk']).select_related('author')
+        return CommunityComment.objects.filter(post_id=self.kwargs['pk']).select_related('author', 'parent', 'parent__author').prefetch_related('likes', 'dislikes')
 
     def perform_create(self, serializer):
         try:
             post = CommunityPost.objects.get(pk=self.kwargs['pk'])
         except CommunityPost.DoesNotExist:
             raise ValidationError('Post not found.')
+
+        parent_id = self.request.data.get('parent')
+        if parent_id:
+            try:
+                parent_comment = CommunityComment.objects.get(pk=parent_id)
+                if parent_comment.post_id != post.id:
+                    raise ValidationError('Parent comment does not belong to this post.')
+            except CommunityComment.DoesNotExist:
+                raise ValidationError('Parent comment not found.')
+
         serializer.save(author=self.request.user, post=post)
+
+
+class CommunityCommentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """PATCH/DELETE /api/community/comments/<pk>/ for editing and deleting."""
+    queryset = CommunityComment.objects.all()
+    serializer_class = CommunityCommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_update(self, serializer):
+        comment = self.get_object()
+        if comment.author != self.request.user:
+            raise PermissionDenied("You can only edit your own comments.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.author != self.request.user:
+            raise PermissionDenied("You can only delete your own comments.")
+        instance.delete()
+
+
+class CommunityCommentLikeView(APIView):
+    """POST /api/community/comments/<pk>/like/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            comment = CommunityComment.objects.get(pk=pk)
+        except CommunityComment.DoesNotExist:
+            return Response({'error': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if comment.likes.filter(pk=request.user.pk).exists():
+            comment.likes.remove(request.user)
+            liked = False
+        else:
+            comment.likes.add(request.user)
+            comment.dislikes.remove(request.user)
+            liked = True
+
+        return Response({
+            'is_liked': liked,
+            'is_disliked': False,
+            'likes_count': comment.likes.count(),
+            'dislikes_count': comment.dislikes.count()
+        })
+
+
+class CommunityCommentDislikeView(APIView):
+    """POST /api/community/comments/<pk>/dislike/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            comment = CommunityComment.objects.get(pk=pk)
+        except CommunityComment.DoesNotExist:
+            return Response({'error': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if comment.dislikes.filter(pk=request.user.pk).exists():
+            comment.dislikes.remove(request.user)
+            disliked = False
+        else:
+            comment.dislikes.add(request.user)
+            comment.likes.remove(request.user)
+            disliked = True
+
+        return Response({
+            'is_liked': False,
+            'is_disliked': disliked,
+            'likes_count': comment.likes.count(),
+            'dislikes_count': comment.dislikes.count()
+        })
+
+
+class CommunityCommentReportView(APIView):
+    """POST /api/community/comments/<pk>/report/"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            comment = CommunityComment.objects.get(pk=pk)
+        except CommunityComment.DoesNotExist:
+            return Response({'error': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        reason = request.data.get('reason', 'other')
+        report, created = CommunityCommentReport.objects.get_or_create(
+            comment=comment,
+            reporter=request.user,
+            defaults={'reason': reason}
+        )
+        if not created:
+            return Response({'detail': 'You have already reported this comment.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'status': 'reported', 'id': report.id})
 
 
 class CommunityPollListView(generics.ListAPIView):

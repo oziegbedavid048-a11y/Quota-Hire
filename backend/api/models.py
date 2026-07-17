@@ -594,7 +594,16 @@ class CommunityComment(models.Model):
     author     = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name='community_comments'
     )
+    parent     = models.ForeignKey(
+        'self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies'
+    )
     content    = models.TextField(max_length=300)
+    likes      = models.ManyToManyField(
+        CustomUser, related_name='liked_comments', blank=True
+    )
+    dislikes   = models.ManyToManyField(
+        CustomUser, related_name='disliked_comments', blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -604,6 +613,39 @@ class CommunityComment(models.Model):
 
     def __str__(self):
         return f'{self.author.full_name} on post {self.post_id}: {self.content[:40]}'
+
+
+class CommunityCommentReport(models.Model):
+    """Records a user's report on a community comment for admin review."""
+
+    class Reason(models.TextChoices):
+        SPAM            = 'spam',           'Spam'
+        INAPPROPRIATE   = 'inappropriate',  'Inappropriate Content'
+        MISLEADING      = 'misleading',     'Misleading Information'
+        HARASSMENT      = 'harassment',     'Harassment or Bullying'
+        OTHER           = 'other',          'Other'
+
+    comment    = models.ForeignKey(
+        CommunityComment, on_delete=models.CASCADE, related_name='reports'
+    )
+    reporter   = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='community_comment_reports'
+    )
+    reason     = models.CharField(max_length=20, choices=Reason.choices, default=Reason.OTHER)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together     = ('comment', 'reporter')   # one report per user per comment
+        ordering            = ['-created_at']
+        verbose_name        = 'Community Comment Report'
+        verbose_name_plural = 'Community Comment Reports'
+
+    def __str__(self):
+        return f'{self.reporter.full_name} reported comment {self.comment_id} ({self.reason})'
+
+    @property
+    def comment_preview(self):
+        return self.comment.content[:80]
 
 
 class CommunityPoll(models.Model):

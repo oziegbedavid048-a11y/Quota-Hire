@@ -28,6 +28,8 @@ from .models import (
     NewsletterAudience,
     CommunityPost,
     CommunityReport,
+    CommunityComment,
+    CommunityCommentReport,
 )
 
 
@@ -1134,3 +1136,38 @@ class CommunityReportAdmin(admin.ModelAdmin):
         url = reverse('admin:api_communitypost_change', args=[obj.post.pk])
         return format_html('<a href="{}">View Post -></a>', url)
     view_post_link.short_description = 'Post'
+
+
+@admin.register(CommunityComment)
+class CommunityCommentAdmin(admin.ModelAdmin):
+    list_display  = ('id', 'author', 'post', 'content_preview', 'created_at')
+    search_fields = ('author__first_name', 'author__last_name', 'author__email', 'content')
+    list_filter   = ('created_at',)
+    ordering      = ('-created_at',)
+
+    def content_preview(self, obj):
+        return obj.content[:80] + ('...' if len(obj.content) > 80 else '')
+    content_preview.short_description = 'Content'
+
+
+@admin.register(CommunityCommentReport)
+class CommunityCommentReportAdmin(admin.ModelAdmin):
+    list_display  = ('id', 'comment_preview', 'reporter_name', 'reason', 'created_at', 'view_comment_link')
+    list_filter   = ('reason',)
+    search_fields = ('reporter__first_name', 'reporter__last_name', 'reporter__email', 'comment__content')
+    readonly_fields = ('comment', 'reporter', 'reason', 'created_at')
+    ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
+
+    def comment_preview(self, obj):
+        return obj.comment.content[:80] + ('...' if len(obj.comment.content) > 80 else '')
+    comment_preview.short_description = 'Comment Content'
+
+    def reporter_name(self, obj):
+        return obj.reporter.get_full_name() or obj.reporter.username
+    reporter_name.short_description = 'Reporter'
+
+    def view_comment_link(self, obj):
+        url = reverse('admin:api_communitycomment_change', args=[obj.comment.pk])
+        return format_html('<a href="{}">View Comment -></a>', url)
+    view_comment_link.short_description = 'Comment'

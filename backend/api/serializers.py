@@ -493,11 +493,54 @@ class CommunityAuthorSerializer(serializers.ModelSerializer):
 
 class CommunityCommentSerializer(serializers.ModelSerializer):
     author = CommunityAuthorSerializer(read_only=True)
+    likes_count = serializers.SerializerMethodField()
+    dislikes_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+    is_disliked = serializers.SerializerMethodField()
+    is_author = serializers.SerializerMethodField()
+    parent_author_name = serializers.SerializerMethodField()
 
     class Meta:
         model  = CommunityComment
-        fields = ('id', 'author', 'content', 'created_at')
-        read_only_fields = ('id', 'author', 'created_at')
+        fields = (
+            'id', 'author', 'content', 'created_at',
+            'likes_count', 'dislikes_count', 'is_liked', 'is_disliked',
+            'is_author', 'parent', 'parent_author_name'
+        )
+        read_only_fields = (
+            'id', 'author', 'created_at',
+            'likes_count', 'dislikes_count', 'is_liked', 'is_disliked',
+            'is_author', 'parent_author_name'
+        )
+
+    def get_likes_count(self, obj):
+        return obj.likes.count()
+
+    def get_dislikes_count(self, obj):
+        return obj.dislikes.count()
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.likes.filter(pk=request.user.pk).exists()
+
+    def get_is_disliked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.dislikes.filter(pk=request.user.pk).exists()
+
+    def get_is_author(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.author_id == request.user.pk
+
+    def get_parent_author_name(self, obj):
+        if obj.parent:
+            return obj.parent.author.get_full_name() or obj.parent.author.username
+        return None
 
 
 class CommunityPollChoiceSerializer(serializers.ModelSerializer):
