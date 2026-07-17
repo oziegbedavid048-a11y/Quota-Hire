@@ -86,14 +86,17 @@ urlpatterns = [
     path('admin/jobs/<int:pk>/edit/', views.AdminJobUpdateView.as_view(),        name='admin-job-update'),
 
     # ── Community (Mobile App Only) ───────────────────────────────────────────
-    path('community/posts/', views.CommunityFeedView.as_view(), name='community-feed'),
-    path('community/posts/create/', views.CommunityPostCreateView.as_view(), name='community-post-create'),
-    path('community/posts/<int:pk>/like/', views.CommunityPostLikeView.as_view(), name='community-post-like'),
-    path('community/posts/<int:pk>/comments/', views.CommunityCommentListCreateView.as_view(), name='community-comments'),
-    path('community/polls/', views.CommunityPollListView.as_view(), name='community-polls'),
-    path('community/polls/create/', views.CommunityPollCreateView.as_view(), name='community-poll-create'),
-    path('community/polls/<int:pk>/vote/', views.CommunityPollVoteView.as_view(), name='community-poll-vote'),
-    path('community/my-posts/', views.CommunityMyPostsView.as_view(), name='community-my-posts'),
+    path('community/posts/',                          views.CommunityFeedView.as_view(),              name='community-feed'),
+    path('community/posts/create/',                   views.CommunityPostCreateView.as_view(),        name='community-post-create'),
+    path('community/posts/<int:pk>/like/',            views.CommunityPostLikeView.as_view(),          name='community-post-like'),
+    path('community/posts/<int:pk>/comments/',        views.CommunityCommentListCreateView.as_view(), name='community-comments'),
+    path('community/posts/<int:pk>/edit/',            views.CommunityPostUpdateView.as_view(),        name='community-post-edit'),
+    path('community/posts/<int:pk>/delete/',          views.CommunityPostDeleteView.as_view(),        name='community-post-delete'),
+    path('community/posts/<int:pk>/report/',          views.CommunityReportView.as_view(),            name='community-post-report'),
+    path('community/polls/',                          views.CommunityPollListView.as_view(),          name='community-polls'),
+    path('community/polls/create/',                   views.CommunityPollCreateView.as_view(),        name='community-poll-create'),
+    path('community/polls/<int:pk>/vote/',            views.CommunityPollVoteView.as_view(),          name='community-poll-vote'),
+    path('community/my-posts/',                       views.CommunityMyPostsView.as_view(),           name='community-my-posts'),
 ]
 
 

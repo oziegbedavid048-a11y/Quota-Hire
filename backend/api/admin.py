@@ -26,6 +26,8 @@ from .models import (
     DownloadToken,
     Newsletter,
     NewsletterAudience,
+    CommunityPost,
+    CommunityReport,
 )
 
 
@@ -1072,3 +1074,63 @@ class NewsletterAdmin(admin.ModelAdmin):
         return HttpResponseRedirect(
             reverse('admin:api_newsletter_change', args=[pk])
         )
+
+
+# -- Community Admin ------------------------------------------------------------
+
+# ── Community Admin ────────────────────────────────────────────────────────────
+
+class CommunityReportInline(admin.TabularInline):
+    model  = CommunityReport
+    fields = ('reporter', 'reason', 'created_at')
+    readonly_fields = ('reporter', 'reason', 'created_at')
+    extra  = 0
+    can_delete = False
+    verbose_name = 'Report'
+    verbose_name_plural = 'Reports on this post'
+
+
+@admin.register(CommunityPost)
+class CommunityPostAdmin(admin.ModelAdmin):
+    list_display  = ('id', 'short_content', 'author', 'category', 'report_count', 'is_anonymous', 'hide_likes', 'comments_disabled', 'created_at')
+    list_filter   = ('category', 'is_anonymous', 'hide_likes', 'comments_disabled')
+    search_fields = ('content', 'author__first_name', 'author__last_name', 'author__email')
+    readonly_fields = ('created_at', 'updated_at')
+    inlines = [CommunityReportInline]
+    ordering = ('-created_at',)
+
+    def short_content(self, obj):
+        return obj.content[:80] + ('...' if len(obj.content) > 80 else '')
+    short_content.short_description = 'Content'
+
+    def report_count(self, obj):
+        count = obj.reports.count()
+        if count == 0:
+            return '-'
+        url = reverse('admin:api_communityreport_changelist') + f'?post__id__exact={obj.pk}'
+        return format_html('<a href="{}" style="color:red;font-weight:bold;">{} report{}</a>',
+                           url, count, 's' if count != 1 else '')
+    report_count.short_description = 'Reports'
+
+
+@admin.register(CommunityReport)
+class CommunityReportAdmin(admin.ModelAdmin):
+    list_display  = ('id', 'post_preview', 'reporter_name', 'reason', 'created_at', 'view_post_link')
+    list_filter   = ('reason',)
+    search_fields = ('reporter__first_name', 'reporter__last_name', 'reporter__email', 'post__content')
+    readonly_fields = ('post', 'reporter', 'reason', 'created_at')
+    ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
+
+    def post_preview(self, obj):
+        return obj.post.content[:80] + ('...' if len(obj.post.content) > 80 else '')
+    post_preview.short_description = 'Post Content'
+
+    def reporter_name(self, obj):
+        return obj.reporter.get_full_name() or obj.reporter.username
+    reporter_name.short_description = 'Reporter'
+
+    def view_post_link(self, obj):
+        url = reverse('admin:api_communitypost_change', args=[obj.post.pk])
+        return format_html('<a href="{}">View Post -></a>', url)
+    view_post_link.short_description = 'Post'

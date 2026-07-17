@@ -562,6 +562,10 @@ class CommunityPost(models.Model):
     likes      = models.ManyToManyField(
         CustomUser, related_name='liked_posts', blank=True
     )
+    # Privacy / visibility settings (set by post author)
+    is_anonymous       = models.BooleanField(default=False, help_text='Hide author name from other users')
+    hide_likes         = models.BooleanField(default=False, help_text='Hide like count from other users')
+    comments_disabled  = models.BooleanField(default=False, help_text='Prevent others from commenting')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -667,3 +671,34 @@ class CommunityPollVote(models.Model):
         return f'{self.voter.full_name} voted {self.choice.text}'
 
 
+class CommunityReport(models.Model):
+    """Records a user's report on a community post for admin review."""
+
+    class Reason(models.TextChoices):
+        SPAM            = 'spam',           'Spam'
+        INAPPROPRIATE   = 'inappropriate',  'Inappropriate Content'
+        MISLEADING      = 'misleading',     'Misleading Information'
+        HARASSMENT      = 'harassment',     'Harassment or Bullying'
+        OTHER           = 'other',          'Other'
+
+    post       = models.ForeignKey(
+        CommunityPost, on_delete=models.CASCADE, related_name='reports'
+    )
+    reporter   = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='community_reports'
+    )
+    reason     = models.CharField(max_length=20, choices=Reason.choices, default=Reason.OTHER)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together     = ('post', 'reporter')   # one report per user per post
+        ordering            = ['-created_at']
+        verbose_name        = 'Community Report'
+        verbose_name_plural = 'Community Reports'
+
+    def __str__(self):
+        return f'{self.reporter.full_name} reported post {self.post_id} ({self.reason})'
+
+    @property
+    def post_preview(self):
+        return self.post.content[:80]

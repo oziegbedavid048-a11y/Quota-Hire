@@ -102,7 +102,9 @@ from .models import (
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
     PaymentStatus,
     CommunityPost, CommunityComment, CommunityPoll, CommunityPollChoice, CommunityPollVote,
+    CommunityReport,
 )
+
 from .serializers import (
     CustomTokenObtainPairSerializer,
     RegisterSerializer,
@@ -2206,3 +2208,68 @@ class CommunityMyPostsView(generics.ListAPIView):
             author=self.request.user
         ).select_related('author').prefetch_related('likes', 'community_comments')
 
+
+
+class CommunityPostUpdateView(APIView):
+    """PATCH /api/community/posts/<pk>/edit/ - author only."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            post = CommunityPost.objects.get(pk=pk)
+        except CommunityPost.DoesNotExist:
+            return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+        if post.author_id != request.user.pk:
+            return Response({'error': 'Not your post.'}, status=status.HTTP_403_FORBIDDEN)
+        content = (request.data.get('content') or '').strip()
+        if content:
+            if len(content) > 500:
+                return Response({'error': 'Content must be 500 characters or fewer.'}, status=status.HTTP_400_BAD_REQUEST)
+            post.content = content
+        for field in ('is_anonymous', 'hide_likes', 'comments_disabled'):
+            val = request.data.get(field)
+            if val is not None:
+                setattr(post, field, bool(val))
+        post.save()
+        serializer = CommunityPostSerializer(post, context={'request': request})
+        return Response(serializer.data)
+
+
+class CommunityPostDeleteView(APIView):
+    """DELETE /api/community/posts/<pk>/delete/ - author only."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk):
+        try:
+            post = CommunityPost.objects.get(pk=pk)
+        except CommunityPost.DoesNotExist:
+            return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+        if post.author_id != request.user.pk:
+            return Response({'error': 'Not your post.'}, status=status.HTTP_403_FORBIDDEN)
+        post.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CommunityReportView(APIView):
+    """POST /api/community/posts/<pk>/report/ - body: { reason }."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            post = CommunityPost.objects.get(pk=pk)
+        except CommunityPost.DoesNotExist:
+            return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
+        if post.author_id == request.user.pk:
+            return Response({'error': 'You cannot report your own post.'}, status=status.HTTP_400_BAD_REQUEST)
+        reason = (request.data.get('reason') or 'other').strip()
+        valid_reasons = [r[0] for r in CommunityReport.Reason.choices]
+        if reason not in valid_reasons:
+            reason = 'other'
+        _, created = CommunityReport.objects.get_or_create(
+            post=post,
+            reporter=request.user,
+            defaults={'reason': reason},
+        )
+        if not created:
+            return Response({'detail': 'You have already reported this post.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'detail': 'Report submitted. Thank you for keeping the community safe.'}, status=status.HTTP_201_CREATED)

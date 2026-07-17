@@ -71,13 +71,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'quotahire.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': config(
-        'DATABASE_URL',
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        cast=dj_database_url.parse
-    )
-}
+_db_config = config(
+    'DATABASE_URL',
+    default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+    cast=dj_database_url.parse
+)
+# CONN_MAX_AGE=60: reuse the same DB connection for 60s inside each worker
+# instead of creating a fresh TCP connection on every request.
+# This dramatically reduces latency for Neon (which has cold-connect overhead).
+_db_config['CONN_MAX_AGE'] = 60
+_db_config['CONN_HEALTH_CHECKS'] = True  # validate connection before reuse
+DATABASES = {'default': _db_config}
 
 # Caching (Redis)
 REDIS_URL = config('REDIS_URL', default=None)
@@ -97,6 +101,15 @@ if REDIS_URL:
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
                 "KEY_PREFIX": "qh",
                 "VERSION": 1,
+                # Connection pool — limits max open Redis connections per worker,
+                # prevents connection exhaustion on Upstash free tier.
+                "CONNECTION_POOL_KWARGS": {
+                    "max_connections": 20,
+                    "socket_timeout": 3,          # fail fast if Redis hangs
+                    "socket_connect_timeout": 3,  # fail fast on new connection
+                    "retry_on_timeout": True,     # auto-retry once on timeout
+                },
+                "IGNORE_EXCEPTIONS": True,  # never crash the app if Redis is down
             }
         }
     }

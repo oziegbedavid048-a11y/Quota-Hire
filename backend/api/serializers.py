@@ -537,20 +537,37 @@ class CommunityPollSerializer(serializers.ModelSerializer):
 
 
 class CommunityPostSerializer(serializers.ModelSerializer):
-    author         = CommunityAuthorSerializer(read_only=True)
-    likes_count    = serializers.SerializerMethodField()
-    comments_count = serializers.SerializerMethodField()
-    is_liked       = serializers.SerializerMethodField()
+    author            = serializers.SerializerMethodField()
+    likes_count       = serializers.SerializerMethodField()
+    comments_count    = serializers.SerializerMethodField()
+    is_liked          = serializers.SerializerMethodField()
+    is_author         = serializers.SerializerMethodField()
 
     class Meta:
         model  = CommunityPost
         fields = (
             'id', 'author', 'content', 'category',
-            'likes_count', 'comments_count', 'is_liked', 'created_at',
+            'likes_count', 'comments_count', 'is_liked',
+            'is_anonymous', 'hide_likes', 'comments_disabled',
+            'is_author', 'created_at',
         )
-        read_only_fields = ('id', 'author', 'likes_count', 'comments_count', 'is_liked', 'created_at')
+        read_only_fields = ('id', 'author', 'likes_count', 'comments_count', 'is_liked', 'is_author', 'created_at')
+
+    def get_author(self, obj):
+        """Return masked author info when post is anonymous."""
+        request = self.context.get('request')
+        # The actual author always sees their own real name
+        is_own = request and request.user.is_authenticated and obj.author_id == request.user.pk
+        if obj.is_anonymous and not is_own:
+            return {'id': 0, 'name': 'Anonymous', 'avatar_url': None}
+        serializer = CommunityAuthorSerializer(obj.author, context=self.context)
+        return serializer.data
 
     def get_likes_count(self, obj):
+        request = self.context.get('request')
+        is_own = request and request.user.is_authenticated and obj.author_id == request.user.pk
+        if obj.hide_likes and not is_own:
+            return None   # mobile will treat None as hidden
         return obj.likes.count()
 
     def get_comments_count(self, obj):
@@ -561,3 +578,9 @@ class CommunityPostSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
         return obj.likes.filter(pk=request.user.pk).exists()
+
+    def get_is_author(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.author_id == request.user.pk
