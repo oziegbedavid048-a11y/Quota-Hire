@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
   // marginLeft: 33 = 16 (screen padding) + 17 (half of 34px parent avatar)
   // This makes the border sit exactly at the centre of the parent avatar.
   repliesWrapper: {
-    marginLeft: 33,
+    marginLeft: 0,
     borderLeftWidth: 2,
     borderLeftColor: '#CBD5E1',
     paddingLeft: 10,

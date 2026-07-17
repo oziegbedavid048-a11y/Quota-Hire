@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   View, Text, FlatList, TextInput, StyleSheet, Modal,
-  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Alert
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+  Alert, TouchableOpacity, Pressable, Image, Switch,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown, useSharedValue, useAnimatedStyle,
+  withSpring, withTiming, interpolate, Extrapolation,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import * as SecureStore from 'expo-secure-store';
 
 import { useCommunityData, CommunityFeedItem, CommunityPost, CommunityPoll } from '@/hooks/useCommunityData';
 import { HapticPressable } from '@/components/haptic-pressable';
@@ -23,18 +28,39 @@ const CATEGORIES = [
   { label: '📊 Polls', value: 'polls' },
 ];
 
+const REPORT_REASONS = [
+  { label: '🚫 Spam', value: 'spam' },
+  { label: '⚠️ Inappropriate Content', value: 'inappropriate' },
+  { label: '❌ Misleading Information', value: 'misleading' },
+  { label: '👊 Harassment or Bullying', value: 'harassment' },
+  { label: '🔖 Other', value: 'other' },
+];
+
+// AnimatedPressable for FAB sub-buttons
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 export default function CommunityScreen() {
   const router = useRouter();
-  const colors = Colors.light;
 
   const {
     feed, isLoading, isRefreshing, hasError, fetchFeed,
-    toggleLike, voteOnPoll, createPost, createPoll
+    toggleLike, voteOnPoll, createPost, editPost, updatePostSettings, deletePost, reportPost, createPoll,
   } = useCommunityData();
 
   const [activeCategory, setActiveCategory] = useState('trending');
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
-  // Creation states
+  useEffect(() => {
+    SecureStore.getItemAsync('user_name').then(name => {
+      if (name) setCurrentUserName(name);
+    });
+  }, []);
+
+  // FAB state
+  const [fabOpen, setFabOpen] = useState(false);
+  const fabProgress = useSharedValue(0);
+
+  // Post modal
   const [postModalVisible, setPostModalVisible] = useState(false);
   const [pollModalVisible, setPollModalVisible] = useState(false);
 
@@ -42,22 +68,43 @@ export default function CommunityScreen() {
   const [postContent, setPostContent] = useState('');
   const [postCat, setPostCat] = useState('general');
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
-  const [postError, setPostError] = useState<string | null>(null);
+
+  // Post privacy settings (applied at creation time — only anonymous at creation)
+  const [settingAnonymous, setSettingAnonymous] = useState(false);
 
   // New poll details
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollChoices, setPollChoices] = useState(['', '']);
   const [pollCat, setPollCat] = useState('polls');
   const [isSubmittingPoll, setIsSubmittingPoll] = useState(false);
-  const [pollError, setPollError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchFeed(activeCategory);
-  }, [activeCategory, fetchFeed]);
+  // 3-dot post settings menu (author only)
+  const [postMenuPost, setPostMenuPost] = useState<CommunityPost | null>(null);
+  const [postMenuVisible, setPostMenuVisible] = useState(false);
 
-  const handleRefresh = () => {
-    fetchFeed(activeCategory, true);
-  };
+  // Long-press context menu (used for edit/delete confirmation)
+  const [contextPost, setContextPost] = useState<CommunityPost | null>(null);
+  const [contextMenuVisible, setContextMenuVisible] = useState(false);
+
+  // Edit modal
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // Report modal
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportPost_state, setReportPost_state] = useState<CommunityPost | null>(null);
+  const [reportReason, setReportReason] = useState('spam');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  // Smart focus-based refresh: only shows skeleton on first load, silently refreshes on focus change
+  useFocusEffect(
+    useCallback(() => {
+      fetchFeed(activeCategory);
+    }, [activeCategory, fetchFeed])
+  );
+
+  const handleRefresh = () => fetchFeed(activeCategory, true);
 
   const handleLike = (id: string) => {
     toggleLike(id);
@@ -69,20 +116,41 @@ export default function CommunityScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  const toggleFab = () => {
+    const next = !fabOpen;
+    setFabOpen(next);
+    // withTiming gives a snappier instant-pop feel vs springify wobble
+    fabProgress.value = withTiming(next ? 1 : 0, { duration: 180 });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const closeFab = () => {
+    setFabOpen(false);
+    fabProgress.value = withTiming(0, { duration: 150 });
+  };
+
+  const openModal = (which: 'post' | 'poll') => {
+    // Close FAB first, then immediately open the modal — no setTimeout needed
+    setFabOpen(false);
+    fabProgress.value = withTiming(0, { duration: 150 });
+    if (which === 'post') setPostModalVisible(true);
+    else if (which === 'poll') setPollModalVisible(true);
+  };
+
   // Submit Post
   const handleSubmitPost = async () => {
     if (!postContent.trim()) return;
     setIsSubmittingPost(true);
-    setPostError(null);
     try {
-      await createPost(postContent.trim(), postCat);
+      await createPost(postContent.trim(), postCat, {
+        is_anonymous: settingAnonymous,
+      });
       setPostContent('');
+      setSettingAnonymous(false);
       setPostModalVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      const msg = err?.message || 'Failed to post. Please try again.';
-      setPostError(msg);
-      Alert.alert('Could not post', msg);
+      Alert.alert('Could not post', err?.message || 'Please try again.');
     } finally {
       setIsSubmittingPost(false);
     }
@@ -92,9 +160,7 @@ export default function CommunityScreen() {
   const handleSubmitPoll = async () => {
     const validChoices = pollChoices.map(c => c.trim()).filter(Boolean);
     if (!pollQuestion.trim() || validChoices.length < 2) return;
-
     setIsSubmittingPoll(true);
-    setPollError(null);
     try {
       await createPoll(pollQuestion.trim(), pollCat, validChoices);
       setPollQuestion('');
@@ -102,15 +168,87 @@ export default function CommunityScreen() {
       setPollModalVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      const msg = err?.message || 'Failed to create poll. Please try again.';
-      setPollError(msg);
-      Alert.alert('Could not create poll', msg);
+      Alert.alert('Could not create poll', err?.message || 'Please try again.');
     } finally {
       setIsSubmittingPoll(false);
     }
   };
 
-  // Formats date relative to now
+  // Open edit modal pre-filled (from 3-dot menu)
+  const openEditModal = (post: CommunityPost) => {
+    setContextPost(post);
+    setPostMenuVisible(false);
+    setEditContent(post.content);
+    setTimeout(() => setEditModalVisible(true), 200);
+  };
+
+  // Confirm delete (from 3-dot menu)
+  const handleDeletePost = (post: CommunityPost) => {
+    setPostMenuVisible(false);
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to permanently delete this post?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete', style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePost(post.id);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch {
+              Alert.alert('Error', 'Could not delete post. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Open report modal for a specific post (non-author)
+  const openReportModal = (post: CommunityPost) => {
+    setReportPost_state(post);
+    setReportReason('spam');
+    setReportModalVisible(true);
+  };
+
+  // Submit edit
+  const handleSubmitEdit = async () => {
+    if (!contextPost || !editContent.trim()) return;
+    setIsSubmittingEdit(true);
+    try {
+      await editPost(contextPost.id, editContent.trim());
+      setEditModalVisible(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      Alert.alert('Could not edit post', err?.message || 'Please try again.');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  // Submit report
+  const handleSubmitReport = async () => {
+    if (!reportPost_state) return;
+    setIsSubmittingReport(true);
+    try {
+      await reportPost(reportPost_state.id, reportReason);
+      setReportModalVisible(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Reported', 'Thank you for keeping the community safe. Our team will review this post.');
+    } catch (err: any) {
+      const msg = err?.message || 'Could not submit report.';
+      if (msg.includes('already reported')) {
+        Alert.alert('Already Reported', 'You have already reported this post.');
+        setReportModalVisible(false);
+      } else {
+        Alert.alert('Error', msg);
+      }
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const formatTime = (dateStr: string) => {
     try {
       const diff = Date.now() - new Date(dateStr).getTime();
@@ -119,55 +257,113 @@ export default function CommunityScreen() {
       if (mins < 60) return `${mins}m ago`;
       const hrs = Math.floor(mins / 60);
       if (hrs < 24) return `${hrs}h ago`;
-      const days = Math.floor(hrs / 24);
-      return `${days}d ago`;
-    } catch {
-      return '';
+      return `${Math.floor(hrs / 24)}d ago`;
+    } catch { return ''; }
+  };
+
+  // Avatar component — real photo if available, gradient initial otherwise
+  const AuthorAvatar = ({ author, isPost }: { author: CommunityPost['author'] | CommunityPoll['author']; isPost: boolean }) => {
+    const init = (author.name || 'A').charAt(0).toUpperCase();
+    if (author.avatar_url) {
+      return (
+        <Image
+          source={{ uri: author.avatar_url }}
+          style={styles.avatar}
+        />
+      );
     }
+    if (isPost) {
+      return (
+        <LinearGradient colors={[Palette.accent200, Palette.accent100]} style={styles.avatar}>
+          <Text style={styles.avatarText}>{init}</Text>
+        </LinearGradient>
+      );
+    }
+    return (
+      <LinearGradient colors={[Palette.warm100, '#FEF3C7']} style={styles.avatar}>
+        <Text style={[styles.avatarText, { color: Palette.warm700 }]}>{init}</Text>
+      </LinearGradient>
+    );
   };
 
   const renderFeedItem = ({ item, index }: { item: CommunityFeedItem; index: number }) => {
     const isPost = item.type === 'post';
-    const authorInit = (item.author.name || 'U').charAt(0).toUpperCase();
 
     if (isPost) {
       const p = item as CommunityPost;
+      const isAuthor = p.is_author || (currentUserName !== null && p.author.name === currentUserName);
+
       return (
         <Animated.View entering={FadeInDown.delay(index * 50).springify()} style={styles.card}>
-          <HapticPressable
+          <Pressable
             onPress={() => router.push({ pathname: '/community-detail', params: { id: p.id } } as any)}
             style={{ padding: 16 }}
           >
-            {/* Header row */}
+            {/* Header */}
             <View style={styles.cardHeader}>
-              <LinearGradient colors={[Palette.accent200, Palette.accent100]} style={styles.avatar}>
-                <Text style={styles.avatarText}>{authorInit}</Text>
-              </LinearGradient>
+              <AuthorAvatar author={p.author} isPost={true} />
               <View style={styles.headerInfo}>
-                <Text style={styles.authorName}>{p.author.name}</Text>
+                <Text style={styles.authorName}>
+                  {p.is_anonymous ? 'Anonymous' : p.author.name}
+                </Text>
                 <Text style={styles.timeText}>{formatTime(p.created_at)}</Text>
               </View>
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText}>{p.category.toUpperCase()}</Text>
+              <View style={styles.headerRight}>
+                {p.is_anonymous && (
+                  <View style={styles.anonBadge}>
+                    <Feather name="eye-off" size={10} color={Palette.neutral500} />
+                  </View>
+                )}
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryText}>{p.category.toUpperCase()}</Text>
+                </View>
+                {/* 3-dot menu for author only */}
+                {isAuthor && (
+                  <Pressable
+                    onPress={() => { setPostMenuPost(p); setPostMenuVisible(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                    style={styles.threeDotBtn}
+                    hitSlop={8}
+                  >
+                    <Feather name="more-vertical" size={18} color={Palette.neutral500} />
+                  </Pressable>
+                )}
+                {/* Report button for non-authors only */}
+                {!isAuthor && (
+                  <Pressable
+                    onPress={() => openReportModal(p)}
+                    style={styles.threeDotBtn}
+                    hitSlop={8}
+                  >
+                    <Feather name="flag" size={16} color={Palette.neutral400} />
+                  </Pressable>
+                )}
               </View>
             </View>
 
             {/* Post content */}
             <Text style={styles.cardContent}>{p.content}</Text>
 
-            {/* Bottom Row Buttons */}
+            {/* Bottom actions */}
             <View style={styles.cardActions}>
               <HapticPressable onPress={() => handleLike(p.id)} style={styles.actionButton}>
-                <Feather name={p.is_liked ? 'heart' : 'heart'} size={16} color={p.is_liked ? Palette.red500 : Palette.neutral500} />
-                <Text style={[styles.actionCount, p.is_liked && { color: Palette.red500 }]}>{p.likes_count}</Text>
+                {p.is_liked ? (
+                  <FontAwesome name="heart" size={16} color={Palette.red500} />
+                ) : (
+                  <FontAwesome name="heart-o" size={16} color={Palette.neutral500} />
+                )}
+                {!p.hide_likes && p.likes_count !== null ? (
+                  <Text style={[styles.actionCount, p.is_liked && { color: Palette.red500 }]}>{p.likes_count}</Text>
+                ) : null}
               </HapticPressable>
 
-              <View style={styles.actionButton}>
-                <Feather name="message-square" size={16} color={Palette.neutral500} />
-                <Text style={styles.actionCount}>{p.comments_count}</Text>
-              </View>
+              {!p.comments_disabled && (
+                <View style={styles.actionButton}>
+                  <Feather name="message-square" size={16} color={Palette.neutral500} />
+                  <Text style={styles.actionCount}>{p.comments_count}</Text>
+                </View>
+              )}
             </View>
-          </HapticPressable>
+          </Pressable>
         </Animated.View>
       );
     } else {
@@ -178,11 +374,8 @@ export default function CommunityScreen() {
       return (
         <Animated.View entering={FadeInDown.delay(index * 50).springify()} style={styles.card}>
           <View style={{ padding: 16 }}>
-            {/* Header */}
             <View style={styles.cardHeader}>
-              <LinearGradient colors={[Palette.warm100, '#FEF3C7']} style={styles.avatar}>
-                <Text style={[styles.avatarText, { color: Palette.warm700 }]}>{authorInit}</Text>
-              </LinearGradient>
+              <AuthorAvatar author={poll.author} isPost={false} />
               <View style={styles.headerInfo}>
                 <Text style={styles.authorName}>{poll.author.name}</Text>
                 <Text style={styles.timeText}>{formatTime(poll.created_at)}</Text>
@@ -192,15 +385,12 @@ export default function CommunityScreen() {
               </View>
             </View>
 
-            {/* Question */}
             <Text style={[styles.cardContent, { fontWeight: FontWeight.semibold }]}>{poll.question}</Text>
 
-            {/* Choices */}
             <View style={styles.pollChoicesContainer}>
               {poll.choices.map((c) => {
                 const percent = Math.round((c.votes_count / total) * 100);
                 const isSelected = poll.user_voted_choice === c.id;
-
                 return (
                   <HapticPressable
                     key={c.id}
@@ -218,16 +408,12 @@ export default function CommunityScreen() {
                           {c.text}
                         </Text>
                       </View>
-                      {hasVoted && (
-                        <Text style={styles.percentText}>{percent}%</Text>
-                      )}
+                      {hasVoted && <Text style={styles.percentText}>{percent}%</Text>}
                     </View>
                   </HapticPressable>
                 );
               })}
             </View>
-
-            {/* Total Votes */}
             <Text style={styles.totalVotesText}>{poll.total_votes} votes</Text>
           </View>
         </Animated.View>
@@ -235,47 +421,69 @@ export default function CommunityScreen() {
     }
   };
 
+  // Animated styles for FAB sub-buttons (now only 2: Post + Poll)
+  const fabIconStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${interpolate(fabProgress.value, [0, 1], [0, 45], Extrapolation.CLAMP)}deg` }],
+  }));
+
+  const subBtn1Style = useAnimatedStyle(() => ({
+    opacity: fabProgress.value,
+    transform: [
+      { translateY: interpolate(fabProgress.value, [0, 1], [0, -130], Extrapolation.CLAMP) },
+      { scale: interpolate(fabProgress.value, [0, 1], [0.4, 1], Extrapolation.CLAMP) },
+    ],
+  }));
+  const subBtn2Style = useAnimatedStyle(() => ({
+    opacity: fabProgress.value,
+    transform: [
+      { translateY: interpolate(fabProgress.value, [0, 1], [0, -70], Extrapolation.CLAMP) },
+      { scale: interpolate(fabProgress.value, [0, 1], [0.4, 1], Extrapolation.CLAMP) },
+    ],
+  }));
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(fabProgress.value, [0, 1], [0, 0.35], Extrapolation.CLAMP),
+    pointerEvents: fabOpen ? 'auto' : 'none',
+  } as any));
+
   return (
     <View style={styles.container}>
-      {/* Search/Filters bar */}
-      <View style={styles.filterBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-          {CATEGORIES.map((c) => {
-            const isSelected = activeCategory === c.value;
-            return (
-              <HapticPressable
-                key={c.value}
-                onPress={() => {
-                  setActiveCategory(c.value);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                style={[styles.chip, isSelected && styles.chipActive]}
-              >
-                <Text style={[styles.chipLabel, isSelected && styles.chipLabelActive]}>
-                  {c.label}
-                </Text>
-              </HapticPressable>
-            );
-          })}
-        </ScrollView>
+      {/* ── Community Header ── */}
+      <View style={styles.communityHeader}>
+        <View>
+          <Text style={styles.communityTitle}>Community</Text>
+          <Text style={styles.communitySubtitle}>Connect, share, and grow together</Text>
+        </View>
+        <View style={styles.filterBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            {CATEGORIES.map((c) => {
+              const isSelected = activeCategory === c.value;
+              return (
+                <HapticPressable
+                  key={c.value}
+                  onPress={() => { setActiveCategory(c.value); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={[styles.chip, isSelected && styles.chipActive]}
+                >
+                  <Text style={[styles.chipLabel, isSelected && styles.chipLabelActive]}>{c.label}</Text>
+                </HapticPressable>
+              );
+            })}
+          </ScrollView>
+        </View>
       </View>
 
-      {/* Feed List */}
-      {isLoading ? (
-        // Skeleton loading — matches the shape of real community post cards
+      {/* Feed */}
+      {isLoading && feed.length === 0 ? (
         <View style={[styles.listContainer, { paddingBottom: 100 }]}>
           {[1, 2, 3].map(k => <SkeletonPostCard key={k} style={{ marginBottom: 16 }} />)}
         </View>
       ) : feed.length === 0 ? (
         <View style={styles.centered}>
           <Feather name="message-square" size={48} color={Palette.neutral300} />
-          <Text style={styles.emptyTitle}>
-            {activeCategory === 'polls' ? 'No polls yet' : 'Nothing here yet'}
-          </Text>
+          <Text style={styles.emptyTitle}>{activeCategory === 'polls' ? 'No polls yet' : 'Nothing here yet'}</Text>
           <Text style={styles.emptySubtitle}>
             {activeCategory === 'polls'
-              ? 'Tap the chart icon to start a poll!'
-              : 'Be the first to share a thought or start a poll!'}
+              ? 'Tap + to start a poll!'
+              : 'Be the first to share a thought!'}
           </Text>
         </View>
       ) : (
@@ -289,35 +497,185 @@ export default function CommunityScreen() {
         />
       )}
 
-      {/* Double FAB Buttons */}
-      <View style={styles.fabContainer}>
-        <HapticPressable
-          onPress={() => setPollModalVisible(true)}
-          style={[styles.miniFab, { backgroundColor: Palette.warm500 }]}
-        >
-          <Feather name="bar-chart-2" size={18} color="#fff" />
-        </HapticPressable>
-        <HapticPressable
-          onPress={() => setPostModalVisible(true)}
-          style={[styles.fab, { backgroundColor: Palette.accent500 }]}
-        >
-          <Feather name="edit-3" size={20} color="#fff" />
-        </HapticPressable>
+      {/* FAB overlay dim */}
+      <Animated.View style={[StyleSheet.absoluteFill, styles.fabOverlay, overlayStyle]} pointerEvents={fabOpen ? 'auto' : 'none'}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeFab} />
+      </Animated.View>
+
+      {/* FAB container */}
+      <View style={styles.fabContainer} pointerEvents="box-none">
+        {/* Sub-buttons only rendered when FAB is open — avoids invisible-but-blocking issue */}
+        {fabOpen && (
+          <>
+            {/* Sub button 2: Poll */}
+            <Animated.View entering={FadeInDown.duration(120)} style={[styles.subFabWrapper, { bottom: 80 }]}>
+              <TouchableOpacity
+                onPress={() => openModal('poll')}
+                style={[styles.subFab, { backgroundColor: Palette.warm500 }]}
+                activeOpacity={0.85}
+              >
+                <Feather name="bar-chart-2" size={18} color="#fff" />
+                <Text style={styles.subFabLabel}>Poll</Text>
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Sub button 1: Post */}
+            <Animated.View entering={FadeInDown.duration(80)} style={[styles.subFabWrapper, { bottom: 148 }]}>
+              <TouchableOpacity
+                onPress={() => openModal('post')}
+                style={[styles.subFab, { backgroundColor: Palette.accent500 }]}
+                activeOpacity={0.85}
+              >
+                <Feather name="edit-3" size={18} color="#fff" />
+                <Text style={styles.subFabLabel}>Post</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </>
+        )}
+
+        {/* Main + FAB */}
+        <TouchableOpacity onPress={toggleFab} style={styles.mainFab} activeOpacity={0.85}>
+          <Animated.View style={fabIconStyle}>
+            <Feather name="plus" size={26} color="#fff" />
+          </Animated.View>
+        </TouchableOpacity>
       </View>
 
-      {/* CREATE POST MODAL */}
-      <Modal
-        visible={postModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setPostModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
+      {/* ── 3-DOT POST SETTINGS MENU (author only) ── */}
+      <Modal visible={postMenuVisible} transparent animationType="fade" onRequestClose={() => setPostMenuVisible(false)}>
+        <Pressable style={styles.contextOverlay} onPress={() => setPostMenuVisible(false)}>
+          <View style={styles.contextMenu}>
+            <Text style={styles.contextTitle} numberOfLines={2}>
+              {postMenuPost?.content?.substring(0, 60)}{(postMenuPost?.content?.length ?? 0) > 60 ? '…' : ''}
+            </Text>
+
+            {/* Edit Post */}
+            <TouchableOpacity style={styles.contextItem} onPress={() => postMenuPost && openEditModal(postMenuPost)}>
+              <Feather name="edit-2" size={18} color={Palette.accent600} />
+              <Text style={styles.contextItemText}>Edit Post</Text>
+            </TouchableOpacity>
+
+            <View style={styles.contextDivider} />
+
+            {/* Toggle Comments */}
+            <TouchableOpacity
+              style={styles.contextItem}
+              onPress={() => {
+                if (!postMenuPost) return;
+                updatePostSettings(postMenuPost.id, { comments_disabled: !postMenuPost.comments_disabled });
+                setPostMenuPost(prev => prev ? { ...prev, comments_disabled: !prev.comments_disabled } : prev);
+              }}
+            >
+              <Feather name="message-square" size={18} color={postMenuPost?.comments_disabled ? Palette.red500 : Palette.neutral600} />
+              <Text style={styles.contextItemText}>
+                {postMenuPost?.comments_disabled ? 'Enable Comments' : 'Disable Comments'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.contextDivider} />
+
+            {/* Toggle Likes visibility */}
+            <TouchableOpacity
+              style={styles.contextItem}
+              onPress={() => {
+                if (!postMenuPost) return;
+                updatePostSettings(postMenuPost.id, { hide_likes: !postMenuPost.hide_likes });
+                setPostMenuPost(prev => prev ? { ...prev, hide_likes: !prev.hide_likes } : prev);
+              }}
+            >
+              <FontAwesome name={postMenuPost?.hide_likes ? 'eye' : 'eye-slash'} size={18} color={Palette.neutral600} />
+              <Text style={styles.contextItemText}>
+                {postMenuPost?.hide_likes ? 'Show Like Count' : 'Hide Like Count'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.contextDivider} />
+
+            {/* Delete Post */}
+            <TouchableOpacity style={styles.contextItem} onPress={() => postMenuPost && handleDeletePost(postMenuPost)}>
+              <Feather name="trash-2" size={18} color={Palette.red500} />
+              <Text style={[styles.contextItemText, { color: Palette.red500 }]}>Delete Post</Text>
+            </TouchableOpacity>
+
+            <View style={styles.contextDivider} />
+
+            <TouchableOpacity style={styles.contextItem} onPress={() => setPostMenuVisible(false)}>
+              <Feather name="x" size={18} color={Palette.neutral500} />
+              <Text style={[styles.contextItemText, { color: Palette.neutral500 }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* ── EDIT MODAL ── */}
+      <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Post</Text>
+              <HapticPressable onPress={() => setEditModalVisible(false)} style={styles.closeBtn}>
+                <Feather name="x" size={20} color={Palette.neutral600} />
+              </HapticPressable>
+            </View>
+            <TextInput
+              multiline
+              maxLength={500}
+              value={editContent}
+              onChangeText={setEditContent}
+              style={styles.modalTextarea}
+              placeholderTextColor={Palette.neutral400}
+              placeholder="Edit your post..."
+            />
+            <Text style={styles.charCount}>{editContent.length}/500</Text>
+            <HapticPressable
+              disabled={isSubmittingEdit || !editContent.trim()}
+              onPress={handleSubmitEdit}
+              style={[styles.submitBtn, !editContent.trim() && styles.submitBtnDisabled]}
+            >
+              {isSubmittingEdit ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitBtnText}>Save Changes</Text>}
+            </HapticPressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── REPORT MODAL ── */}
+      <Modal visible={reportModalVisible} transparent animationType="slide" onRequestClose={() => setReportModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Report Post</Text>
+              <HapticPressable onPress={() => setReportModalVisible(false)} style={styles.closeBtn}>
+                <Feather name="x" size={20} color={Palette.neutral600} />
+              </HapticPressable>
+            </View>
+            <Text style={styles.inputLabel}>Why are you reporting this post?</Text>
+            <View style={{ gap: 8, marginBottom: 20 }}>
+              {REPORT_REASONS.map(r => (
+                <TouchableOpacity
+                  key={r.value}
+                  onPress={() => setReportReason(r.value)}
+                  style={[styles.reportOption, reportReason === r.value && styles.reportOptionActive]}
+                >
+                  <Text style={[styles.reportOptionText, reportReason === r.value && styles.reportOptionTextActive]}>
+                    {r.label}
+                  </Text>
+                  {reportReason === r.value && <Feather name="check" size={16} color={Palette.accent600} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+            <HapticPressable onPress={handleSubmitReport} style={styles.reportSubmitBtn} disabled={isSubmittingReport}>
+              {isSubmittingReport
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={styles.submitBtnText}>Submit Report</Text>}
+            </HapticPressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── CREATE POST MODAL ── */}
+      <Modal visible={postModalVisible} animationType="slide" transparent onRequestClose={() => setPostModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Share a Thought</Text>
               <HapticPressable onPress={() => setPostModalVisible(false)} style={styles.closeBtn}>
@@ -325,8 +683,7 @@ export default function CommunityScreen() {
               </HapticPressable>
             </View>
 
-            {/* Category selection */}
-            <Text style={styles.inputLabel}>Select Category</Text>
+            <Text style={styles.inputLabel}>Category</Text>
             <View style={styles.modalCategoryRow}>
               {CATEGORIES.slice(1, 5).map((c) => {
                 const isSelected = postCat === c.value;
@@ -344,10 +701,8 @@ export default function CommunityScreen() {
               })}
             </View>
 
-            {/* Input fields */}
             <TextInput
-              multiline
-              maxLength={500}
+              multiline maxLength={500}
               placeholder="What's on your mind? Keep it professional..."
               placeholderTextColor={Palette.neutral400}
               value={postContent}
@@ -356,45 +711,42 @@ export default function CommunityScreen() {
             />
             <Text style={styles.charCount}>{postContent.length}/500</Text>
 
-            {/* Submit button */}
+            {/* Anonymous toggle only — other settings available on post via 3-dot */}
+            <View style={[styles.privacyRow, { marginTop: 12, marginBottom: 4, backgroundColor: '#F8FAFF', borderRadius: 12, padding: 12 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.privacyLabel}>Post anonymously</Text>
+                <Text style={styles.privacyDesc}>Others will see "Anonymous" as the author</Text>
+              </View>
+              <Switch
+                value={settingAnonymous}
+                onValueChange={setSettingAnonymous}
+                trackColor={{ true: Palette.accent400 }}
+                thumbColor={settingAnonymous ? Palette.accent600 : '#f4f3f4'}
+              />
+            </View>
+
             <HapticPressable
               disabled={isSubmittingPost || !postContent.trim()}
               onPress={handleSubmitPost}
               style={[styles.submitBtn, !postContent.trim() && styles.submitBtnDisabled]}
             >
-              {isSubmittingPost ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.submitBtnText}>Post</Text>
-              )}
+              {isSubmittingPost ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitBtnText}>Post</Text>}
             </HapticPressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* CREATE POLL MODAL */}
-      <Modal
-        visible={pollModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setPollModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
+      {/* ── CREATE POLL MODAL ── */}
+      <Modal visible={pollModalVisible} animationType="slide" transparent onRequestClose={() => setPollModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Create a Poll</Text>
               <HapticPressable onPress={() => setPollModalVisible(false)} style={styles.closeBtn}>
                 <Feather name="x" size={20} color={Palette.neutral600} />
               </HapticPressable>
             </View>
-
-            {/* Scrollable contents to avoid keyboard blocking */}
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
-              {/* Question */}
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
               <Text style={styles.inputLabel}>Question</Text>
               <TextInput
                 maxLength={300}
@@ -404,13 +756,10 @@ export default function CommunityScreen() {
                 onChangeText={setPollQuestion}
                 style={styles.modalInput}
               />
-
-              {/* Choices inputs */}
               <Text style={styles.inputLabel}>Options</Text>
               {pollChoices.map((choice, i) => (
                 <TextInput
-                  key={i}
-                  maxLength={100}
+                  key={i} maxLength={100}
                   placeholder={`Choice ${i + 1}`}
                   placeholderTextColor={Palette.neutral400}
                   value={choice}
@@ -422,37 +771,24 @@ export default function CommunityScreen() {
                   style={styles.modalInput}
                 />
               ))}
-
-              {/* Add choice button if < 4 options */}
               {pollChoices.length < 4 && (
-                <HapticPressable
-                  onPress={() => setPollChoices(prev => [...prev, ''])}
-                  style={styles.addOptionBtn}
-                >
+                <HapticPressable onPress={() => setPollChoices(prev => [...prev, ''])} style={styles.addOptionBtn}>
                   <Feather name="plus" size={14} color={Palette.accent500} />
                   <Text style={styles.addOptionText}>Add Choice</Text>
                 </HapticPressable>
               )}
             </ScrollView>
-
-            {/* Submit button */}
             <HapticPressable
               disabled={isSubmittingPoll || !pollQuestion.trim() || pollChoices.filter(c => c.trim()).length < 2}
               onPress={handleSubmitPoll}
-              style={[
-                styles.submitBtn,
-                (!pollQuestion.trim() || pollChoices.filter(c => c.trim()).length < 2) && styles.submitBtnDisabled
-              ]}
+              style={[styles.submitBtn, (!pollQuestion.trim() || pollChoices.filter(c => c.trim()).length < 2) && styles.submitBtnDisabled]}
             >
-              {isSubmittingPoll ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.submitBtnText}>Launch Poll</Text>
-              )}
+              {isSubmittingPoll ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitBtnText}>Launch Poll</Text>}
             </HapticPressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
     </View>
   );
 }
@@ -462,10 +798,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFBEB',
   },
-  filterBar: {
-    paddingVertical: 12,
+  // Community header (replaces bare filter chips)
+  communityHeader: {
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderColor: '#E2E8F0',
+    paddingTop: 16,
+  },
+  communityTitle: {
+    fontSize: 22,
+    fontWeight: FontWeight.bold,
+    color: Palette.neutral900,
+    paddingHorizontal: 16,
+    marginBottom: 2,
+  },
+  communitySubtitle: {
+    fontSize: FontSize.sm,
+    color: Palette.neutral500,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  filterBar: {
+    paddingVertical: 10,
   },
   filterScroll: {
     paddingHorizontal: 16,
@@ -488,13 +842,11 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.medium,
     color: Palette.neutral700,
   },
-  chipLabelActive: {
-    color: '#fff',
-  },
+  chipLabelActive: { color: '#fff' },
   listContainer: {
     padding: 16,
     gap: 16,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   card: {
     backgroundColor: '#fff',
@@ -509,9 +861,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -524,6 +876,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   authorName: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
@@ -533,6 +890,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Palette.neutral400,
     marginTop: 2,
+  },
+  anonBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryBadge: {
     paddingHorizontal: 8,
@@ -545,6 +910,14 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Palette.accent700,
   },
+  threeDotBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 2,
+  },
   cardContent: {
     fontSize: FontSize.base,
     color: Palette.neutral800,
@@ -553,7 +926,8 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: 'row',
-    gap: 20,
+    alignItems: 'center',
+    gap: 16,
     borderTopWidth: 1,
     borderColor: '#F1F5F9',
     paddingTop: 12,
@@ -568,10 +942,17 @@ const styles = StyleSheet.create({
     color: Palette.neutral500,
     fontWeight: FontWeight.medium,
   },
-  pollChoicesContainer: {
-    gap: 8,
-    marginBottom: 12,
+  authorBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    opacity: 0.7,
   },
+  authorBadgeText: {
+    fontSize: 10,
+    color: Palette.accent400,
+  },
+  pollChoicesContainer: { gap: 8, marginBottom: 12 },
   pollChoiceRow: {
     height: 46,
     borderRadius: BorderRadius.sm,
@@ -588,9 +969,7 @@ const styles = StyleSheet.create({
   },
   pollProgressFill: {
     position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
+    left: 0, top: 0, bottom: 0,
     backgroundColor: 'rgba(21, 117, 10, 0.08)',
   },
   pollChoiceInner: {
@@ -600,42 +979,160 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     zIndex: 2,
   },
-  choiceText: {
-    fontSize: FontSize.sm,
-    color: Palette.neutral800,
-  },
-  percentText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: Palette.neutral700,
-  },
-  totalVotesText: {
-    fontSize: FontSize.xs,
-    color: Palette.neutral400,
+  choiceText: { fontSize: FontSize.sm, color: Palette.neutral800 },
+  percentText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Palette.neutral700 },
+  totalVotesText: { fontSize: FontSize.xs, color: Palette.neutral400 },
+  // FAB
+  fabOverlay: {
+    backgroundColor: '#0f172a',
+    zIndex: 10,
   },
   fabContainer: {
     position: 'absolute',
     right: 20,
     bottom: 30,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  mainFab: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Palette.accent600,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadow.cardMd,
+  },
+  subFabWrapper: {
+    position: 'absolute',
+    right: 0,
+    alignItems: 'flex-end',
+  },
+  subFab: {
     flexDirection: 'row',
-    gap: 12,
     alignItems: 'center',
-  },
-  fab: {
-    width: 56,
-    height: 56,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
     ...Shadow.cardMd,
   },
-  miniFab: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  subFabLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: '#fff',
+  },
+  // Context menu
+  contextOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  contextMenu: {
+    backgroundColor: '#fff',
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+  },
+  contextTitle: {
+    fontSize: FontSize.sm,
+    color: Palette.neutral500,
+    padding: 16,
+    paddingBottom: 12,
+    fontStyle: 'italic',
+  },
+  contextItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  contextItemText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.medium,
+    color: Palette.neutral800,
+  },
+  contextDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginHorizontal: 16,
+  },
+  // Report
+  reportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#f8fafc',
+  },
+  reportOptionActive: {
+    borderColor: Palette.accent400,
+    backgroundColor: Palette.accent50,
+  },
+  reportOptionText: {
+    fontSize: FontSize.sm,
+    color: Palette.neutral700,
+    fontWeight: FontWeight.medium,
+  },
+  reportOptionTextActive: {
+    color: Palette.accent700,
+    fontWeight: FontWeight.semibold,
+  },
+  reportSubmitBtn: {
+    height: 52,
+    borderRadius: BorderRadius.button,
+    backgroundColor: Palette.red500,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadow.cardMd,
+  },
+  // Privacy
+  privacySection: {
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#f8fafc',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  privacyTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: Palette.neutral500,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  privacyLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Palette.neutral800,
+  },
+  privacyDesc: {
+    fontSize: 11,
+    color: Palette.neutral400,
+    marginTop: 2,
+  },
+  settingsDesc: {
+    fontSize: FontSize.sm,
+    color: Palette.neutral500,
+    lineHeight: 20,
+    marginBottom: 16,
   },
   centered: {
     flex: 1,
@@ -656,6 +1153,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 20,
   },
+  // Modals
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
@@ -679,9 +1177,7 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: Palette.neutral900,
   },
-  closeBtn: {
-    padding: 4,
-  },
+  closeBtn: { padding: 4 },
   inputLabel: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
@@ -693,6 +1189,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 16,
+    flexWrap: 'wrap',
   },
   modalChip: {
     paddingHorizontal: 12,
@@ -711,11 +1208,9 @@ const styles = StyleSheet.create({
     color: Palette.neutral600,
     fontWeight: FontWeight.semibold,
   },
-  modalChipTextActive: {
-    color: '#fff',
-  },
+  modalChipTextActive: { color: '#fff' },
   modalTextarea: {
-    height: 120,
+    height: 100,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -730,7 +1225,7 @@ const styles = StyleSheet.create({
     color: Palette.neutral400,
     textAlign: 'right',
     marginTop: 4,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   modalInput: {
     height: 48,
@@ -761,11 +1256,9 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.accent500,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 8,
   },
-  submitBtnDisabled: {
-    backgroundColor: '#E2E8F0',
-  },
+  submitBtnDisabled: { backgroundColor: '#E2E8F0' },
   submitBtnText: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
