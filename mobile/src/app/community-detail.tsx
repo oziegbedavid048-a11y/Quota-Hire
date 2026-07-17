@@ -116,6 +116,13 @@ function CommentRow({
     >
       <AvatarImage author={item.author} size={isReply ? 28 : 34} />
       <View style={styles.commentBody}>
+        {/* "Replying to @name" for reply-to-reply clarity */}
+        {isReply && item.parent_author_name && (
+          <View style={styles.replyingToTag}>
+            <Feather name="corner-down-right" size={10} color={Palette.neutral400} />
+            <Text style={styles.replyingToText}>Replying to @{item.parent_author_name}</Text>
+          </View>
+        )}
         <View style={styles.commentMeta}>
           <Text style={[styles.commentAuthor, isReply && { fontSize: 12 }]}>{item.author.name}</Text>
           <Text style={styles.commentTime}>{formatTime(item.created_at)}</Text>
@@ -179,11 +186,14 @@ function CommentGroupItem({
       <CommentRow item={comment} onLongPress={onLongPress} onLike={onLike} onDislike={onDislike} />
 
       {replies.length > 0 && (
+        /*
+         * repliesWrapper uses a left border as the thread line.
+         * marginLeft: 33 aligns the border with the parent avatar center
+         * (16px screen padding + 17px = half of 34px avatar = 33).
+         */
         <View style={styles.repliesWrapper}>
-          {/* Vertical thread line — positioned at centre of parent avatar */}
-          <View style={styles.threadLine} pointerEvents="none" />
 
-          {/* "View X replies" button — paddingLeft:60 aligns text with name after avatar */}
+          {/* "View / Hide X replies" toggle — indented to align text with name */}
           <Pressable
             onPress={() => {
               setExpanded(e => !e);
@@ -197,25 +207,21 @@ function CommentGroupItem({
               color={Palette.accent600}
             />
             <Text style={styles.viewRepliesText}>
-              {expanded ? 'Hide' : 'View'} {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+              {expanded ? 'Hide' : 'View'} {replies.length}{' '}
+              {replies.length === 1 ? 'reply' : 'replies'}
             </Text>
           </Pressable>
 
-          {/* Expanded replies with horizontal thread tick */}
+          {/* Expanded replies */}
           {expanded && replies.map(reply => (
-            <View key={reply.id} style={styles.replyWithTick}>
-              {/* Horizontal tick from thread line to avatar */}
-              <View style={styles.threadHorizontalTick} />
-              <View style={{ flex: 1 }}>
-                <CommentRow
-                  item={reply}
-                  isReply
-                  onLongPress={onLongPress}
-                  onLike={onLike}
-                  onDislike={onDislike}
-                />
-              </View>
-            </View>
+            <CommentRow
+              key={reply.id}
+              item={reply}
+              isReply
+              onLongPress={onLongPress}
+              onLike={onLike}
+              onDislike={onDislike}
+            />
           ))}
         </View>
       )}
@@ -755,11 +761,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,      // ← vertical breathing room
     gap: 10,
   },
-  replyRow: {
-    paddingLeft: 0,           // no extra indent — flush with parent
-    paddingVertical: 10,
-    backgroundColor: '#FAFAFA',
-  },
+
   commentBody: { flex: 1, paddingRight: 4 },
   commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   commentAuthor: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Palette.neutral900 },
@@ -777,48 +779,50 @@ const styles = StyleSheet.create({
   actionSpacer: { height: 10 },   // ← gap between thumbs-up and thumbs-down
 
   // Replies section
+  //
+  // The thread line is the LEFT BORDER of repliesWrapper.
+  // marginLeft: 33 = 16 (screen padding) + 17 (half of 34px parent avatar)
+  // This makes the border sit exactly at the centre of the parent avatar.
   repliesWrapper: {
-    position: 'relative',
-    paddingBottom: 6,
+    marginLeft: 33,
+    borderLeftWidth: 2,
+    borderLeftColor: '#CBD5E1',
+    paddingLeft: 10,
+    paddingBottom: 10,
     backgroundColor: '#FAFAFA',
+    marginBottom: 0,
   },
-  // Vertical thread line — runs at the centre of the parent avatar (x = 16 + 17 = 33)
-  threadLine: {
-    position: 'absolute',
-    left: 33,
-    top: 0,
-    bottom: 6,
-    width: 2,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 1,
-    zIndex: 0,
-  },
-  // Wrapper for each reply row that draws the horizontal tick
-  replyWithTick: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  // Horizontal tick from vertical line to reply avatar
-  threadHorizontalTick: {
-    width: 16,                // from x=33 to x=49 (16px tick)
-    height: 2,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 1,
-    marginTop: 24,            // vertically centres against the reply avatar
-    flexShrink: 0,
-  },
-  // "View X replies" button — paddingLeft:60 aligns chevron+text with name after avatar
+  // "View X replies" toggle — no extra paddingLeft needed (wrapper already indents it)
   viewRepliesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingVertical: 8,
-    paddingLeft: 60,          // 16 padding + 34 avatar + 10 gap = aligns with name text
+    paddingLeft: 2,
   },
   viewRepliesText: {
     fontSize: 12,
     color: Palette.accent600,
     fontWeight: FontWeight.semibold,
+  },
+  // Reply rows inside the thread wrapper (paddingLeft: 0 to not double-indent)
+  replyRow: {
+    paddingLeft: 0,
+    paddingRight: 12,
+    paddingVertical: 10,
+    backgroundColor: 'transparent',
+  },
+  // "Replying to @name" label (shown on reply-to-reply)
+  replyingToTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  replyingToText: {
+    fontSize: 10,
+    color: Palette.neutral400,
+    fontStyle: 'italic',
   },
 
   // Empty state
