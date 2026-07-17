@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, StyleSheet, KeyboardAvoidingView,
   Platform, ActivityIndicator, SafeAreaView, Alert, Image, Modal,
-  Pressable, Keyboard,
+  Pressable, Keyboard, BackHandler,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -219,6 +219,35 @@ export default function CommunityDetailScreen() {
     editComment, deleteComment, reportComment,
     toggleCommentLike, toggleCommentDislike,
   } = useCommunityData();
+
+  const navigation = useNavigation();
+  const hasNavigated = useRef(false);
+
+  useEffect(() => {
+    // Intercept swipe-back gestures and navigation pop actions
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (hasNavigated.current) return;
+      e.preventDefault();
+      hasNavigated.current = true;
+      router.replace('/community' as any);
+    });
+
+    // Intercept Android hardware back presses
+    const onBackPress = () => {
+      if (!hasNavigated.current) {
+        hasNavigated.current = true;
+        router.replace('/community' as any);
+      }
+      return true;
+    };
+
+    BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+    return () => {
+      unsubscribe();
+      BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    };
+  }, [navigation]);
 
   const [post, setPost] = useState<CommunityPost | null>(null);
   const [isLoadingPost, setIsLoadingPost] = useState(true);
@@ -672,10 +701,14 @@ const styles = StyleSheet.create({
   // Post detail section
   scrollContent: { paddingBottom: 32 },
   postDetails: {
+    backgroundColor: '#fff',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
     padding: 16,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.5)',
-    marginBottom: 8,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   headerInfo: { flex: 1, marginLeft: 12 },

@@ -454,11 +454,40 @@ export default function CommunityScreen() {
         end={{ x: 1, y: 1 }}
       />
 
-      {/* ── Community Header ── */}
-      <View style={styles.communityHeader}>
-        <Text style={styles.communityTitle}>Community</Text>
-        <Text style={styles.communitySubtitle}>Connect, share, and grow together</Text>
-      </View>
+      {/* ── 3D Hero Banner ── */}
+      <Animated.View entering={FadeInDown.springify()} style={{ paddingHorizontal: 16, paddingTop: 16, marginBottom: 4 }}>
+        <LinearGradient
+          colors={['#FCEFCF', '#E1F6DD']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroBanner}
+        >
+          {/* Decorative blobs */}
+          <View style={styles.blob1} />
+          <View style={styles.blob2} />
+
+          <View style={styles.heroContent}>
+            {/* Text side */}
+            <View style={{ flex: 1, zIndex: 1 }}>
+              <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.65)', borderColor: 'rgba(226, 232, 240, 0.5)' }]}>
+                <Feather name="users" size={12} color={Palette.accent600} />
+                <Text style={styles.heroPillText}>Quota Community</Text>
+              </View>
+              <Text style={styles.heroTitle}>Connect & Share</Text>
+              <Text style={styles.heroSub}>
+                Join conversations, share professional insights, ask questions, or run community polls!
+              </Text>
+            </View>
+
+            {/* 3D Illustration */}
+            <Image
+              source={require('@/assets/images/illustrations/contact_illustration.png')}
+              style={styles.heroImage}
+              contentFit="contain"
+            />
+          </View>
+        </LinearGradient>
+      </Animated.View>
 
       {/* Feed */}
       {isLoading && feed.length === 0 ? (
@@ -783,25 +812,57 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFBEB',
   },
-  // Community header
-  communityHeader: {
-    backgroundColor: 'transparent',
-    borderBottomWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.4)',
-    paddingTop: 20,
-    paddingBottom: 16,
+  // ── Hero Banner ──
+  heroBanner: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.6)',
+    padding: 20,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  communityTitle: {
-    fontSize: 24,
-    fontWeight: FontWeight.bold,
+  blob1: {
+    position: 'absolute', top: -40, right: -40,
+    width: 160, height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(239,68,68,0.06)',
+  },
+  blob2: {
+    position: 'absolute', bottom: -20, left: -20,
+    width: 120, height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(21,117,10,0.05)',
+  },
+  heroContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  heroPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 99, borderWidth: 1,
+    marginBottom: 8,
+  },
+  heroPillText: {
+    fontSize: 11, fontWeight: '700',
+    color: Palette.accent700,
+  },
+  heroTitle: {
+    fontSize: 24, fontWeight: '900',
+    letterSpacing: -0.5,
+    lineHeight: 30,
+    marginBottom: 6,
     color: Palette.neutral900,
-    paddingHorizontal: 16,
-    marginBottom: 4,
   },
-  communitySubtitle: {
-    fontSize: FontSize.sm,
-    color: Palette.neutral500,
-    paddingHorizontal: 16,
+  heroSub: {
+    fontSize: 12, lineHeight: 17,
+    color: Palette.neutral600,
+  },
+  heroImage: {
+    width: 100, height: 100,
+    flexShrink: 0,
   },
   listContainer: {
     padding: 16,

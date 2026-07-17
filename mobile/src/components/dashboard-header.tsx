@@ -47,9 +47,11 @@ export default function DashboardHeader({
         styles.container,
         {
           backgroundColor: isDark
-            ? 'rgba(10,10,10,0.90)'
-            : 'rgba(255,255,255,0.90)',
-          borderBottomColor: colors.border,
+            ? 'rgba(15, 23, 42, 0.85)'
+            : 'rgba(255, 255, 255, 0.85)',
+          borderBottomColor: isDark
+            ? 'rgba(255, 255, 255, 0.08)'
+            : 'rgba(0, 0, 0, 0.05)',
         },
       ]}
     >
@@ -144,7 +146,12 @@ const styles = StyleSheet.create({
     justifyContent:    'space-between',
     paddingHorizontal: 20,
     paddingVertical:   12,
-    borderBottomWidth: 1,
+    borderBottomWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 3,
   },
   left: {
     flexDirection: 'row',
@@ -153,8 +160,8 @@ const styles = StyleSheet.create({
     flex:          1,
   },
   logo: {
-    width:  30,
-    height: 30,
+    width:  36,
+    height: 36,
   },
   greetingBlock: {
     gap: 0,
