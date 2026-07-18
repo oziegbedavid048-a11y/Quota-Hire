@@ -79,6 +79,7 @@ urlpatterns = [
     # ── Notifications ─────────────────────────────────────────────────────────
     path('notifications/',                  views.NotificationListView.as_view(),      name='notifications'),
     path('notifications/<int:pk>/read/',    views.MarkNotificationReadView.as_view(),  name='notification-read'),
+    path('notifications/push-token/',       views.SavePushTokenView.as_view(),         name='push-token'),
 
     # ── Admin endpoints ───────────────────────────────────────────────────────
     path('admin/users/',            views.AdminUserListView.as_view(),           name='admin-users'),
@@ -102,5 +103,3 @@ urlpatterns = [
     path('community/polls/<int:pk>/vote/',            views.CommunityPollVoteView.as_view(),          name='community-poll-vote'),
     path('community/my-posts/',                       views.CommunityMyPostsView.as_view(),           name='community-my-posts'),
 ]
-
-

@@ -639,7 +639,7 @@ class AIAnalysisView(APIView):
             metrics_score += 10
             if "Revenue Metrics Included" not in strengths:
                 strengths.append("Performance Metrics Included")
-        
+
         if metrics_score > 0:
             score += metrics_score
         else:
@@ -764,10 +764,10 @@ class VerifyEmailView(APIView):
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
             email = payload.get('email')
-            
+
             if not email:
                 return Response({'error': 'Invalid token payload'}, status=status.HTTP_400_BAD_REQUEST)
-                
+
             # Verification is handled implicitly by successful login if needed, or we could add an is_verified field
             try:
                 user = CustomUser.objects.get(email=email)
@@ -795,7 +795,7 @@ class VerifyEmailView(APIView):
                 # Non-critical — do not block the verification response
 
             return Response({'message': 'Email verified successfully'}, status=status.HTTP_200_OK)
-            
+
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Verification link has expired'}, status=status.HTTP_400_BAD_REQUEST)
         except jwt.InvalidTokenError:
@@ -812,7 +812,7 @@ class SendVerificationEmailView(APIView):
     def post(self, request):
         email = request.data.get('email')
         name = request.data.get('name')
-        
+
         if not email:
             return Response({'error': 'email is required'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -824,15 +824,15 @@ class SendVerificationEmailView(APIView):
             'email': email,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
         }, settings.SECRET_KEY, algorithm='HS256')
-        
+
         frontend_url = settings.FRONTEND_URL.strip()
         verify_link = f"{frontend_url}/verify-email?token={token}"
         display_name = name or email.split('@')[0]
-        
+
         try:
             html_content = get_verification_email_html(user=display_name, redirect=verify_link)
             text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
-            
+
             send_courier_email(
                 to_email=email,
                 subject="Verify your email for Quota Hire",
@@ -842,7 +842,7 @@ class SendVerificationEmailView(APIView):
         except Exception as e:
             logger.error(f"Failed to send manual verification email to {email}: {e}")
             return Response({'error': 'Failed to send verification email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
+
         return Response({'message': 'Verification email sent'}, status=status.HTTP_200_OK)
 
 class ForgotPasswordView(APIView):
@@ -880,7 +880,7 @@ class ForgotPasswordView(APIView):
                 text_content=text_content,
                 html_content=html_content
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to send recovery email to {email}: {e}")
             return Response({'error': 'Failed to send recovery email'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -996,7 +996,7 @@ class DashboardAnalyticsView(APIView):
         if user.role == 'employee':
             my_apps = Application.objects.filter(employee=user)
             all_jobs = Job.objects.filter(status='approved')
-            
+
             # Market Insights Data (OTE vs Base)
             now = timezone.now()
             market_insights = []
@@ -1004,11 +1004,11 @@ class DashboardAnalyticsView(APIView):
                 month_start = (now.replace(day=1) - timedelta(days=30*i)).replace(day=1)
                 month_str = month_start.strftime('%b')
                 month_jobs = all_jobs.filter(created_at__year=month_start.year, created_at__month=month_start.month)
-                
+
                 total_base = 0
                 total_ote = 0
                 count = 0
-                
+
                 for job in month_jobs:
                     numbers = re.findall(r'\d+', job.salary_range.replace(',', ''))
                     if len(numbers) >= 2:
@@ -1019,7 +1019,7 @@ class DashboardAnalyticsView(APIView):
                         total_base += base
                         total_ote += ote
                         count += 1
-                
+
                 avg_base = (total_base // count) if count > 0 else 75000
                 avg_ote = (total_ote // count) if count > 0 else 110000
                 market_insights.append({'month': month_str, 'ote': avg_ote, 'base': avg_base})
@@ -1032,12 +1032,12 @@ class DashboardAnalyticsView(APIView):
             defaults = ['Enterprise', 'SDR', 'Closing', 'Outbound', 'Inbound', 'CRM']
             while len(top_skills) < 6:
                 top_skills.append(defaults[len(top_skills)])
-                
+
             try:
                 emp_skills = set(user.employee_profile.skills)
             except:
                 emp_skills = set()
-                
+
             skill_match = []
             for skill in top_skills:
                 count_in_jobs = sum(1 for req in all_reqs if req == skill)
@@ -1056,7 +1056,7 @@ class DashboardAnalyticsView(APIView):
                 week_start = now - timedelta(days=7*(i+1))
                 week_end = now - timedelta(days=7*i)
                 week_apps = my_apps.filter(applied_at__gte=week_start, applied_at__lt=week_end)
-                
+
                 app_activity.append({
                     'week': f'W{4-i}',
                     'apps': week_apps.count(),
@@ -1082,7 +1082,7 @@ class DashboardAnalyticsView(APIView):
                 day = now - timedelta(days=i)
                 day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
                 day_end = day_start + timedelta(days=1)
-                
+
                 apps_on_day = all_apps.filter(applied_at__gte=day_start, applied_at__lt=day_end).count()
                 applicant_velocity.append({
                     'name': day.strftime('%a'),
@@ -1095,7 +1095,7 @@ class DashboardAnalyticsView(APIView):
                     'name': job.title[:10] + '...',
                     'applicants': Application.objects.filter(job=job).count()
                 })
-                
+
             top_matches = 0
             for app in all_apps:
                 try:
@@ -1180,7 +1180,52 @@ class ApplyForJobView(APIView):
             except GeneratedCV.DoesNotExist:
                 pass
 
+        # ── Notify the company — in-app + push ────────────────────────────
+        # This notification was previously missing from the system entirely.
+        try:
+            from .push_utils import send_push_notification
+            employee_name = request.user.get_full_name() or request.user.username or 'Someone'
+            Notification.objects.create(
+                user=job.company,
+                title='New Application Received',
+                message=(
+                    f'{employee_name} has applied for your "{job.title}" position. '
+                    'Review their profile in the Applicants section.'
+                ),
+            )
+            send_push_notification(
+                user=job.company,
+                title='New Application Received',
+                body=f'{employee_name} applied for {job.title}.',
+                data={'type': 'new_application', 'job_id': str(job.pk)},
+            )
+        except Exception as _notify_exc:
+            logger.warning('Could not notify company of new application: %s', _notify_exc)
+
         return Response(ApplicationSerializer(app).data, status=status.HTTP_201_CREATED)
+
+
+class SavePushTokenView(APIView):
+    """
+    POST /api/notifications/push-token/
+    Body: { "token": "ExponentPushToken[...]" }
+
+    Saves the Expo push token for the authenticated user's device.
+    Called by the mobile app on every login and app open so the token
+    stays current (tokens can change after app reinstalls or OS updates).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        token = (request.data.get('token') or '').strip()
+        if not token:
+            return Response({'error': 'token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not token.startswith('ExponentPushToken['):
+            return Response({'error': 'Invalid token format.'}, status=status.HTTP_400_BAD_REQUEST)
+        request.user.push_token = token
+        request.user.save(update_fields=['push_token'])
+        logger.info('Push token saved for user %s', request.user.pk)
+        return Response({'status': 'ok'})
 
 
 class MyApplicationsView(generics.ListAPIView):
@@ -1424,12 +1469,12 @@ class ResumeProxyView(APIView):
             if profile.resume_binary:
                 file_data = profile.resume_binary
                 filename = profile.resume_filename or 'resume.pdf'
-                
+
                 from django.http import HttpResponse
                 response = HttpResponse(file_data, content_type='application/pdf')
                 response['Content-Disposition'] = f'inline; filename="{filename}"'
                 return response
-            
+
             # Fallback for old resumes that don't have binary data yet:
             # Attempt to fetch from Cloudinary as a fallback
             import cloudinary
@@ -1953,6 +1998,20 @@ class PaymentVerifyView(APIView):
         transaction.paystack_id = str(pdata.get('id', ''))
         transaction.amount_kobo = paid_kobo
         transaction.save(update_fields=['status', 'paystack_id', 'amount_kobo', 'updated_at'])
+
+        # Immediately bust the user's dashboard cache so payment stats and CV
+        # counts reflect the new payment without waiting for the 60-second TTL.
+        # This is the ONLY place where we intentionally force-invalidate the
+        # dashboard cache mid-session — all other cache entries expire naturally.
+        try:
+            from .cache_utils import safe_delete, dashboard_key
+            safe_delete(dashboard_key(request.user.pk, request.user.role))
+            logger.debug(
+                'Payment cache bust: cleared dashboard cache for user=%s',
+                request.user.pk,
+            )
+        except Exception as _cache_exc:
+            logger.warning('Could not bust dashboard cache after payment: %s', _cache_exc)
 
         # Issue one-time download token (10 minutes)
         token_str = _make_download_token(request.user.pk, transaction.cv_id, transaction.pk)

@@ -32,6 +32,8 @@ class CustomUser(AbstractUser):
     location         = models.CharField(max_length=200, blank=True)
     saved_jobs       = models.ManyToManyField('Job', related_name='saved_by', blank=True)
     email_verified   = models.BooleanField(default=False)
+    push_token       = models.CharField(max_length=300, blank=True, null=True, default=None,
+                                        help_text="Expo push token for mobile push notifications")
     created_at       = models.DateTimeField(auto_now_add=True)
 
     # Use email as the primary login identifier
@@ -56,7 +58,7 @@ class CustomUser(AbstractUser):
     def is_verified(self):
         if not self.email_verified:
             return False
-            
+
         if self.role == UserRole.COMPANY:
             try:
                 prof = self.company_profile
@@ -376,13 +378,13 @@ class ShortlistedApplicant(models.Model):
     Admin manages the status of this shortlist.
     """
     application = models.OneToOneField(
-        Application, 
-        on_delete=models.CASCADE, 
+        Application,
+        on_delete=models.CASCADE,
         related_name='shortlist'
     )
     status = models.CharField(
-        max_length=20, 
-        choices=ApplicationStatus.choices, 
+        max_length=20,
+        choices=ApplicationStatus.choices,
         default=ApplicationStatus.PENDING
     )
     shortlisted_at = models.DateTimeField(auto_now_add=True)

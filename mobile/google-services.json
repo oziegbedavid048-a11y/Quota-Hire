@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "352334741503",
+    "project_id": "quota-hire-7cc72",
+    "storage_bucket": "quota-hire-7cc72.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:352334741503:android:e83539ad54bf2acd8731ca",
+        "android_client_info": {
+          "package_name": "com.oziegbedavid.quotahire"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBArf0t03HIE6fyaKDLVFugaiEn_w6IbgQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

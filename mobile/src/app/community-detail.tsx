@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, StyleSheet, KeyboardAvoidingView,
-  Platform, ActivityIndicator, SafeAreaView, Alert, Image, Modal,
-  Pressable, Keyboard, BackHandler,
+  Platform, ActivityIndicator, Alert, Image, Modal,
+  Pressable, Keyboard, PanResponder, BackHandler,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -92,15 +92,21 @@ function buildGroups(allComments: CommunityComment[]): CommentGroup[] {
 function CommentRow({
   item,
   isReply = false,
+  isLastReply = false,
+  hasReplies = false,
   onLongPress,
   onLike,
   onDislike,
+  onReply,
 }: {
   item: CommunityComment;
   isReply?: boolean;
+  isLastReply?: boolean;
+  hasReplies?: boolean;
   onLongPress: (c: CommunityComment) => void;
   onLike: (c: CommunityComment) => void;
   onDislike: (c: CommunityComment) => void;
+  onReply: (c: CommunityComment) => void;
 }) {
   return (
     <Pressable
@@ -108,6 +114,11 @@ function CommentRow({
       delayLongPress={500}
       style={[styles.commentRow, isReply && styles.replyRow]}
     >
+      {/* Thread connecting lines */}
+      {!isReply && hasReplies && <View style={styles.parentThreadLine} />}
+      {isReply && <View style={styles.childThreadLineTop} />}
+      {isReply && !isLastReply && <View style={styles.childThreadLineBottom} />}
+
       <AvatarImage author={item.author} size={isReply ? 28 : 34} />
       <View style={styles.commentBody}>
         {isReply && item.parent_author_name && (
@@ -121,31 +132,36 @@ function CommentRow({
           <Text style={styles.commentTime}>{formatTime(item.created_at)}</Text>
         </View>
         <Text style={[styles.commentText, isReply && { fontSize: 13 }]}>{item.content}</Text>
-      </View>
+        
+        {/* Horizontal Action buttons aligned under the text */}
+        <View style={styles.commentActions}>
+          <HapticPressable onPress={() => onLike(item)} style={styles.commentActionBtnHorizontal}>
+            <FontAwesome
+              name={item.is_liked ? 'thumbs-up' : 'thumbs-o-up'}
+              size={13}
+              color={item.is_liked ? Palette.accent600 : Palette.neutral400}
+            />
+            <Text style={[styles.commentActionCount, item.is_liked && { color: Palette.accent600 }]}>
+              {item.likes_count ?? 0}
+            </Text>
+          </HapticPressable>
 
-      {/* Horizontal Like & Dislike buttons */}
-      <View style={styles.commentActions}>
-        <HapticPressable onPress={() => onLike(item)} style={styles.commentActionBtnHorizontal}>
-          <FontAwesome
-            name={item.is_liked ? 'thumbs-up' : 'thumbs-o-up'}
-            size={14}
-            color={item.is_liked ? Palette.accent600 : Palette.neutral400}
-          />
-          <Text style={[styles.commentActionCount, item.is_liked && { color: Palette.accent600 }]}>
-            {item.likes_count ?? 0}
-          </Text>
-        </HapticPressable>
+          <HapticPressable onPress={() => onDislike(item)} style={styles.commentActionBtnHorizontal}>
+            <FontAwesome
+              name={item.is_disliked ? 'thumbs-down' : 'thumbs-o-down'}
+              size={13}
+              color={item.is_disliked ? Palette.red500 : Palette.neutral400}
+            />
+            <Text style={[styles.commentActionCount, item.is_disliked && { color: Palette.red500 }]}>
+              {item.dislikes_count ?? 0}
+            </Text>
+          </HapticPressable>
 
-        <HapticPressable onPress={() => onDislike(item)} style={styles.commentActionBtnHorizontal}>
-          <FontAwesome
-            name={item.is_disliked ? 'thumbs-down' : 'thumbs-o-down'}
-            size={14}
-            color={item.is_disliked ? Palette.red500 : Palette.neutral400}
-          />
-          <Text style={[styles.commentActionCount, item.is_disliked && { color: Palette.red500 }]}>
-            {item.dislikes_count ?? 0}
-          </Text>
-        </HapticPressable>
+          <HapticPressable onPress={() => onReply(item)} style={styles.commentActionBtnHorizontal}>
+            <Feather name="message-square" size={13} color={Palette.neutral400} />
+            <Text style={styles.commentActionCount}>Reply</Text>
+          </HapticPressable>
+        </View>
       </View>
     </Pressable>
   );
@@ -170,7 +186,14 @@ function CommentGroupItem({
 
   return (
     <View style={styles.commentGroupContainer}>
-      <CommentRow item={comment} onLongPress={onLongPress} onLike={onLike} onDislike={onDislike} />
+      <CommentRow
+        item={comment}
+        hasReplies={replies.length > 0 && expanded}
+        onLongPress={onLongPress}
+        onLike={onLike}
+        onDislike={onDislike}
+        onReply={onReply}
+      />
 
       {replies.length > 0 && (
         <View style={styles.repliesWrapper}>
@@ -192,14 +215,16 @@ function CommentGroupItem({
             </Text>
           </Pressable>
 
-          {expanded && replies.map(reply => (
+          {expanded && replies.map((reply, idx) => (
             <CommentRow
               key={reply.id}
               item={reply}
               isReply
+              isLastReply={idx === replies.length - 1}
               onLongPress={onLongPress}
               onLike={onLike}
               onDislike={onDislike}
+              onReply={onReply}
             />
           ))}
         </View>
@@ -218,37 +243,72 @@ export default function CommunityDetailScreen() {
     toggleLike, fetchComments, addComment,
     editComment, deleteComment, reportComment,
     toggleCommentLike, toggleCommentDislike,
+    reportPost,
   } = useCommunityData();
 
-  const navigation = useNavigation();
-  const hasNavigated = useRef(false);
-
-  useEffect(() => {
-    // Intercept swipe-back gestures and navigation pop actions
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (hasNavigated.current) return;
-      e.preventDefault();
-      hasNavigated.current = true;
-      router.replace('/community' as any);
-    });
-
-    // Intercept Android hardware back presses
-    const onBackPress = () => {
-      if (!hasNavigated.current) {
-        hasNavigated.current = true;
-        router.replace('/community' as any);
+  const handleReportPost = () => {
+    if (!post) return;
+    Alert.alert('Report Post', 'Are you sure you want to report this post?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Report',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await reportPost(post.id, 'inappropriate');
+            Alert.alert('Reported', 'Thank you for keeping the community safe.');
+          } catch {
+            Alert.alert('Error', 'Could not report post.');
+          }
+        }
       }
-      return true;
+    ]);
+  };
+
+  // Native back pop is handled automatically by Expo Router stack
+
+  // ── Swipe-left-from-edge to go back to Community ─────────────────────────
+  const swipeBackRef = useRef({ startX: 0 });
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: (evt, gs) => {
+        const startX = gs.moveX - gs.dx;
+        return startX < 40 && gs.dx > 10 && Math.abs(gs.dy) < Math.abs(gs.dx) * 0.5;
+      },
+      onMoveShouldSetPanResponderCapture: (evt, gs) => {
+        const startX = gs.moveX - gs.dx;
+        return startX < 40 && gs.dx > 10 && Math.abs(gs.dy) < Math.abs(gs.dx) * 0.5;
+      },
+      onPanResponderRelease: (evt, gs) => {
+        const startX = gs.moveX - gs.dx;
+        if (startX < 40 && gs.dx > 60) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.replace('/community' as any);
+        }
+      },
+    })
+  ).current;
+
+  // ── Hardware Back Button handler (Android) ────────────────────────────────
+  useEffect(() => {
+    const onBackPress = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.replace('/community' as any);
+      return true; // prevent default (dashboard navigation)
     };
 
-    BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [router]);
 
-    return () => {
-      unsubscribe();
-      BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    };
-  }, [navigation]);
-
+  // ── Bookmark state ────────────────────────────────────────────────────────
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const handleBookmark = () => {
+    setIsBookmarked(prev => !prev);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
   const [post, setPost] = useState<CommunityPost | null>(null);
   const [isLoadingPost, setIsLoadingPost] = useState(true);
   const [comments, setComments] = useState<CommunityComment[]>([]);
@@ -478,7 +538,7 @@ export default function CommunityDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       {/* Dashboard visual background gradient */}
       <LinearGradient
         colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
@@ -488,9 +548,9 @@ export default function CommunityDetailScreen() {
       />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
       >
         <FlatList
           data={groups}
@@ -525,9 +585,6 @@ export default function CommunityDetailScreen() {
                     <Feather name="eye-off" size={10} color={Palette.neutral500} />
                   </View>
                 )}
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{post.category.toUpperCase()}</Text>
-                </View>
               </View>
 
               <Text style={styles.postBody}>{post.content}</Text>
@@ -535,14 +592,37 @@ export default function CommunityDetailScreen() {
               <View style={styles.cardActions}>
                 <HapticPressable onPress={handleLike} style={styles.actionButton}>
                   {post.is_liked
-                    ? <FontAwesome name="heart" size={18} color={Palette.red500} />
-                    : <FontAwesome name="heart-o" size={18} color={Palette.neutral500} />
+                    ? <FontAwesome name="heart" size={19} color={Palette.red500} />
+                    : <FontAwesome name="heart-o" size={19} color={Palette.neutral500} />
                   }
                   {post.likes_count !== null && (
                     <Text style={[styles.actionCount, post.is_liked && { color: Palette.red500 }]}>
-                      {post.likes_count} {post.likes_count === 1 ? 'like' : 'likes'}
+                      {post.likes_count}
                     </Text>
                   )}
+                </HapticPressable>
+
+                {!post.comments_disabled && (
+                  <View style={styles.actionButton}>
+                    <Feather name="message-square" size={19} color={Palette.neutral500} />
+                    <Text style={styles.actionCount}>{post.comments_count}</Text>
+                  </View>
+                )}
+
+                <HapticPressable onPress={handleBookmark} style={styles.actionButton}>
+                  <Feather
+                    name="bookmark"
+                    size={19}
+                    color={isBookmarked ? Palette.accent600 : Palette.neutral400}
+                    style={isBookmarked ? { opacity: 1 } : { opacity: 0.7 }}
+                  />
+                  {isBookmarked && (
+                    <Text style={[styles.actionCount, { color: Palette.accent600 }]}>Saved</Text>
+                  )}
+                </HapticPressable>
+
+                <HapticPressable onPress={handleReportPost} style={[styles.actionButton, { marginLeft: 'auto' }]}>
+                  <Feather name="flag" size={18} color={Palette.neutral400} />
                 </HapticPressable>
               </View>
 
@@ -701,14 +781,12 @@ const styles = StyleSheet.create({
   // Post detail section
   scrollContent: { paddingBottom: 32 },
   postDetails: {
-    backgroundColor: '#fff',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 12,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
   headerInfo: { flex: 1, marginLeft: 12 },
@@ -723,8 +801,8 @@ const styles = StyleSheet.create({
   categoryText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Palette.accent700 },
   postBody: { fontSize: FontSize.lg, color: Palette.neutral900, lineHeight: 26, marginBottom: 18 },
   cardActions: {
-    borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(241, 245, 249, 0.5)',
-    paddingVertical: 10, flexDirection: 'row', marginBottom: 18,
+    borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#F1F5F9',
+    paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 28, marginBottom: 16,
   },
   actionButton: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   actionCount: { fontSize: FontSize.sm, color: Palette.neutral600, fontWeight: FontWeight.medium },
@@ -733,9 +811,8 @@ const styles = StyleSheet.create({
   // Comment group container
   commentGroupContainer: {
     backgroundColor: 'transparent',
-    marginBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(241, 245, 249, 0.3)',
+    borderBottomColor: '#E2E8F0',
   },
 
   // Comment row
@@ -745,6 +822,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 10,
+    position: 'relative',
   },
   commentBody: { flex: 1, paddingRight: 4 },
   commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
@@ -752,13 +830,13 @@ const styles = StyleSheet.create({
   commentTime: { fontSize: 11, color: Palette.neutral400 },
   commentText: { fontSize: FontSize.sm, color: Palette.neutral700, lineHeight: 19 },
 
-  // Horizontal Like & Dislike styling
+  // Horizontal Actions styling
   commentActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 18,
     alignSelf: 'flex-start',
-    paddingTop: 4,
+    paddingTop: 8,
   },
   commentActionBtnHorizontal: {
     flexDirection: 'row',
@@ -772,12 +850,36 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
 
+  // Thread lines
+  parentThreadLine: {
+    position: 'absolute',
+    left: 32,
+    top: 12 + 34 + 4,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#CBD5E1',
+  },
+  childThreadLineTop: {
+    position: 'absolute',
+    left: 32,
+    top: 0,
+    height: 10 + 28/2,
+    width: 2,
+    backgroundColor: '#CBD5E1',
+  },
+  childThreadLineBottom: {
+    position: 'absolute',
+    left: 32,
+    top: 10 + 28/2,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#CBD5E1',
+  },
+
   // Replies section
   repliesWrapper: {
     marginLeft: 0,
-    borderLeftWidth: 2,
-    borderLeftColor: 'rgba(203, 213, 225, 0.5)',
-    paddingLeft: 10,
+    paddingLeft: 0,
     paddingBottom: 10,
     backgroundColor: 'transparent',
     marginBottom: 0,
@@ -787,7 +889,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     paddingVertical: 8,
-    paddingLeft: 2,
+    paddingLeft: 19,
   },
   viewRepliesText: {
     fontSize: 12,
@@ -795,7 +897,7 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
   replyRow: {
-    paddingLeft: 0,
+    paddingLeft: 19,
     paddingRight: 12,
     paddingVertical: 10,
     backgroundColor: 'transparent',

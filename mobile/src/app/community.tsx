@@ -5,6 +5,7 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
   Alert, TouchableOpacity, Pressable, Image, Switch,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -96,6 +97,13 @@ export default function CommunityScreen() {
   const [reportPost_state, setReportPost_state] = useState<CommunityPost | null>(null);
   const [reportReason, setReportReason] = useState('spam');
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  // Bookmark state
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<Record<string, boolean>>({});
+  const handleToggleBookmark = (id: string) => {
+    setBookmarkedPosts(prev => ({ ...prev, [id]: !prev[id] }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   // Smart focus-based refresh: loads all posts in newest order (category="")
   useFocusEffect(
@@ -297,7 +305,7 @@ export default function CommunityScreen() {
         <Animated.View entering={FadeInDown.delay(index * 50).springify()} style={styles.card}>
           <Pressable
             onPress={() => router.push({ pathname: '/community-detail', params: { id: p.id } } as any)}
-            style={{ padding: 16 }}
+            style={{ paddingHorizontal: 16, paddingVertical: 12 }}
           >
             {/* Header */}
             <View style={styles.cardHeader}>
@@ -314,9 +322,6 @@ export default function CommunityScreen() {
                     <Feather name="eye-off" size={10} color={Palette.neutral500} />
                   </View>
                 )}
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryText}>{p.category.toUpperCase()}</Text>
-                </View>
                 {/* 3-dot menu for author only */}
                 {isAuthor && (
                   <Pressable
@@ -347,9 +352,9 @@ export default function CommunityScreen() {
             <View style={styles.cardActions}>
               <HapticPressable onPress={() => handleLike(p.id)} style={styles.actionButton}>
                 {p.is_liked ? (
-                  <FontAwesome name="heart" size={16} color={Palette.red500} />
+                  <FontAwesome name="heart" size={19} color={Palette.red500} />
                 ) : (
-                  <FontAwesome name="heart-o" size={16} color={Palette.neutral500} />
+                  <FontAwesome name="heart-o" size={19} color={Palette.neutral500} />
                 )}
                 {!p.hide_likes && p.likes_count !== null ? (
                   <Text style={[styles.actionCount, p.is_liked && { color: Palette.red500 }]}>{p.likes_count}</Text>
@@ -358,9 +363,24 @@ export default function CommunityScreen() {
 
               {!p.comments_disabled && (
                 <View style={styles.actionButton}>
-                  <Feather name="message-square" size={16} color={Palette.neutral500} />
+                  <Feather name="message-square" size={19} color={Palette.neutral500} />
                   <Text style={styles.actionCount}>{p.comments_count}</Text>
                 </View>
+              )}
+
+              <HapticPressable onPress={() => handleToggleBookmark(p.id)} style={styles.actionButton}>
+                <Feather
+                  name="bookmark"
+                  size={19}
+                  color={bookmarkedPosts[p.id] ? Palette.accent600 : Palette.neutral400}
+                  style={bookmarkedPosts[p.id] ? { opacity: 1 } : { opacity: 0.7 }}
+                />
+              </HapticPressable>
+
+              {!isAuthor && (
+                <Pressable onPress={() => openReportModal(p)} style={[styles.actionButton, { marginLeft: 'auto' }]}>
+                  <Feather name="flag" size={18} color={Palette.neutral400} />
+                </Pressable>
               )}
             </View>
           </Pressable>
@@ -373,7 +393,7 @@ export default function CommunityScreen() {
 
       return (
         <Animated.View entering={FadeInDown.delay(index * 50).springify()} style={styles.card}>
-          <View style={{ padding: 16 }}>
+          <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
             <View style={styles.cardHeader}>
               <AuthorAvatar author={poll.author} isPost={false} />
               <View style={styles.headerInfo}>
@@ -454,62 +474,66 @@ export default function CommunityScreen() {
         end={{ x: 1, y: 1 }}
       />
 
-      {/* ── 3D Hero Banner ── */}
-      <Animated.View entering={FadeInDown.springify()} style={{ paddingHorizontal: 16, paddingTop: 16, marginBottom: 4 }}>
-        <LinearGradient
-          colors={['#FCEFCF', '#E1F6DD']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroBanner}
-        >
-          {/* Decorative blobs */}
-          <View style={styles.blob1} />
-          <View style={styles.blob2} />
-
-          <View style={styles.heroContent}>
-            {/* Text side */}
-            <View style={{ flex: 1, zIndex: 1 }}>
-              <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.65)', borderColor: 'rgba(226, 232, 240, 0.5)' }]}>
-                <Feather name="users" size={12} color={Palette.accent600} />
-                <Text style={styles.heroPillText}>Quota Community</Text>
-              </View>
-              <Text style={styles.heroTitle}>Connect & Share</Text>
-              <Text style={styles.heroSub}>
-                Join conversations, share professional insights, ask questions, or run community polls!
-              </Text>
-            </View>
-
-            {/* 3D Illustration */}
-            <Image
-              source={require('@/assets/images/illustrations/contact_illustration.png')}
-              style={styles.heroImage}
-              contentFit="contain"
-            />
-          </View>
-        </LinearGradient>
-      </Animated.View>
-
       {/* Feed */}
-      {isLoading && feed.length === 0 ? (
-        <View style={[styles.listContainer, { paddingBottom: 100 }]}>
-          {[1, 2, 3].map(k => <SkeletonPostCard key={k} style={{ marginBottom: 16 }} />)}
-        </View>
-      ) : feed.length === 0 ? (
-        <View style={styles.centered}>
-          <Feather name="message-square" size={48} color={Palette.neutral300} />
-          <Text style={styles.emptyTitle}>Nothing here yet</Text>
-          <Text style={styles.emptySubtitle}>Be the first to share a thought!</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={feed}
-          keyExtractor={(item) => `${item.type}-${item.id}`}
-          renderItem={renderFeedItem}
-          contentContainerStyle={styles.listContainer}
-          refreshing={isRefreshing}
-          onRefresh={handleRefresh}
-        />
-      )}
+      <FlatList
+        data={isLoading && feed.length === 0 ? ([1, 2, 3] as any[]) : feed}
+        keyExtractor={(item, index) =>
+          isLoading && feed.length === 0 ? `skeleton-${index}` : `${(item as any).type}-${(item as any).id}`
+        }
+        renderItem={({ item, index }) => {
+          if (isLoading && feed.length === 0) {
+            return <SkeletonPostCard style={{ marginBottom: 16, marginHorizontal: 16 }} />;
+          }
+          return renderFeedItem({ item: item as CommunityFeedItem, index });
+        }}
+        ListHeaderComponent={
+          <Animated.View entering={FadeInDown.springify()} style={{ paddingHorizontal: 16, paddingTop: 16, marginBottom: 4 }}>
+            <LinearGradient
+              colors={['#FCEFCF', '#E1F6DD']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroBanner}
+            >
+              {/* Decorative blobs */}
+              <View style={styles.blob1} />
+              <View style={styles.blob2} />
+
+              <View style={styles.heroContent}>
+                {/* Text side */}
+                <View style={{ flex: 1, zIndex: 1 }}>
+                  <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.65)', borderColor: 'rgba(226, 232, 240, 0.5)' }]}>
+                    <Feather name="users" size={12} color={Palette.accent600} />
+                    <Text style={styles.heroPillText}>Quota Community</Text>
+                  </View>
+                  <Text style={styles.heroTitle}>Connect & Share</Text>
+                  <Text style={styles.heroSub}>
+                    Join conversations, share professional insights, ask questions, or run community polls!
+                  </Text>
+                </View>
+
+                {/* 3D Illustration */}
+                <ExpoImage
+                  source={require('@/assets/images/illustrations/community_illustration.png')}
+                  style={styles.heroImage}
+                  contentFit="contain"
+                />
+              </View>
+            </LinearGradient>
+          </Animated.View>
+        }
+        ListEmptyComponent={
+          !isLoading ? (
+            <View style={[styles.centered, { marginTop: 40 }]}>
+              <Feather name="message-square" size={48} color={Palette.neutral300} />
+              <Text style={styles.emptyTitle}>Nothing here yet</Text>
+              <Text style={styles.emptySubtitle}>Be the first to share a thought!</Text>
+            </View>
+          ) : null
+        }
+        contentContainerStyle={styles.listContainer}
+        refreshing={isRefreshing}
+        onRefresh={handleRefresh}
+      />
 
       {/* FAB overlay dim */}
       <Animated.View style={[StyleSheet.absoluteFill, styles.fabOverlay, overlayStyle]} pointerEvents={fabOpen ? 'auto' : 'none'}>
@@ -865,16 +889,25 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   listContainer: {
-    padding: 16,
-    gap: 16,
+    paddingTop: 0,
     paddingBottom: 120,
+    paddingHorizontal: 0,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
+  },
+  pollCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: BorderRadius.md,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    overflow: 'hidden',
+    ...Shadow.card,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -948,10 +981,8 @@ const styles = StyleSheet.create({
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    borderTopWidth: 1,
-    borderColor: '#F1F5F9',
-    paddingTop: 12,
+    gap: 28,
+    paddingTop: 8,
   },
   actionButton: {
     flexDirection: 'row',
