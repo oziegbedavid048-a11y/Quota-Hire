@@ -162,11 +162,45 @@ export const EmployeeProfilePage = () => {
     }
   };
 
-  // Open payment modal. If paid, it will auto-download inside the modal.
-  const handleDownloadCV = (cv: any) => {
+  // Download paid CV directly, or open payment modal if unpaid.
+  const handleDownloadCV = async (cv: any) => {
     const cvName = cv.target_role || cv.template_name || `CV #${cv.id}`;
     setSelectedCV({ id: cv.id, name: cvName, isPaid: cv.is_paid });
-    setPaymentModalOpen(true);
+
+    if (cv.is_paid) {
+      toast.info("Downloading your CV...");
+      try {
+        const result = await apiFetch("/payments/initiate/", {
+          method: "POST",
+          body: JSON.stringify({ cv_id: cv.id }),
+        });
+        if (result?.already_paid && result?.download_token) {
+          const authToken = localStorage.getItem("access_token");
+          const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+          const resp = await fetch(`${API_BASE}/cv/${cv.id}/download/?token=${encodeURIComponent(result.download_token)}`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+          if (!resp.ok) {
+            toast.error("Download failed. Please try again.");
+            return;
+          }
+          const blob = await resp.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${cvName.replace(/\s+/g, "_")}_${cv.id}.pdf`;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          toast.success("CV downloaded successfully!");
+        } else {
+          setPaymentModalOpen(true);
+        }
+      } catch {
+        toast.error("Download failed. Please check your network.");
+      }
+    } else {
+      setPaymentModalOpen(true);
+    }
   };
 
 

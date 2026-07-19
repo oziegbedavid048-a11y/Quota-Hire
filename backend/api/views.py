@@ -1649,6 +1649,24 @@ class DownloadGeneratedCVView(APIView):
         if cv_obj.employee != user:
             return Response({'error': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
 
+        # Check if the owner has already paid for this CV
+        has_paid = PaymentTransaction.objects.filter(
+            user=user,
+            cv=cv_obj,
+            status=PaymentStatus.PAID,
+        ).exists()
+
+        # If they already paid, bypass the download token verification entirely!
+        if has_paid:
+            if not cv_obj.cv_pdf:
+                return Response({'error': 'No PDF stored for this CV.'}, status=status.HTTP_404_NOT_FOUND)
+            response = HttpResponse(bytes(cv_obj.cv_pdf), content_type='application/pdf')
+            filename = cv_obj.cv_filename or 'cv.pdf'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response['X-Content-Type-Options'] = 'nosniff'
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
+            return response
+
         # Employee must provide a valid payment-based download token
         raw_token = request.query_params.get('token', '').strip()
         if not raw_token:
@@ -1820,19 +1838,33 @@ class PaymentInitiateView(APIView):
         except GeneratedCV.DoesNotExist:
             return Response({'error': 'CV not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # ─ Idempotency: check for valid existing paid token (avoid double charging)
-        existing_token = DownloadToken.objects.filter(
+        # ─ Idempotency: check if user has ever successfully paid for this CV
+        has_paid = PaymentTransaction.objects.filter(
             user=request.user,
             cv=cv_obj,
-            used=False,
-            expires_at__gt=timezone.now(),
-            transaction__status=PaymentStatus.PAID,
-        ).order_by('-created_at').first()
+            status=PaymentStatus.PAID,
+        ).exists()
 
-        if existing_token:
+        if has_paid:
+            # Get the last successful transaction to associate the new token with
+            last_paid_tx = PaymentTransaction.objects.filter(
+                user=request.user,
+                cv=cv_obj,
+                status=PaymentStatus.PAID,
+            ).order_by('-created_at').first()
+
+            # Generate a fresh download token on the fly for free
+            token_str = _make_download_token(request.user.pk, cv_obj.pk, last_paid_tx.pk)
+            new_token = DownloadToken.objects.create(
+                user=request.user,
+                cv=cv_obj,
+                transaction=last_paid_tx,
+                token=token_str,
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
             return Response({
                 'already_paid': True,
-                'download_token': existing_token.token,
+                'download_token': new_token.token,
                 'message': 'You have already paid for this document. Download is ready.',
             })
 
