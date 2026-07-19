@@ -10,46 +10,51 @@ import { Toaster } from 'sonner';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/layout/Navbar';
-import { MyJobs } from './pages/company/MyJobs';
 import { Footer } from './components/layout/Footer';
 import { preloadImages, PRELOAD_ILLUSTRATIONS } from './utils/preloadImages';
-import { Home } from './pages/Home';
-import { Login } from './pages/auth/Login';
-import { Signup } from './pages/auth/Signup';
-import { ForgotPassword } from './pages/auth/ForgotPassword';
-import { ResetPassword } from './pages/auth/ResetPassword';
-import { VerifyEmail } from './pages/auth/VerifyEmail';
-import { EmployeeSetup } from './pages/employee/Setup';
-import { EmployeeProfilePage } from './pages/employee/Profile';
-import ResumeUpload from './pages/employee/ResumeUpload';
-import { CompanySetup } from './pages/company/Setup';
-import { Dashboard } from './pages/Dashboard';
-import { CompanyProfilePage } from './pages/company/Profile';
-import { PublicProfile } from './pages/company/PublicProfile';
-import { PostJob } from './pages/company/PostJob';
-import { JobApplicants } from './pages/company/JobApplicants';
-import { ApplicantProfilePage } from './pages/company/ApplicantProfilePage';
-import { JobsList } from './pages/jobs/JobsList';
-import { JobDetail } from './pages/jobs/JobDetail';
-import { ApplyJobPage } from './pages/jobs/ApplyJobPage';
-import { NotificationsPage } from './pages/Notifications';
-import { About } from './pages/About';
-import { Onboarding } from './pages/auth/Onboarding';
-import { AIProfileCoach } from './pages/employee/AIProfileCoach';
-import { ApplicationTracker } from './pages/employee/ApplicationTracker';
-import { SavedJobs } from './pages/jobs/SavedJobs';
 
-import { Contact } from './pages/Contact';
-import { Privacy } from './pages/Privacy';
-
-import { CVGeneratorPage } from './pages/employee/CVGeneratorPage';
-import { Why } from './pages/Why';
+const MyJobs = React.lazy(() => import('./pages/company/MyJobs').then(m => ({ default: m.MyJobs })));
+const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
+const Login = React.lazy(() => import('./pages/auth/Login').then(m => ({ default: m.Login })));
+const Signup = React.lazy(() => import('./pages/auth/Signup').then(m => ({ default: m.Signup })));
+const ForgotPassword = React.lazy(() => import('./pages/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const ResetPassword = React.lazy(() => import('./pages/auth/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const VerifyEmail = React.lazy(() => import('./pages/auth/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
+const EmployeeSetup = React.lazy(() => import('./pages/employee/Setup').then(m => ({ default: m.EmployeeSetup })));
+const EmployeeProfilePage = React.lazy(() => import('./pages/employee/Profile').then(m => ({ default: m.EmployeeProfilePage })));
+const ResumeUpload = React.lazy(() => import('./pages/employee/ResumeUpload'));
+const CompanySetup = React.lazy(() => import('./pages/company/Setup').then(m => ({ default: m.CompanySetup })));
+const Dashboard = React.lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const CompanyProfilePage = React.lazy(() => import('./pages/company/Profile').then(m => ({ default: m.CompanyProfilePage })));
+const PublicProfile = React.lazy(() => import('./pages/company/PublicProfile').then(m => ({ default: m.PublicProfile })));
+const PostJob = React.lazy(() => import('./pages/company/PostJob').then(m => ({ default: m.PostJob })));
+const JobApplicants = React.lazy(() => import('./pages/company/JobApplicants').then(m => ({ default: m.JobApplicants })));
+const ApplicantProfilePage = React.lazy(() => import('./pages/company/ApplicantProfilePage').then(m => ({ default: m.ApplicantProfilePage })));
+const JobsList = React.lazy(() => import('./pages/jobs/JobsList').then(m => ({ default: m.JobsList })));
+const JobDetail = React.lazy(() => import('./pages/jobs/JobDetail').then(m => ({ default: m.JobDetail })));
+const ApplyJobPage = React.lazy(() => import('./pages/jobs/ApplyJobPage').then(m => ({ default: m.ApplyJobPage })));
+const NotificationsPage = React.lazy(() => import('./pages/Notifications').then(m => ({ default: m.NotificationsPage })));
+const About = React.lazy(() => import('./pages/About').then(m => ({ default: m.About })));
+const Onboarding = React.lazy(() => import('./pages/auth/Onboarding').then(m => ({ default: m.Onboarding })));
+const AIProfileCoach = React.lazy(() => import('./pages/employee/AIProfileCoach').then(m => ({ default: m.AIProfileCoach })));
+const ApplicationTracker = React.lazy(() => import('./pages/employee/ApplicationTracker').then(m => ({ default: m.ApplicationTracker })));
+const SavedJobs = React.lazy(() => import('./pages/jobs/SavedJobs').then(m => ({ default: m.SavedJobs })));
+const Contact = React.lazy(() => import('./pages/Contact').then(m => ({ default: m.Contact })));
+const Privacy = React.lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })));
+const CVGeneratorPage = React.lazy(() => import('./pages/employee/CVGeneratorPage').then(m => ({ default: m.CVGeneratorPage })));
+const Why = React.lazy(() => import('./pages/Why').then(m => ({ default: m.Why })));
+const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
 
 import UnifiedDashboardLayout from './components/layout/UnifiedDashboardLayout';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { GlobalErrorState } from './components/ui/GlobalErrorState';
-import { Settings } from './pages/Settings';
 import { CookieBanner } from './components/ui/CookieBanner';
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[50vh] w-full">
+    <div className="w-8 h-8 border-4 border-accent-600 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 // Protected Route Wrapper
 const ProtectedRoute = ({
@@ -100,6 +105,7 @@ const AppRoutes = () => {
       <div className={`flex flex-col ${isDashboardRoute ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
         {!isDashboardRoute && <Navbar />}
         <main className="flex-grow flex flex-col">
+        <React.Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -266,6 +272,7 @@ const AppRoutes = () => {
 
           
         </Routes>
+        </React.Suspense>
       </main>
       {!isDashboardRoute && !isAuthRoute && <Footer />}
       </div>

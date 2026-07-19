@@ -651,15 +651,24 @@ class CommunityPostSerializer(serializers.ModelSerializer):
         is_own = request and request.user.is_authenticated and obj.author_id == request.user.pk
         if obj.hide_likes and not is_own:
             return None   # mobile will treat None as hidden
+        annotated_likes = getattr(obj, 'annotated_likes_count', None)
+        if annotated_likes is not None:
+            return annotated_likes
         return obj.likes.count()
 
     def get_comments_count(self, obj):
+        annotated_comments = getattr(obj, 'annotated_comments_count', None)
+        if annotated_comments is not None:
+            return annotated_comments
         return obj.community_comments.count()
 
     def get_is_liked(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
+        user_liked = getattr(obj, 'user_has_liked', None)
+        if user_liked is not None:
+            return user_liked
         return obj.likes.filter(pk=request.user.pk).exists()
 
     def get_is_author(self, obj):
@@ -667,3 +676,133 @@ class CommunityPostSerializer(serializers.ModelSerializer):
         if not request or not request.user.is_authenticated:
             return False
         return obj.author_id == request.user.pk
+
+
+# ── Optimized Lightweight List Serializers ───────────────────────────────────────
+
+class JobListSerializer(serializers.ModelSerializer):
+    company_name     = serializers.SerializerMethodField()
+    company_id       = serializers.SerializerMethodField()
+    company_is_verified = serializers.SerializerMethodField()
+    company_logo_url = serializers.SerializerMethodField()
+    description      = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = Job
+        fields = (
+            'id', 'company_id', 'company_name', 'company_is_verified', 'company_logo_url',
+            'title', 'description', 'requirements', 'employment_type',
+            'is_remote', 'location', 'salary_range', 'commission_range', 'currency',
+            'custom_company_name', 'status', 'created_at', 'job_code',
+        )
+
+    def get_company_name(self, obj):
+        return obj.company_name
+
+    def get_company_id(self, obj):
+        return obj.company_id
+
+    def get_company_is_verified(self, obj):
+        return obj.company.is_verified
+
+    def get_company_logo_url(self, obj):
+        request = self.context.get('request')
+        if obj.company.avatar:
+            if request:
+                return optimize_image_url(request.build_absolute_uri(obj.company.avatar.url))
+            return optimize_image_url(obj.company.avatar.url)
+        try:
+            logo = obj.company.company_profile.logo_url
+            if logo:
+                if request and not logo.startswith('http'):
+                    return optimize_image_url(request.build_absolute_uri(logo))
+                return optimize_image_url(logo)
+        except Exception:
+            pass
+        return None
+
+    def get_description(self, obj):
+        desc = obj.description or ''
+        return desc[:250] + '...' if len(desc) > 250 else desc
+
+
+class CompanyApplicantListSerializer(serializers.ModelSerializer):
+    """
+    Lightweight serializer for applicants list card, omitting cover letters, education, and full profile details.
+    """
+    job_title = serializers.CharField(source='job.title', read_only=True)
+    employee_name = serializers.SerializerMethodField()
+    employee_profile = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
+    is_shortlisted = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Application
+        fields = ('id', 'job', 'job_title', 'employee_name', 'status', 'applied_at', 'employee_profile', 'avatar_url', 'is_shortlisted')
+        read_only_fields = fields
+
+    def get_employee_name(self, obj):
+        return obj.employee.get_full_name() or obj.employee.username
+
+    def get_employee_profile(self, obj):
+        try:
+            profile = obj.employee.employee_profile
+            # Return only minified title, bio (truncated), and first 4 skills to avoid loading excessive details
+            bio = profile.bio or ''
+            truncated_bio = bio[:200] + '...' if len(bio) > 200 else bio
+            return {
+                'title': profile.title,
+                'bio': scrub_contact_info(truncated_bio, user=obj.employee, profile=profile),
+                'skills': profile.skills[:4] if profile.skills else []
+            }
+        except EmployeeProfile.DoesNotExist:
+            return None
+
+    def get_avatar_url(self, obj):
+        request = self.context.get('request')
+        if obj.employee.avatar:
+            if request:
+                return optimize_image_url(request.build_absolute_uri(obj.employee.avatar.url))
+            return optimize_image_url(obj.employee.avatar.url)
+        return None
+
+    def get_is_shortlisted(self, obj):
+        return hasattr(obj, 'shortlist')
+
+
+class ApplicationListSerializer(serializers.ModelSerializer):
+    """
+    Lightweight applications serializer for the job tracker screen.
+    """
+    job_title    = serializers.CharField(source='job.title', read_only=True)
+    company_name = serializers.SerializerMethodField()
+    company_logo_url = serializers.SerializerMethodField()
+    employee_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = Application
+        fields = ('id', 'job', 'job_title', 'company_name', 'company_logo_url', 'employee', 'employee_name', 'status', 'applied_at')
+        read_only_fields = fields
+
+    def get_company_name(self, obj):
+        return obj.job.company_name
+
+    def get_company_logo_url(self, obj):
+        request = self.context.get('request')
+        company = obj.job.company
+        if company.avatar:
+            if request:
+                return optimize_image_url(request.build_absolute_uri(company.avatar.url))
+            return optimize_image_url(company.avatar.url)
+        try:
+            logo = company.company_profile.logo_url
+            if logo:
+                if request and not logo.startswith('http'):
+                    return optimize_image_url(request.build_absolute_uri(logo))
+                return optimize_image_url(logo)
+        except Exception:
+            pass
+        return None
+
+    def get_employee_name(self, obj):
+        return obj.employee.get_full_name() or obj.employee.username

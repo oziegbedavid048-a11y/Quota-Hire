@@ -120,6 +120,10 @@ from .serializers import (
     CommunityCommentSerializer,
     CommunityPollSerializer,
     CommunityPollChoiceSerializer,
+    JobListSerializer,
+    CompanyApplicantListSerializer,
+    ApplicationListSerializer,
+    optimize_image_url,
 )
 
 # ── Resume Parsing Helpers ───────────────────────────────────────────────
@@ -575,7 +579,7 @@ class AvatarUploadView(APIView):
         user.avatar = avatar_file
         user.save(update_fields=['avatar'])
 
-        avatar_url = request.build_absolute_uri(user.avatar.url)
+        avatar_url = optimize_image_url(request.build_absolute_uri(user.avatar.url))
         return Response({'avatarUrl': avatar_url, 'message': 'Avatar updated successfully!'})
 
 class AIAnalysisView(APIView):
@@ -698,7 +702,10 @@ class JobListCreateView(generics.ListCreateAPIView):
         - Cache is invalidated immediately on any Job save via signals.py.
     POST /api/jobs/ — post a new job (company only, starts as pending).
     """
-    serializer_class = JobSerializer
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return JobSerializer
+        return JobListSerializer
 
     def get(self, request, *args, **kwargs):
         from .cache_utils import jobs_list_key, safe_get, safe_set, JOBS_LIST_TTL
@@ -733,7 +740,15 @@ class JobListCreateView(generics.ListCreateAPIView):
         return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
-        qs = Job.objects.filter(status='approved').select_related('company')
+        qs = Job.objects.filter(status='approved').select_related(
+            'company', 'company__company_profile'
+        ).only(
+            'id', 'company__id', 'company__username', 'company__first_name', 'company__last_name',
+            'company__is_verified', 'company__avatar', 'company__company_profile__logo_url',
+            'title', 'description', 'requirements', 'employment_type',
+            'is_remote', 'location', 'salary_range', 'commission_range', 'currency',
+            'custom_company_name', 'status', 'created_at', 'job_code'
+        )
         # Optional filters from query params
         search = self.request.query_params.get('search')
         remote = self.request.query_params.get('remote')
@@ -1230,14 +1245,27 @@ class SavePushTokenView(APIView):
 
 class MyApplicationsView(generics.ListAPIView):
     """GET /api/applications/ — list the current user's own applications (or applications to company's jobs)."""
-    serializer_class   = ApplicationSerializer
+    serializer_class   = ApplicationListSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
         if user.role == 'company':
-            return Application.objects.filter(job__company=user).select_related('job', 'employee')
-        return Application.objects.filter(employee=user).select_related('job')
+            return Application.objects.filter(job__company=user).select_related(
+                'job', 'employee'
+            ).only(
+                'id', 'job__id', 'job__title', 'job__company_name',
+                'employee__id', 'employee__username', 'employee__first_name', 'employee__last_name',
+                'status', 'applied_at'
+            )
+        return Application.objects.filter(employee=user).select_related(
+            'job', 'job__company', 'job__company__company_profile'
+        ).only(
+            'id', 'job__id', 'job__title', 'job__company_name',
+            'job__company__id', 'job__company__username', 'job__company__first_name', 'job__company__last_name',
+            'job__company__avatar', 'job__company__company_profile__logo_url',
+            'employee__id', 'status', 'applied_at'
+        )
 
 
 class ApplicationStatusUpdateView(APIView):
@@ -1402,13 +1430,22 @@ class ResumeUploadView(APIView):
 
 class CompanyJobApplicantsView(generics.ListAPIView):
     """GET /api/company/jobs/<int:job_id>/applicants/"""
-    from .serializers import CompanyApplicantSerializer
-    serializer_class = CompanyApplicantSerializer
+    serializer_class = CompanyApplicantListSerializer
     permission_classes = [IsCompany]
 
     def get_queryset(self):
         job_id = self.kwargs.get('job_id')
-        return Application.objects.filter(job_id=job_id, job__company=self.request.user).select_related('employee', 'job')
+        return Application.objects.filter(
+            job_id=job_id, job__company=self.request.user
+        ).select_related(
+            'employee', 'employee__employee_profile', 'job', 'shortlist'
+        ).only(
+            'id', 'job__id', 'job__title',
+            'employee__id', 'employee__username', 'employee__first_name', 'employee__last_name',
+            'employee__avatar',
+            'employee__employee_profile__title', 'employee__employee_profile__bio', 'employee__employee_profile__skills',
+            'status', 'applied_at'
+        )
 
 class ShortlistApplicantView(APIView):
     """POST /api/company/applications/<int:pk>/shortlist/"""
@@ -2159,16 +2196,29 @@ class CommunityFeedView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = CommunityPost.objects.select_related('author').prefetch_related(
-            'likes', 'community_comments'
+        from django.db.models import Count, Exists, OuterRef, Value, BooleanField
+        user = self.request.user
+
+        qs = CommunityPost.objects.select_related('author')
+
+        if user and user.is_authenticated:
+            liked_subquery = CommunityPost.likes.through.objects.filter(
+                communitypost_id=OuterRef('pk'),
+                customuser_id=user.pk
+            )
+            qs = qs.annotate(user_has_liked=Exists(liked_subquery))
+        else:
+            qs = qs.annotate(user_has_liked=Value(False, output_field=BooleanField()))
+
+        qs = qs.annotate(
+            annotated_likes_count=Count('likes', distinct=True),
+            annotated_comments_count=Count('community_comments', distinct=True)
         )
+
         category = self.request.query_params.get('category', '').strip()
         if category == 'trending':
-            from django.db.models import Count
             week_ago = timezone.now() - timedelta(days=7)
-            qs = qs.filter(created_at__gte=week_ago).annotate(
-                like_count=Count('likes')
-            ).order_by('-like_count', '-created_at')
+            qs = qs.filter(created_at__gte=week_ago).order_by('-annotated_likes_count', '-created_at')
         elif category and category not in ('polls',):
             # 'polls' is handled by the separate polls endpoint; filter everything else
             qs = qs.filter(category=category)
