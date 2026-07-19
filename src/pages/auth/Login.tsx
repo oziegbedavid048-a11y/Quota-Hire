@@ -157,8 +157,9 @@ export const Login = () => {
         {/* ── LEFT PANEL: 3D FIGURE (desktop only) ── */}
         <div className="hidden lg:flex flex-1 items-center justify-center relative z-20 pointer-events-none">
           <motion.img
-            src={`${import.meta.env.BASE_URL}images/login_human_3d.png`}
+            src={`${import.meta.env.BASE_URL}images/login_human_3d.webp`}
             alt="Welcome Back Illustration"
+            loading="lazy"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}

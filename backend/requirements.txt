@@ -1,20 +1,45 @@
-django
-djangorestframework
-django-cors-headers
-djangorestframework-simplejwt
-pillow
-python-decouple
-gunicorn
-dj-database-url
-psycopg2-binary
-whitenoise
-django-redis
-django-cloudinary-storage
-cloudinary
-sentry-sdk
-posthog
-PyMuPDF
-python-docx
-celery
-redis
-google-auth
+# Quota Hire — Backend Python Dependencies
+# Pinned to exact versions to prevent surprise breaking changes on redeploy.
+# To upgrade a package: change the version here, test locally, then push.
+
+# ── Core Django ───────────────────────────────────────────────────────────────
+Django==5.2.15
+djangorestframework==3.17.1
+django-cors-headers==4.9.0
+djangorestframework-simplejwt==5.5.1
+
+# ── Database ──────────────────────────────────────────────────────────────────
+dj-database-url==3.1.2
+psycopg2-binary==2.9.12
+
+# ── Caching ───────────────────────────────────────────────────────────────────
+django-redis==7.0.0
+redis==8.0.0
+
+# ── File Storage & Media ──────────────────────────────────────────────────────
+Pillow==12.2.0
+django-cloudinary-storage==0.3.0
+cloudinary==1.44.2
+
+# ── Static Files ─────────────────────────────────────────────────────────────
+whitenoise==6.12.0
+
+# ── Server ───────────────────────────────────────────────────────────────────
+gunicorn==26.0.0
+
+# ── Config & Environment ──────────────────────────────────────────────────────
+python-decouple==3.8
+
+# ── Task Queue ────────────────────────────────────────────────────────────────
+celery==5.6.3
+
+# ── Resume Parsing ────────────────────────────────────────────────────────────
+PyMuPDF==1.27.2.3
+python-docx==1.2.0
+
+# ── Monitoring & Analytics ────────────────────────────────────────────────────
+sentry-sdk==2.62.0
+posthog==7.18.3
+
+# ── Google OAuth ─────────────────────────────────────────────────────────────
+google-auth==2.55.2

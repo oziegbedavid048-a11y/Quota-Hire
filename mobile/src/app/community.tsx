@@ -44,7 +44,7 @@ export default function CommunityScreen() {
   const router = useRouter();
 
   const {
-    feed, isLoading, isRefreshing, hasError, fetchFeed,
+    feed, isLoading, isRefreshing, isFetchingMore, hasError, page, hasMore, fetchFeed,
     toggleLike, voteOnPoll, createPost, editPost, updatePostSettings, deletePost, reportPost, createPoll,
   } = useCommunityData();
 
@@ -113,6 +113,11 @@ export default function CommunityScreen() {
   );
 
   const handleRefresh = () => fetchFeed('', true);
+
+  const handleLoadMore = () => {
+    if (!hasMore || isFetchingMore) return;
+    fetchFeed('', false, page + 1);
+  };
 
   const handleLike = (id: string) => {
     toggleLike(id);
@@ -511,9 +516,9 @@ export default function CommunityScreen() {
                   </Text>
                 </View>
 
-                {/* 3D Illustration */}
+                {/* 3D Illustration WebP */}
                 <ExpoImage
-                  source={require('@/assets/images/illustrations/community_illustration.png')}
+                  source={require('@/assets/images/illustrations/community_illustration.webp')}
                   style={styles.heroImage}
                   contentFit="contain"
                 />
@@ -533,6 +538,15 @@ export default function CommunityScreen() {
         contentContainerStyle={styles.listContainer}
         refreshing={isRefreshing}
         onRefresh={handleRefresh}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
+        initialNumToRender={4}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
+        ListFooterComponent={isFetchingMore ? (
+          <ActivityIndicator size="small" color={Palette.accent600} style={{ paddingVertical: 12 }} />
+        ) : null}
       />
 
       {/* FAB overlay dim */}

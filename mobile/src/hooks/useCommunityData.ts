@@ -64,14 +64,19 @@ export function useCommunityData() {
   const [feed, setFeed] = useState<CommunityFeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
   // Fetch feed (Posts & Polls)
-  const fetchFeed = useCallback(async (category = '', isRefresh = false) => {
-    if (isRefresh) {
-      setIsRefreshing(true);
+  const fetchFeed = useCallback(async (category = '', isRefresh = false, pageNum = 1) => {
+    if (isRefresh || pageNum === 1) {
+      setPage(1);
+      if (isRefresh) setIsRefreshing(true);
+      else setIsLoading(true);
     } else {
-      setIsLoading(true);
+      setIsFetchingMore(true);
     }
     setHasError(false);
 
@@ -81,11 +86,12 @@ export function useCommunityData() {
 
       // Fetch posts and polls in parallel
       const [postsData, pollsData] = await Promise.all([
-        apiFetch(`/community/posts/?category=${category}`).catch(() => []),
-        apiFetch('/community/polls/').catch(() => []),
+        apiFetch(`/community/posts/?category=${category}&page=${pageNum}`).catch(() => []),
+        pageNum === 1 ? apiFetch('/community/polls/').catch(() => []) : Promise.resolve([]),
       ]);
 
       const rawPosts = Array.isArray(postsData) ? postsData : (postsData?.results || []);
+      const nextPostsUrl = postsData?.next;
       const rawPolls = Array.isArray(pollsData) ? pollsData : (pollsData?.results || []);
 
       const formattedPosts: CommunityPost[] = rawPosts.map((p: any) => ({
@@ -125,13 +131,18 @@ export function useCommunityData() {
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      setFeed(combined);
+      setFeed(prev => (isRefresh || pageNum === 1) ? combined : [...prev, ...combined]);
+      setHasMore(!!nextPostsUrl);
+      if (pageNum > 1 && combined.length > 0) {
+        setPage(pageNum);
+      }
     } catch (err) {
       console.warn('[Community] Failed to fetch feed:', err);
       setHasError(true);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+      setIsFetchingMore(false);
     }
   }, []);
 
@@ -460,7 +471,10 @@ export function useCommunityData() {
     feed,
     isLoading,
     isRefreshing,
+    isFetchingMore,
     hasError,
+    page,
+    hasMore,
     fetchFeed,
     toggleLike,
     createPost,

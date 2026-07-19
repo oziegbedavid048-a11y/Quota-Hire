@@ -1,0 +1,59 @@
+# Ignore everything in the parent/sibling directories (web app & backend)
+../node_modules/
+../src/
+../public/
+../dist/
+../CV/
+../Dashboard desgn/
+../Flyers/
+../backend/
+../*.mp4
+../build.zip
+../*.py
+../*.cjs
+../*.js
+../*.html
+../*.png
+../*.jpg
+../*.txt
+../*.yaml
+
+# Standard mobile app ignores
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native keys and build files
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders
+/ios
+/android

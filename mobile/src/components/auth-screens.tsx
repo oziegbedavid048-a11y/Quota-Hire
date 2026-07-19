@@ -9,11 +9,30 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 const API_BASE = "https://quotahire-backend.onrender.com/api";
-import { prefetchCache } from "@/services/prefetch-cache";
 import { SafeAreaView } from "react-native-safe-area-context";
+let GoogleSignin: any = null;
+let statusCodes: any = {};
+let isGoogleSigninSupported = false;
+
+try {
+  const GoogleSignInModule = require("@react-native-google-signin/google-signin");
+  GoogleSignin = GoogleSignInModule.GoogleSignin;
+  statusCodes = GoogleSignInModule.statusCodes;
+
+  GoogleSignin.configure({
+    webClientId: "741329909708-cljluh4tepm3rpadt16lqdhqohhs5sd7.apps.googleusercontent.com",
+    offlineAccess: true,
+  });
+  isGoogleSigninSupported = true;
+} catch (e) {
+  console.warn(
+    "[Google Sign-In] Native module not found. Google Sign-In is disabled (this is normal in Expo Go). To use Google Sign-In, please run in a Development Build or standalone APK."
+  );
+}
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
@@ -290,6 +309,92 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     };
   });
 
+  const handleGoogleSignIn = async () => {
+    if (!isGoogleSigninSupported) {
+      Alert.alert(
+        "Google Sign-In Unavailable",
+        "Google Sign-In is not supported inside the Expo Go sandbox because it requires custom native binaries. Please run a Development Build (using npx expo run:android) or install the standalone APK to test Google Sign-In. For testing in Expo Go, please use the email and password form."
+      );
+      return;
+    }
+
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      
+      if (userInfo.type !== "success") {
+        throw { code: statusCodes.SIGN_IN_CANCELLED };
+      }
+
+      const idToken = userInfo.data.idToken;
+
+      if (!idToken) {
+        throw new Error("No ID Token received from Google");
+      }
+
+      if (mode === "login") {
+        setLSubmitting(true);
+        setLError("");
+      } else {
+        setSSubmitting(true);
+        setSError("");
+      }
+
+      const res = await fetch(`${API_BASE}/auth/google/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: idToken,
+          role: role,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || data?.detail || "Google authentication failed.");
+      }
+
+      if (data.access)
+        await SecureStore.setItemAsync("access_token", data.access);
+      if (data.refresh)
+        await SecureStore.setItemAsync("refresh_token", data.refresh);
+
+      const uName = data.user?.full_name || data.user?.name || data.user?.email || "";
+      const uRole = data.user?.role || "employee";
+      await SecureStore.setItemAsync("user_name", uName);
+      await SecureStore.setItemAsync("user_role", uRole);
+
+      if (mode === "login") {
+        setLSubmitting(false);
+      } else {
+        setSSubmitting(false);
+      }
+
+      onLogin(uName, uRole);
+    } catch (error: any) {
+      console.error(error);
+      let errorMsg = "Google Sign-In failed. Please try again.";
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        errorMsg = "Google Sign-In was cancelled.";
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        errorMsg = "Google Sign-In is already in progress.";
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        errorMsg = "Google Play Services are not available on this device.";
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+
+      if (mode === "login") {
+        setLError(errorMsg);
+        setLSubmitting(false);
+      } else {
+        setSError(errorMsg);
+        setSSubmitting(false);
+      }
+    }
+  };
+
   const handleForgot = async () => {
     if (!forgotEmail.trim()) {
       setForgotError("Please enter your email address.");
@@ -333,17 +438,11 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     setLError("");
     setLSubmitting(true);
     try {
-      // ── Fire login AND public jobs fetch in parallel ───────────────────────
-      // /jobs/ is public (no auth) so we can fetch it while the login is in
-      // flight. By the time login succeeds the jobs list is already in memory.
-      const [res, jobsRes] = await Promise.all([
-        fetch(`${API_BASE}/auth/login/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: lEmail.trim(), password: lPass }),
-        }),
-        fetch(`${API_BASE}/jobs/`).catch(() => null), // best-effort — public endpoint
-      ]);
+      const res = await fetch(`${API_BASE}/auth/login/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: lEmail.trim(), password: lPass }),
+      });
 
       const data = await res.json();
       if (!res.ok) {
@@ -357,39 +456,11 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
         return;
       }
 
-      // Parse the jobs that arrived in parallel (may be null if network hiccup)
-      let rawJobs: any[] = [];
-      if (jobsRes?.ok) {
-        const jobsData = await jobsRes.json().catch(() => null);
-        rawJobs = Array.isArray(jobsData)
-          ? jobsData
-          : (jobsData?.results ?? []);
-      }
-
-      // ── Populate the prefetch cache immediately ────────────────────────────
-      // The login response already contains the user object — that is enough for
-      // Phase 1 of useLocalDashboardData. Profile/apps/analytics arrive via the
-      // background fetch below and are patched into the cache as they resolve.
-      prefetchCache.set({
-        user: data.user ?? null,
-        jobs: rawJobs,
-        profile: null,
-        applications: [],
-        analytics: null,
-      });
-
       // ── Store JWT tokens securely ──────────────────────────────────────────
       if (data.access)
         await SecureStore.setItemAsync("access_token", data.access);
       if (data.refresh)
         await SecureStore.setItemAsync("refresh_token", data.refresh);
-
-      // ── Fire private background prefetches (non-blocking) ─────────────────
-      // These fill in the rest of the cache WHILE the user is looking at the
-      // dashboard. By the time they scroll to profile / applications, data is there.
-      if (data.access && data.user?.role === "employee") {
-        _backgroundPrefetchEmployee(data.access);
-      }
 
       // Store user info for auto-login on next app open
       const uName =
@@ -399,7 +470,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
       await SecureStore.setItemAsync("user_role", uRole);
 
       setLSubmitting(false);
-      onLogin(uName, uRole); // ← dashboard mounts here; cache is already populated
+      onLogin(uName, uRole); // ← dashboard mounts here; fetches network-live
     } catch (e: any) {
       setLError(
         "Could not connect to the server. Please check your internet connection.",
@@ -407,36 +478,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
       setLSubmitting(false);
     }
   };
-
-  /**
-   * Fires parallel private API calls immediately after login, patching the
-   * prefetch cache as each one resolves. The dashboard hook picks these up the
-   * moment it first reads the cache, making Phase-2 data appear without a second
-   * loading state.
-   */
-  function _backgroundPrefetchEmployee(token: string) {
-    const h = { Authorization: `Bearer ${token}` };
-    Promise.all([
-      fetch(`${API_BASE}/profile/employee/`, { headers: h })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null),
-      fetch(`${API_BASE}/applications/`, { headers: h })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null),
-      fetch(`${API_BASE}/dashboard/analytics/`, { headers: h })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null),
-    ])
-      .then(([profile, appsRaw, analytics]) => {
-        const apps = Array.isArray(appsRaw)
-          ? appsRaw
-          : (appsRaw?.results ?? []);
-        prefetchCache.patch({ profile, applications: apps, analytics });
-      })
-      .catch(() => {
-        /* silently swallow — dashboard will fetch normally if cache is gone */
-      });
-  }
 
   const handleSignup = async () => {
     if (role === "employee" && (!sFirst.trim() || !sLast.trim())) {
@@ -781,9 +822,11 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
 
                     {/* Sign in with Google */}
                     <Pressable
+                      disabled={lSubmitting || sSubmitting}
+                      onPress={handleGoogleSignIn}
                       style={({ pressed }) => [
                         gs.googleBtn,
-                        { opacity: pressed ? 0.85 : 1 },
+                        { opacity: (pressed || lSubmitting || sSubmitting) ? 0.65 : 1 },
                       ]}
                     >
                       <GoogleG />
@@ -1038,9 +1081,11 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
 
                     {/* Sign up with Google */}
                     <Pressable
+                      disabled={lSubmitting || sSubmitting}
+                      onPress={handleGoogleSignIn}
                       style={({ pressed }) => [
                         gs.googleBtn,
-                        { opacity: pressed ? 0.85 : 1 },
+                        { opacity: (pressed || lSubmitting || sSubmitting) ? 0.65 : 1 },
                       ]}
                     >
                       <GoogleG />

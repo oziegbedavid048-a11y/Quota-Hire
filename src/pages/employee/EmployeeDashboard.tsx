@@ -157,7 +157,7 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
 
           <div className="w-40 h-40 md:w-52 md:h-52 shrink-0 mb-4 md:mb-0">
             <img
-              src={`${import.meta.env.BASE_URL}images/employee_welcome.png`}
+              src={`${import.meta.env.BASE_URL}images/employee_welcome.webp`}
               alt="Welcome 3D Character"
               loading="eager"
               decoding="async"
@@ -485,7 +485,7 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
               >
                 <div className="flex justify-between items-start mb-3">
                   {job.companyLogoUrl ? (
-                    <img src={job.companyLogoUrl} alt={job.companyName} className="w-10 h-10 rounded-xl object-cover shadow-sm border border-neutral-100 dark:border-neutral-800" />
+                    <img src={job.companyLogoUrl} alt={job.companyName} loading="lazy" className="w-10 h-10 rounded-xl object-cover shadow-sm border border-neutral-100 dark:border-neutral-800" />
                   ) : (
                     <div className="w-10 h-10 rounded-xl bg-white dark:bg-neutral-900 flex items-center justify-center text-neutral-500 font-bold text-sm shadow-sm border border-neutral-100 dark:border-neutral-800">
                       {job.companyName?.charAt(0) || 'C'}

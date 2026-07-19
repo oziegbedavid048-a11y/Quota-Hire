@@ -15,6 +15,17 @@ def sanitize_text(value):
     return re.sub(r'[^\u0000-\uFFFF]', '', str(value))
 
 
+def optimize_image_url(url):
+    if not url:
+        return url
+    # If the URL points to Cloudinary, inject f_auto,q_auto for automated format (WebP) and quality optimization.
+    if 'res.cloudinary.com' in url and '/image/upload/' in url:
+        parts = url.split('/image/upload/')
+        if len(parts) == 2:
+            return f"{parts[0]}/image/upload/f_auto,q_auto/{parts[1]}"
+    return url
+
+
 from .models import (
     CustomUser,
     EmployeeProfile,
@@ -77,7 +88,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'setup_completed': self.user.setup_completed,
             'location':        self.user.location,
             'saved_jobs':      [{'id': e.job_id, 'saved_at': e.saved_at.isoformat()} for e in saved_entries],
-            'avatarUrl':       self.user.avatar.url if self.user.avatar else None,
+            'avatarUrl':       optimize_image_url(self.user.avatar.url) if self.user.avatar else None,
         }
         return data
 
@@ -97,6 +108,7 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
 
 class CompanyProfileSerializer(serializers.ModelSerializer):
     about_company = serializers.CharField(max_length=5000, allow_blank=True, required=False)
+    logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model  = CompanyProfile
@@ -105,12 +117,40 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
     def validate_about_company(self, value):
         return sanitize_text(value)
 
+    def get_logo_url(self, obj):
+        request = self.context.get('request') if self.context else None
+        logo = obj.logo_url
+        if logo:
+            if request and not logo.startswith('http'):
+                return optimize_image_url(request.build_absolute_uri(logo))
+            return optimize_image_url(logo)
+        if obj.user and obj.user.avatar:
+            if request:
+                return optimize_image_url(request.build_absolute_uri(obj.user.avatar.url))
+            return optimize_image_url(obj.user.avatar.url)
+        return None
+
 
 class CompanyPublicProfileSerializer(serializers.ModelSerializer):
     """Serializer for public company profiles — hides all contact phone and email fields."""
+    logo_url = serializers.SerializerMethodField()
+
     class Meta:
         model  = CompanyProfile
         fields = ('id', 'company_name', 'website', 'industry', 'about_company', 'logo_url')
+
+    def get_logo_url(self, obj):
+        request = self.context.get('request') if self.context else None
+        logo = obj.logo_url
+        if logo:
+            if request and not logo.startswith('http'):
+                return optimize_image_url(request.build_absolute_uri(logo))
+            return optimize_image_url(logo)
+        if obj.user and obj.user.avatar:
+            if request:
+                return optimize_image_url(request.build_absolute_uri(obj.user.avatar.url))
+            return optimize_image_url(obj.user.avatar.url)
+        return None
 
 
 # ── User Serializers ──────────────────────────────────────────────────────────
@@ -143,8 +183,8 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.avatar:
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.avatar.url)
-            return obj.avatar.url
+                return optimize_image_url(request.build_absolute_uri(obj.avatar.url))
+            return optimize_image_url(obj.avatar.url)
         return None
 
     def get_is_verified(self, obj):
@@ -247,14 +287,14 @@ class JobSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.company.avatar:
             if request:
-                return request.build_absolute_uri(obj.company.avatar.url)
-            return obj.company.avatar.url
+                return optimize_image_url(request.build_absolute_uri(obj.company.avatar.url))
+            return optimize_image_url(obj.company.avatar.url)
         try:
             logo = obj.company.company_profile.logo_url
             if logo:
                 if request and not logo.startswith('http'):
-                    return request.build_absolute_uri(logo)
-                return logo
+                    return optimize_image_url(request.build_absolute_uri(logo))
+                return optimize_image_url(logo)
         except Exception:
             pass
         return None
@@ -299,14 +339,14 @@ class ApplicationSerializer(serializers.ModelSerializer):
         company = obj.job.company
         if company.avatar:
             if request:
-                return request.build_absolute_uri(company.avatar.url)
-            return company.avatar.url
+                return optimize_image_url(request.build_absolute_uri(company.avatar.url))
+            return optimize_image_url(company.avatar.url)
         try:
             logo = company.company_profile.logo_url
             if logo:
                 if request and not logo.startswith('http'):
-                    return request.build_absolute_uri(logo)
-                return logo
+                    return optimize_image_url(request.build_absolute_uri(logo))
+                return optimize_image_url(logo)
         except:
             pass
         return None
@@ -428,8 +468,8 @@ class CompanyApplicantSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if obj.employee.avatar:
             if request:
-                return request.build_absolute_uri(obj.employee.avatar.url)
-            return obj.employee.avatar.url
+                return optimize_image_url(request.build_absolute_uri(obj.employee.avatar.url))
+            return optimize_image_url(obj.employee.avatar.url)
         return None
 
     def get_is_shortlisted(self, obj):
@@ -487,7 +527,7 @@ class CommunityAuthorSerializer(serializers.ModelSerializer):
     def get_avatar_url(self, obj):
         request = self.context.get('request')
         if obj.avatar and request:
-            return request.build_absolute_uri(obj.avatar.url)
+            return optimize_image_url(request.build_absolute_uri(obj.avatar.url))
         return None
 
 

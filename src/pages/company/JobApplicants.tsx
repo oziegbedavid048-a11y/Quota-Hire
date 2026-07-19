@@ -60,8 +60,9 @@ export const JobApplicants = () => {
             </div>
             <div className="w-40 h-40 md:w-48 md:h-48 shrink-0 order-1 md:order-2 flex justify-center">
               <img
-                src={`${import.meta.env.BASE_URL}images/applicant_reviewer.png`}
+                src={`${import.meta.env.BASE_URL}images/applicant_reviewer.webp`}
                 alt="3D Reviewer"
+                loading="lazy"
                 className="w-full h-full object-contain drop-shadow-xl animate-float"
               />
             </div>
@@ -85,7 +86,7 @@ export const JobApplicants = () => {
               >
                 <div className="flex items-center gap-4 mb-4">
                   {app.avatar_url ? (
-                    <img src={app.avatar_url} alt={app.employee_name} className="w-16 h-16 rounded-full object-cover border-2 border-accent-100 dark:border-accent-900/50 shadow-inner-soft shrink-0" />
+                    <img src={app.avatar_url} alt={app.employee_name} loading="lazy" className="w-16 h-16 rounded-full object-cover border-2 border-accent-100 dark:border-accent-900/50 shadow-inner-soft shrink-0" />
                   ) : (
                     <div className="w-16 h-16 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 text-2xl font-bold shadow-inner-soft shrink-0">
                       {app.employee_name[0]}

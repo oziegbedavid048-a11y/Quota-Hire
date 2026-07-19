@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { useLocalDashboardData } from '@/hooks/useLocalDashboardData';
+import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
 import EmployeeDashboard from '@/components/employee-dashboard';
 import CompanyDashboard from '@/components/company-dashboard';
 import { Palette } from '@/constants/theme';
 import * as SecureStore from 'expo-secure-store';
 
 export default function DashboardScreen() {
-  const { user, isLoading } = useLocalDashboardData();
+  const { user, isLoading } = useEmployeeDashboardData();
 
   // Detect role — prefer SecureStore (real login) over mock
   const [role, setRole] = React.useState<string | null>(null);

@@ -10,22 +10,6 @@ export interface NotificationItem {
   createdAt: string;
 }
 
-const MOCK_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'n1',
-    title: 'AI Profile Coach alert',
-    message: 'Your profile strength is at 70%. Use the AI Profile Coach to improve it and attract 3x more employers.',
-    read: false,
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'n2',
-    title: 'New application match',
-    message: 'We found a high-fit B2B SaaS role matching your MEDDIC and Account Executive skills.',
-    read: false,
-    createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-  },
-];
 
 export function useNotificationsData() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);

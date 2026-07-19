@@ -110,7 +110,7 @@ export default function TabLayout() {
   useEffect(() => {
     // Listen for taps on notifications (app is open or in background)
     notifResponseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
+      Notifications.addNotificationResponseReceivedListener((response: any) => {
         const data = response.notification.request.content.data as Record<
           string,
           unknown

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useTheme } from '../../context/ThemeContext';
+import { throttle } from '../../utils/throttle';
 
 interface ShaderAnimationProps {
   isPaused?: boolean;
@@ -112,7 +113,7 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
     canvas.style.left = '0';
     container.appendChild(canvas);
 
-    const resize = () => {
+    const throttledResize = throttle(() => {
       const width = container.clientWidth || window.innerWidth;
       const height = container.clientHeight || window.innerHeight;
       if (width === 0 || height === 0) return;
@@ -124,13 +125,13 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
       canvas.style.height = '100%';
       uniforms.resolution.value.x = width * dpr;
       uniforms.resolution.value.y = height * dpr;
-    };
+    }, 100);
 
-    const ro = new ResizeObserver(() => resize());
+    const ro = new ResizeObserver(() => throttledResize());
     ro.observe(container);
-    window.addEventListener('resize', resize, false);
-    requestAnimationFrame(resize);
-    resize();
+    window.addEventListener('resize', throttledResize, false);
+    requestAnimationFrame(throttledResize);
+    throttledResize();
 
     const animate = () => {
       if (!isAnimatingRef.current) return; // stop loop cleanly
@@ -185,7 +186,7 @@ export function ShaderAnimation({ isPaused = false, className }: ShaderAnimation
       isAnimatingRef.current = false;
       io.disconnect();
       ro.disconnect();
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', throttledResize);
       if (sceneRef.current) {
         cancelAnimationFrame(sceneRef.current.animationId);
         if (container && sceneRef.current.renderer.domElement.parentNode === container) {

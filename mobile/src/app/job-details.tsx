@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
-import { useLocalDashboardData } from '@/hooks/useLocalDashboardData';
+import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
 import ApplyJobModal from '@/components/apply-job-modal';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -26,7 +26,7 @@ export default function JobDetailsScreen() {
   const {
     user, jobs, savedJobs, toggleSavedJob, applications,
     profileScore, refreshData, isLoading,
-  } = useLocalDashboardData();
+  } = useEmployeeDashboardData();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

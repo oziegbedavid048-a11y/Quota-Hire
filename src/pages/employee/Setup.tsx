@@ -88,8 +88,9 @@ export const EmployeeSetup = () => {
             </div>
             <div className="w-32 h-32 md:w-44 md:h-44 shrink-0">
               <img
-                src={`${import.meta.env.BASE_URL}images/employee_setup.png`}
+                src={`${import.meta.env.BASE_URL}images/employee_setup.webp`}
                 alt="Setup 3D Character"
+                loading="lazy"
                 className="w-full h-full object-contain drop-shadow-xl animate-float"
               />
             </div>

@@ -1,0 +1,71 @@
+# Ignore everything at the workspace root except the mobile directory
+/node_modules
+/backend
+/src
+/public
+/dist
+/CV
+/Dashboard desgn
+/Flyers
+/test-archive-out
+/test-archive-out-no-vcs
+/test-archive-out-vcs-root-ignore
+/test-archive-out-final
+
+# Mobile app specific ignores
+/mobile/node_modules
+/mobile/.expo
+/mobile/dist
+/mobile/web-build
+/mobile/android
+/mobile/ios
+/mobile/expo-env.d.ts
+/mobile/.kotlin
+/mobile/*.orig.*
+/mobile/*.jks
+/mobile/*.p8
+/mobile/*.p12
+/mobile/*.key
+/mobile/*.mobileprovision
+/mobile/.metro-health-check*
+/mobile/npm-debug.*
+/mobile/yarn-debug.*
+/mobile/yarn-error.*
+/mobile/.DS_Store
+/mobile/*.pem
+/mobile/.env*.local
+/mobile/*.tsbuildinfo
+/mobile/example
+/mobile/test-archive-out-final
+
+# File ignores ONLY at root level (prefixed with / so they don't recursively affect /mobile/assets)
+/*.mp4
+/build.zip
+/*.py
+/*.cjs
+/*.js
+/*.html
+/*.png
+/*.jpg
+/*.txt
+/*.yaml
+/_sec_scan.py
+/test_post_job.py
+/check_jobs.py
+/process_image.py
+/remove_applicant_bg.py
+/remove_bg.py
+/remove_bg_profiles.py
+/remove_logo_bg.py
+/remove_review_bg.py
+/remove_success_bg.py
+/remove_why_bg.py
+/zeptomail_validation.txt
+/tracked_files.txt
+/output.txt
+/DISASTER_RECOVERY.md
+/PROFILE (1).jpg
+/PROFILE (2).jpg
+/download.png
+/email_signature.html
+/LOGO.html

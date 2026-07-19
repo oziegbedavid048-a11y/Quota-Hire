@@ -39,6 +39,8 @@ import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 
 import {
   Colors,
@@ -49,7 +51,7 @@ import {
   FontWeight,
   TabBarHeight,
 } from "@/constants/theme";
-import { useLocalDashboardData } from "@/hooks/useLocalDashboardData";
+import { useEmployeeDashboardData } from "@/hooks/useEmployeeDashboardData";
 import { apiFetch, API_BASE } from "@/services/api";
 import NativePaymentModal from "@/components/native-payment-modal";
 import CompanyProfile from "@/components/company-profile";
@@ -161,6 +163,36 @@ const PROFILE_SECTIONS = [
 
 type SectionKey = (typeof PROFILE_SECTIONS)[number]["key"];
 
+function uploadFileViaXHR(url: string, formData: FormData, token: string | null): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    if (token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          resolve(xhr.responseText);
+        }
+      } else {
+        let errorMsg = "Upload failed";
+        try {
+          const body = JSON.parse(xhr.responseText);
+          errorMsg = body.error || body.message || errorMsg;
+        } catch {
+          // ignore
+        }
+        reject(new Error(errorMsg));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Network request failed"));
+    xhr.send(formData as any);
+  });
+}
+
 export default function ProfileScreen() {
   const colors = Colors.light;
 
@@ -170,7 +202,7 @@ export default function ProfileScreen() {
   }, []);
 
   const { user, profileScore, profileItems, refreshData, isFetching } =
-    useLocalDashboardData();
+    useEmployeeDashboardData();
   const firstName = user.name.split(" ")[0];
   const initial = user.name.charAt(0).toUpperCase();
 
@@ -198,6 +230,7 @@ export default function ProfileScreen() {
   const [cvsLoading, setCvsLoading] = useState(false);
   const [paymentVisible, setPaymentVisible] = useState(false);
   const [selectedCV, setSelectedCV] = useState<any | null>(null);
+  const [downloadingCVId, setDownloadingCVId] = useState<number | null>(null);
 
   // Resume parsing flow state
   const [parsedResume, setParsedResume] = useState<any | null>(null);
@@ -250,16 +283,7 @@ export default function ProfileScreen() {
 
     try {
       const token = await SecureStore.getItemAsync("access_token");
-      const resp = await fetch(`${API_BASE}/profile/avatar/`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        throw new Error(body.error || "Upload failed");
-      }
+      await uploadFileViaXHR(`${API_BASE}/profile/avatar/`, formData, token);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Profile picture updated!");
@@ -453,6 +477,47 @@ export default function ProfileScreen() {
       // silently ignore CV fetch errors
     } finally {
       setCvsLoading(false);
+    }
+  };
+
+  const handleDownloadCV = async (cv: any) => {
+    setSelectedCV(cv);
+    const cvName = cv.target_role || cv.template_name || `CV #${cv.id}`;
+
+    if (cv.is_paid) {
+      setDownloadingCVId(cv.id);
+      try {
+        const res = await apiFetch("/payments/initiate/", {
+          method: "POST",
+          body: JSON.stringify({ cv_id: cv.id }),
+        });
+
+        if (res.already_paid && res.download_token) {
+          const API_BASE = "https://quotahire-backend.onrender.com/api";
+          const fileUri = `${FileSystem.documentDirectory}${cvName.replace(/\s+/g, "_")}_${cv.id}.pdf`;
+
+          const { uri } = await FileSystem.downloadAsync(
+            `${API_BASE}/cv/${cv.id}/download/?token=${encodeURIComponent(res.download_token)}`,
+            fileUri
+          );
+
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri);
+          } else {
+            Alert.alert("Success", "CV saved to device local folder.");
+          }
+        } else {
+          setPaymentVisible(true);
+        }
+      } catch (err) {
+        Alert.alert("Error", "Unable to download CV. Please check your network.");
+      } finally {
+        setDownloadingCVId(null);
+      }
+    } else {
+      setPaymentVisible(true);
     }
   };
 
@@ -664,18 +729,7 @@ export default function ProfileScreen() {
       } as any);
 
       const token = await SecureStore.getItemAsync("access_token");
-      const resp = await fetch(`${API_BASE}/profile/resume/upload/`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        throw new Error(body.error || "Upload failed");
-      }
-
-      const data = await resp.json();
+      const data = await uploadFileViaXHR(`${API_BASE}/profile/resume/upload/`, formData, token);
 
       if (data.parsed) {
         setParsedResume(data.parsed);
@@ -1621,29 +1675,33 @@ export default function ProfileScreen() {
                           </Text>
                         </View>
                         <Pressable
-                          onPress={() => {
-                            setSelectedCV(cv);
-                            setPaymentVisible(true);
-                          }}
+                          onPress={() => handleDownloadCV(cv)}
+                          disabled={downloadingCVId !== null}
                           style={[
                             s.cvDownloadBtn,
                             { backgroundColor: Palette.accent50 },
                           ]}
                         >
-                          <Feather
-                            name="download"
-                            size={13}
-                            color={Palette.accent600}
-                          />
-                          <Text
-                            style={{
-                              fontSize: 11,
-                              fontWeight: "bold",
-                              color: Palette.accent600,
-                            }}
-                          >
-                            Download
-                          </Text>
+                          {downloadingCVId === cv.id ? (
+                            <ActivityIndicator size="small" color={Palette.accent600} />
+                          ) : (
+                            <>
+                              <Feather
+                                name="download"
+                                size={13}
+                                color={Palette.accent600}
+                              />
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: "bold",
+                                  color: Palette.accent600,
+                                }}
+                              >
+                                Download
+                              </Text>
+                            </>
+                          )}
                         </Pressable>
                       </View>
                     ))}

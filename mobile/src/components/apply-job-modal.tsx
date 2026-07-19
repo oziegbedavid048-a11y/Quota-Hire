@@ -19,7 +19,7 @@ import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-nati
 
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
-import { Job } from '@/hooks/useLocalDashboardData';
+import { Job } from '@/hooks/useEmployeeDashboardData';
 import CVWizardModal from '@/components/cv-wizard-modal';
 
 const { height: SCREEN_H } = Dimensions.get('window');

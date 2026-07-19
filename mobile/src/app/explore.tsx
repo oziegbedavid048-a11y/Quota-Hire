@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, Pressable, TextInput,
-  StyleSheet, FlatList, Dimensions, Modal,
+  StyleSheet, FlatList, Dimensions, Modal, ActivityIndicator, Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,12 +12,14 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
+
 import CompanyPostJob from '@/components/company-post-job';
 import { SkeletonJobCard } from '@/components/ui/skeleton';
 import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
-import { useLocalDashboardData, Job } from '@/hooks/useLocalDashboardData';
+import { useEmployeeDashboardData, Job } from '@/hooks/useEmployeeDashboardData';
+import { apiFetch } from '@/services/api';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -36,25 +38,97 @@ export default function JobsScreen() {
     SecureStore.getItemAsync('user_role').then(r => setRole(r || 'employee'));
   }, []);
 
-  const { jobs, savedJobs, toggleSavedJob, refreshData, isLoading } = useLocalDashboardData();
+  const { savedJobs, toggleSavedJob } = useEmployeeDashboardData();
 
-  const [search, setSearch]           = useState('');
+  // Local pagination & fetching states
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isFetchingLocal, setIsFetchingLocal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
-  const filtered = jobs.filter(j => {
-    const matchSearch =
-      j.title.toLowerCase().includes(search.toLowerCase()) ||
-      j.companyName.toLowerCase().includes(search.toLowerCase()) ||
-      j.location.toLowerCase().includes(search.toLowerCase());
-    const matchFilter =
-      activeFilter === 'All' ||
-      j.workType === activeFilter ||
-      (activeFilter === 'Remote' && (j.location?.toLowerCase().includes('remote') || j.workType?.toLowerCase().includes('remote'))) ||
-      (activeFilter === 'Full-time' && (j.workType?.toLowerCase().includes('full') || j.workType?.toLowerCase().includes('permanent')));
-    return matchSearch && matchFilter;
-  });
+  // Debounce search input to avoid redundant requests
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Reset page and fetch new list when filters change
+  useEffect(() => {
+    setPage(1);
+    fetchJobs(1, debouncedSearch, activeFilter, false);
+  }, [debouncedSearch, activeFilter]);
+
+  const fetchJobs = async (pageNum: number, searchVal: string, filterVal: string, isAppend: boolean) => {
+    if (pageNum === 1 && !isRefreshing) {
+      setIsLoading(true);
+    }
+    setIsFetchingLocal(true);
+    try {
+      let url = `/jobs/?page=${pageNum}`;
+      if (searchVal) {
+        url += `&search=${encodeURIComponent(searchVal)}`;
+      }
+      if (filterVal === 'Remote') {
+        url += `&remote=true`;
+      } else if (filterVal === 'Full-time') {
+        url += `&employment_type=Full-time`;
+      }
+
+      const res = await apiFetch(url);
+      const results = Array.isArray(res) ? res : (res?.results || []);
+      const nextUrl = res?.next;
+
+      const formattedJobs = results.map((j: any) => ({
+        id: j.id.toString(),
+        title: j.title,
+        companyName: j.company_name,
+        companyLogoUrl: j.company_logo_url,
+        companyIsVerified: true,
+        location: j.location,
+        workType: j.is_remote ? "Remote" : ("Hybrid" as const),
+        salaryRange: j.salary_range,
+        commissionRange: j.commission_range,
+        description: j.description,
+        requirements: j.requirements || [],
+        status: j.status || "approved",
+        postedAt: j.created_at || new Date().toISOString(),
+      }));
+
+      // Only show approved jobs
+      const approvedOnly = formattedJobs.filter((j: any) => j.status === 'approved');
+
+      setJobs(prev => isAppend ? [...prev, ...approvedOnly] : approvedOnly);
+      setHasMore(!!nextUrl);
+    } catch (e) {
+      console.warn("Failed to fetch jobs in explore:", e);
+    } finally {
+      setIsLoading(false);
+      setIsFetchingLocal(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setPage(1);
+    await fetchJobs(1, debouncedSearch, activeFilter, false);
+    setIsRefreshing(false);
+  };
+
+  const handleLoadMore = () => {
+    if (!hasMore || isFetchingLocal) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchJobs(nextPage, debouncedSearch, activeFilter, true);
+  };
 
   const handleSave = (id: string) => {
     toggleSavedJob(id);
@@ -232,35 +306,30 @@ export default function JobsScreen() {
       </Modal>
 
       {/* ── JOB LIST — search + filter scroll with jobs via ListHeaderComponent ── */}
-      {isLoading ? (
+      {isLoading && jobs.length === 0 ? (
         /* ── Skeleton loading — 4 placeholder job cards ── */
         <View style={[s.list, { paddingBottom: TabBarHeight + 24, paddingTop: 4 }]}>
           {/* Hero banner skeleton placeholder area is the real banner above */}
           {[1,2,3,4].map(k => <SkeletonJobCard key={k} style={{ marginBottom: 12 }} />)}
         </View>
-      ) : filtered.length === 0 && search === '' && activeFilter === 'All' ? (
-        <View style={s.empty}>
-          <View style={[s.emptyIconWrap, { backgroundColor: Palette.neutral100 }]}>
-            <Feather name="search" size={28} color={colors.textMuted} />
-          </View>
-          <Text style={[s.emptyTitle, { color: colors.text }]}>No roles found</Text>
-          <Text style={[s.emptySub, { color: colors.textMuted }]}>
-            Try adjusting your search or filters
-          </Text>
-          <Pressable
-            onPress={() => { setSearch(''); setActiveFilter('All'); }}
-            style={[s.clearBtn, { backgroundColor: Palette.accent600 }]}
-          >
-            <Text style={s.clearBtnText}>Clear Filters</Text>
-          </Pressable>
-        </View>
       ) : (
         <FlatList
-          data={filtered}
+          data={jobs}
           keyExtractor={j => j.id}
           renderItem={renderJob}
           contentContainerStyle={[s.list, { paddingBottom: TabBarHeight + 24 }]}
           showsVerticalScrollIndicator={false}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.4}
+          initialNumToRender={5}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
+          ListFooterComponent={isFetchingLocal && jobs.length > 0 ? (
+            <ActivityIndicator size="small" color={Palette.accent600} style={{ paddingVertical: 12 }} />
+          ) : null}
           ListHeaderComponent={
             <View>
               {/* ── Hero Banner ── */}
@@ -282,9 +351,9 @@ export default function JobsScreen() {
                     </Text>
                   </View>
 
-                  {/* 3D Illustration */}
+                  {/* 3D Illustration WebP */}
                   <Image
-                    source={require('@/assets/images/illustrations/browse_jobs_seeker.png')}
+                    source={require('@/assets/images/illustrations/browse_jobs_seeker.webp')}
                     style={s.heroImage}
                     contentFit="contain"
                   />

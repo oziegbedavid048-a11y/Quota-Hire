@@ -43,7 +43,7 @@ import {
   Colors, Palette, Shadow, BorderRadius,
   FontSize, FontWeight, Spacing, TabBarHeight,
 } from '@/constants/theme';
-import { useLocalDashboardData } from '@/hooks/useLocalDashboardData';
+import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
 import { GlassView } from 'expo-glass-effect';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -426,7 +426,7 @@ export default function EmployeeDashboardScreen() {
     user, jobs, applications, savedJobs, analytics,
     profileScore, profileItems, toggleSavedJob, refreshData, isLoading,
     isFetching, hasError, isNetworkError,
-  } = useLocalDashboardData();
+  } = useEmployeeDashboardData();
 
   const firstName    = user.name.split(' ')[0];
   const approvedJobs = jobs.filter(j => j.status === 'approved').slice(0, 4);

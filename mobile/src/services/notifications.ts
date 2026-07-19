@@ -12,11 +12,41 @@
  * (Android) on your behalf.
  */
 
-import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { apiFetch } from "./api";
+
+// Try to require expo-notifications, otherwise stub it for Expo Go (where SDK 53+ removed native remote notifications)
+let Notifications: any = null;
+let isNotificationsSupported = false;
+
+try {
+  Notifications = require("expo-notifications");
+  isNotificationsSupported = true;
+} catch (e) {
+  console.warn(
+    "[expo-notifications] Native push notification module is not supported in the Expo Go sandbox (SDK 53+). Push notifications are disabled in this session. Build a custom Development Client to test notifications."
+  );
+
+  // Stub the Notifications object to prevent crashes
+  Notifications = {
+    setNotificationHandler: () => {},
+    setNotificationChannelAsync: async () => {},
+    getPermissionsAsync: async () => ({ status: "denied" }),
+    requestPermissionsAsync: async () => ({ status: "denied" }),
+    getExpoPushTokenAsync: async () => ({ data: "" }),
+    addNotificationResponseReceivedListener: () => ({ remove: () => {} }),
+    AndroidImportance: {
+      MAX: 4,
+      HIGH: 3,
+      DEFAULT: 2,
+      LOW: 1,
+      MIN: 0,
+      NONE: -1,
+    },
+  };
+}
 
 // ── Foreground notification behaviour ────────────────────────────────────────
 // Show alert + play sound + update badge even when the app is open in the
@@ -49,6 +79,11 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync(): Promise<
   string | null
 > {
+  if (!isNotificationsSupported) {
+    console.log("[Push] Skipping — notifications not supported in this client (Expo Go)");
+    return null;
+  }
+
   // Push notifications only work on physical devices.
   // Simulators/emulators will always return null here.
   if (!Device.isDevice) {

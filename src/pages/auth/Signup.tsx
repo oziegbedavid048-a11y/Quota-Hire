@@ -501,8 +501,9 @@ export const Signup = () => {
         {/* ── RIGHT PANEL: 3D FIGURE + TEXT (desktop only) ── */}
         <div className="hidden lg:flex flex-row items-center justify-start relative z-20 pointer-events-none -ml-12 xl:-ml-20">
           <motion.img
-            src={`${import.meta.env.BASE_URL}images/signup_human_3d.png`}
+            src={`${import.meta.env.BASE_URL}images/signup_human_3d.webp`}
             alt="Sign Up Illustration"
+            loading="lazy"
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}

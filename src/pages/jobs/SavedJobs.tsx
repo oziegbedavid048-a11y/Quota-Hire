@@ -307,8 +307,9 @@ export const SavedJobs = () => {
 
             <div className="w-32 h-32 md:w-48 md:h-48 shrink-0 mb-4 md:mb-0">
               <img
-                src={`${import.meta.env.BASE_URL}images/saved_jobs_illustration.png`}
+                src={`${import.meta.env.BASE_URL}images/saved_jobs_illustration.webp`}
                 alt="Saved Jobs 3D Illustration"
+                loading="lazy"
                 className="w-full h-full object-contain drop-shadow-xl animate-float"
               />
             </div>

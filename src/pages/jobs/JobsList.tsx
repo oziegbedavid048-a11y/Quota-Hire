@@ -3,17 +3,27 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, MapPin, Banknote, Briefcase, Filter, BadgeCheck, TrendingUp } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext, apiFetch } from '../../context/AppContext';
 import { getCurrencySymbol } from '../../utils/currencies';
+
 export const JobsList = () => {
-  const { jobs, currentUser, loading } = useAppContext();
+  const { currentUser, loading } = useAppContext();
+  
+  // Local pagination & fetching states
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [isFetchingLocal, setIsFetchingLocal] = useState(false);
+
+  // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterType, setFilterType] = useState('All');
-  const [visibleCount, setVisibleCount] = useState(5);
 
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Handle URL share code redirect/prefill
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const code = queryParams.get('code');
@@ -26,6 +36,74 @@ export const JobsList = () => {
       }
     }
   }, [location.search, currentUser, loading, navigate]);
+
+  // Debounce search input to avoid spamming network requests
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Reset pagination and fetch new list when filters/search values update
+  useEffect(() => {
+    setPage(1);
+    fetchJobs(1, debouncedSearch, filterType, false);
+  }, [debouncedSearch, filterType]);
+
+  const fetchJobs = async (pageNum: number, searchVal: string, filterVal: string, isAppend: boolean) => {
+    setIsFetchingLocal(true);
+    try {
+      let url = `/jobs/?page=${pageNum}`;
+      if (searchVal) {
+        url += `&search=${encodeURIComponent(searchVal)}`;
+      }
+      if (filterVal === 'Remote') {
+        url += `&remote=true`;
+      } else if (filterVal !== 'All') {
+        url += `&employment_type=${encodeURIComponent(filterVal)}`;
+      }
+
+      const res = await apiFetch(url);
+      const results = Array.isArray(res) ? res : (res?.results || []);
+      const nextUrl = res?.next;
+
+      const formattedJobs = results.map((j: any) => ({
+        id: j.id.toString(),
+        companyId: j.custom_company_name ? `external-${encodeURIComponent(j.custom_company_name)}` : (j.company_id?.toString() || j.company?.toString() || j.company_name),
+        companyName: j.company_name,
+        companyLogoUrl: j.company_logo_url,
+        companyIsVerified: true,
+        title: j.title,
+        description: j.description,
+        requirements: j.requirements || [],
+        employment_type: j.employment_type,
+        isRemote: j.is_remote,
+        location: j.location,
+        currency: j.currency,
+        salaryRange: j.salary_range,
+        commissionRange: j.commission_range,
+        status: j.status,
+        createdAt: j.created_at,
+        job_code: j.job_code,
+      }));
+
+      setJobs(prev => isAppend ? [...prev, ...formattedJobs] : formattedJobs);
+      setHasMore(!!nextUrl);
+    } catch (e) {
+      console.warn("Failed to fetch jobs:", e);
+    } finally {
+      setIsFetchingLocal(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (isFetchingLocal) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchJobs(nextPage, debouncedSearch, filterType, true);
+  };
+
   const formatRelativeTime = (dateString?: string) => {
     if (!dateString) return 'Recent';
     const date = new Date(dateString);
@@ -41,25 +119,11 @@ export const JobsList = () => {
 
   // Only show approved jobs
   const approvedJobs = jobs.filter((j) => j.status === 'approved');
-  const filteredJobs = approvedJobs.filter((job) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch =
-      job.title.toLowerCase().includes(term) ||
-      (job.companyName && job.companyName.toLowerCase().includes(term)) ||
-      (job.location && job.location.toLowerCase().includes(term)) ||
-      (job.job_code && job.job_code.toLowerCase().includes(term));
-      
-    const matchesType = filterType === 'All' ? true : 
-      (job.employment_type === filterType || (filterType === 'Remote' && job.isRemote));
 
-    return matchesSearch && matchesType;
-  });
-
-  const displayedJobs = filteredJobs.slice(0, visibleCount);
   return (
     <div className="min-h-screen py-12">
       <div className="container mx-auto px-4 max-w-5xl">
-        {/* Hero Banner with 3D Illustration */}
+        {/* Hero Banner with WebP 3D Illustration */}
         <div className="mb-10 relative overflow-hidden rounded-[28px] bg-gradient-to-r from-warm-50 to-accent-50 dark:from-warm-900/20 dark:to-accent-900/20 border border-neutral-100 dark:border-neutral-800 p-6 md:p-8">
           <div className="absolute -left-10 -bottom-10 w-64 h-64 bg-warm-200/40 dark:bg-warm-900/40 rounded-full blur-[60px]" />
           <div className="relative z-10 flex flex-col-reverse md:flex-row items-center gap-6">
@@ -73,7 +137,7 @@ export const JobsList = () => {
               <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-5">
                 Browse exclusive sales opportunities at top-tier companies.
               </p>
-              {/* Search bar moved into banner */}
+              {/* Search bar */}
               <div className="flex items-center gap-2 bg-white dark:bg-neutral-900 p-1.5 rounded-xl shadow-subtle border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl mx-auto md:mx-0">
                 <div className="relative flex-1 min-w-0">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400" size={16} />
@@ -92,8 +156,9 @@ export const JobsList = () => {
             </div>
             <div className="w-48 h-48 md:w-56 md:h-56 shrink-0">
               <img
-                src={`${import.meta.env.BASE_URL}images/browse_jobs_seeker.png`}
-                alt="Job Seeker 3D Character"
+                src={`${import.meta.env.BASE_URL}images/browse_jobs_seeker.webp`}
+                alt="Job Seeker WebP Character"
+                loading="lazy"
                 className="w-full h-full object-contain drop-shadow-xl animate-float"
               />
             </div>
@@ -119,8 +184,8 @@ export const JobsList = () => {
 
         {/* Jobs List */}
         <div className="space-y-4">
-          {filteredJobs.length === 0 ?
-          <div className="text-center py-20 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+          {approvedJobs.length === 0 && !isFetchingLocal ? (
+            <div className="text-center py-20 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
               <Briefcase className="mx-auto h-12 w-12 text-neutral-300 dark:text-neutral-700 mb-4" />
               <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">
                 No jobs found
@@ -129,32 +194,24 @@ export const JobsList = () => {
                 Try adjusting your search terms or filters.
               </p>
               <Button
-              variant="outline"
-              className="mt-6"
-              onClick={() => {
-                setSearchTerm('');
-                setFilterType('All');
-              }}>
-              
+                variant="outline"
+                className="mt-6"
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterType('All');
+                }}
+              >
                 Clear Filters
               </Button>
-            </div> :
-
-          displayedJobs.map((job, index) =>
-          <motion.div
-            key={job.id}
-            initial={{
-              opacity: 0,
-              y: 20
-            }}
-            animate={{
-              opacity: 1,
-              y: 0
-            }}
-            transition={{
-              delay: index * 0.05
-            }}>
-            
+            </div>
+          ) : (
+            approvedJobs.map((job, index) => (
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
                 <Link to={`/jobs/${job.id}`} className="block group">
                   <div className="bg-white dark:bg-neutral-900 p-5 md:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md hover:border-accent-300 dark:hover:border-accent-700 transition-all duration-200">
                     
@@ -162,7 +219,12 @@ export const JobsList = () => {
                       <div className="flex items-start gap-3 md:gap-4 w-full md:w-auto overflow-hidden">
                         {job.companyLogoUrl ? (
                           <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden flex-shrink-0 border border-neutral-200 dark:border-neutral-700">
-                            <img src={job.companyLogoUrl} alt={job.companyName} className="w-full h-full object-cover" />
+                            <img 
+                              src={job.companyLogoUrl} 
+                              alt={job.companyName} 
+                              loading="lazy" 
+                              className="w-full h-full object-cover" 
+                            />
                           </div>
                         ) : (
                           <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-900 dark:text-white font-bold text-xl flex-shrink-0 group-hover:bg-accent-600 group-hover:text-white transition-colors">
@@ -192,7 +254,7 @@ export const JobsList = () => {
                       
                       <div className="hidden md:flex flex-col items-end shrink-0">
                         <span className="text-xs font-medium text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50 px-2.5 py-1 rounded-md">
-                          {formatRelativeTime(job.createdAt || (job as any).created_at)}
+                          {formatRelativeTime(job.createdAt)}
                         </span>
                       </div>
                     </div>
@@ -206,11 +268,6 @@ export const JobsList = () => {
                       {job.commissionRange && (
                         <span className="inline-flex items-center gap-1.5 text-sm font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-lg">
                           <TrendingUp size={14} /> OTE {getCurrencySymbol(job.currency)}{job.commissionRange}
-                        </span>
-                      )}
-                      {!job.salaryRange && !job.commissionRange && (
-                        <span className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-3 py-1 rounded-lg">
-                          <Banknote size={14} /> Competitive
                         </span>
                       )}
                       {job.isRemote ? (
@@ -241,13 +298,14 @@ export const JobsList = () => {
 
                     <div className="flex items-center justify-between mt-2 pt-4 border-t border-neutral-100 dark:border-neutral-800/50">
                       <span className="md:hidden text-xs font-medium text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50 px-2.5 py-1 rounded-md">
-                        {formatRelativeTime(job.createdAt || (job as any).created_at)}
+                        {formatRelativeTime(job.createdAt)}
                       </span>
                       <div className="hidden md:block flex-1"></div>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="ml-auto w-auto group-hover:bg-accent-600 group-hover:text-white group-hover:border-accent-600 transition-colors shadow-sm">
+                        className="ml-auto w-auto group-hover:bg-accent-600 group-hover:text-white group-hover:border-accent-600 transition-colors shadow-sm"
+                      >
                         View Details
                       </Button>
                     </div>
@@ -255,15 +313,21 @@ export const JobsList = () => {
                   </div>
                 </Link>
               </motion.div>
-          )
-          }
+            ))
+          )}
+
+          {isFetchingLocal && (
+            <div className="flex justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent-600"></div>
+            </div>
+          )}
           
-          {filteredJobs.length > visibleCount && (
+          {hasMore && !isFetchingLocal && (
             <div className="flex justify-center mt-10">
               <Button
                 variant="outline"
                 className="px-8 py-2.5 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-900 dark:text-white border-neutral-200 dark:border-neutral-700 shadow-sm transition-all"
-                onClick={() => setVisibleCount(v => v + 5)}
+                onClick={handleLoadMore}
               >
                 See More Jobs
               </Button>
@@ -271,6 +335,6 @@ export const JobsList = () => {
           )}
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 };

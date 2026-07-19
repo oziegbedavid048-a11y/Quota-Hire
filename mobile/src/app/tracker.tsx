@@ -16,7 +16,7 @@ import { SkeletonApplicationCard } from '@/components/ui/skeleton';
 import {
   Colors, Palette, Shadow, BorderRadius, TabBarHeight,
 } from '@/constants/theme';
-import { useLocalDashboardData, Application } from '@/hooks/useLocalDashboardData';
+import { useEmployeeDashboardData, Application } from '@/hooks/useEmployeeDashboardData';
 
 // Exactly matches web ApplicationTracker statusConfig
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
@@ -40,7 +40,7 @@ export default function TrackerScreen() {
     SecureStore.getItemAsync('user_role').then(r => setRole(r || 'employee'));
   }, []);
 
-  const { applications, jobs, isLoading } = useLocalDashboardData();
+  const { applications, jobs, isLoading } = useEmployeeDashboardData();
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<typeof ALL_STATUSES[number]>('all');

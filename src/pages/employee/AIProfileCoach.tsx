@@ -78,7 +78,7 @@ export const AIProfileCoach = () => {
               </div>
               <div className="w-32 h-32 md:w-44 md:h-44 shrink-0">
                 <img
-                  src={`${import.meta.env.BASE_URL}images/ai_coach_orb.png`}
+                  src={`${import.meta.env.BASE_URL}images/ai_coach_orb.webp`}
                   alt="AI Coach 3D Character"
                   loading="lazy"
                   decoding="async"

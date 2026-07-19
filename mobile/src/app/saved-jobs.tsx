@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
-import { useLocalDashboardData } from '@/hooks/useLocalDashboardData';
+import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
 import { SkeletonJobCard } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -219,7 +219,7 @@ export default function SavedJobsScreen() {
 
   const {
     jobs, savedJobs, toggleSavedJob, isFetching, isLoading, refreshData,
-  } = useLocalDashboardData();
+  } = useEmployeeDashboardData();
 
   const savedList = jobs.filter(j => savedJobs.includes(j.id));
 
