@@ -1,0 +1,1 @@
+const n=e=>{if(!e||e.role!=="employee")return 0;let t=10;return e.name&&e.phoneNumber&&e.location&&(t+=10),e.title&&(t+=15),e.bio&&e.bio.length>10&&(t+=15),e.skills&&e.skills.length>0&&(t+=20),(e.experienceYears>0||e.education)&&(t+=10),(e.resumeUrl||e.resumeFile)&&(t+=20),Math.min(t,100)};export{n as c};
