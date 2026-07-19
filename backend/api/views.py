@@ -744,7 +744,7 @@ class JobListCreateView(generics.ListCreateAPIView):
             'company', 'company__company_profile'
         ).only(
             'id', 'company__id', 'company__username', 'company__first_name', 'company__last_name',
-            'company__is_verified', 'company__avatar', 'company__company_profile__logo_url',
+            'company__email_verified', 'company__avatar', 'company__company_profile__logo_url', 'company__company_profile__company_name',
             'title', 'description', 'requirements', 'employment_type',
             'is_remote', 'location', 'salary_range', 'commission_range', 'currency',
             'custom_company_name', 'status', 'created_at', 'job_code'
@@ -1252,18 +1252,20 @@ class MyApplicationsView(generics.ListAPIView):
         user = self.request.user
         if user.role == 'company':
             return Application.objects.filter(job__company=user).select_related(
-                'job', 'employee'
+                'job', 'job__company', 'job__company__company_profile', 'employee'
             ).only(
-                'id', 'job__id', 'job__title', 'job__company_name',
+                'id', 'job__id', 'job__title', 'job__custom_company_name',
+                'job__company__id', 'job__company__username', 'job__company__first_name', 'job__company__last_name',
+                'job__company__avatar', 'job__company__company_profile__logo_url', 'job__company__company_profile__company_name',
                 'employee__id', 'employee__username', 'employee__first_name', 'employee__last_name',
                 'status', 'applied_at'
             )
         return Application.objects.filter(employee=user).select_related(
             'job', 'job__company', 'job__company__company_profile'
         ).only(
-            'id', 'job__id', 'job__title', 'job__company_name',
+            'id', 'job__id', 'job__title', 'job__custom_company_name',
             'job__company__id', 'job__company__username', 'job__company__first_name', 'job__company__last_name',
-            'job__company__avatar', 'job__company__company_profile__logo_url',
+            'job__company__avatar', 'job__company__company_profile__logo_url', 'job__company__company_profile__company_name',
             'employee__id', 'status', 'applied_at'
         )
 
