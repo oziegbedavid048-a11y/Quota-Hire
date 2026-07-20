@@ -251,6 +251,12 @@ export default function JobsScreen() {
 
   return (
     <View style={s.root}>
+      <LinearGradient
+        colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
 
       {/* Filter Selector Modal — lives outside FlatList so it overlays properly */}
       <Modal

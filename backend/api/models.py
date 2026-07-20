@@ -181,11 +181,11 @@ class Job(models.Model):
         related_name='posted_jobs',
         limit_choices_to={'role': UserRole.COMPANY},
     )
-    title            = models.CharField(max_length=300)
+    title            = models.CharField(max_length=300, db_index=True)
     description      = models.TextField()
     requirements     = models.JSONField(default=list)   # ["5+ years SaaS", ...]
     employment_type  = models.CharField(max_length=100, default='Full-time', blank=True)
-    is_remote        = models.BooleanField(default=False)
+    is_remote        = models.BooleanField(default=False, db_index=True)
     location         = models.CharField(max_length=200, blank=True)
     salary_range     = models.CharField(max_length=200, blank=True)
     commission_range = models.CharField(max_length=200, blank=True)
@@ -196,11 +196,11 @@ class Job(models.Model):
     company_address  = models.CharField(max_length=300, blank=True)
     custom_company_name = models.CharField(max_length=200, blank=True)
     external_apply_url = models.URLField(max_length=1000, blank=True, null=True, help_text="Link to external company website for applying")
-    status           = models.CharField(max_length=20, choices=JobStatus.choices, default=JobStatus.PENDING)
+    status           = models.CharField(max_length=20, choices=JobStatus.choices, default=JobStatus.PENDING, db_index=True)
     package          = models.CharField(max_length=50, choices=JobPackage.choices, blank=True)
     job_code         = models.CharField(max_length=50, unique=True, blank=True, null=True)
     is_deleted       = models.BooleanField(default=False)
-    created_at       = models.DateTimeField(auto_now_add=True)
+    created_at       = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at       = models.DateTimeField(auto_now=True)
 
     objects = JobManager()
@@ -269,9 +269,9 @@ class Application(models.Model):
         related_name='applications',
         limit_choices_to={'role': UserRole.EMPLOYEE},
     )
-    status       = models.CharField(max_length=20, choices=ApplicationStatus.choices, default=ApplicationStatus.PENDING)
+    status       = models.CharField(max_length=20, choices=ApplicationStatus.choices, default=ApplicationStatus.PENDING, db_index=True)
     cover_letter = models.TextField(blank=True)
-    applied_at   = models.DateTimeField(auto_now_add=True)
+    applied_at   = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -336,8 +336,8 @@ class Notification(models.Model):
     user       = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notifications')
     title      = models.CharField(max_length=300)
     message    = models.TextField()
-    read       = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    read       = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         verbose_name        = 'Notification'
@@ -434,10 +434,11 @@ class PaymentTransaction(models.Model):
         max_length=20,
         choices=PaymentStatus.choices,
         default=PaymentStatus.PENDING,
+        db_index=True,
     )
     # Paystack internal transaction ID (filled after successful verification)
     paystack_id = models.CharField(max_length=100, blank=True)
-    created_at  = models.DateTimeField(auto_now_add=True)
+    created_at  = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at  = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -559,7 +560,8 @@ class CommunityPost(models.Model):
     )
     content    = models.TextField(max_length=500)
     category   = models.CharField(
-        max_length=20, choices=CommunityCategory.choices, default=CommunityCategory.GENERAL
+        max_length=20, choices=CommunityCategory.choices, default=CommunityCategory.GENERAL,
+        db_index=True,
     )
     likes      = models.ManyToManyField(
         CustomUser, related_name='liked_posts', blank=True
@@ -568,7 +570,7 @@ class CommunityPost(models.Model):
     is_anonymous       = models.BooleanField(default=False, help_text='Hide author name from other users')
     hide_likes         = models.BooleanField(default=False, help_text='Hide like count from other users')
     comments_disabled  = models.BooleanField(default=False, help_text='Prevent others from commenting')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

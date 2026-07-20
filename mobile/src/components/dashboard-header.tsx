@@ -11,6 +11,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { Colors, Palette, FontSize, FontWeight, Shadow, BorderRadius } from '@/constants/theme';
+import Logo from '@/components/logo';
 
 interface DashboardHeaderProps {
   userName?: string;
@@ -57,11 +58,7 @@ export default function DashboardHeader({
     >
       {/* LEFT: Logo + Greeting */}
       <View style={styles.left}>
-        <Image
-          source={require('@/assets/images/logo.svg')}
-          style={styles.logo}
-          contentFit="contain"
-        />
+        <Logo size={36} />
         <View style={styles.greetingBlock}>
           <Text style={[styles.greetingLine, { color: colors.textSecondary }]}>
             {greeting}

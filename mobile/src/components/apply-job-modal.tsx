@@ -167,9 +167,9 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
   );
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <View style={s.overlay}>
@@ -407,6 +407,7 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
         onClose={() => setCvWizardVisible(false)}
         templateType="standard"
         prefilledHeadline={job.title}
+        job={job}
         onSuccess={handleCVGeneratedSuccess}
       />
       </KeyboardAvoidingView>

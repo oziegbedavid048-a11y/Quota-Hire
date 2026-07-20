@@ -256,7 +256,7 @@ export default function CompanyPostJob() {
               <Text style={styles.heroSub}>Find and recruit sales superstars in simple guided steps.</Text>
             </View>
             <Image
-              source={require('../../assets/images/illustrations/post_job_recruiter.png')}
+              source={require('../../assets/images/illustrations/post_job_recruiter.webp')}
               style={{ width: 80, height: 80 }}
               contentFit="contain"
             />

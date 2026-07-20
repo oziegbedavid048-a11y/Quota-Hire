@@ -202,7 +202,7 @@ export default function CompanyApplicants() {
                 <Text style={styles.heroSub}>Review anonymized profiles and shortlist top performers.</Text>
               </View>
               <Image
-                source={require('../../assets/images/illustrations/applicant_reviewer.png')}
+                source={require('../../assets/images/illustrations/applicant_reviewer.webp')}
                 style={{ width: 80, height: 80 }}
                 contentFit="contain"
               />

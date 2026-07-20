@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system/legacy';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { WebView } from 'react-native-webview';
 
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
@@ -55,6 +56,7 @@ interface CVWizardModalProps {
   templateType: 'standard' | 'europass';
   onSuccess: () => void;
   prefilledHeadline?: string;
+  job?: any;
 }
 
 const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
@@ -388,7 +390,51 @@ const compileEuropassHTML = (profile: any, data: any) => {
   `;
 };
 
-export default function CVWizardModal({ visible, onClose, templateType, onSuccess, prefilledHeadline }: CVWizardModalProps) {
+const buildCoverLetterText = (
+  profile: any,
+  headline: string,
+  skills: string,
+  workEntries: WorkEntry[],
+  job: any
+) => {
+  const years = profile?.employee_profile?.experience_years || profile?.experience_years || 0;
+  const companyName = job?.companyName || 'your organisation';
+  const jobTitle = job?.title || 'the desired position';
+
+  // Get skills
+  const skillsList = skills
+    ? skills.split(',').map((s) => s.trim()).filter(Boolean)
+    : (profile?.skills || []);
+  const topSkills = skillsList.slice(0, 3).join(', ');
+
+  const today = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const p1 = `I am writing to express my strong interest in the ${jobTitle} position at ${companyName}. With my background as a ${headline}, I am confident that my skills and dedication make me an excellent candidate for this role.`;
+
+  const p2 = years > 0
+    ? `Over the past ${years} years, I have built deep expertise in this domain${topSkills ? `, specifically in ${topSkills}` : ''}. This experience has equipped me with the ability to deliver measurable results while working collaboratively within dynamic team environments.`
+    : `Throughout my career, I have developed strong expertise in my domain${topSkills ? `, particularly in ${topSkills}` : ''}. I thrive in fast-paced environments and am committed to delivering high-quality results that exceed expectations.`;
+
+  // Draw achievement from the first work entry's duties
+  const firstWork = workEntries?.[0];
+  const dutiesText = firstWork?.duties || '';
+  const firstSentence = dutiesText.split(/[.\n]+/)[0]?.trim();
+  const achievement = firstSentence && firstSentence.length > 10 ? firstSentence : '';
+
+  const p3 = achievement
+    ? `In my previous roles, I have successfully accomplished key milestones: ${achievement} I am confident in bringing this same level of commitment and performance to ${companyName}.`
+    : `I am committed to continuous improvement and professional excellence. I believe in building strong relationships and delivering consistent value to every stakeholder I work with, fostering an environment of collaboration and high achievement.`;
+
+  const p4 = `I would welcome the opportunity to discuss how my background aligns with the goals of ${companyName}. Thank you for your time and consideration. I look forward to the possibility of contributing to your team and helping drive outstanding results.`;
+
+  return [p1, p2, p3, p4].join('\n\n');
+};
+
+export default function CVWizardModal({ visible, onClose, templateType, onSuccess, prefilledHeadline, job }: CVWizardModalProps) {
   const colors = Colors.light;
 
   const [step, setStep] = useState(1);
@@ -396,7 +442,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [profile, setProfile] = useState<any>(null);
 
   const isEuropass = templateType === 'europass';
-  const totalSteps = isEuropass ? 5 : 3;
+  const totalSteps = isEuropass ? (job ? 6 : 5) : (job ? 4 : 3);
 
   // ── Form State ──────────────────────────────────────────────────────────────
   // Common / Standard States
@@ -407,6 +453,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [certifications, setCertifications] = useState('');
   const [strengths, setStrengths] = useState('');
   const [workEntries, setWorkEntries] = useState<WorkEntry[]>([{ role: '', company: '', period: '', duties: '' }]);
+  const [coverLetter, setCoverLetter] = useState('');
 
   // Europe (Europass) States
   const [firstName, setFirstName] = useState('');
@@ -431,6 +478,19 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [otherCompetencies, setOtherCompetencies] = useState('');
   const [drivingLicence, setDrivingLicence] = useState('');
   const [hobbies, setHobbies] = useState('');
+  const getCompiledHTML = () => {
+    if (isEuropass) {
+      return compileEuropassHTML(profile, {
+        firstName, lastName, dateOfBirth, nationality, address, phone, email, linkedinUrl, website, summary,
+        workEntries, eduEntries, motherTongue, foreignLanguages, digitalSkills,
+        communicationCompetencies, organisationalCompetencies, jobRelatedCompetencies, otherCompetencies, drivingLicence, certifications, hobbies
+      });
+    } else {
+      return compileStandardHTML(profile, {
+        headline, education, skills, languages, certifications, strengths, workEntries
+      });
+    }
+  };
 
   // Load profile data to prefill details
   useEffect(() => {
@@ -459,6 +519,20 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
         .finally(() => setLoading(false));
     }
   }, [visible, prefilledHeadline]);
+
+  // Automatically generate cover letter when we reach the Cover Letter step
+  useEffect(() => {
+    if (job && step === totalSteps && !coverLetter) {
+      const generated = buildCoverLetterText(
+        profile,
+        headline || 'Professional',
+        skills || digitalSkills || '',
+        workEntries,
+        job
+      );
+      setCoverLetter(generated);
+    }
+  }, [step, totalSteps, job, profile, headline, skills, digitalSkills, workEntries, coverLetter]);
 
   // AI Suggest for Standard template
   const handleAISuggest = () => {
@@ -637,8 +711,11 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
           template_id: isEuropass ? 'EU1' : 'T14',
           template_name: isEuropass ? 'Europass Template' : 'Steel Blue Banner',
           target_role: isEuropass ? (headline || 'Europe CV') : headline,
+          target_company: job?.companyName || '',
           cv_pdf_base64: base64Pdf,
+          cover_letter_text: job ? coverLetter : '',
           work_experience_json: workEntries,
+          job_id: job?.id || undefined,
         }),
       });
 
@@ -655,9 +732,9 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
         <View style={s.overlay}>
@@ -844,6 +921,42 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           placeholder="e.g. HubSpot Sales, AWS Practitioner"
                           placeholderTextColor={colors.textMuted}
                           style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
+                    </Animated.View>
+                  )}
+
+                  {step === 4 && job && (
+                    <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
+                      <Text style={[s.sectionTitle, { color: colors.text, marginBottom: 4 }]}>Final Application Review</Text>
+                      
+                      {/* CV Design Preview */}
+                      <View style={{ marginBottom: 12 }}>
+                        <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>Tailored CV Design Preview</Text>
+                        <View style={[s.previewContainer, { borderColor: colors.border, backgroundColor: '#fff' }]}>
+                          <WebView
+                            originWhitelist={['*']}
+                            source={{ html: getCompiledHTML() }}
+                            style={{ flex: 1 }}
+                            scalesPageToFit={true}
+                          />
+                          {/* Absolute overlay to intercept touches and prevent clicking/scrolling */}
+                          <View style={StyleSheet.absoluteFill} onStartShouldSetResponder={() => true} />
+                        </View>
+                      </View>
+
+                      {/* Cover Letter Section */}
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Generated Cover Letter</Text>
+                        <Text style={[s.sectionSub, { color: colors.textSecondary, marginBottom: 8 }]}>
+                          Tailored for the {job.title} position at {job.companyName || 'your organisation'}. Customize it below.
+                        </Text>
+                        <TextInput
+                          value={coverLetter}
+                          onChangeText={setCoverLetter}
+                          multiline
+                          numberOfLines={10}
+                          style={[s.textArea, { borderColor: colors.border, color: colors.text, height: 220 }]}
                         />
                       </View>
                     </Animated.View>
@@ -1253,6 +1366,42 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                       </View>
                     </Animated.View>
                   )}
+
+                  {step === 6 && job && (
+                    <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
+                      <Text style={[s.sectionTitle, { color: colors.text, marginBottom: 4 }]}>Final Application Review</Text>
+                      
+                      {/* CV Design Preview */}
+                      <View style={{ marginBottom: 12 }}>
+                        <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>Tailored CV Design Preview</Text>
+                        <View style={[s.previewContainer, { borderColor: colors.border, backgroundColor: '#fff' }]}>
+                          <WebView
+                            originWhitelist={['*']}
+                            source={{ html: getCompiledHTML() }}
+                            style={{ flex: 1 }}
+                            scalesPageToFit={true}
+                          />
+                          {/* Absolute overlay to intercept touches and prevent clicking/scrolling */}
+                          <View style={StyleSheet.absoluteFill} onStartShouldSetResponder={() => true} />
+                        </View>
+                      </View>
+
+                      {/* Cover Letter Section */}
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Generated Cover Letter</Text>
+                        <Text style={[s.sectionSub, { color: colors.textSecondary, marginBottom: 8 }]}>
+                          Tailored for the {job.title} position at {job.companyName || 'your organisation'}. Customize it below.
+                        </Text>
+                        <TextInput
+                          value={coverLetter}
+                          onChangeText={setCoverLetter}
+                          multiline
+                          numberOfLines={10}
+                          style={[s.textArea, { borderColor: colors.border, color: colors.text, height: 220 }]}
+                        />
+                      </View>
+                    </Animated.View>
+                  )}
                 </>
               )}
 
@@ -1333,6 +1482,14 @@ const s = StyleSheet.create({
   stepContainer: {
     gap: 16,
   },
+  previewContainer: {
+    height: 260,
+    borderWidth: 1,
+    borderRadius: BorderRadius.card,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 4,
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1342,6 +1499,11 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.extrabold,
+  },
+  sectionSub: {
+    fontSize: FontSize.xs,
+    lineHeight: 18,
+    marginBottom: 8,
   },
   aiBtn: {
     flexDirection: 'row',

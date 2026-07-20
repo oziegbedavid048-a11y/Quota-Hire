@@ -71,6 +71,12 @@ export default function CVScreen() {
 
   return (
     <View style={s.root}>
+      <LinearGradient
+        colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: TabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
@@ -99,7 +105,7 @@ export default function CVScreen() {
 
             {/* 3D Illustration */}
             <Image
-              source={require('@/assets/images/resume_3d.png')}
+              source={require('@/assets/images/resume_3d.webp')}
               style={s.heroImage}
               contentFit="contain"
             />

@@ -65,6 +65,12 @@ export default function TrackerScreen() {
 
   return (
     <View style={s.safe}>
+      <LinearGradient
+        colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={[s.scroll, { paddingBottom: TabBarHeight + 24 }]}
@@ -81,7 +87,7 @@ export default function TrackerScreen() {
           <View style={s.heroInner}>
             <View style={{ alignItems: 'center', marginBottom: 16, width: '100%' }}>
               <Image
-                source={require('@/assets/images/tracker_illustration.png')}
+                source={require('@/assets/images/tracker_illustration.webp')}
                 style={{ width: 140, height: 140 }}
                 resizeMode="contain"
               />

@@ -84,7 +84,7 @@ export default function CompanyMyJobs() {
               <Text style={styles.heroSub}>Track approval status, listing details, and manage applicants.</Text>
             </View>
             <Image
-              source={require('../../assets/images/illustrations/my_jobs_manager.png')}
+              source={require('../../assets/images/illustrations/my_jobs_manager.webp')}
               style={{ width: 80, height: 80 }}
               contentFit="contain"
             />

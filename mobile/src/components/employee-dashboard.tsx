@@ -555,7 +555,7 @@ export default function EmployeeDashboardScreen() {
 
             {/* 3D Illustration — employee_welcome.png */}
             <Image
-              source={require('@/assets/images/employee_welcome.png')}
+              source={require('@/assets/images/employee_welcome.webp')}
               style={styles.heroImage}
               contentFit="contain"
               transition={300}
@@ -591,7 +591,7 @@ export default function EmployeeDashboardScreen() {
               <Text style={{ color: colors.text, fontWeight: FontWeight.bold }}>
                 {savedJobs.length} saved role{savedJobs.length !== 1 ? 's' : ''}
               </Text>
-              {'. '}Keep pushing — your next role is waiting.
+              {'. '}Keep pushing! Your next role is waiting.
             </Text>
 
             {/* CTA Buttons — Browse Jobs + CV Generator */}

@@ -256,7 +256,7 @@ export default function SettingsScreen() {
       style={s.root}
     >
       <LinearGradient
-        colors={['#FFFBEB', '#FFFDF5', '#FFFBEB']}
+        colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

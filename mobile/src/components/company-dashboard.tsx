@@ -262,7 +262,7 @@ export default function CompanyDashboardScreen() {
 
             {/* 3D Illustration — post_job_recruiter.png (matches web) */}
             <Image
-              source={require('../../assets/images/illustrations/post_job_recruiter.png')}
+              source={require('../../assets/images/illustrations/post_job_recruiter.webp')}
               style={styles.heroImage}
               contentFit="contain"
               transition={300}

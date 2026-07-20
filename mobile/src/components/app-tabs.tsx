@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Palette, Shadow, BorderRadius } from '@/constants/theme';
+import Logo from '@/components/logo';
 import { useNotificationsData } from '@/hooks/useNotificationsData';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
@@ -60,11 +61,7 @@ function FloatingHeader({
       <View style={styles.headerContent}>
         {/* Left: Logo + Brand */}
         <View style={styles.logoRow}>
-          <Image
-            source={require('@/assets/images/logo-glow.png')}
-            style={styles.logo}
-            contentFit="contain"
-          />
+          <Logo size={22} />
           <Text style={styles.logoText}>Quota Hire</Text>
         </View>
 
@@ -184,11 +181,7 @@ function Sidebar({
         {/* Sidebar header with logo */}
         <View style={styles.sidebarHeader}>
           <View style={styles.logoRow}>
-            <Image
-              source={require('@/assets/images/logo-glow.png')}
-              style={styles.logo}
-              contentFit="contain"
-            />
+            <Logo size={22} />
             <Text style={styles.logoText}>Quota Hire</Text>
           </View>
           <HapticPressable onPress={onClose} style={styles.closeBtn}>

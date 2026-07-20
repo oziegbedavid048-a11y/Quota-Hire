@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNotificationsData } from '@/hooks/useNotificationsData';
 import { SkeletonNotificationItem } from '@/components/ui/skeleton';
 
@@ -68,126 +69,134 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: TabBarHeight + 32 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Banner header title & description */}
-        <View style={styles.bannerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Stay updated with your latest job listings, candidate reviews, and pipeline matches.
-            </Text>
-          </View>
-          {notifications.some(n => !n.read) && (
-            <Pressable
-              onPress={handleMarkAllRead}
-              style={[styles.markAllBtn, { borderColor: Palette.accent600 }]}
-            >
-              <Feather name="check-square" size={12} color={Palette.accent600} />
-              <Text style={styles.markAllBtnText}>Mark all read</Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Content Card */}
-        <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }, Shadow.card]}>
-          {isLoading ? (
-            // Skeleton loading — matches the shape of real notification rows
-            <View>
-              {[1, 2, 3, 4, 5].map(k => (
-                <SkeletonNotificationItem key={k} />
-              ))}
-            </View>
-          ) : notifications.length === 0 ? (
-            <View style={styles.empty}>
-              <View style={[styles.emptyIconWrap, { backgroundColor: Palette.neutral50 }]}>
-                <Feather name="bell" size={28} color={Palette.neutral400} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>All Caught Up!</Text>
-              <Text style={[styles.emptySub, { color: colors.textMuted }]}>
-                You have no new notifications right now.
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <SafeAreaView style={[styles.safe, { backgroundColor: 'transparent' }]} edges={['top']}>
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: TabBarHeight + 32 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Banner header title & description */}
+          <View style={styles.bannerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.title, { color: colors.text }]}>Notifications</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+                Stay updated with your latest job listings, candidate reviews, and pipeline matches.
               </Text>
             </View>
-          ) : (
-            <View style={styles.list}>
-              {notifications.map((item, index) => {
-                const isExpanded = expandedIds.includes(item.id);
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => toggleExpand(item.id, item.read)}
-                    style={({ pressed }) => [
-                      styles.item,
-                      { borderBottomColor: colors.border, opacity: pressed ? 0.95 : 1 },
-                      !item.read && { backgroundColor: Palette.accent50 }, // distinct background for unread
-                      index === notifications.length - 1 && { borderBottomWidth: 0 },
-                    ]}
-                  >
-                    <View style={styles.itemLeft}>
-                      <View
-                        style={[
-                          styles.bellIconWrap,
-                          {
-                            backgroundColor: item.read
-                              ? Palette.neutral100
-                              : '#ffffff',
-                          },
-                        ]}
-                      >
-                        <Feather
-                          name={item.read ? 'bell' : 'bell-off'}
-                          size={15}
-                          color={item.read ? Palette.neutral400 : Palette.accent500}
-                        />
-                      </View>
-                      {!item.read && <View style={styles.unreadBadge} />}
-                    </View>
+            {notifications.some(n => !n.read) && (
+              <Pressable
+                onPress={handleMarkAllRead}
+                style={[styles.markAllBtn, { borderColor: Palette.accent600 }]}
+              >
+                <Feather name="check-square" size={12} color={Palette.accent600} />
+                <Text style={styles.markAllBtnText}>Mark all read</Text>
+              </Pressable>
+            )}
+          </View>
 
-                    <View style={styles.itemBody}>
-                      <View style={styles.itemHeader}>
+          {/* Content Card */}
+          <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }, Shadow.card]}>
+            {isLoading ? (
+              // Skeleton loading — matches the shape of real notification rows
+              <View>
+                {[1, 2, 3, 4, 5].map(k => (
+                  <SkeletonNotificationItem key={k} />
+                ))}
+              </View>
+            ) : notifications.length === 0 ? (
+              <View style={styles.empty}>
+                <View style={[styles.emptyIconWrap, { backgroundColor: Palette.neutral50 }]}>
+                  <Feather name="bell" size={28} color={Palette.neutral400} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>All Caught Up!</Text>
+                <Text style={[styles.emptySub, { color: colors.textMuted }]}>
+                  You have no new notifications right now.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.list}>
+                {notifications.map((item, index) => {
+                  const isExpanded = expandedIds.includes(item.id);
+                  return (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => toggleExpand(item.id, item.read)}
+                      style={({ pressed }) => [
+                        styles.item,
+                        { borderBottomColor: colors.border, opacity: pressed ? 0.95 : 1 },
+                        !item.read && { backgroundColor: Palette.accent50 }, // distinct background for unread
+                        index === notifications.length - 1 && { borderBottomWidth: 0 },
+                      ]}
+                    >
+                      <View style={styles.itemLeft}>
+                        <View
+                          style={[
+                            styles.bellIconWrap,
+                            {
+                              backgroundColor: item.read
+                                ? Palette.neutral100
+                                : '#ffffff',
+                            },
+                          ]}
+                        >
+                          <Feather
+                            name={item.read ? 'bell' : 'bell-off'}
+                            size={15}
+                            color={item.read ? Palette.neutral400 : Palette.accent500}
+                          />
+                        </View>
+                        {!item.read && <View style={styles.unreadBadge} />}
+                      </View>
+
+                      <View style={styles.itemBody}>
+                        <View style={styles.itemHeader}>
+                          <Text
+                            style={[
+                              styles.itemTitle,
+                              { color: colors.text },
+                              !item.read ? { fontWeight: FontWeight.bold, fontSize: FontSize.sm } : { fontWeight: FontWeight.semibold },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.title}
+                          </Text>
+                          <Text style={[styles.itemTime, { color: colors.textMuted }]}>
+                            {formatDate(item.createdAt)}
+                          </Text>
+                        </View>
                         <Text
                           style={[
-                            styles.itemTitle,
-                            { color: colors.text },
-                            !item.read ? { fontWeight: FontWeight.bold, fontSize: FontSize.sm } : { fontWeight: FontWeight.semibold },
+                            styles.itemMessage,
+                            { color: item.read ? colors.textSecondary : colors.text },
+                            !item.read && { fontWeight: '500' },
                           ]}
-                          numberOfLines={1}
+                          numberOfLines={isExpanded ? undefined : 2}
                         >
-                          {item.title}
+                          {item.message}
                         </Text>
-                        <Text style={[styles.itemTime, { color: colors.textMuted }]}>
-                          {formatDate(item.createdAt)}
-                        </Text>
+                        
+                        <View style={styles.expandRow}>
+                          <Text style={styles.expandText}>
+                            {isExpanded ? 'Tap to collapse' : 'Tap to read full notification'}
+                          </Text>
+                          <Feather name={isExpanded ? 'chevron-up' : 'chevron-down'} size={11} color={Palette.neutral400} />
+                        </View>
                       </View>
-                      <Text
-                        style={[
-                          styles.itemMessage,
-                          { color: item.read ? colors.textSecondary : colors.text },
-                          !item.read && { fontWeight: '500' },
-                        ]}
-                        numberOfLines={isExpanded ? undefined : 2}
-                      >
-                        {item.message}
-                      </Text>
-                      
-                      <View style={styles.expandRow}>
-                        <Text style={styles.expandText}>
-                          {isExpanded ? 'Tap to collapse' : 'Tap to read full notification'}
-                        </Text>
-                        <Feather name={isExpanded ? 'chevron-up' : 'chevron-down'} size={11} color={Palette.neutral400} />
-                      </View>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 

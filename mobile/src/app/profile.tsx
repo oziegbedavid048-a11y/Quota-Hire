@@ -41,6 +41,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as SecureStore from "expo-secure-store";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import * as Print from "expo-print";
 
 import {
   Colors,
@@ -480,9 +481,99 @@ export default function ProfileScreen() {
     }
   };
 
+  const generateCoverLetterPDF = async (cv: any, cvNameForFile: string) => {
+    if (!cv.cover_letter_text) return null;
+
+    const name = user?.name || "Applicant";
+    const email = user?.email || "";
+    const phone = user?.phone || "";
+    const location = user?.location || "";
+    const companyName = cv.target_company || "your organisation";
+    const jobTitle = cv.target_role || "the desired position";
+
+    const today = new Date().toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+
+    const paragraphs = cv.cover_letter_text
+      .split("\n\n")
+      .map((p: string) => p.trim())
+      .filter(Boolean);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1f2937; margin: 0; padding: 50px; line-height: 1.6; font-size: 14px; }
+          .header { border-bottom: 2px solid #1A6515; padding-bottom: 20px; margin-bottom: 30px; }
+          .name { font-size: 26px; font-weight: bold; color: #1A6515; margin: 0; }
+          .contact-info { font-size: 12px; color: #4b5563; margin-top: 8px; }
+          .date { margin-bottom: 20px; font-weight: 500; color: #4b5563; }
+          .recipient { margin-bottom: 30px; }
+          .recipient-title { font-weight: bold; color: #111827; }
+          .subject { font-weight: bold; font-size: 15px; color: #111827; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.5px; }
+          .paragraph { margin-bottom: 20px; text-align: justify; }
+          .signature { margin-top: 40px; }
+          .signature-name { font-weight: bold; color: #111827; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="name">${name}</div>
+          <div class="contact-info">
+            ${email ? `✉ ${email} &nbsp;|&nbsp; ` : ""}
+            ${phone ? `☎ ${phone} &nbsp;|&nbsp; ` : ""}
+            ${location ? `📍 ${location}` : ""}
+          </div>
+        </div>
+        
+        <div class="date">${today}</div>
+        
+        <div class="recipient">
+          <div class="recipient-title">Hiring Team</div>
+          <div>${companyName}</div>
+        </div>
+        
+        <div class="subject">Application for ${jobTitle}</div>
+        
+        ${paragraphs.map((p: string) => `<div class="paragraph">${p}</div>`).join("")}
+        
+        <div class="signature">
+          <div>Sincerely,</div>
+          <div class="signature-name">${name}</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      const coverLetterUri = `${FileSystem.documentDirectory}${cvNameForFile}_Cover_Letter_${cv.id}.pdf`;
+      
+      try {
+        await FileSystem.deleteAsync(coverLetterUri, { idempotent: true });
+      } catch (e) {}
+
+      await FileSystem.copyAsync({
+        from: uri,
+        to: coverLetterUri,
+      });
+
+      return coverLetterUri;
+    } catch (err) {
+      console.error("Cover letter PDF generation failed:", err);
+      return null;
+    }
+  };
+
   const handleDownloadCV = async (cv: any) => {
     setSelectedCV(cv);
     const cvName = cv.target_role || cv.template_name || `CV #${cv.id}`;
+    const cvNameForFile = cvName.replace(/[^a-zA-Z0-9]/g, "_");
 
     if (cv.is_paid) {
       setDownloadingCVId(cv.id);
@@ -494,7 +585,7 @@ export default function ProfileScreen() {
 
         if (res.already_paid && res.download_token) {
           const API_BASE = "https://quotahire-backend.onrender.com/api";
-          const fileUri = `${FileSystem.documentDirectory}${cvName.replace(/\s+/g, "_")}_${cv.id}.pdf`;
+          const fileUri = `${FileSystem.documentDirectory}${cvNameForFile}_${cv.id}.pdf`;
 
           const { uri } = await FileSystem.downloadAsync(
             `${API_BASE}/cv/${cv.id}/download/?token=${encodeURIComponent(res.download_token)}`,
@@ -503,10 +594,46 @@ export default function ProfileScreen() {
 
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+          // Generate cover letter PDF locally if cover letter text is stored
+          let coverLetterUri = null;
+          if (cv.cover_letter_text) {
+            try {
+              coverLetterUri = await generateCoverLetterPDF(cv, cvNameForFile);
+            } catch (err) {
+              console.error("Could not generate Cover Letter PDF:", err);
+            }
+          }
+
           if (await Sharing.isAvailableAsync()) {
+            // Share CV first
             await Sharing.shareAsync(uri);
+            
+            // Share Cover Letter sequentially if generated
+            if (coverLetterUri) {
+              Alert.alert(
+                "CV Shared Successfully",
+                "Now we will open the sharing options for your auto-generated Cover Letter.",
+                [
+                  {
+                    text: "Continue",
+                    onPress: async () => {
+                      try {
+                        await Sharing.shareAsync(coverLetterUri);
+                      } catch (err) {
+                        console.error("Failed to share Cover Letter:", err);
+                      }
+                    },
+                  },
+                ]
+              );
+            }
           } else {
-            Alert.alert("Success", "CV saved to device local folder.");
+            Alert.alert(
+              "Success",
+              coverLetterUri
+                ? "CV and Cover Letter downloaded successfully to your device."
+                : "CV saved to device local folder."
+            );
           }
         } else {
           setPaymentVisible(true);
@@ -627,7 +754,7 @@ export default function ProfileScreen() {
       if (parsedResume.education)
         profilePayload.education = parsedResume.education;
       if (parsedResume.experience_years)
-        profilePayload.experience_years = parsedResume.experience_years;
+        profilePayload.experience_years = parseInt(parsedResume.experience_years) || 0;
       if (parsedResume.phone_number)
         profilePayload.phone_number = parsedResume.phone_number;
       if (parsedResume.city) profilePayload.city = parsedResume.city;
@@ -640,12 +767,16 @@ export default function ProfileScreen() {
         });
       }
 
-      // Also update the top-level user location field if present
+      // Also update the top-level user location field if present, wrapped in try/catch to avoid blocking read-only field errors
       if (parsedResume.location) {
-        await apiFetch("/auth/me/", {
-          method: "PUT",
-          body: JSON.stringify({ location: parsedResume.location }),
-        });
+        try {
+          await apiFetch("/auth/me/", {
+            method: "PUT",
+            body: JSON.stringify({ location: parsedResume.location }),
+          });
+        } catch (err) {
+          console.debug("Failed to save location directly on /auth/me (read-only):", err);
+        }
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -852,6 +983,12 @@ export default function ProfileScreen() {
 
   return (
     <View style={s.safe}>
+      <LinearGradient
+        colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: TabBarHeight + 32 }]}
         showsVerticalScrollIndicator={false}
@@ -1088,9 +1225,10 @@ export default function ProfileScreen() {
         visible={activeSection !== null && activeSection !== "generated-cvs"}
         animationType="slide"
         transparent
+        statusBarTranslucent
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1 }}
         >
           <View style={s.overlay}>
@@ -1112,6 +1250,7 @@ export default function ProfileScreen() {
 
               <ScrollView
                 style={s.modalBody}
+                contentContainerStyle={{ paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
               >
                 {activeSection === "contact" && (
@@ -1604,9 +1743,10 @@ export default function ProfileScreen() {
         visible={activeSection === "generated-cvs"}
         animationType="slide"
         transparent
+        statusBarTranslucent
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1 }}
         >
           <View style={s.overlay}>
@@ -1628,6 +1768,7 @@ export default function ProfileScreen() {
 
               <ScrollView
                 style={s.modalBody}
+                contentContainerStyle={{ paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
               >
                 {cvsLoading ? (

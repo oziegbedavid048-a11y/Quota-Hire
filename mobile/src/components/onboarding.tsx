@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import Logo from "@/components/logo";
 
 const ONBOARDING_PAGES = [
   {
@@ -20,7 +21,7 @@ const ONBOARDING_PAGES = [
     subtitle: "REVENUE SYSTEMS",
     description:
       "We don't just 'give you staff'. We establish, recruit, onboard, and manage functioning Sales & Marketing systems with full process and accountability to turn your business into a consistent revenue machine.",
-    image: require("@/assets/images/onboarding/revenue.png"),
+    image: require("@/assets/images/onboarding/revenue.webp"),
   },
   {
     key: "2",
@@ -28,7 +29,7 @@ const ONBOARDING_PAGES = [
     subtitle: "ZERO CV SPAM",
     description:
       "Skip the generic job boards. We source, test, and deliver only pre-vetted Sales, Marketing, Finance & Ops talent. You only interview the top 3-5% of applicants.",
-    image: require("@/assets/images/onboarding/talent.png"),
+    image: require("@/assets/images/onboarding/talent.webp"),
   },
   {
     key: "3",
@@ -36,7 +37,7 @@ const ONBOARDING_PAGES = [
     subtitle: "VERIFIED CAREERS",
     description:
       "Automatically generate polished sales CVs featuring transparent OTE metrics, verified performance quotas, and target tracking to stand out directly to high-growth global companies.",
-    image: require("@/assets/images/onboarding/speed.png"),
+    image: require("@/assets/images/onboarding/speed.webp"),
   },
   {
     key: "4",
@@ -44,7 +45,7 @@ const ONBOARDING_PAGES = [
     subtitle: "ACCOUNTABILITY",
     description:
       "We run weekly sales huddles, monthly reviews, and ongoing training. Underperformers get coached or replaced under our 90-day free replacement warranty.",
-    image: require("@/assets/images/onboarding/growth.png"),
+    image: require("@/assets/images/onboarding/growth.webp"),
   },
 ];
 
@@ -102,11 +103,7 @@ export default function Onboarding({ onFinish }: OnboardingProps) {
         {/* Header Section */}
         <View style={styles.header}>
           <View style={styles.brandContainer}>
-            <Image
-              source={require("@/assets/images/logo-glow.png")}
-              style={styles.brandLogo}
-              contentFit="contain"
-            />
+            <Logo size={22} />
             <Text style={[styles.brandText, { color: textColor }]}>
               Quota Hire
             </Text>

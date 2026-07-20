@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
@@ -239,7 +240,13 @@ export default function SavedJobsScreen() {
   }, [toggleSavedJob]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFBEB' }}>
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }} />
 
       <ScrollView
@@ -283,7 +290,7 @@ export default function SavedJobsScreen() {
 
             {/* 3D Illustration */}
             <Image
-              source={require('@/assets/images/illustrations/saved_jobs_illustration.png')}
+              source={require('@/assets/images/illustrations/saved_jobs_illustration.webp')}
               style={s.heroImage}
               contentFit="contain"
             />

@@ -20,7 +20,7 @@
       "package": "com.oziegbedavid.quotahire",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#FAFCF9",
+        "backgroundColor": "#EDEEDE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -35,7 +35,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FAFCF9",
+          "backgroundColor": "#EDEEDE",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }

@@ -613,7 +613,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
               {/* w-16 h-16 drop-shadow-md */}
               <View style={gs.logoWrap}>
                 <Image
-                  source={require("@/assets/images/expo-logo.png")}
+                  source={require("@/assets/images/expo-logo.webp")}
                   style={gs.logo}
                   contentFit="contain"
                 />

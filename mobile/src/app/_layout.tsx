@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { View, ActivityIndicator } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
-import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import AppTabs from "@/components/app-tabs";
 import Onboarding from "@/components/onboarding";
 import VideoSplash from "@/components/video-splash";
@@ -31,7 +30,6 @@ SplashScreen.preventAutoHideAsync();
 export default function TabLayout() {
   const router = useRouter();
   const [splashFinished, setSplashFinished] = useState(false);
-  const [startSplashAnim, setStartSplashAnim] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -159,7 +157,6 @@ export default function TabLayout() {
   if (typeof globalThis !== "undefined") {
     (globalThis as any).resetOnboarding = () => {
       setSplashFinished(false);
-      setStartSplashAnim(false);
       setShowOnboarding(true);
       setIsLoggedIn(false);
     };
@@ -191,10 +188,8 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={CustomTheme}>
-      <AnimatedSplashOverlay onDismiss={() => setStartSplashAnim(true)} />
       {!splashFinished ? (
         <VideoSplash
-          start={startSplashAnim}
           onFinish={() => setSplashFinished(true)}
         />
       ) : showOnboarding ? (
