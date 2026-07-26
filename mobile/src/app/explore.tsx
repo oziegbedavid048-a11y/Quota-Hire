@@ -97,6 +97,7 @@ export default function JobsScreen() {
         workType: j.is_remote ? "Remote" : ("Hybrid" as const),
         salaryRange: j.salary_range,
         commissionRange: j.commission_range,
+        currency: j.currency || 'USD',
         description: j.description,
         requirements: j.requirements || [],
         status: j.status || "approved",
@@ -197,12 +198,16 @@ export default function JobsScreen() {
             </View>
             {job.salaryRange && (
               <View style={[s.tag, { backgroundColor: Palette.emerald50 }]}>
-                <Text style={[s.tagText, { color: Palette.emerald600 }]}>{job.salaryRange}</Text>
+                <Text style={[s.tagText, { color: Palette.emerald600 }]}>
+                  {job.currency ? `${job.currency} ` : ''}{job.salaryRange}
+                </Text>
               </View>
             )}
             {job.commissionRange && (
               <View style={[s.tag, { backgroundColor: Palette.warm50 }]}>
-                <Text style={[s.tagText, { color: Palette.warm600 }]}>OTE {job.commissionRange}</Text>
+                <Text style={[s.tagText, { color: Palette.warm600 }]}>
+                  OTE {job.currency ? `${job.currency} ` : ''}{job.commissionRange}
+                </Text>
               </View>
             )}
           </View>

@@ -797,15 +797,17 @@ class GeneratedCVAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentTransaction)
 class PaymentTransactionAdmin(admin.ModelAdmin):
-    list_display   = ('reference', 'user', 'cv', 'status', 'amount_eur', 'amount_kobo', 'paystack_id', 'created_at')
-    list_filter    = ('status', 'created_at')
-    search_fields  = ('reference', 'user__email', 'user__first_name', 'user__last_name', 'paystack_id')
-    readonly_fields = ('reference', 'created_at', 'updated_at', 'paystack_id', 'amount_kobo')
+    list_display   = ('reference', 'user', 'cv', 'status', 'payment_source', 'amount_eur', 'amount_kobo', 'paystack_id', 'google_order_id', 'created_at')
+    list_filter    = ('status', 'payment_source', 'created_at')
+    search_fields  = ('reference', 'user__email', 'user__first_name', 'user__last_name', 'paystack_id', 'google_order_id')
+    readonly_fields = ('reference', 'created_at', 'updated_at', 'paystack_id', 'amount_kobo', 'google_order_id', 'google_purchase_token')
     ordering       = ('-created_at',)
     date_hierarchy = 'created_at'
 
     fieldsets = (
-        ('Transaction Info', {'fields': ('reference', 'status', 'amount_eur', 'amount_kobo', 'paystack_id')}),
+        ('Transaction Info', {'fields': ('reference', 'status', 'payment_source', 'amount_eur', 'amount_kobo')}),
+        ('Paystack (Web)', {'fields': ('paystack_id',), 'classes': ('collapse',)}),
+        ('Google Play Billing (Mobile)', {'fields': ('google_order_id', 'google_purchase_token'), 'classes': ('collapse',)}),
         ('Linked Records', {'fields': ('user', 'cv')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
     )

@@ -1446,7 +1446,7 @@ const s = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: BorderRadius.cardLg,
     borderTopRightRadius: BorderRadius.cardLg,
-    height: SCREEN_H * 0.85,
+    maxHeight: SCREEN_H * 0.85,
     paddingTop: 8,
   },
   header: {

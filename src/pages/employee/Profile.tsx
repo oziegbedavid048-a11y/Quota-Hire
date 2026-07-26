@@ -193,12 +193,14 @@ export const EmployeeProfilePage = () => {
           window.URL.revokeObjectURL(url);
           toast.success("CV downloaded successfully!");
         } else {
+          closeSection();
           setPaymentModalOpen(true);
         }
       } catch {
         toast.error("Download failed. Please check your network.");
       }
     } else {
+      closeSection();
       setPaymentModalOpen(true);
     }
   };

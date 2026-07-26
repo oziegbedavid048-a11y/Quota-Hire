@@ -37,6 +37,12 @@ urlpatterns = [
     path('auth/forgot-password/',   views.ForgotPasswordView.as_view(),          name='auth-forgot-password'),
     path('auth/reset-password/',    views.ResetPasswordView.as_view(),           name='auth-reset-password'),
 
+    # ── Mobile-only in-app OTP password reset (3-step, no web redirect) ───────
+    path('auth/mobile/forgot-password/', views.MobileForgotPasswordView.as_view(), name='mobile-forgot-password'),
+    path('auth/mobile/verify-otp/',      views.MobileVerifyOTPView.as_view(),      name='mobile-verify-otp'),
+    path('auth/mobile/reset-password/',  views.MobileResetPasswordView.as_view(),  name='mobile-reset-password'),
+
+
     # ── Profiles ──────────────────────────────────────────────────────────────
     path('profile/employee/',       views.EmployeeProfileView.as_view(),         name='profile-employee'),
     path('profile/company/',        views.CompanyProfileView.as_view(),          name='profile-company'),
@@ -49,10 +55,13 @@ urlpatterns = [
     path('cv/my-cvs/',              views.MyGeneratedCVsView.as_view(),           name='cv-my-list'),
     path('cv/<int:pk>/download/',   views.DownloadGeneratedCVView.as_view(),      name='cv-download'),
 
-    # ── Payments ──────────────────────────────────────────────────────────────
+    # ── Payments ─────────────────────────────────────────────────────────────
     path('payments/initiate/',      views.PaymentInitiateView.as_view(),         name='payment-initiate'),
     path('payments/verify/',        views.PaymentVerifyView.as_view(),           name='payment-verify'),
     path('payments/webhook/',       views.PaystackWebhookView.as_view(),         name='payment-webhook'),
+    # Google Play Billing (mobile IAP) — replaces Paystack for Android app
+    path('payments/verify-iap/',    views.PlayBillingVerifyView.as_view(),       name='payment-verify-iap'),
+    path('payments/already-paid/',  views.AlreadyPaidCheckView.as_view(),        name='payment-already-paid'),
 
     # ── Analytics ─────────────────────────────────────────────────────────────
     path('dashboard/analytics/',    views.DashboardAnalyticsView.as_view(),      name='dashboard-analytics'),

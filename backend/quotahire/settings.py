@@ -284,13 +284,23 @@ POSTHOG_HOST = config('POSTHOG_HOST', default=None)
 if POSTHOG_API_KEY and POSTHOG_HOST:
     posthog = Posthog(POSTHOG_API_KEY, host=POSTHOG_HOST)
 
-# ── Paystack Payment Gateway ──────────────────────────────────────────────────
+# ── Paystack Payment Gateway (kept for web app) ─────────────────────────────
 PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')
 PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='')
 # CV download fee in EUR; Paystack converts to NGN at live exchange rate
 CV_DOWNLOAD_FEE_EUR = float(config('CV_DOWNLOAD_FEE_EUR', default='1.50'))
 # Approximate NGN per EUR — used to compute a floor kobo amount for validation
 NGN_PER_EUR = int(config('NGN_PER_EUR', default='1650'))
+
+# ── Google Play Billing (mobile IAP) ─────────────────────────────────────────────
+# Service account JSON (as a string) for Play Developer API purchase verification.
+# Set this env var on Render with the full JSON content of your service account key file.
+GOOGLE_PLAY_SERVICE_ACCOUNT_JSON = config('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON', default='')
+# Your Android app package name — must match what is in Play Console.
+GOOGLE_PLAY_PACKAGE_NAME = config('GOOGLE_PLAY_PACKAGE_NAME', default='com.oziegbedavid.quotahire')
+# The in-app product ID created in Google Play Console — must match expo-iap PRODUCT_ID
+GOOGLE_PLAY_PRODUCT_ID = config('GOOGLE_PLAY_PRODUCT_ID', default='cv_download_150')
+
 
 # ── Production Security Headers ───────────────────────────────────────────────
 # Only enforce HTTPS/security headers in production (not in local dev)

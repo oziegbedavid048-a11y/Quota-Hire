@@ -15,6 +15,7 @@ import {
 } from '@/constants/theme';
 import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
 import ApplyJobModal from '@/components/apply-job-modal';
+import { SkeletonBox, SkeletonLine } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -67,6 +68,76 @@ export default function JobDetailsScreen() {
     setModalVisible(true);
   };
 
+  if (isLoading) {
+    return (
+      <View style={[s.root, { backgroundColor: '#FFFBEB' }]}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }} />
+        <View style={[s.header, { backgroundColor: 'transparent', borderBottomWidth: 0, height: 48 }]}>
+          <Pressable
+            style={({ pressed }) => [s.headerBackBtn, { opacity: pressed ? 0.7 : 1 }]}
+            onPress={() => router.back()}
+          >
+            <Feather name="chevron-left" size={24} color={Palette.accent600} />
+            <Text style={[s.headerBackText, { color: Palette.accent600 }]}>Back</Text>
+          </Pressable>
+        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 100, gap: 16 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ─── Hero card skeleton ─── */}
+          <View style={[s.heroCard, { padding: 20, gap: 16, backgroundColor: '#fff' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
+              <SkeletonBox width={60} height={60} borderRadius={12} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <SkeletonLine width="45%" height={12} />
+                <SkeletonLine width="85%" height={18} />
+                <SkeletonLine width="65%" height={14} />
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+              <SkeletonBox width={90} height={26} borderRadius={8} />
+              <SkeletonBox width={80} height={26} borderRadius={8} />
+            </View>
+          </View>
+          {/* ─── About section skeleton ─── */}
+          <View style={{ gap: 10 }}>
+            <SkeletonLine width="35%" height={15} />
+            <SkeletonLine width="100%" height={12} />
+            <SkeletonLine width="95%" height={12} />
+            <SkeletonLine width="80%" height={12} />
+            <SkeletonLine width="90%" height={12} />
+          </View>
+          {/* ─── Requirements skeleton ─── */}
+          <View style={{ gap: 10 }}>
+            <SkeletonLine width="40%" height={15} />
+            {[1, 2, 3].map(k => (
+              <View key={k} style={[s.reqRow, { backgroundColor: '#fff' }]}>
+                <SkeletonBox width={22} height={22} borderRadius={11} />
+                <SkeletonLine width="75%" height={12} />
+              </View>
+            ))}
+          </View>
+          {/* ─── Compensation skeleton ─── */}
+          <View style={[s.compensationCard, { padding: 16 }]}>
+            <SkeletonLine width="35%" height={15} style={{ marginBottom: 12 }} />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1, gap: 6 }}>
+                <SkeletonLine width="60%" height={10} />
+                <SkeletonLine width="80%" height={20} />
+              </View>
+              <View style={{ flex: 1, gap: 6 }}>
+                <SkeletonLine width="60%" height={10} />
+                <SkeletonLine width="80%" height={20} />
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   if (!job) {
     return (
       <SafeAreaView style={[s.errorContainer, { backgroundColor: '#FFFBEB' }]}>
@@ -85,12 +156,21 @@ export default function JobDetailsScreen() {
     );
   }
 
+  // Helper: prefix salary/commission with currency, avoids double-prefix
+  const formatRange = (range?: string, currency?: string) => {
+    if (!range) return null;
+    const cur = (currency || '').trim();
+    if (!cur) return range;
+    if (range.trimStart().startsWith(cur)) return range;
+    return `${cur} ${range}`;
+  };
+
   return (
     <View style={[s.root, { backgroundColor: '#FFFBEB' }]}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }} />
 
       {/* ── TOP NAV BAR ── */}
-      <View style={[s.header, { backgroundColor: 'transparent', borderBottomWidth: 0, height: 36 }]}>
+      <View style={[s.header, { backgroundColor: 'transparent', borderBottomWidth: 0, height: 48 }]}>
         <Pressable
           style={({ pressed }) => [s.headerBackBtn, { opacity: pressed ? 0.7 : 1 }]}
           onPress={() => {
@@ -98,8 +178,8 @@ export default function JobDetailsScreen() {
             router.back();
           }}
         >
-          <Feather name="arrow-left" size={16} color={Palette.accent600} />
-          <Text style={[s.headerBackText, { color: Palette.accent600 }]}>Back to Roles</Text>
+          <Feather name="chevron-left" size={24} color={Palette.accent600} />
+          <Text style={[s.headerBackText, { color: Palette.accent600 }]}>Back</Text>
         </Pressable>
       </View>
 
@@ -128,16 +208,27 @@ export default function JobDetailsScreen() {
               </View>
             )}
 
-            <View style={{ flex: 1, marginLeft: 16 }}>
+            {/* Text area — flex:1 + minWidth:0 so long titles wrap instead of overflow */}
+            <View style={s.heroTextArea}>
               <View style={s.companyNameRow}>
-                <Text style={[s.companyName, { color: colors.textSecondary }]} numberOfLines={1}>
+                <Text
+                  style={[s.companyName, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {job.companyName}
                 </Text>
                 {job.companyIsVerified && (
                   <Feather name="check-circle" size={14} color={Palette.blue500} />
                 )}
               </View>
-              <Text style={[s.jobTitle, { color: colors.text }]}>{job.title}</Text>
+              <Text
+                style={[s.jobTitle, { color: colors.text }]}
+                numberOfLines={4}
+                ellipsizeMode="tail"
+              >
+                {job.title}
+              </Text>
             </View>
           </View>
 
@@ -186,13 +277,17 @@ export default function JobDetailsScreen() {
             {job.salaryRange && (
               <View style={s.compItem}>
                 <Text style={s.compLabel}>Base Salary</Text>
-                <Text style={[s.compVal, { color: colors.text }]}>{job.salaryRange}</Text>
+                <Text style={[s.compVal, { color: colors.text }]}>
+                  {formatRange(job.salaryRange, job.currency)}
+                </Text>
               </View>
             )}
             {job.commissionRange && (
               <View style={[s.compItem, job.salaryRange ? s.compItemBorder : {}]}>
                 <Text style={s.compLabel}>OTE / Commission</Text>
-                <Text style={[s.compVal, { color: Palette.warm600 }]}>{job.commissionRange}</Text>
+                <Text style={[s.compVal, { color: Palette.warm600 }]}>
+                  {formatRange(job.commissionRange, job.currency)}
+                </Text>
               </View>
             )}
             {!job.salaryRange && !job.commissionRange && (
@@ -267,18 +362,16 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: Palette.neutral100,
   },
   headerBackBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
     paddingVertical: 6,
   },
   headerBackText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
   },
 
   // Body Scroll
@@ -299,12 +392,13 @@ const s = StyleSheet.create({
   },
   heroTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',   // logo stays top-left when title wraps
   },
   companyLogo: {
     width: 60,
     height: 60,
     borderRadius: BorderRadius.md,
+    flexShrink: 0,              // logo never shrinks
   },
   companyLogoPlaceholder: {
     width: 60,
@@ -312,10 +406,16 @@ const s = StyleSheet.create({
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,              // placeholder never shrinks
   },
   logoText: {
     fontSize: 24,
     fontWeight: FontWeight.extrabold,
+  },
+  heroTextArea: {
+    flex: 1,
+    marginLeft: 16,
+    minWidth: 0,                // crucial: allows flex child to shrink/wrap
   },
   companyNameRow: {
     flexDirection: 'row',
@@ -326,14 +426,17 @@ const s = StyleSheet.create({
   companyName: {
     fontSize: 13,
     fontWeight: FontWeight.semibold,
+    flexShrink: 1,              // shrinks before the verified icon disappears
   },
   jobTitle: {
     fontSize: 18,
     fontWeight: FontWeight.extrabold,
     lineHeight: 24,
+    flexWrap: 'wrap',           // wraps long titles to next line
   },
   tagsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',           // tags wrap to next line on small screens
     gap: 8,
     marginTop: 16,
   },

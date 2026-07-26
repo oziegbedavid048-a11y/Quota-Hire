@@ -941,6 +941,210 @@ class ResetPasswordView(APIView):
             logger.error(f"Password reset failed: {e}", exc_info=True)
             return Response({'error': 'An internal error occurred. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# ── Mobile In-App OTP Password Reset (3-step, no web redirect) ────────────────────────
+
+
+class MobileForgotPasswordView(APIView):
+    """
+    POST /api/auth/mobile/forgot-password/
+    Body: { "email": "user@example.com" }
+
+    Step 1: generates a cryptographically secure 6-digit OTP,
+    deletes any previous OTPs for this user, stores the new one
+    (30-minute expiry), and emails it. The code is NEVER returned
+    in the HTTP response (only delivered by email).
+
+    Security:
+    - Rate-limited: 5 requests / IP / hour (AuthEmailThrottle)
+    - Does NOT reveal whether the email exists (always 200 OK)
+    """
+    permission_classes     = []
+    authentication_classes = []
+    throttle_classes       = [AuthEmailThrottle]
+
+    def post(self, request):
+        import secrets as _secrets
+        from .models import PasswordResetOTP
+
+        email = request.data.get('email', '').strip().lower()
+        if not email:
+            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = CustomUser.objects.filter(email__iexact=email).first()
+
+        # Always respond the same way so attackers cannot enumerate accounts
+        if not user:
+            return Response({'message': 'If that email is registered, a code has been sent.'}, status=status.HTTP_200_OK)
+
+        # Delete all previous OTPs for this user (one active at a time)
+        PasswordResetOTP.objects.filter(user=user).delete()
+
+        # Generate a cryptographically secure 6-digit code
+        otp_code = str(_secrets.randbelow(900000) + 100000)  # 100000-999999
+
+        otp = PasswordResetOTP.objects.create(
+            user=user,
+            otp_code=otp_code,
+            expires_at=timezone.now() + timedelta(minutes=30),
+        )
+
+        # Build email content using executive branded template
+        display_name = user.first_name or user.username or 'there'
+        subject      = 'Your Quota Hire Password Reset Code'
+        text_content = (
+            f'Hi {display_name},\n\n'
+            f'Your password reset code is: {otp_code}\n\n'
+            f'This code expires in 30 minutes.\n\n'
+            f'Please enter this code into the Quota Hire app to reset your password.\n\n'
+            f'The Quota Hire Team'
+        )
+
+        try:
+            from .email_templates import get_mobile_otp_email_html, send_courier_email
+            html_content = get_mobile_otp_email_html(display_name, otp_code)
+            send_courier_email(
+                to_email=email,
+                subject=subject,
+                text_content=text_content,
+                html_content=html_content,
+            )
+        except Exception as e:
+            logger.error(f'Mobile OTP email failed for {email}: {e}')
+            # Clean up so they can try again
+            otp.delete()
+            return Response({'error': 'Failed to send OTP email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+        logger.info(f'Mobile OTP sent to {email}')
+        return Response({'message': 'If that email is registered, a code has been sent.'}, status=status.HTTP_200_OK)
+
+
+class MobileVerifyOTPView(APIView):
+    """
+    POST /api/auth/mobile/verify-otp/
+    Body: { "email": "user@example.com", "otp_code": "123456" }
+
+    Step 2: validates the OTP. On success, marks the OTP as used and returns
+    a short-lived (10-min) signed JWT reset_token. The app must send this
+    token with the new password in Step 3.
+
+    Security:
+    - Constant-time comparison (hmac.compare_digest) to prevent timing attacks
+    - Checks is_used and expiry before accepting
+    - Rate-limited via AuthEmailThrottle
+    """
+    permission_classes     = []
+    authentication_classes = []
+    throttle_classes       = [AuthEmailThrottle]
+
+    def post(self, request):
+        import hmac as _hmac
+        from .models import PasswordResetOTP
+
+        email    = request.data.get('email', '').strip().lower()
+        otp_code = request.data.get('otp_code', '').strip()
+
+        if not email or not otp_code:
+            return Response({'error': 'Email and otp_code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = CustomUser.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response({'error': 'Invalid code or it has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch the most recent unused, unexpired OTP for this user
+        otp = (
+            PasswordResetOTP.objects
+            .filter(user=user, is_used=False, expires_at__gt=timezone.now())
+            .order_by('-created_at')
+            .first()
+        )
+
+        if otp is None:
+            return Response({'error': 'Invalid code or it has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Constant-time comparison to prevent timing attacks
+        if not _hmac.compare_digest(otp.otp_code, otp_code):
+            return Response({'error': 'Invalid code or it has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark OTP as used immediately
+        otp.is_used = True
+        otp.save(update_fields=['is_used'])
+
+        # Issue a short-lived (10 min) signed reset session token
+        reset_token = jwt.encode({
+            'email': email,
+            'type':  'mobile_password_reset',   # type field prevents reuse as auth token
+            'exp':   timezone.now() + timedelta(minutes=10),
+        }, settings.SECRET_KEY, algorithm='HS256')
+
+        logger.info(f'Mobile OTP verified for {email}')
+        return Response({'reset_token': reset_token}, status=status.HTTP_200_OK)
+
+
+class MobileResetPasswordView(APIView):
+    """
+    POST /api/auth/mobile/reset-password/
+    Body: { "reset_token": "...", "password": "...", "password_confirm": "..." }
+
+    Step 3: verifies the session token from Step 2, validates the new
+    password, and updates it. The token type is checked to prevent
+    normal auth tokens being used here.
+
+    Security:
+    - Validates JWT type == 'mobile_password_reset'
+    - Validates expiry (10 min)
+    - Validates password == password_confirm
+    - Rate-limited
+    """
+    permission_classes     = []
+    authentication_classes = []
+    throttle_classes       = [AuthEmailThrottle]
+
+    def post(self, request):
+        reset_token      = request.data.get('reset_token', '').strip()
+        password         = request.data.get('password', '')
+        password_confirm = request.data.get('password_confirm', '')
+
+        if not reset_token or not password or not password_confirm:
+            return Response(
+                {'error': 'reset_token, password, and password_confirm are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if password != password_confirm:
+            return Response({'error': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(password) < 8:
+            return Response({'error': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            payload = jwt.decode(reset_token, settings.SECRET_KEY, algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Session expired. Please restart the reset process.'}, status=status.HTTP_400_BAD_REQUEST)
+        except jwt.InvalidTokenError:
+            return Response({'error': 'Invalid session token. Please restart the reset process.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Enforce token type to prevent auth tokens being used here
+        if payload.get('type') != 'mobile_password_reset':
+            return Response({'error': 'Invalid session token.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = payload.get('email', '')
+        user  = CustomUser.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user.set_password(password)
+        user.save()
+
+        # Clean up any remaining OTPs for this user
+        from .models import PasswordResetOTP
+        PasswordResetOTP.objects.filter(user=user).delete()
+
+        logger.info(f'Mobile password reset completed for {email}')
+        return Response({'message': 'Password reset successfully. You can now log in.'}, status=status.HTTP_200_OK)
+
+
 class JobDetailView(generics.RetrieveAPIView):
     """
     GET /api/jobs/<id>/ — get a single approved job.
@@ -2147,6 +2351,253 @@ class PaystackWebhookView(APIView):
             reference = edata.get('reference', '')
             paid_kobo = edata.get('amount', 0)
             paystack_id = str(edata.get('id', ''))
+            if reference:
+                try:
+                    tx = PaymentTransaction.objects.get(reference=reference)
+                    if tx.status != PaymentStatus.PAID:
+                        tx.status = PaymentStatus.PAID
+                        tx.paystack_id = paystack_id
+                        tx.amount_kobo = paid_kobo
+                        tx.save(update_fields=['status', 'paystack_id', 'amount_kobo', 'updated_at'])
+                        logger.info(f'Webhook: marked payment PAID ref={reference}')
+                except PaymentTransaction.DoesNotExist:
+                    logger.warning(f'Webhook: transaction not found ref={reference}')
+        return HttpResponse('OK', status=200)
+
+
+# ── Google Play Billing Verification ────────────────────────────────────────────────────────
+
+
+def _build_google_play_service(service_account_json_str: str):
+    """
+    Build an authenticated Google Play Developer API client using a service account.
+    The service account JSON is stored as a string in the GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+    environment variable (paste the full JSON content of your downloaded key file).
+    """
+    import json as _json
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+
+    service_account_info = _json.loads(service_account_json_str)
+    credentials = service_account.Credentials.from_service_account_info(
+        service_account_info,
+        scopes=['https://www.googleapis.com/auth/androidpublisher'],
+    )
+    return build('androidpublisher', 'v3', credentials=credentials, cache_discovery=False)
+
+
+class PlayBillingVerifyView(APIView):
+    """
+    POST /api/payments/verify-iap/
+    Body: { "purchase_token": "...", "product_id": "cv_download_150", "cv_id": 42, "order_id": "GPA..." }
+
+    Called by the mobile app after a successful Google Play in-app purchase.
+    1. Validates the purchase_token against the Google Play Developer API server-side.
+    2. Checks purchaseState == 0 (Purchased) and productId matches.
+    3. Records the transaction in PaymentTransaction.
+    4. Acknowledges the purchase on Google Play (marks it so it isn't refunded after 3 days).
+    5. Issues a one-time 10-minute DownloadToken and returns it.
+    """
+    permission_classes = [IsEmployee]
+    throttle_classes = [PaymentThrottle]
+
+    def post(self, request):
+        import json as _json
+
+        purchase_token = request.data.get('purchase_token', '').strip()
+        product_id     = request.data.get('product_id', '').strip()
+        cv_id          = request.data.get('cv_id')
+        order_id       = request.data.get('order_id', '').strip()
+
+        # ─ Validate inputs
+        if not purchase_token:
+            return Response({'error': 'purchase_token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not product_id:
+            return Response({'error': 'product_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not cv_id:
+            return Response({'error': 'cv_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ─ Validate product ID matches our configured product
+        expected_product_id = settings.GOOGLE_PLAY_PRODUCT_ID
+        if product_id != expected_product_id:
+            logger.warning(f'PlayBilling verify: unexpected product_id={product_id}')
+            return Response(
+                {'error': 'invalid_product', 'message': f'Unknown product ID: {product_id}'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # ─ Get the CV
+        try:
+            cv_obj = GeneratedCV.objects.get(pk=cv_id, employee=request.user)
+        except GeneratedCV.DoesNotExist:
+            return Response({'error': 'CV not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # ─ Reject duplicate purchase tokens (prevent replay attacks)
+        if PaymentTransaction.objects.filter(google_purchase_token=purchase_token).exists():
+            # Token already used — still issue a download token if the tx is PAID
+            existing_tx = PaymentTransaction.objects.filter(
+                google_purchase_token=purchase_token,
+                status=PaymentStatus.PAID,
+            ).first()
+            if existing_tx:
+                token_str = _make_download_token(request.user.pk, cv_obj.pk, existing_tx.pk)
+                dt = DownloadToken.objects.create(
+                    user=request.user, cv=cv_obj, transaction=existing_tx,
+                    token=token_str, expires_at=timezone.now() + timedelta(minutes=10),
+                )
+                return Response({'download_token': dt.token, 'cv_id': cv_obj.pk, 'already_verified': True})
+            return Response(
+                {'error': 'duplicate_token', 'message': 'This purchase token has already been used.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # ─ Load Google Play service account config
+        service_account_json = settings.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+        package_name         = settings.GOOGLE_PLAY_PACKAGE_NAME
+
+        if not service_account_json:
+            logger.error('PlayBilling verify: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not configured.')
+            return Response(
+                {'error': 'server_config_error', 'message': 'Server payment configuration error. Contact support.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # ─ Call Google Play Developer API to verify the purchase
+        try:
+            service = _build_google_play_service(service_account_json)
+            result = (
+                service.purchases()
+                .products()
+                .get(
+                    packageName=package_name,
+                    productId=product_id,
+                    token=purchase_token,
+                )
+                .execute()
+            )
+        except Exception as e:
+            logger.error(f'Google Play verify API error: {e}')
+            return Response(
+                {'error': 'verify_failed', 'message': 'Could not verify purchase with Google Play. Please try again.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # ─ Validate purchase state
+        # purchaseState: 0 = Purchased, 1 = Canceled, 2 = Pending
+        purchase_state = result.get('purchaseState', -1)
+        if purchase_state != 0:
+            state_labels = {0: 'Purchased', 1: 'Canceled', 2: 'Pending'}
+            label = state_labels.get(purchase_state, f'Unknown ({purchase_state})')
+            logger.warning(f'Google Play verify: bad purchaseState={purchase_state} token={purchase_token[:20]}...')
+            return Response(
+                {'error': 'payment_not_successful', 'message': f'Purchase state is "{label}". Please try again.'},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
+
+        # ─ Create the transaction record
+        import uuid as _uuid
+        reference = str(_uuid.uuid4())  # Internal reference for our records
+        transaction = PaymentTransaction.objects.create(
+            user=request.user,
+            cv=cv_obj,
+            reference=reference,
+            amount_eur=settings.CV_DOWNLOAD_FEE_EUR,
+            status=PaymentStatus.PAID,
+            payment_source=PaymentTransaction.PAYMENT_SOURCE_GOOGLE_PLAY,
+            google_order_id=order_id,
+            google_purchase_token=purchase_token,
+        )
+
+        # ─ Acknowledge the purchase on Google Play
+        # Required within 3 days — unacknowledged purchases are automatically refunded.
+        try:
+            (
+                service.purchases()
+                .products()
+                .acknowledge(
+                    packageName=package_name,
+                    productId=product_id,
+                    token=purchase_token,
+                    body={},
+                )
+                .execute()
+            )
+            logger.info(
+                f'Google Play purchase acknowledged: user={request.user.pk} '
+                f'cv={cv_obj.pk} order={order_id}'
+            )
+        except Exception as ack_err:
+            # Non-fatal — we already verified and saved the tx. Log it but don't fail.
+            logger.warning(f'Google Play acknowledge error (non-fatal): {ack_err}')
+
+        # ─ Bust dashboard cache
+        try:
+            from .cache_utils import safe_delete, dashboard_key
+            safe_delete(dashboard_key(request.user.pk, request.user.role))
+        except Exception:
+            pass
+
+        # ─ Issue one-time download token (10 minutes)
+        token_str = _make_download_token(request.user.pk, cv_obj.pk, transaction.pk)
+        dt = DownloadToken.objects.create(
+            user=request.user,
+            cv=cv_obj,
+            transaction=transaction,
+            token=token_str,
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+
+        logger.info(
+            f'Google Play payment verified: user={request.user.pk} cv={cv_obj.pk} '
+            f'order={order_id} token={purchase_token[:20]}...'
+        )
+
+        return Response({'download_token': dt.token, 'cv_id': cv_obj.pk, 'already_verified': False})
+
+
+class AlreadyPaidCheckView(APIView):
+    """
+    POST /api/payments/already-paid/
+    Body: { "cv_id": <int> }
+
+    Called by the mobile app when cv.is_paid == true before showing the payment modal.
+    If the user has a PAID transaction for this CV (via ANY payment source),
+    returns a fresh 10-minute download token so they can download without paying again.
+    Returns: { already_paid: true, download_token: "..." }  OR  { already_paid: false }
+    """
+    permission_classes = [IsEmployee]
+
+    def post(self, request):
+        cv_id = request.data.get('cv_id')
+        if not cv_id:
+            return Response({'error': 'cv_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cv_obj = GeneratedCV.objects.get(pk=cv_id, employee=request.user)
+        except GeneratedCV.DoesNotExist:
+            return Response({'error': 'CV not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        last_paid_tx = PaymentTransaction.objects.filter(
+            user=request.user,
+            cv=cv_obj,
+            status=PaymentStatus.PAID,
+        ).order_by('-created_at').first()
+
+        if not last_paid_tx:
+            return Response({'already_paid': False})
+
+        token_str = _make_download_token(request.user.pk, cv_obj.pk, last_paid_tx.pk)
+        dt = DownloadToken.objects.create(
+            user=request.user,
+            cv=cv_obj,
+            transaction=last_paid_tx,
+            token=token_str,
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        return Response({'already_paid': True, 'download_token': dt.token})
+
+
+
 class CompanyPublicProfileView(APIView):
     """GET /api/company/<lookup_val>/ — get public details of a company (supports user_id or external company name)."""
     permission_classes = [permissions.AllowAny]
@@ -2230,12 +2681,16 @@ class CommunityFeedView(generics.ListAPIView):
 
 
 class CommunityPostCreateView(APIView):
-    """POST /api/community/posts/create/ — body: { content, category }."""
+    """POST /api/community/posts/create/ — body: { content, category, is_anonymous, hide_likes, comments_disabled }."""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         content  = (request.data.get('content') or '').strip()
         category = (request.data.get('category') or 'general').strip()
+        is_anonymous = bool(request.data.get('is_anonymous', False))
+        hide_likes = bool(request.data.get('hide_likes', False))
+        comments_disabled = bool(request.data.get('comments_disabled', False))
+
         if not content:
             return Response({'error': 'Content is required.'}, status=status.HTTP_400_BAD_REQUEST)
         if len(content) > 500:
@@ -2243,7 +2698,14 @@ class CommunityPostCreateView(APIView):
         valid_categories = ('general', 'wins', 'questions', 'tips', 'polls')
         if category not in valid_categories:
             category = 'general'
-        post = CommunityPost.objects.create(author=request.user, content=content, category=category)
+        post = CommunityPost.objects.create(
+            author=request.user,
+            content=content,
+            category=category,
+            is_anonymous=is_anonymous,
+            hide_likes=hide_likes,
+            comments_disabled=comments_disabled
+        )
         serializer = CommunityPostSerializer(post, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

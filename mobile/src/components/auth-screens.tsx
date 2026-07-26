@@ -245,7 +245,7 @@ const stylesShader = StyleSheet.create({
 });
 
 export default function AuthScreens({ onLogin }: AuthScreensProps) {
-  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot" | "otp" | "new-password">("login");
 
   // ── Login state
   const [lEmail, setLEmail] = useState("");
@@ -274,12 +274,28 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   const [sSubmitting, setSSubmitting] = useState(false);
   const [showVerify, setShowVerify] = useState(false);
 
-  // ── Forgot Password state
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotError, setForgotError] = useState("");
-  const [forgotSuccess, setForgotSuccess] = useState("");
-  const [forgotFocus, setForgotFocus] = useState("");
+  // ── Forgot Password state (Step 1 — email entry)
+  const [forgotEmail, setForgotEmail]         = useState("");
+  const [forgotError, setForgotError]         = useState("");
+  const [forgotSuccess, setForgotSuccess]     = useState("");
+  const [forgotFocus, setForgotFocus]         = useState("");
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
+
+  // ── OTP state (Step 2 — code verification)
+  const [otpCode, setOtpCode]         = useState("");
+  const [otpError, setOtpError]       = useState("");
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+  const [otpResending, setOtpResending]   = useState(false);
+  const [resetToken, setResetToken]   = useState(""); // JWT from Step 2 → used in Step 3
+
+  // ── New Password state (Step 3 — set new password)
+  const [newPass, setNewPass]           = useState("");
+  const [newPassConf, setNewPassConf]   = useState("");
+  const [newPassError, setNewPassError] = useState("");
+  const [newPassDone, setNewPassDone]   = useState(false);
+  const [newPassSubmitting, setNewPassSubmitting] = useState(false);
+  const [showNewPass, setShowNewPass]   = useState(false);
+  const [showNewPassConf, setShowNewPassConf] = useState(false);
 
   // ── Role switcher animation — CSS transition-all duration-300 in Signup.tsx
   const sliderX = useSharedValue(0);
@@ -288,9 +304,19 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   useEffect(() => {
     setLError("");
     setSError("");
-    setForgotError("");
-    setForgotSuccess("");
-    setForgotEmail("");
+    // Reset entire forgot flow when switching away from it
+    if (mode === "login" || mode === "signup") {
+      setForgotEmail("");
+      setForgotError("");
+      setForgotSuccess("");
+      setOtpCode("");
+      setOtpError("");
+      setResetToken("");
+      setNewPass("");
+      setNewPassConf("");
+      setNewPassError("");
+      setNewPassDone(false);
+    }
   }, [mode]);
 
   const switchRole = (r: "employee" | "company") => {
@@ -395,7 +421,8 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     }
   };
 
-  const handleForgot = async () => {
+  // ── Step 1: Send 6-digit OTP to email ──────────────────────────────────────
+  const handleSendOTP = async () => {
     if (!forgotEmail.trim()) {
       setForgotError("Please enter your email address.");
       return;
@@ -404,31 +431,116 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     setForgotSuccess("");
     setForgotSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/forgot-password/`, {
+      const res = await fetch(`${API_BASE}/auth/mobile/forgot-password/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail.trim() }),
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setForgotError(
-          data?.error ||
-            data?.detail ||
-            "Could not send reset email. Please try again.",
-        );
+        setForgotError(data?.error || "Could not send code. Please try again.");
       } else {
-        setForgotSuccess(
-          "Reset link sent! Check your email inbox (and spam folder) for a link to reset your password on the web app.",
-        );
+        // Always advance to OTP step (server never reveals if email exists)
+        setOtpCode("");
+        setOtpError("");
+        setMode("otp");
       }
     } catch {
-      setForgotError(
-        "Could not connect to the server. Please check your internet connection.",
-      );
+      setForgotError("Could not connect to the server. Check your internet connection.");
     } finally {
       setForgotSubmitting(false);
     }
   };
+
+  // ── Step 2: Verify OTP code ────────────────────────────────────────────────
+  const handleVerifyOTP = async () => {
+    if (otpCode.trim().length !== 6) {
+      setOtpError("Please enter the 6-digit code from your email.");
+      return;
+    }
+    setOtpError("");
+    setOtpSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/mobile/verify-otp/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: forgotEmail.trim().toLowerCase(),
+          otp_code: otpCode.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setOtpError(data?.error || "Invalid or expired code. Please try again.");
+      } else {
+        // Store the reset session token and advance to new password step
+        setResetToken(data.reset_token || "");
+        setNewPass("");
+        setNewPassConf("");
+        setNewPassError("");
+        setNewPassDone(false);
+        setMode("new-password");
+      }
+    } catch {
+      setOtpError("Could not connect to the server. Check your internet connection.");
+    } finally {
+      setOtpSubmitting(false);
+    }
+  };
+
+  // ── Resend OTP (back to Step 1 silently) ──────────────────────────────────
+  const handleResendOTP = async () => {
+    setOtpResending(true);
+    setOtpError("");
+    try {
+      await fetch(`${API_BASE}/auth/mobile/forgot-password/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+      });
+      setOtpCode("");
+      setOtpError("");
+    } catch { /* silently ignore */ }
+    finally { setOtpResending(false); }
+  };
+
+  // ── Step 3: Set new password ──────────────────────────────────────────────
+  const handleResetPassword = async () => {
+    if (newPass.length < 8) {
+      setNewPassError("Password must be at least 8 characters.");
+      return;
+    }
+    if (newPass !== newPassConf) {
+      setNewPassError("Passwords do not match.");
+      return;
+    }
+    setNewPassError("");
+    setNewPassSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/mobile/reset-password/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reset_token: resetToken,
+          password: newPass,
+          password_confirm: newPassConf,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNewPassError(data?.error || "Password reset failed. Please start again.");
+      } else {
+        setNewPassDone(true);
+      }
+    } catch {
+      setNewPassError("Could not connect to the server. Check your internet connection.");
+    } finally {
+      setNewPassSubmitting(false);
+    }
+  };
+
+  // Legacy handleForgot kept for any other usage (no-op, replaced above)
+  const handleForgot = handleSendOTP;
 
   const handleLogin = async () => {
     if (!lEmail.trim() || !lPass.trim()) {
@@ -624,15 +736,23 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                   ? "Secure Login"
                   : mode === "forgot"
                     ? "Reset Password"
-                    : "Create an account"}
+                    : mode === "otp"
+                      ? "Enter 6-Digit Code"
+                      : mode === "new-password"
+                        ? "Set New Password"
+                        : "Create an account"}
               </Text>
               {/* text-sm text-neutral-600 font-medium */}
               <Text style={gs.cardSub}>
                 {mode === "login"
                   ? "Enter your credentials to access your portal."
                   : mode === "forgot"
-                    ? "Enter your email and we'll send you a reset link."
-                    : "Join the premier network for sales professionals."}
+                    ? "Enter your email address to receive a 6-digit verification code."
+                    : mode === "otp"
+                      ? `We sent a code to ${forgotEmail}. Enter it below.`
+                      : mode === "new-password"
+                        ? "Create a strong new password for your account."
+                        : "Join the premier network for sales professionals."}
               </Text>
             </View>
 
@@ -652,28 +772,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       </View>
                     )}
 
-                    {/* Success banner */}
-                    {!!forgotSuccess && (
-                      <View
-                        style={[
-                          gs.errorBanner,
-                          {
-                            backgroundColor: "rgba(16,185,129,0.08)",
-                            borderColor: "rgba(16,185,129,0.20)",
-                          },
-                        ]}
-                      >
-                        <Feather
-                          name="check-circle"
-                          size={16}
-                          color="#059669"
-                        />
-                        <Text style={[gs.errorText, { color: "#059669" }]}>
-                          {forgotSuccess}
-                        </Text>
-                      </View>
-                    )}
-
                     <View style={[gs.formGap, { marginBottom: 20 }]}>
                       <GInput
                         label="Email Address"
@@ -687,15 +785,12 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       />
                     </View>
 
-                    {/* Send reset link button */}
+                    {/* Send reset code button */}
                     <Pressable
-                      onPress={handleForgot}
-                      disabled={forgotSubmitting || !!forgotSuccess}
+                      onPress={handleSendOTP}
+                      disabled={forgotSubmitting}
                       style={({ pressed }) => ({
-                        opacity:
-                          pressed || forgotSubmitting || !!forgotSuccess
-                            ? 0.75
-                            : 1,
+                        opacity: pressed || forgotSubmitting ? 0.75 : 1,
                       })}
                     >
                       <LinearGradient
@@ -707,15 +802,10 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                         {forgotSubmitting ? (
                           <View style={gs.btnRow}>
                             <ActivityIndicator size="small" color="#fff" />
-                            <Text style={gs.btnText}>Sending...</Text>
-                          </View>
-                        ) : forgotSuccess ? (
-                          <View style={gs.btnRow}>
-                            <Feather name="check" size={16} color="#fff" />
-                            <Text style={gs.btnText}>Link Sent</Text>
+                            <Text style={gs.btnText}>Sending Code...</Text>
                           </View>
                         ) : (
-                          <Text style={gs.btnText}>Send Reset Link</Text>
+                          <Text style={gs.btnText}>Send 6-Digit Code</Text>
                         )}
                       </LinearGradient>
                     </Pressable>
@@ -728,6 +818,178 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                         </Text>
                       </Pressable>
                     </View>
+                  </View>
+                ) : mode === "otp" ? (
+                  <View>
+                    {!!otpError && (
+                      <View style={gs.errorBanner}>
+                        <Feather
+                          name="alert-triangle"
+                          size={16}
+                          color="#dc2626"
+                        />
+                        <Text style={gs.errorText}>{otpError}</Text>
+                      </View>
+                    )}
+
+                    <View style={[gs.formGap, { marginBottom: 20 }]}>
+                      <GInput
+                        label="6-Digit Verification Code"
+                        icon="key"
+                        value={otpCode}
+                        onChange={setOtpCode}
+                        kb="number-pad"
+                        ph="123456"
+                        fk="otp"
+                        focusSet={setForgotFocus}
+                        focusCur={forgotFocus}
+                      />
+                    </View>
+
+                    <Pressable
+                      onPress={handleVerifyOTP}
+                      disabled={otpSubmitting}
+                      style={({ pressed }) => ({
+                        opacity: pressed || otpSubmitting ? 0.75 : 1,
+                      })}
+                    >
+                      <LinearGradient
+                        colors={[ACCENT_600, ACCENT_500]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 0.5 }}
+                        style={gs.submitBtn}
+                      >
+                        {otpSubmitting ? (
+                          <View style={gs.btnRow}>
+                            <ActivityIndicator size="small" color="#fff" />
+                            <Text style={gs.btnText}>Verifying...</Text>
+                          </View>
+                        ) : (
+                          <Text style={gs.btnText}>Verify Code</Text>
+                        )}
+                      </LinearGradient>
+                    </Pressable>
+
+                    <View style={[gs.switchRow, { marginTop: 16 }]}>
+                      <Text style={gs.switchText}>Didn't receive the code? </Text>
+                      <Pressable onPress={handleResendOTP} disabled={otpResending}>
+                        <Text style={gs.switchLink}>
+                          {otpResending ? "Sending..." : "Resend"}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <View style={gs.divider} />
+                    <View style={gs.switchRow}>
+                      <Pressable onPress={() => setMode("forgot")}>
+                        <Text style={[gs.switchLink, { fontSize: 14 }]}>
+                          Change Email Address
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : mode === "new-password" ? (
+                  <View>
+                    {newPassDone ? (
+                      <View style={{ alignItems: "center", paddingVertical: 10 }}>
+                        <View
+                          style={{
+                            width: 60,
+                            height: 60,
+                            borderRadius: 30,
+                            backgroundColor: "#e5f6e2",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginBottom: 16,
+                          }}
+                        >
+                          <Feather name="check-circle" size={32} color={ACCENT_600} />
+                        </View>
+                        <Text style={[gs.cardTitle, { fontSize: 20, marginBottom: 8 }]}>
+                          Password Reset Successfully!
+                        </Text>
+                        <Text style={[gs.cardSub, { marginBottom: 20 }]}>
+                          You can now log in with your new password.
+                        </Text>
+                        <Pressable
+                          onPress={() => setMode("login")}
+                          style={{ width: "100%" }}
+                        >
+                          <LinearGradient
+                            colors={[ACCENT_600, ACCENT_500]}
+                            start={{ x: 0, y: 0.5 }}
+                            end={{ x: 1, y: 0.5 }}
+                            style={gs.submitBtn}
+                          >
+                            <Text style={gs.btnText}>Proceed to Login</Text>
+                          </LinearGradient>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <View>
+                        {!!newPassError && (
+                          <View style={gs.errorBanner}>
+                            <Feather
+                              name="alert-triangle"
+                              size={16}
+                              color="#dc2626"
+                            />
+                            <Text style={gs.errorText}>{newPassError}</Text>
+                          </View>
+                        )}
+
+                        <View style={[gs.formGap, { marginBottom: 20 }]}>
+                          <GInput
+                            label="New Password"
+                            icon="lock"
+                            value={newPass}
+                            onChange={setNewPass}
+                            secret
+                            showSecret={showNewPass}
+                            onToggleSecret={() => setShowNewPass(!showNewPass)}
+                            fk="np"
+                            focusSet={setForgotFocus}
+                            focusCur={forgotFocus}
+                          />
+                          <GInput
+                            label="Confirm New Password"
+                            icon="lock"
+                            value={newPassConf}
+                            onChange={setNewPassConf}
+                            secret
+                            showSecret={showNewPassConf}
+                            onToggleSecret={() => setShowNewPassConf(!showNewPassConf)}
+                            fk="npc"
+                            focusSet={setForgotFocus}
+                            focusCur={forgotFocus}
+                          />
+                        </View>
+
+                        <Pressable
+                          onPress={handleResetPassword}
+                          disabled={newPassSubmitting}
+                          style={({ pressed }) => ({
+                            opacity: pressed || newPassSubmitting ? 0.75 : 1,
+                          })}
+                        >
+                          <LinearGradient
+                            colors={[ACCENT_600, ACCENT_500]}
+                            start={{ x: 0, y: 0.5 }}
+                            end={{ x: 1, y: 0.5 }}
+                            style={gs.submitBtn}
+                          >
+                            {newPassSubmitting ? (
+                              <View style={gs.btnRow}>
+                                <ActivityIndicator size="small" color="#fff" />
+                                <Text style={gs.btnText}>Updating Password...</Text>
+                              </View>
+                            ) : (
+                              <Text style={gs.btnText}>Reset Password</Text>
+                            )}
+                          </LinearGradient>
+                        </Pressable>
+                      </View>
+                    )}
                   </View>
                 ) : mode === "login" ? (
                   <View>

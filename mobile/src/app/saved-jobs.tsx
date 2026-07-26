@@ -20,7 +20,7 @@ import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
 import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
-import { SkeletonJobCard } from '@/components/ui/skeleton';
+import { SkeletonJobCard, SkeletonLine } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const H_PAD = 16;
@@ -278,14 +278,18 @@ export default function SavedJobsScreen() {
               <Text style={[s.heroSub, { color: colors.textSecondary }]}>
                 Keep track of roles you want to apply for. Great opportunities fill fast!
               </Text>
-              {savedList.length > 0 && (
+              {(isLoading || isFetching) ? (
+                <View style={{ marginTop: 8 }}>
+                  <SkeletonLine width={160} height={24} style={{ borderRadius: 10 }} />
+                </View>
+              ) : savedList.length > 0 ? (
                 <View style={[s.countBadge, { backgroundColor: Palette.accent50, borderColor: Palette.accent200 }]}>
                   <Feather name="trending-up" size={14} color={Palette.accent600} />
                   <Text style={[s.countText, { color: Palette.accent700 }]}>
                     {savedList.length} saved {savedList.length === 1 ? 'role' : 'roles'} in pipeline
                   </Text>
                 </View>
-              )}
+              ) : null}
             </View>
 
             {/* 3D Illustration */}
@@ -297,8 +301,8 @@ export default function SavedJobsScreen() {
           </View>
         </Animated.View>
 
-        {/* ── Search bar (only when there are saved jobs) ── */}
-        {savedList.length > 0 && (
+        {/* ── Search bar (displays instantly) ── */}
+        {(isLoading || isFetching || savedList.length > 0) && (
           <Animated.View entering={FadeInDown.delay(100).springify()} style={s.searchWrap}>
             <Feather name="search" size={15} color={colors.textMuted} style={s.searchIcon} />
             <TextInput
@@ -317,8 +321,8 @@ export default function SavedJobsScreen() {
         )}
 
         {/* ── Content ── */}
-        {isLoading ? (
-          // Skeleton loading — matches shape of real saved job cards
+        {(isLoading || isFetching) ? (
+          // Skeleton loading — stays until ALL data (including savedJobs list) is ready
           <View style={{ gap: 12, paddingHorizontal: 16 }}>
             {[1, 2, 3].map(k => <SkeletonJobCard key={k} />)}
           </View>

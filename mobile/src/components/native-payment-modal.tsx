@@ -1,4 +1,21 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * NativePaymentModal — Google Play Billing (IAP) via expo-iap v4
+ *
+ * Uses the useIAP hook (expo-iap v4 pattern) which manages the BillingClient
+ * lifecycle, product loading, and purchase listener automatically.
+ *
+ * Flow:
+ *   1. Component mounts → useIAP() connects BillingClient + loads product info.
+ *   2. User taps "Buy & Download" → requestPurchase(PRODUCT_ID) → native Play sheet.
+ *   3. onPurchaseSuccess callback fires → sends purchaseToken to backend /payments/verify-iap/.
+ *   4. Backend verifies with Google Play Developer API → returns download_token.
+ *   5. App downloads PDF using the one-time token.
+ *   6. finishTransaction() acknowledges the purchase (REQUIRED within 3 days).
+ *
+ * Android only: Google Play Billing is not available on iOS.
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,16 +28,19 @@ import {
   Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useIAP, finishTransaction } from 'expo-iap';
 
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
 
 const { height: SCREEN_H } = Dimensions.get('window');
+
+// ─── IMPORTANT: This MUST match the product ID you create in Google Play Console ───
+const PRODUCT_ID = 'cv_download_150';
 
 interface NativePaymentModalProps {
   visible: boolean;
@@ -30,160 +50,159 @@ interface NativePaymentModalProps {
   onSuccess: () => void;
 }
 
-type PayState = 'idle' | 'initiating' | 'checkout' | 'verifying' | 'downloading' | 'completed' | 'cancelled' | 'error';
+type PayState =
+  | 'idle'
+  | 'connecting'
+  | 'purchasing'
+  | 'verifying'
+  | 'downloading'
+  | 'completed'
+  | 'cancelled'
+  | 'error';
 
-export default function NativePaymentModal({ visible, onClose, cvId, cvName, onSuccess }: NativePaymentModalProps) {
+export default function NativePaymentModal({
+  visible,
+  onClose,
+  cvId,
+  cvName,
+  onSuccess,
+}: NativePaymentModalProps) {
   const colors = Colors.light;
 
   const [payState, setPayState] = useState<PayState>('idle');
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-  const [reference, setReference] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string>('');
-  const [webViewLoading, setWebViewLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
+  // ─── expo-iap v4 useIAP hook ────────────────────────────────────────────────
+  const {
+    products,
+    requestPurchase,
+    connected,
+    getProducts,
+    purchaseHistory,
+  } = useIAP({
+    onPurchaseSuccess: async (purchase) => {
+      // Called automatically when Google Play returns a successful purchase
+      await handlePurchaseSuccess(purchase);
+    },
+    onPurchaseError: (error: any) => {
+      // E_USER_CANCELLED is not really an error — user just dismissed the sheet
+      if (
+        error?.code === 'E_USER_CANCELLED' ||
+        error?.message?.toLowerCase().includes('cancel')
+      ) {
+        setPayState('cancelled');
+      } else {
+        setErrorMessage(error?.message || 'Purchase failed. Please try again.');
+        setPayState('error');
+      }
+    },
+  });
+
+  // ─── Fetch product when modal opens and IAP is connected ─────────────────────
   useEffect(() => {
-    if (visible) {
-      setPayState('idle');
-      setCheckoutUrl(null);
-      setReference(null);
-      setErrorMessage('');
-      setWebViewLoading(true);
+    if (!visible) return;
+
+    // Reset state every time the modal opens fresh
+    setPayState('idle');
+    setErrorMessage('');
+
+    if (Platform.OS !== 'android') {
+      setPayState('error');
+      setErrorMessage('In-app purchases via Google Play are only available on Android.');
+      return;
     }
   }, [visible]);
 
-  const initiatePayment = async () => {
-    setPayState('initiating');
-    try {
-      const res = await apiFetch('/payments/initiate/', {
-        method: 'POST',
-        body: JSON.stringify({ cv_id: cvId }),
-      });
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'android') return;
 
-      if (res.already_paid && res.download_token) {
-        setPayState('downloading');
-        downloadCV(res.download_token);
-        return;
-      }
+    if (connected) {
+      // BillingClient is ready — load product info
+      setPayState('connecting');
+      getProducts([PRODUCT_ID])
+        .then(() => setPayState('idle'))
+        .catch((err: any) => {
+          setErrorMessage(
+            err?.message ||
+              `Could not load product "${PRODUCT_ID}". Make sure it is Active in Play Console.`
+          );
+          setPayState('error');
+        });
+    } else {
+      setPayState('connecting');
+    }
+  }, [connected, visible]);
 
-      if (res.access_code && res.reference) {
-        setReference(res.reference);
-        setCheckoutUrl(res.authorization_url || `https://checkout.paystack.com/${res.access_code}`);
-        setWebViewLoading(true);
-        setPayState('checkout');
-      } else {
-        throw new Error('Failed to initiate payment.');
+  // ─── Handle a successful purchase from the useIAP hook ────────────────────────
+  const handlePurchaseSuccess = useCallback(
+    async (purchase: any) => {
+      if (!purchase?.purchaseToken) return;
+      setPayState('verifying');
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      try {
+        const res = await apiFetch('/payments/verify-iap/', {
+          method: 'POST',
+          body: JSON.stringify({
+            purchase_token: purchase.purchaseToken,
+            product_id: purchase.productId,
+            cv_id: cvId,
+            order_id: purchase.transactionId ?? purchase.orderId ?? '',
+          }),
+        });
+
+        if (res.download_token) {
+          // Acknowledge the purchase — REQUIRED by Google Play within 3 days
+          await finishTransaction(purchase);
+
+          setPayState('downloading');
+          await downloadCV(res.download_token);
+        } else {
+          throw new Error('No download token received from server.');
+        }
+      } catch (err: any) {
+        setErrorMessage(
+          err.message || 'Purchase could not be verified. Contact support if you were charged.'
+        );
+        setPayState('error');
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Unable to initiate transaction. Please check your network.');
+    },
+    [cvId, cvName]
+  );
+
+  // ─── Trigger Google Play purchase sheet ──────────────────────────────────────
+  const handleBuyPress = async () => {
+    if (!connected) {
+      setErrorMessage('Google Play connection not ready. Please close and try again.');
       setPayState('error');
-    }
-  };
-
-  const injectedJS = `
-    (function() {
-      // 1. Override window.close
-      var origClose = window.close;
-      window.close = function() {
-        window.ReactNativeWebView.postMessage("cancelled");
-        if (origClose) origClose();
-      };
-
-      // 2. Intercept redirects or navigation attempts to standard close URLs
-      var origAssign = window.location.assign;
-      if (origAssign) {
-        window.location.assign = function(url) {
-          if (url && (url.indexOf('close') !== -1 || url.indexOf('cancel') !== -1)) {
-            window.ReactNativeWebView.postMessage("cancelled");
-          }
-          origAssign.apply(this, arguments);
-        };
-      }
-
-      // 3. Keep trying to bind click handlers to cancel / close links
-      var checkInterval = setInterval(function() {
-        var links = document.getElementsByTagName('a');
-        for (var i = 0; i < links.length; i++) {
-          var link = links[i];
-          if (link.innerText && (link.innerText.toLowerCase().includes('cancel') || link.innerText.toLowerCase().includes('close') || link.innerText.toLowerCase().includes('go back'))) {
-            if (!link.hasAttribute('data-cancel-bound')) {
-              link.setAttribute('data-cancel-bound', 'true');
-              link.addEventListener('click', function(e) {
-                window.ReactNativeWebView.postMessage("cancelled");
-              });
-            }
-          }
-        }
-        var buttons = document.getElementsByTagName('button');
-        for (var i = 0; i < buttons.length; i++) {
-          var btn = buttons[i];
-          if (btn.innerText && (btn.innerText.toLowerCase().includes('cancel') || btn.innerText.toLowerCase().includes('close') || btn.innerText.toLowerCase().includes('go back'))) {
-            if (!btn.hasAttribute('data-cancel-bound')) {
-              btn.setAttribute('data-cancel-bound', 'true');
-              btn.addEventListener('click', function(e) {
-                window.ReactNativeWebView.postMessage("cancelled");
-              });
-            }
-          }
-        }
-      }, 1000);
-    })();
-    true;
-  `;
-
-  const handleMessage = (event: any) => {
-    try {
-      const data = event.nativeEvent.data;
-      if (data === 'cancelled' || data === 'close' || data === 'window_close') {
-        handleCancelPayment();
-      }
-    } catch (e) {
-      // Ignore
-    }
-  };
-
-  const handleNavigationStateChange = (navState: any) => {
-    const { url } = navState;
-    if (!url) return;
-    // Paystack success/callback
-    if (url.includes('callback') || url.includes('success') || url.includes('trx')) {
-      verifyTransaction();
       return;
     }
-    // Paystack's own Cancel button redirects to a URL containing 'cancel' or 'close'
-    if (url.includes('cancel') || url.includes('close') || url.includes('cancelled')) {
-      handleCancelPayment();
-    }
-  };
-
-  const verifyTransaction = async () => {
-    if (!reference) return;
-    setPayState('verifying');
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPayState('purchasing');
     try {
-      const res = await apiFetch('/payments/verify/', {
-        method: 'POST',
-        body: JSON.stringify({ reference }),
-      });
-
-      if (res.download_token) {
-        setPayState('downloading');
-        downloadCV(res.download_token);
-      } else {
-        throw new Error('No download token received.');
-      }
+      // expo-iap v4: requestPurchase takes the product ID string directly
+      await requestPurchase(PRODUCT_ID);
+      // Result is handled by onPurchaseSuccess / onPurchaseError callbacks above
     } catch (err: any) {
-      setErrorMessage(err.message || 'Payment could not be verified. Contact support if you were debited.');
-      setPayState('error');
+      if (
+        err?.code === 'E_USER_CANCELLED' ||
+        err?.message?.toLowerCase().includes('cancel')
+      ) {
+        setPayState('cancelled');
+      } else {
+        setErrorMessage(err?.message || 'Could not initiate purchase. Please try again.');
+        setPayState('error');
+      }
     }
   };
 
+  // ─── Download the CV PDF using the server-issued one-time token ──────────────
   const downloadCV = async (token: string) => {
     try {
       const API_BASE = 'https://quotahire-backend.onrender.com/api';
-      const fileUri = `${FileSystem.documentDirectory}${cvName.replace(/\s+/g, '_')}_${cvId}.pdf`;
+      const safeName = cvName.replace(/\s+/g, '_');
+      const fileUri = `${FileSystem.documentDirectory}${safeName}_${cvId}.pdf`;
 
-      // Native PDF download from Django REST binary endpoint
       const { uri } = await FileSystem.downloadAsync(
         `${API_BASE}/cv/${cvId}/download/?token=${encodeURIComponent(token)}`,
         fileUri
@@ -193,81 +212,79 @@ export default function NativePaymentModal({ visible, onClose, cvId, cvName, onS
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onSuccess();
 
-      // Open native system sharing/viewing sheet so user can view/save/print it!
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri);
       } else {
-        Alert.alert('Success', 'CV saved to device local folder.');
+        Alert.alert('Success', 'CV saved to your device.');
       }
-    } catch (err) {
-      setErrorMessage('Payment was successful, but the PDF download failed. Please retry.');
+    } catch {
+      setErrorMessage(
+        'Payment was successful, but the PDF download failed. Please retry download.'
+      );
       setPayState('error');
     }
   };
 
+  // ─── Close helpers ────────────────────────────────────────────────────────────
+  const isBusy = ['connecting', 'purchasing', 'verifying', 'downloading'].includes(payState);
+
   const handleClose = () => {
-    if (['initiating', 'verifying', 'downloading'].includes(payState)) return;
+    if (isBusy) return;
     setPayState('idle');
     setErrorMessage('');
-    setReference(null);
-    setCheckoutUrl(null);
     onClose();
   };
 
-  // Used by the Cancel Payment button shown during checkout
-  const handleCancelPayment = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setPayState('cancelled');
-  };
+  // ─── Price display — use live product price from Play Console ─────────────────
+  const product = products.find((p) => p.productId === PRODUCT_ID);
+  const displayPrice = (product as any)?.localizedPrice ?? (product as any)?.price ?? '~€1.50';
 
-  const isBusy = ['initiating', 'verifying', 'downloading'].includes(payState);
-
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={s.overlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
 
-        <View style={[
-          s.sheet,
-          { backgroundColor: colors.cardBg },
-          payState === 'checkout' && { height: '100%', borderTopLeftRadius: 0, borderTopRightRadius: 0, paddingTop: Platform.OS === 'ios' ? 44 : 20 }
-        ]}>
-          {/* Header */}
+        <View style={[s.sheet, { backgroundColor: colors.cardBg }]}>
+          {/* ── Header ── */}
           <View style={[s.header, { borderBottomColor: colors.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={[s.headerIconWrap, { backgroundColor: Palette.accent50 }]}>
-                <Feather name="credit-card" size={16} color={Palette.accent600} />
+                <Feather name="shopping-bag" size={16} color={Palette.accent600} />
               </View>
               <View>
                 <Text style={[s.headerTitle, { color: colors.text }]}>Download CV</Text>
-                <Text style={{ fontSize: 10, color: colors.textMuted, maxWidth: 180 }} numberOfLines={1}>{cvName}</Text>
+                <Text
+                  style={{ fontSize: 10, color: colors.textMuted, maxWidth: 180 }}
+                  numberOfLines={1}
+                >
+                  {cvName}
+                </Text>
               </View>
             </View>
-            <Pressable
-              onPress={() => {
-                // During checkout: cancel payment (not silently close)
-                if (payState === 'checkout') {
-                  handleCancelPayment();
-                } else {
-                  handleClose();
-                }
-              }}
-              disabled={isBusy}
-              hitSlop={12}
-            >
-              <Feather name="x" size={20} color={colors.textMuted} style={isBusy && { opacity: 0.3 }} />
+            <Pressable onPress={handleClose} disabled={isBusy} hitSlop={12}>
+              <Feather
+                name="x"
+                size={20}
+                color={colors.textMuted}
+                style={isBusy && { opacity: 0.3 }}
+              />
             </Pressable>
           </View>
 
-          {/* IDLE */}
+          {/* ── IDLE: show product info & buy button ── */}
           {payState === 'idle' && (
             <View style={s.idleContainer}>
-              {/* Price row */}
-              <View style={[s.priceCard, { backgroundColor: Palette.neutral50, borderColor: colors.border }]}>
+              {/* Price card */}
+              <View
+                style={[s.priceCard, { backgroundColor: Palette.neutral50, borderColor: colors.border }]}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={[s.priceLabel, { color: colors.textMuted }]}>One-time fee</Text>
-                  <Text style={[s.priceValue, { color: colors.text }]}>€1.50</Text>
-                  <Text style={[s.priceSubtitle, { color: colors.textMuted }]}>Charged in ₦ at live rate</Text>
+                  <Text style={[s.priceValue, { color: colors.text }]}>{displayPrice}</Text>
+                  <Text style={[s.priceSubtitle, { color: colors.textMuted }]}>
+                    Charged via Google Play
+                  </Text>
                 </View>
                 <View style={[s.priceIconWrap, { backgroundColor: Palette.accent50 }]}>
                   <Feather name="download" size={22} color={Palette.accent600} />
@@ -278,15 +295,15 @@ export default function NativePaymentModal({ visible, onClose, cvId, cvName, onS
               <View style={s.trustRow}>
                 <View style={s.trustItem}>
                   <Feather name="shield" size={12} color={Palette.accent600} />
-                  <Text style={[s.trustText, { color: colors.textMuted }]}>256-bit SSL</Text>
+                  <Text style={[s.trustText, { color: colors.textMuted }]}>Google Play Protected</Text>
                 </View>
                 <View style={s.trustItem}>
                   <Feather name="lock" size={12} color={Palette.accent600} />
-                  <Text style={[s.trustText, { color: colors.textMuted }]}>Paystack</Text>
+                  <Text style={[s.trustText, { color: colors.textMuted }]}>256-bit SSL</Text>
                 </View>
               </View>
 
-              {/* CTA button with LinearGradient */}
+              {/* Buy CTA */}
               <LinearGradient
                 colors={['#0e4f06', '#15750a']}
                 start={{ x: 0, y: 0 }}
@@ -294,76 +311,73 @@ export default function NativePaymentModal({ visible, onClose, cvId, cvName, onS
                 style={[s.payBtnWrap, Shadow.card]}
               >
                 <Pressable
-                  style={({ pressed }) => [s.payBtn, pressed && { opacity: 0.95 }]}
-                  onPress={initiatePayment}
+                  style={({ pressed }) => [s.payBtn, pressed && { opacity: 0.85 }]}
+                  onPress={handleBuyPress}
                 >
-                  <Text style={s.payBtnText}>Pay €1.50 & Download</Text>
+                  <Feather name="shopping-cart" size={14} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={s.payBtnText}>Buy {displayPrice} via Google Play</Text>
                 </Pressable>
               </LinearGradient>
 
               <Text style={[s.acceptedPaymentsText, { color: colors.textMuted }]}>
-                Card, bank transfer, or USSD accepted
+                Secure payment handled by Google Play Billing
               </Text>
             </View>
           )}
 
-          {/* INITIATING */}
-          {payState === 'initiating' && (
+          {/* ── CONNECTING: initialising Play Billing client ── */}
+          {payState === 'connecting' && (
             <View style={s.center}>
               <ActivityIndicator size="large" color={Palette.accent600} />
-              <Text style={[s.statusText, { color: colors.text }]}>Preparing transaction secure gateway...</Text>
+              <Text style={[s.statusText, { color: colors.text }]}>
+                Connecting to Google Play…
+              </Text>
             </View>
           )}
 
-          {/* CHECKOUT */}
-          {payState === 'checkout' && checkoutUrl && (
-            <View style={{ flex: 1, position: 'relative' }}>
-              <WebView
-                source={{ uri: checkoutUrl }}
-                onNavigationStateChange={handleNavigationStateChange}
-                onLoadStart={() => setWebViewLoading(true)}
-                onLoadEnd={() => setWebViewLoading(false)}
-                injectedJavaScript={injectedJS}
-                onMessage={handleMessage}
-                style={{ flex: 1 }}
-              />
-
-              {/* Overlay spinner until Paystack page is fully loaded */}
-              {webViewLoading && (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: '#ffffff', justifyContent: 'center', alignItems: 'center', zIndex: 10 }]}>
-                  <ActivityIndicator size="large" color={Palette.accent600} />
-                  <Text style={{ marginTop: 12, fontSize: 13, color: colors.textSecondary, fontWeight: '600' }}>
-                    Loading Paystack secure gateway...
-                  </Text>
-                </View>
-              )}
+          {/* ── PURCHASING: waiting for user to complete the Play sheet ── */}
+          {payState === 'purchasing' && (
+            <View style={s.center}>
+              <ActivityIndicator size="large" color={Palette.accent600} />
+              <Text style={[s.statusText, { color: colors.text }]}>
+                Opening Google Play checkout…
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: 'center' }}>
+                Complete the payment in the Google Play sheet that appeared.
+              </Text>
             </View>
           )}
 
-          {/* VERIFYING */}
+          {/* ── VERIFYING: backend checking with Google Play API ── */}
           {payState === 'verifying' && (
             <View style={s.center}>
               <ActivityIndicator size="large" color={Palette.accent600} />
-              <Text style={[s.statusText, { color: colors.text }]}>Verifying transaction reference...</Text>
+              <Text style={[s.statusText, { color: colors.text }]}>
+                Verifying purchase with Google…
+              </Text>
             </View>
           )}
 
-          {/* DOWNLOADING */}
+          {/* ── DOWNLOADING: fetching the PDF ── */}
           {payState === 'downloading' && (
             <View style={s.center}>
               <ActivityIndicator size="large" color={Palette.emerald600} />
-              <Text style={[s.statusText, { color: colors.text }]}>Generating binary PDF and saving...</Text>
+              <Text style={[s.statusText, { color: colors.text }]}>
+                Generating PDF and saving to device…
+              </Text>
             </View>
           )}
 
-          {/* COMPLETED */}
+          {/* ── COMPLETED ── */}
           {payState === 'completed' && (
             <View style={s.center}>
               <View style={[s.successIconWrap, { backgroundColor: Palette.emerald50 }]}>
                 <Feather name="check-circle" size={32} color={Palette.emerald600} />
               </View>
               <Text style={[s.successTitle, { color: colors.text }]}>Download complete!</Text>
-              <Text style={[s.successSub, { color: colors.textMuted }]}>Your CV has been saved to your device.</Text>
+              <Text style={[s.successSub, { color: colors.textMuted }]}>
+                Your CV has been saved to your device.
+              </Text>
               <Pressable
                 onPress={handleClose}
                 style={[s.doneBtn, { backgroundColor: Palette.accent600 }]}
@@ -373,13 +387,13 @@ export default function NativePaymentModal({ visible, onClose, cvId, cvName, onS
             </View>
           )}
 
-          {/* CANCELLED */}
+          {/* ── CANCELLED ── */}
           {payState === 'cancelled' && (
             <View style={s.center}>
               <View style={[s.warnIconWrap, { backgroundColor: Palette.neutral100 }]}>
                 <Feather name="x-circle" size={32} color={Palette.neutral500} />
               </View>
-              <Text style={[s.successTitle, { color: colors.text }]}>Payment cancelled</Text>
+              <Text style={[s.successTitle, { color: colors.text }]}>Purchase cancelled</Text>
               <Text style={[s.successSub, { color: colors.textMuted }]}>No charge was made.</Text>
               <View style={s.btnRow}>
                 <Pressable
@@ -398,7 +412,7 @@ export default function NativePaymentModal({ visible, onClose, cvId, cvName, onS
             </View>
           )}
 
-          {/* ERROR */}
+          {/* ── ERROR ── */}
           {payState === 'error' && (
             <View style={s.center}>
               <View style={[s.errIconWrap, { backgroundColor: Palette.red50 }]}>
@@ -414,7 +428,7 @@ export default function NativePaymentModal({ visible, onClose, cvId, cvName, onS
                   <Text style={[s.btnHalfText, { color: colors.text }]}>Close</Text>
                 </Pressable>
                 <Pressable
-                  onPress={initiatePayment}
+                  onPress={() => setPayState('idle')}
                   style={[s.btnHalf, { backgroundColor: Palette.accent600 }]}
                 >
                   <Text style={[s.btnHalfText, { color: '#fff' }]}>Retry</Text>
@@ -428,6 +442,7 @@ export default function NativePaymentModal({ visible, onClose, cvId, cvName, onS
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -437,7 +452,7 @@ const s = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: BorderRadius.cardLg,
     borderTopRightRadius: BorderRadius.cardLg,
-    height: SCREEN_H * 0.45,
+    maxHeight: SCREEN_H * 0.85,
     paddingTop: 8,
     overflow: 'hidden',
   },
@@ -471,48 +486,6 @@ const s = StyleSheet.create({
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
     textAlign: 'center',
-  },
-  cancelBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: Palette.red400,
-    backgroundColor: Palette.red50,
-  },
-  cancelBarText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Palette.red600,
-  },
-  checkoutHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Palette.neutral50,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: Palette.neutral200,
-  },
-  checkoutHeaderSecureText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  cancelPaymentBtn: {
-    backgroundColor: Palette.red50,
-    borderColor: Palette.red400,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  cancelPaymentBtnText: {
-    color: Palette.red700,
-    fontSize: 11,
-    fontWeight: '700',
   },
   idleContainer: {
     padding: 20,
@@ -570,6 +543,7 @@ const s = StyleSheet.create({
   },
   payBtn: {
     paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },

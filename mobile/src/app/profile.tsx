@@ -284,7 +284,10 @@ export default function ProfileScreen() {
 
     try {
       const token = await SecureStore.getItemAsync("access_token");
-      await uploadFileViaXHR(`${API_BASE}/profile/avatar/`, formData, token);
+      const res = await uploadFileViaXHR(`${API_BASE}/profile/avatar/`, formData, token);
+      if (res?.avatarUrl) {
+        await SecureStore.setItemAsync("user_avatar", res.avatarUrl);
+      }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Profile picture updated!");
@@ -578,7 +581,8 @@ export default function ProfileScreen() {
     if (cv.is_paid) {
       setDownloadingCVId(cv.id);
       try {
-        const res = await apiFetch("/payments/initiate/", {
+        // Check if user already paid for this CV (via Google Play) → get a fresh download token
+        const res = await apiFetch("/payments/already-paid/", {
           method: "POST",
           body: JSON.stringify({ cv_id: cv.id }),
         });
@@ -636,6 +640,7 @@ export default function ProfileScreen() {
             );
           }
         } else {
+          setActiveSection(null);
           setPaymentVisible(true);
         }
       } catch (err) {
@@ -644,6 +649,7 @@ export default function ProfileScreen() {
         setDownloadingCVId(null);
       }
     } else {
+      setActiveSection(null);
       setPaymentVisible(true);
     }
   };
@@ -1055,9 +1061,13 @@ export default function ProfileScreen() {
             </View>
 
             {/* Name + title */}
-            <Text style={[s.heroName, { color: colors.text }]}>
-              {user.name}
-            </Text>
+            {isFetching && !user.name ? (
+              <Skeleton width={140} height={20} borderRadius={6} style={{ marginBottom: 6 }} />
+            ) : (
+              <Text style={[s.heroName, { color: colors.text }]}>
+                {user.name}
+              </Text>
+            )}
             <View style={s.titleRow}>
               {user.title && (
                 <Text style={[s.heroTitle, { color: colors.textSecondary }]}>
@@ -1081,9 +1091,13 @@ export default function ProfileScreen() {
               <Text style={[s.scoreLabel, { color: colors.textMuted }]}>
                 Profile Score
               </Text>
-              <Text style={[s.scoreVal, { color: Palette.accent500 }]}>
-                {profileScore}%
-              </Text>
+              {isFetching ? (
+                <Skeleton width={36} height={16} borderRadius={4} />
+              ) : (
+                <Text style={[s.scoreVal, { color: Palette.accent500 }]}>
+                  {profileScore}%
+                </Text>
+              )}
             </View>
             <View style={[s.progressBg, { backgroundColor: colors.border }]}>
               <LinearGradient
@@ -1144,12 +1158,16 @@ export default function ProfileScreen() {
                       <Text style={[s.sectionLabel, { color: colors.text }]}>
                         {item.label}
                       </Text>
-                      <Text
-                        style={[s.sectionSub, { color: colors.textMuted }]}
-                        numberOfLines={1}
-                      >
-                        {item.subtitle}
-                      </Text>
+                      {isFetching ? (
+                        <Skeleton width={120} height={12} borderRadius={4} style={{ marginTop: 4 }} />
+                      ) : (
+                        <Text
+                          style={[s.sectionSub, { color: colors.textMuted }]}
+                          numberOfLines={1}
+                        >
+                          {item.subtitle}
+                        </Text>
+                      )}
                     </View>
 
                     {item.actionText ? (
@@ -1250,7 +1268,7 @@ export default function ProfileScreen() {
 
               <ScrollView
                 style={s.modalBody}
-                contentContainerStyle={{ paddingBottom: 40 }}
+                contentContainerStyle={{ paddingBottom: 24, flexGrow: 0 }}
                 showsVerticalScrollIndicator={false}
               >
                 {activeSection === "contact" && (
@@ -1768,7 +1786,7 @@ export default function ProfileScreen() {
 
               <ScrollView
                 style={s.modalBody}
-                contentContainerStyle={{ paddingBottom: 40 }}
+                contentContainerStyle={{ paddingBottom: 24, flexGrow: 0 }}
                 showsVerticalScrollIndicator={false}
               >
                 {cvsLoading ? (
@@ -2031,7 +2049,7 @@ const s = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: BorderRadius.cardLg,
     borderTopRightRadius: BorderRadius.cardLg,
-    height: SCREEN_H * 0.8,
+    maxHeight: SCREEN_H * 0.85,
     paddingTop: 8,
   },
   modalHeader: {

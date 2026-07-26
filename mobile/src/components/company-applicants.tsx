@@ -21,6 +21,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Palette, BorderRadius, FontSize, FontWeight, TabBarHeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
 import { useCompanyDashboardData } from '@/hooks/useCompanyDashboardData';
+import { SkeletonBox, SkeletonLine } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -170,9 +171,19 @@ export default function CompanyApplicants() {
           <Text style={styles.emptySub}>Select one of your job roles above to view the applicant submissions.</Text>
         </View>
       ) : loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color={Palette.accent500} />
-          <Text style={styles.loaderText}>Loading candidates...</Text>
+        <View style={{ gap: 12, paddingHorizontal: 16, paddingTop: 16 }}>
+          {[1, 2, 3].map(k => (
+            <View key={k} style={{ padding: 16, gap: 12, backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: colors.borderMid }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <SkeletonBox width={44} height={44} borderRadius={22} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <SkeletonLine width="50%" height={14} />
+                  <SkeletonLine width="35%" height={11} />
+                </View>
+              </View>
+              <SkeletonLine width="80%" height={12} />
+            </View>
+          ))}
         </View>
       ) : applicants.length === 0 ? (
         <View style={styles.emptyContainer}>

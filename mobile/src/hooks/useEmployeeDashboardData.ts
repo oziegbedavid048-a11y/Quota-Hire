@@ -22,6 +22,7 @@ export interface Job {
   workType: "Remote" | "On-Site" | "Hybrid";
   salaryRange?: string;
   commissionRange?: string;
+  currency?: string;
   description: string;
   requirements: string[];
   status: "approved" | "pending" | "rejected";
@@ -145,6 +146,7 @@ function normalizeJobs(rawJobs: any[]): Job[] {
     workType: j.is_remote ? "Remote" : ("Hybrid" as const),
     salaryRange: j.salary_range,
     commissionRange: j.commission_range,
+    currency: j.currency || 'USD',
     description: j.description,
     requirements: j.requirements || [],
     status: j.status || "approved",

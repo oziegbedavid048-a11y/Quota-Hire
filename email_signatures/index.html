@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quota Hire Email Signatures Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1A6515;
+      --primary-hover: #134e10;
+      --accent: #5DDE2A;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #eaf5e9;
+      color: var(--primary);
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      border: 1px solid #c7e6c5;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.8px;
+      color: #0f172a;
+      margin-bottom: 10px;
+    }
+
+    p.subtitle {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 16px 24px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+    }
+
+    .bg-toggle {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .toggle-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .signatures-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+
+    .sig-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    .sig-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 24px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sig-title-area h3 {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sig-email {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      background: #eaf5e9;
+      padding: 2px 10px;
+      border-radius: 6px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    .preview-box {
+      padding: 30px;
+      background: #ffffff;
+      transition: background 0.3s ease;
+      display: flex;
+      justify-content: center;
+    }
+
+    .preview-box.dark-mode {
+      background: #111827 !important;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .instructions {
+      margin-top: 48px;
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 28px;
+    }
+
+    .instructions h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .instructions ol {
+      padding-left: 20px;
+      font-size: 14px;
+      color: #334155;
+      line-height: 1.8;
+    }
+
+    .instructions li {
+      margin-bottom: 8px;
+    }
+
+    code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="logo-badge">
+        <span>QUOTA HIRE</span> &bull; <span>UK OFFICIAL</span>
+      </div>
+      <h1>HTML Email Signatures</h1>
+      <p class="subtitle">Clean, responsive, professional HTML signatures designed for <strong>hello@</strong>, <strong>info@</strong>, and <strong>support@quotahire.co.uk</strong>.</p>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="bg-toggle">
+        <span>Preview Background:</span>
+        <button class="toggle-btn active" onclick="setPreviewBg('light')">Light</button>
+        <button class="toggle-btn" onclick="setPreviewBg('dark')">Dark Mode</button>
+      </div>
+      <div style="font-size: 12px; color: var(--muted); font-weight: 500;">
+        Tested on Gmail, Outlook, Apple Mail, iOS & Android
+      </div>
+    </div>
+
+    <div class="signatures-grid">
+
+      <!-- Signature 1: HELLO -->
+      <div class="sig-card">
+        <div class="sig-header">
+          <div class="sig-title-area">
+            <h3>Hello Signature <span class="sig-email">hello@quotahire.co.uk</span></h3>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" onclick="copyHTML('hello-frame')">Copy HTML Code</button>
+            <button class="btn btn-primary" onclick="copyRichText('hello-preview')">Copy Signature</button>
+          </div>
+        </div>
+        <div class="preview-box" id="hello-preview-box">
+          <iframe id="hello-frame" src="hello_quotahire.html" style="width: 100%; max-width: 580px; height: 130px; border: none; overflow: hidden;" onload="resizeIframe(this)"></iframe>
+        </div>
+      </div>
+
+      <!-- Signature 2: INFO -->
+      <div class="sig-card">
+        <div class="sig-header">
+          <div class="sig-title-area">
+            <h3>Info Desk Signature <span class="sig-email">info@quotahire.co.uk</span></h3>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" onclick="copyHTML('info-frame')">Copy HTML Code</button>
+            <button class="btn btn-primary" onclick="copyRichText('info-preview')">Copy Signature</button>
+          </div>
+        </div>
+        <div class="preview-box" id="info-preview-box">
+          <iframe id="info-frame" src="info_quotahire.html" style="width: 100%; max-width: 580px; height: 130px; border: none; overflow: hidden;" onload="resizeIframe(this)"></iframe>
+        </div>
+      </div>
+
+      <!-- Signature 3: SUPPORT -->
+      <div class="sig-card">
+        <div class="sig-header">
+          <div class="sig-title-area">
+            <h3>Support Helpdesk Signature <span class="sig-email">support@quotahire.co.uk</span></h3>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" onclick="copyHTML('support-frame')">Copy HTML Code</button>
+            <button class="btn btn-primary" onclick="copyRichText('support-preview')">Copy Signature</button>
+          </div>
+        </div>
+        <div class="preview-box" id="support-preview-box">
+          <iframe id="support-frame" src="support_quotahire.html" style="width: 100%; max-width: 580px; height: 130px; border: none; overflow: hidden;" onload="resizeIframe(this)"></iframe>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Instructions Section -->
+    <div class="instructions">
+      <h2>How to Install Signature in Your Email Client</h2>
+      <ol>
+        <li><strong>Gmail / Google Workspace:</strong> Open Gmail &rarr; Settings (Gear Icon) &rarr; See all settings &rarr; General &rarr; Signature. Click <code>Copy Signature</code> button above, then paste directly into the signature text editor box. Save changes.</li>
+        <li><strong>Outlook (Web or Desktop):</strong> Settings &rarr; View all Outlook settings &rarr; Mail &rarr; Compose and reply &rarr; Signature. Paste the copied signature directly into the box.</li>
+        <li><strong>Apple Mail (Mac):</strong> Preferences &rarr; Signatures. Create a new signature, uncheck "Always match my default font", and paste the signature.</li>
+        <li><strong>ZeptoMail / Automated Mailers:</strong> Click <code>Copy HTML Code</code> button above and paste the raw HTML into your ZeptoMail or email template editor.</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast" class="toast">Copied to clipboard!</div>
+
+  <script>
+    function setPreviewBg(mode) {
+      const boxes = document.querySelectorAll('.preview-box');
+      const btns = document.querySelectorAll('.toggle-btn');
+      
+      btns.forEach(btn => btn.classList.remove('active'));
+      
+      if (mode === 'dark') {
+        boxes.forEach(b => b.classList.add('dark-mode'));
+        btns[1].classList.add('active');
+      } else {
+        boxes.forEach(b => b.classList.remove('dark-mode'));
+        btns[0].classList.add('active');
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.innerText = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function copyHTML(iframeId) {
+      const iframe = document.getElementById(iframeId);
+      const htmlContent = iframe.contentDocument.documentElement.outerHTML;
+      navigator.clipboard.writeText(htmlContent).then(() => {
+        showToast('HTML code copied to clipboard!');
+      }).catch(err => {
+        alert('Failed to copy: ' + err);
+      });
+    }
+
+    function copyRichText(previewBoxId) {
+      const iframeId = previewBoxId.replace('-preview', '-frame');
+      const iframe = document.getElementById(iframeId);
+      const doc = iframe.contentDocument;
+      
+      const range = doc.createRange();
+      range.selectNodeContents(doc.body);
+      const selection = doc.defaultView.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      doc.execCommand('copy');
+      selection.removeAllRanges();
+      showToast('Formatted signature copied! Ready to paste into Gmail/Outlook.');
+    }
+
+    function resizeIframe(obj) {
+      obj.style.height = (obj.contentWindow.document.documentElement.scrollHeight + 10) + 'px';
+    }
+  </script>
+</body>
+</html>

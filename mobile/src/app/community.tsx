@@ -48,6 +48,40 @@ export default function CommunityScreen() {
     toggleLike, voteOnPoll, createPost, editPost, updatePostSettings, deletePost, reportPost, createPoll,
   } = useCommunityData();
 
+  // Track whether all avatar images in the current feed have finished loading
+  // Skeleton stays visible until both data is fetched AND images are prefetched
+  const [imagesReady, setImagesReady] = useState(false);
+  const prevIsLoading = useRef(true);
+
+  useEffect(() => {
+    // When isLoading transitions from true → false, prefetch all avatar images
+    if (prevIsLoading.current && !isLoading) {
+      prevIsLoading.current = false;
+      const avatarUrls = feed
+        .map(item => item.author?.avatar_url)
+        .filter((url): url is string => typeof url === 'string' && url.length > 0);
+
+      if (avatarUrls.length === 0) {
+        // No images to load — mark ready immediately
+        setImagesReady(true);
+        return;
+      }
+
+      // Prefetch all avatar images in parallel, then mark ready
+      Promise.all(
+        avatarUrls.map(url =>
+          Image.prefetch(url).catch(() => null) // never throw — missing image is OK
+        )
+      ).then(() => {
+        setImagesReady(true);
+      });
+    } else if (isLoading) {
+      // Reset on every new load cycle
+      prevIsLoading.current = true;
+      setImagesReady(false);
+    }
+  }, [isLoading, feed]);
+
   const [activeCategory, setActiveCategory] = useState('trending');
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
@@ -274,10 +308,17 @@ export default function CommunityScreen() {
     } catch { return ''; }
   };
 
-  // Avatar component — real photo if available, gradient initial otherwise
-  const AuthorAvatar = ({ author, isPost }: { author: CommunityPost['author'] | CommunityPoll['author']; isPost: boolean }) => {
-    const init = (author.name || 'A').charAt(0).toUpperCase();
-    if (author.avatar_url) {
+  // Avatar component — real photo if available, gradient initial otherwise, or incognito icon for anonymous
+  const AuthorAvatar = ({ author, isPost, isAnonymous }: { author: CommunityPost['author'] | CommunityPoll['author']; isPost: boolean; isAnonymous?: boolean }) => {
+    if (isAnonymous || author?.name === 'Anonymous') {
+      return (
+        <LinearGradient colors={[Palette.neutral400, Palette.neutral500]} style={styles.avatar}>
+          <Feather name="user" size={18} color="#fff" />
+        </LinearGradient>
+      );
+    }
+    const init = (author?.name || 'A').charAt(0).toUpperCase();
+    if (author?.avatar_url) {
       return (
         <Image
           source={{ uri: author.avatar_url }}
@@ -314,10 +355,10 @@ export default function CommunityScreen() {
           >
             {/* Header */}
             <View style={styles.cardHeader}>
-              <AuthorAvatar author={p.author} isPost={true} />
+              <AuthorAvatar author={p.author} isPost={true} isAnonymous={p.is_anonymous} />
               <View style={styles.headerInfo}>
                 <Text style={styles.authorName}>
-                  {p.is_anonymous ? 'Anonymous' : p.author.name}
+                  {p.is_anonymous ? (isAuthor ? 'Anonymous (You)' : 'Anonymous') : p.author.name}
                 </Text>
                 <Text style={styles.timeText}>{formatTime(p.created_at)}</Text>
               </View>
@@ -335,16 +376,6 @@ export default function CommunityScreen() {
                     hitSlop={8}
                   >
                     <Feather name="more-vertical" size={18} color={Palette.neutral500} />
-                  </Pressable>
-                )}
-                {/* Report button for non-authors only */}
-                {!isAuthor && (
-                  <Pressable
-                    onPress={() => openReportModal(p)}
-                    style={styles.threeDotBtn}
-                    hitSlop={8}
-                  >
-                    <Feather name="flag" size={16} color={Palette.neutral400} />
                   </Pressable>
                 )}
               </View>
@@ -481,12 +512,12 @@ export default function CommunityScreen() {
 
       {/* Feed */}
       <FlatList
-        data={isLoading && feed.length === 0 ? ([1, 2, 3] as any[]) : feed}
+        data={isLoading ? ([1, 2, 3, 4, 5] as any[]) : feed}
         keyExtractor={(item, index) =>
-          isLoading && feed.length === 0 ? `skeleton-${index}` : `${(item as any).type}-${(item as any).id}`
+          isLoading ? `skeleton-${index}` : `${(item as any).type}-${(item as any).id}`
         }
         renderItem={({ item, index }) => {
-          if (isLoading && feed.length === 0) {
+          if (isLoading) {
             return <SkeletonPostCard style={{ marginBottom: 16, marginHorizontal: 16 }} />;
           }
           return renderFeedItem({ item: item as CommunityFeedItem, index });
@@ -527,7 +558,7 @@ export default function CommunityScreen() {
           </Animated.View>
         }
         ListEmptyComponent={
-          !isLoading ? (
+          (!isLoading && imagesReady) ? (
             <View style={[styles.centered, { marginTop: 40 }]}>
               <Feather name="message-square" size={48} color={Palette.neutral300} />
               <Text style={styles.emptyTitle}>Nothing here yet</Text>

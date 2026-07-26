@@ -213,6 +213,32 @@ def get_recovery_email_html(user, redirect):
     return _build_email(title="Reset your password - Quota Hire", body_html=body)
 
 
+def get_mobile_otp_email_html(user, otp_code):
+    """Generates the HTML email for mobile 6-digit OTP password reset."""
+    body = (
+        _h1("Password Reset Code", "Use this code in the Quota Hire app") +
+        _p(f"Hi <strong>{user}</strong>,") +
+        _p(
+            "We received a request to reset your password on the Quota Hire mobile app. "
+            "Please enter the 6-digit code below directly into the app:"
+        ) +
+        '<div style="background-color:#f4fbf2;border:2px dashed #1A6515;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">'
+        f'<div style="font-size:36px;font-weight:900;letter-spacing:12px;color:#1A6515;font-family:monospace;">{otp_code}</div>'
+        '</div>' +
+        _p(
+            "This code is valid for <strong>30 minutes</strong> and can only be used once. "
+            "Do not share this code with anyone."
+        ) +
+        _p(
+            "If you did not request a password reset, please ignore this email. "
+            "Your password will remain unchanged."
+        ) +
+        _signoff()
+    )
+    return _build_email(title="Your Password Reset Code - Quota Hire", body_html=body)
+
+
+
 # =============================================================================
 # 3. WELCOME EMAIL (sent after email verification)
 # =============================================================================

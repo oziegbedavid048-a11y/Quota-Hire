@@ -26,7 +26,17 @@ interface CommentGroup {
 }
 
 // ─── Avatar Helper ────────────────────────────────────────────────────────────
-function AvatarImage({ author, size = 40 }: { author: any; size?: number }) {
+function AvatarImage({ author, size = 40, isAnonymous }: { author: any; size?: number; isAnonymous?: boolean }) {
+  if (isAnonymous || author?.name === 'Anonymous') {
+    return (
+      <LinearGradient
+        colors={[Palette.neutral400, Palette.neutral500]}
+        style={{ width: size, height: size, borderRadius: size / 2, justifyContent: 'center', alignItems: 'center' }}
+      >
+        <Feather name="user" size={size * 0.45} color="#fff" />
+      </LinearGradient>
+    );
+  }
   const init = (author?.name || 'U').charAt(0).toUpperCase();
   if (author?.avatar_url) {
     return (
@@ -575,9 +585,11 @@ export default function CommunityDetailScreen() {
             <View style={styles.postDetails}>
               {/* Author row */}
               <View style={styles.cardHeader}>
-                <AvatarImage author={post.author} size={44} />
+                <AvatarImage author={post.author} size={44} isAnonymous={post.is_anonymous} />
                 <View style={styles.headerInfo}>
-                  <Text style={styles.authorName}>{post.author.name}</Text>
+                  <Text style={styles.authorName}>
+                    {post.is_anonymous ? (post.is_author ? 'Anonymous (You)' : 'Anonymous') : post.author.name}
+                  </Text>
                   <Text style={styles.timeText}>{formatTime(post.created_at)}</Text>
                 </View>
                 {post.is_anonymous && (

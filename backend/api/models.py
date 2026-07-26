@@ -409,9 +409,17 @@ class PaymentStatus(models.TextChoices):
 
 class PaymentTransaction(models.Model):
     """
-    Tracks a Paystack payment for a CV document download.
+    Tracks a payment for a CV document download.
+    Supports both Paystack (web) and Google Play Billing (mobile IAP).
     One record per payment attempt.
     """
+    PAYMENT_SOURCE_PAYSTACK     = 'paystack'
+    PAYMENT_SOURCE_GOOGLE_PLAY  = 'google_play'
+    PAYMENT_SOURCE_CHOICES = [
+        (PAYMENT_SOURCE_PAYSTACK,    'Paystack (Web)'),
+        (PAYMENT_SOURCE_GOOGLE_PLAY, 'Google Play Billing (Mobile)'),
+    ]
+
     user        = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
@@ -425,7 +433,14 @@ class PaymentTransaction(models.Model):
         related_name='payment_transactions',
         help_text='The CV document this payment is for. Null = uploaded resume.',
     )
-    # Paystack reference — unique UUID used as the payment reference
+    # Payment source — which processor handled this transaction
+    payment_source = models.CharField(
+        max_length=20,
+        choices=PAYMENT_SOURCE_CHOICES,
+        default=PAYMENT_SOURCE_PAYSTACK,
+        db_index=True,
+    )
+    # Paystack reference — unique UUID used as the payment reference (web flow)
     reference   = models.CharField(max_length=100, unique=True, default=uuid.uuid4)
     amount_eur  = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('1.50'))
     # Amount in NGN kobo as returned by Paystack on verification
@@ -436,8 +451,13 @@ class PaymentTransaction(models.Model):
         default=PaymentStatus.PENDING,
         db_index=True,
     )
-    # Paystack internal transaction ID (filled after successful verification)
+    # Paystack internal transaction ID (filled after successful verification — web)
     paystack_id = models.CharField(max_length=100, blank=True)
+    # ── Google Play Billing fields (mobile IAP) ─────────────────────────────────
+    # The Google Play orderId (e.g. GPA.xxxx-xxxx-xxxx-xxxxx)
+    google_order_id     = models.CharField(max_length=200, blank=True)
+    # The purchaseToken returned by Google Play — used for server-side verification
+    google_purchase_token = models.CharField(max_length=500, blank=True)
     created_at  = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at  = models.DateTimeField(auto_now=True)
 
@@ -748,3 +768,37 @@ class CommunityReport(models.Model):
     @property
     def post_preview(self):
         return self.post.content[:80]
+
+
+# ── Mobile Password Reset OTP ─────────────────────────────────────────────────
+
+class PasswordResetOTP(models.Model):
+    """
+    Stores a 6-digit one-time password for the mobile in-app password reset.
+    Security: one active OTP per user, 30-min expiry, single-use, rate-limited.
+    """
+    user       = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name='password_reset_otps'
+    )
+    otp_code   = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used    = models.BooleanField(default=False)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'Password Reset OTP'
+        verbose_name_plural = 'Password Reset OTPs'
+        indexes             = [
+            models.Index(fields=['user', 'is_used']),
+        ]
+
+    def __str__(self):
+        return f'OTP for {self.user.email} (used={self.is_used})'
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+

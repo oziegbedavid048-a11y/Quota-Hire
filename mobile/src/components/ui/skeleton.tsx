@@ -156,6 +156,64 @@ export function SkeletonApplicationCard({ style }: { style?: ViewStyle }) {
   );
 }
 
+// ─── Skeleton job details screen ─────────────────────────────────────────────
+export function SkeletonJobDetails({ style }: { style?: ViewStyle }) {
+  return (
+    <View style={[{ padding: 16, gap: 16 }, style]}>
+      {/* Hero card skeleton */}
+      <View style={[sk.jobCard, { padding: 20, gap: 16 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
+          <SkeletonBox width={60} height={60} borderRadius={12} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <SkeletonLine width="45%" height={12} />
+            <SkeletonLine width="85%" height={18} />
+            <SkeletonLine width="65%" height={14} />
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+          <SkeletonBox width={90} height={26} borderRadius={8} />
+          <SkeletonBox width={80} height={26} borderRadius={8} />
+        </View>
+      </View>
+
+      {/* About section skeleton */}
+      <View style={{ gap: 10 }}>
+        <SkeletonLine width="35%" height={15} />
+        <SkeletonLine width="100%" height={12} />
+        <SkeletonLine width="95%" height={12} />
+        <SkeletonLine width="80%" height={12} />
+        <SkeletonLine width="90%" height={12} />
+      </View>
+
+      {/* Requirements skeleton */}
+      <View style={{ gap: 10 }}>
+        <SkeletonLine width="40%" height={15} />
+        {[1,2,3].map(k => (
+          <View key={k} style={[sk.jobCard, { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 }]}>
+            <SkeletonBox width={22} height={22} borderRadius={11} />
+            <SkeletonLine width="75%" height={12} />
+          </View>
+        ))}
+      </View>
+
+      {/* Compensation skeleton */}
+      <View style={[sk.jobCard, { padding: 16 }]}>
+        <SkeletonLine width="35%" height={15} style={{ marginBottom: 12 }} />
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flex: 1, gap: 6 }}>
+            <SkeletonLine width="60%" height={10} />
+            <SkeletonLine width="80%" height={20} />
+          </View>
+          <View style={{ flex: 1, gap: 6 }}>
+            <SkeletonLine width="60%" height={10} />
+            <SkeletonLine width="80%" height={20} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const sk = StyleSheet.create({
   row: {
