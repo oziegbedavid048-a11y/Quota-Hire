@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "npx vite",
-    "build": "npx vite build",
+    "dev": "vite",
+    "build": "vite build",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "preview": "npx vite preview",
+    "preview": "vite preview",
     "predeploy": "npm run build && node -e \"require('fs').copyFileSync('public/404.html', 'dist/404.html')\"",
     "deploy": "gh-pages -d dist"
   },
@@ -18,6 +18,7 @@
     "@react-pdf/renderer": "^4.5.1",
     "@sentry/react": "^10.57.0",
     "@studio-freight/lenis": "^1.0.42",
+    "@vitejs/plugin-react": "^4.2.1",
     "buffer": "^6.0.3",
     "date-fns": "^4.4.0",
     "dompurify": "^3.4.11",
@@ -33,6 +34,7 @@
     "sonner": "^2.0.1",
     "tar": "^7.5.19",
     "three": "^0.170.0",
+    "vite": "^6.3.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -43,7 +45,6 @@
     "@types/three": "^0.184.1",
     "@typescript-eslint/eslint-plugin": "^5.54.0",
     "@typescript-eslint/parser": "^5.54.0",
-    "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "latest",
     "eslint": "^8.50.0",
     "eslint-plugin-react-hooks": "^4.6.0",
@@ -51,8 +52,7 @@
     "gh-pages": "^6.3.0",
     "postcss": "latest",
     "tailwindcss": "3.4.17",
-    "typescript": "^5.5.4",
-    "vite": "^6.3.5"
+    "typescript": "^5.5.4"
   },
   "overrides": {
     "@types/estree": "1.0.6"
