@@ -98,6 +98,8 @@ class ApplyThrottle(UserRateThrottle):
     scope = 'apply'
 
 
+from .cache_utils import safe_get, safe_set, safe_delete, dashboard_key, DASHBOARD_TTL
+
 from .models import (
     CustomUser, UserRole, EmployeeProfile, CompanyProfile, Job, Application,
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
