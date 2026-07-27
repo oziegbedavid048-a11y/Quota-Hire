@@ -158,8 +158,10 @@ export default function CommunityScreen() {
   // Tab state: 'feed' vs 'groups'
   const [activeTab, setActiveTab] = useState<'feed' | 'groups'>('feed');
 
-  // Real community members with 30-second auto-shuffle (minimum 20)
+  // Real community members with 10-second batch rotation (20 per batch, cycling through all employees)
+  const [allEmployeesPool, setAllEmployeesPool] = useState<{ id: string; name: string; avatar?: string | null }[]>([]);
   const [membersList, setMembersList] = useState<{ id: string; name: string; avatar?: string | null }[]>([]);
+  const batchOffsetRef = useRef(0);
 
   useEffect(() => {
     fetchMembers();
@@ -191,17 +193,41 @@ export default function CommunityScreen() {
     }
 
     if (list.length > 0) {
+      setAllEmployeesPool(list);
       setMembersList(list.slice(0, 20));
+      batchOffsetRef.current = 0;
     }
   }, [apiMembers, feed]);
 
+  // Rotate to a new set of 20 employees every 10 seconds
   useEffect(() => {
-    if (membersList.length <= 1) return;
+    if (allEmployeesPool.length === 0) return;
+    const BATCH_SIZE = 20;
+
     const timer = setInterval(() => {
-      setMembersList(prev => [...prev].sort(() => Math.random() - 0.5));
-    }, 30000);
+      setAllEmployeesPool(pool => {
+        if (pool.length === 0) return pool;
+
+        let nextOffset = batchOffsetRef.current + BATCH_SIZE;
+        if (nextOffset >= pool.length) {
+          nextOffset = 0;
+        }
+        batchOffsetRef.current = nextOffset;
+
+        let batch = pool.slice(nextOffset, nextOffset + BATCH_SIZE);
+        if (batch.length < BATCH_SIZE && pool.length > batch.length) {
+          const remainingNeeded = BATCH_SIZE - batch.length;
+          const wrapItems = pool.slice(0, remainingNeeded);
+          batch = [...batch, ...wrapItems];
+        }
+
+        setMembersList(batch);
+        return pool;
+      });
+    }, 10000);
+
     return () => clearInterval(timer);
-  }, [membersList.length]);
+  }, [allEmployeesPool.length]);
 
   // Group detail modal
   const [selectedGroup, setSelectedGroup] = useState<typeof COMMUNITY_GROUPS[0] | null>(null);

@@ -2986,7 +2986,7 @@ class CommunityReportView(APIView):
 
 
 class CommunityMembersView(APIView):
-    """GET /api/community/members/ — returns 20 employee accounts, prioritizing those with profile pictures."""
+    """GET /api/community/members/ — returns employee accounts (up to 500), prioritizing those with profile pictures."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -2998,16 +2998,16 @@ class CommunityMembersView(APIView):
                 default=Value(0),
                 output_field=IntegerField(),
             )
-        ).order_by('-has_avatar', '-created_at')[:20]
+        ).order_by('-has_avatar', '-created_at')[:500]
 
-        if employees.count() < 20:
+        if employees.count() < 10:
             employees = CustomUser.objects.annotate(
                 has_avatar=Case(
                     When(models.Q(avatar__isnull=False) & ~models.Q(avatar=''), then=Value(1)),
                     default=Value(0),
                     output_field=IntegerField(),
                 )
-            ).order_by('-has_avatar', '-created_at')[:20]
+            ).order_by('-has_avatar', '-created_at')[:500]
 
         data = []
         for u in employees:
