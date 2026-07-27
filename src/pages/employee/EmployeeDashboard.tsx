@@ -12,7 +12,11 @@ import {
   CheckCircle2,
   Target,
   Activity,
-  FileText
+  FileText,
+  Zap,
+  Star,
+  MessageSquare,
+  Eye
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -87,15 +91,6 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
     { name: 'Offer', value: acceptedApps, color: '#10b981' },
     { name: 'Rejected', value: rejectedApps, color: '#ef4444' },
   ].filter(d => d.value > 0);
-
-  const profileItems = [
-    { label: 'Full Name', done: !!user?.name },
-    { label: 'Current Title', done: !!user?.title },
-    { label: 'Professional Summary', done: !!user?.bio },
-    { label: 'Core Skills', done: !!(user?.skills && user.skills.length > 0) },
-    { label: 'Education Background', done: !!user?.education },
-    { label: 'Resume / Portfolio', done: !!user?.resumeUrl },
-  ];
 
   const firstName = user?.name?.split(' ')[0] || 'there';
 
@@ -186,12 +181,12 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
           onClick={() => navigate('/saved-jobs')}
         />
         <StatCard
-          label="Profile Score"
-          value={`${profileScore}%`}
-          icon={Target}
-          color="bg-emerald-50 text-emerald-600"
-          sub={profileScore === 100 ? 'Fully complete!' : 'Complete your profile'}
-          onClick={() => navigate('/employee/profile')}
+          label="Profile Views"
+          value="28"
+          icon={Eye}
+          color="bg-indigo-50 text-indigo-600"
+          sub="Recruiter views this month"
+          onClick={() => navigate('/employee/tracker')}
         />
         <StatCard
           label="Interviews Won"
@@ -413,49 +408,70 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
           )}
         </motion.div>
 
-        {/* Right Panel */}
-        {profileScore < 100 && (
-          <div className="space-y-6">
+        {/* AI Career Accelerator */}
+        <div className="space-y-6">
+          <motion.div variants={itemVariants} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
+                <Zap size={16} className="text-accent-500" /> AI Career Accelerator
+              </h2>
+              <span className="text-[10px] font-extrabold text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full">Pro Tools</span>
+            </div>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 leading-relaxed">
+              Supercharge your tech sales career with AI-powered resume tailoring, high-OTE role matching, and peer discussions.
+            </p>
 
-            {/* Profile Completion */}
-            <motion.div variants={itemVariants} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <Target size={16} className="text-accent-500" /> Profile Score
-                </h2>
-                <span className="text-lg font-extrabold text-accent-600">{profileScore}%</span>
-              </div>
-              <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-2.5 mb-5 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${profileScore}%` }}
-                  transition={{ duration: 1, delay: 0.5, ease: 'easeOut' }}
-                  className="h-full bg-gradient-to-r from-accent-500 to-warm-500 rounded-full"
-                />
-              </div>
-              <div className="space-y-2.5">
-                {profileItems.map((item) => (
-                  <div key={item.label} className="flex items-center gap-2.5">
-                    <CheckCircle2 size={15} className={item.done ? 'text-emerald-500' : 'text-neutral-200 dark:text-neutral-700'} />
-                    <span className={`text-xs font-semibold ${item.done ? 'text-neutral-700 dark:text-neutral-300' : 'text-neutral-400'}`}>
-                      {item.label}
-                    </span>
+            <div className="space-y-2.5">
+              <button
+                onClick={() => navigate('/employee/cv')}
+                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-accent-200 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-accent-50 flex items-center justify-center text-accent-600">
+                    <Star size={16} />
                   </div>
-                ))}
-              </div>
-              {profileScore < 100 && (
-                <button
-                  onClick={() => navigate('/employee/profile')}
-                  className="mt-4 w-full text-xs font-bold text-accent-600 hover:text-accent-700 bg-accent-50 hover:bg-accent-100 py-2 rounded-xl transition-colors"
-                >
-                  Complete Profile →
-                </button>
-              )}
-            </motion.div>
+                  <div>
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-accent-600 transition-colors">AI CV Tailor</p>
+                    <p className="text-[11px] text-neutral-400">Match your CV to target jobs</p>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-neutral-400 group-hover:text-accent-500 transition-colors" />
+              </button>
 
+              <button
+                onClick={() => navigate('/jobs')}
+                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-warm-200 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-warm-50 flex items-center justify-center text-warm-600">
+                    <TrendingUp size={16} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-warm-600 transition-colors">High OTE Tech Roles</p>
+                    <p className="text-[11px] text-neutral-400">$100k+ commission upside</p>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-neutral-400 group-hover:text-warm-500 transition-colors" />
+              </button>
 
-          </div>
-        )}
+              <button
+                onClick={() => navigate('/community')}
+                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-indigo-200 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <MessageSquare size={16} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">QuotaHire Community</p>
+                    <p className="text-[11px] text-neutral-400">MEDDIC & quota strategy discussions</p>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-neutral-400 group-hover:text-indigo-500 transition-colors" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
       </div>
 
       {/* ── RECOMMENDED JOBS ── */}

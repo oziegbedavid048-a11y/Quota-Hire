@@ -258,16 +258,43 @@ export default function UnifiedDashboardLayout({ children }: { children: React.R
         />
 
         {currentUser && (() => {
-          const isComplete = currentUser.role === 'company'
-            ? !!((currentUser as any).companyName && (currentUser as any).industry && (currentUser as any).aboutCompany)
-            : currentUser.setupCompleted;
-          
+          const userRole = currentUser.role;
+          let isComplete = false;
+
+          if (userRole === 'company') {
+            const hasLogo = !!((currentUser as any).logoUrl || (currentUser as any).avatarUrl);
+            const hasName = !!(currentUser as any).companyName;
+            const hasIndustry = !!(currentUser as any).industry;
+            const hasAbout = !!((currentUser as any).aboutCompany && String((currentUser as any).aboutCompany).trim().length > 0);
+            isComplete = hasLogo && hasName && hasIndustry && hasAbout;
+          } else {
+            const hasAvatar = !!(currentUser as any).avatarUrl;
+            const hasTitle = !!(currentUser as any).title;
+            const hasBio = !!((currentUser as any).bio && String((currentUser as any).bio).trim().length > 0);
+            const hasPhone = !!((currentUser as any).phoneNumber || (currentUser as any).phone);
+            const hasLocation = !!((currentUser as any).location || (currentUser as any).city);
+            const hasSkills = !!((currentUser as any).skills && (currentUser as any).skills.length > 0);
+            isComplete = hasAvatar && hasTitle && hasBio && hasPhone && hasLocation && hasSkills;
+          }
+
           if (isComplete) return null;
 
+          const marqueeText = userRole === 'company'
+            ? "Action Required: Your organization profile is incomplete. Complete your company profile to verify your account and publish job listings to top talent. Click to update →"
+            : "Action Required: Your profile is incomplete. Complete your profile details to increase your visibility to top hiring companies and unlock recommendations. Click to update →";
+
+          const targetLink = userRole === 'company' ? '/company/profile' : '/employee/profile';
+
           return (
-            <Link to={currentUser.role === 'company' ? '/company/profile' : '/employee/profile'} className="block bg-amber-500 hover:bg-amber-600 transition-colors text-white font-bold text-sm py-2 overflow-hidden shrink-0 relative z-20">
-              <div className="animate-marquee whitespace-nowrap inline-block">
-                ⚠️ You haven't completed your profile yet. Click here to complete your profile and unlock all features! ⚠️ You haven't completed your profile yet. Click here to complete your profile and unlock all features! ⚠️
+            <Link
+              to={targetLink}
+              className="block bg-amber-500 hover:bg-amber-600 transition-colors text-white font-extrabold text-xs sm:text-sm py-2.5 overflow-hidden shrink-0 relative z-20 shadow-md border-b border-amber-600/30"
+            >
+              <div className="animate-marquee whitespace-nowrap inline-flex items-center gap-12">
+                <span className="flex items-center gap-2">⚠️ {marqueeText}</span>
+                <span className="flex items-center gap-2">⚠️ {marqueeText}</span>
+                <span className="flex items-center gap-2">⚠️ {marqueeText}</span>
+                <span className="flex items-center gap-2">⚠️ {marqueeText}</span>
               </div>
             </Link>
           );
