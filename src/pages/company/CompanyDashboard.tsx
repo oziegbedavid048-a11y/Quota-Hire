@@ -13,14 +13,10 @@ import {
   Eye,
   MapPin,
   BarChart3,
-  Target,
   BadgeCheck,
   ChevronRight,
   Star,
-  Activity,
-  Zap,
-  PlusCircle,
-  MessageSquare
+  Activity
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -115,15 +111,6 @@ export const CompanyDashboardPage = () => {
       default: return { label: 'Closed', cls: 'bg-neutral-100 text-neutral-500', icon: XCircle };
     }
   };
-
-  const completionItems = [
-    { label: 'Company Name', done: !!company?.companyName },
-    { label: 'Industry', done: !!company?.industry },
-    { label: 'About Company', done: !!company?.aboutCompany },
-    { label: 'Active Job Posted', done: activeJobs.length > 0 },
-    { label: 'Profile Verified', done: !!company?.isVerified },
-  ];
-  const completionScore = Math.round((completionItems.filter(i => i.done).length / completionItems.length) * 100);
 
   const firstName = company?.companyName?.split(' ')[0] || company?.name?.split(' ')[0] || 'there';
 
