@@ -1129,19 +1129,49 @@ export default function CommunityScreen() {
             />
             <Text style={styles.charCount}>{postContent.length}/500</Text>
 
-            {/* Anonymous toggle only — other settings available on post via 3-dot */}
-            <View style={[styles.privacyRow, { marginTop: 12, marginBottom: 4, backgroundColor: '#F8FAFF', borderRadius: 12, padding: 12 }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.privacyLabel}>Post anonymously</Text>
+            {/* Anonymous toggle row — fully touchable card with instant haptic feedback */}
+            <HapticPressable
+              onPress={() => {
+                setSettingAnonymous(prev => !prev);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={[
+                styles.privacyRow,
+                {
+                  marginTop: 12,
+                  marginBottom: 4,
+                  backgroundColor: settingAnonymous ? '#F0FDF4' : '#F8FAFF',
+                  borderColor: settingAnonymous ? Palette.accent300 : '#E2E8F0',
+                  borderWidth: 1.5,
+                  borderRadius: 12,
+                  padding: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                },
+              ]}
+            >
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Feather
+                    name={settingAnonymous ? 'eye-off' : 'user'}
+                    size={16}
+                    color={settingAnonymous ? Palette.accent600 : Palette.neutral500}
+                  />
+                  <Text style={[styles.privacyLabel, settingAnonymous && { color: Palette.accent700, fontWeight: '800' }]}>
+                    Post anonymously
+                  </Text>
+                </View>
                 <Text style={styles.privacyDesc}>Others will see "Anonymous" as the author</Text>
               </View>
-              <Switch
-                value={settingAnonymous}
-                onValueChange={setSettingAnonymous}
-                trackColor={{ true: Palette.accent400 }}
-                thumbColor={settingAnonymous ? Palette.accent600 : '#f4f3f4'}
-              />
-            </View>
+              <View pointerEvents="none">
+                <Switch
+                  value={settingAnonymous}
+                  onValueChange={setSettingAnonymous}
+                  trackColor={{ true: Palette.accent400, false: '#CBD5E1' }}
+                  thumbColor={settingAnonymous ? Palette.accent600 : '#f4f3f4'}
+                />
+              </View>
+            </HapticPressable>
 
             <HapticPressable
               disabled={isSubmittingPost || !postContent.trim()}
