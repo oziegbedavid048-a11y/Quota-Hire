@@ -319,7 +319,7 @@ export const CompanyDashboardPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Recent Job Listings */}
-        <motion.div variants={itemVariants} className={`${completionScore < 100 ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-6 shadow-sm`}>
+        <motion.div variants={itemVariants} className="lg:col-span-3 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-extrabold text-neutral-900 dark:text-white">Your Active Roles</h2>
             <button onClick={() => navigate('/company/jobs')} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
@@ -373,71 +373,6 @@ export const CompanyDashboardPage = () => {
             </div>
           )}
         </motion.div>
-
-        {/* Company Hiring Accelerator */}
-        <div className="space-y-6">
-          <motion.div variants={itemVariants} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
-                <Zap size={16} className="text-blue-500" /> Hiring Accelerator
-              </h2>
-              <span className="text-[10px] font-extrabold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Recruiter Tools</span>
-            </div>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 leading-relaxed">
-              Accelerate your hiring pipeline with targeted job posts, applicant management, and direct community engagement.
-            </p>
-
-            <div className="space-y-2.5">
-              <button
-                onClick={() => navigate('/company/post-job')}
-                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-blue-200 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                    <PlusCircle size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-blue-600 transition-colors">Post New Job Opening</p>
-                    <p className="text-[11px] text-neutral-400">Publish active sales roles</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-neutral-400 group-hover:text-blue-500 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => navigate('/company/applicants')}
-                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-accent-200 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-accent-50 flex items-center justify-center text-accent-600">
-                    <Users size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-accent-600 transition-colors">Applicant Pipeline</p>
-                    <p className="text-[11px] text-neutral-400">Review candidate stages</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-neutral-400 group-hover:text-accent-500 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => navigate('/community')}
-                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-indigo-200 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                    <MessageSquare size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">QuotaHire Community</p>
-                    <p className="text-[11px] text-neutral-400">Engage sales rep talent</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-neutral-400 group-hover:text-indigo-500 transition-colors" />
-              </button>
-            </div>
-          </motion.div>
-        </div>
       </div>
 
     </motion.div>
