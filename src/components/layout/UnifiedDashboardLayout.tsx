@@ -14,7 +14,8 @@ import {
   Sparkles,
   List,
   LayoutList,
-  Settings
+  Settings,
+  ChevronDown
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 
@@ -60,7 +61,7 @@ function FloatingHeader({ toggleSidebar, user }: { toggleSidebar: () => void; us
 
           {/* Profile */}
           {user && (
-            <Link to={getProfileLink()} className="flex items-center gap-3 group bg-neutral-100 dark:bg-[#1f232b] rounded-full p-1.5 pr-4 hover:bg-neutral-200 dark:hover:bg-[#252a34] transition-all">
+            <Link to={getProfileLink()} className="flex items-center gap-2.5 group bg-neutral-100 dark:bg-[#1f232b] rounded-full p-1.5 pr-3 hover:bg-neutral-200 dark:hover:bg-[#252a34] transition-all">
               <div className="w-9 h-9 rounded-full overflow-hidden border border-neutral-200 dark:border-neutral-700 bg-accent-100 dark:bg-accent-900/40 flex items-center justify-center text-accent-900 dark:text-accent-100 font-bold shrink-0">
                 {userAvatarUrl ? (
                   <img src={userAvatarUrl} alt={user.name} className="w-full h-full object-cover" />
@@ -71,6 +72,7 @@ function FloatingHeader({ toggleSidebar, user }: { toggleSidebar: () => void; us
               <div className="hidden md:block">
                 <p className="text-sm font-bold text-neutral-900 dark:text-white leading-tight">{user.name || user.first_name || 'User'}</p>
               </div>
+              <ChevronDown size={14} className="text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-white transition-colors" />
             </Link>
           )}
 
@@ -266,7 +268,8 @@ export default function UnifiedDashboardLayout({ children }: { children: React.R
             const hasName = !!(currentUser as any).companyName;
             const hasIndustry = !!(currentUser as any).industry;
             const hasAbout = !!((currentUser as any).aboutCompany && String((currentUser as any).aboutCompany).trim().length > 0);
-            isComplete = hasLogo && hasName && hasIndustry && hasAbout;
+            const hasPhone = !!((currentUser as any).phoneNumber || (currentUser as any).phone || (currentUser as any).contactPhone);
+            isComplete = hasLogo && hasName && hasIndustry && hasAbout && hasPhone;
           } else {
             const hasAvatar = !!(currentUser as any).avatarUrl;
             const hasTitle = !!(currentUser as any).title;
