@@ -2986,10 +2986,15 @@ class CommunityReportView(APIView):
 
 
 class CommunityMembersView(APIView):
-    """GET /api/community/members/ — returns employee accounts (up to 500), prioritizing those with profile pictures."""
+    """GET /api/community/members/ — returns employee accounts (up to 500), cached in Redis."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        cache_key = 'community_members_list'
+        cached_data = safe_get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data)
+
         from django.db.models import Case, When, Value, IntegerField
 
         employees = CustomUser.objects.filter(role=UserRole.EMPLOYEE).annotate(
@@ -3025,5 +3030,6 @@ class CommunityMembersView(APIView):
                 'avatar': avatar_url,
             })
 
+        safe_set(cache_key, data, ttl=300)
         return Response(data)
 
