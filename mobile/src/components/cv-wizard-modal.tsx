@@ -683,26 +683,24 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
       // Generate PDF locally on device
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
 
-      // Copy file to document directory to prevent Android permission/read issues
-      const tempUri = `${FileSystem.documentDirectory}temp_print_cv.pdf`;
+      // Read PDF file contents as Base64 (direct read first to avoid Android Print cache locks)
+      let base64Pdf = '';
       try {
-        await FileSystem.deleteAsync(tempUri, { idempotent: true });
-      } catch (e) {}
-
-      await FileSystem.copyAsync({
-        from: uri,
-        to: tempUri,
-      });
-
-      // Read PDF file contents as Base64 string from accessible documentDirectory
-      const base64Pdf = await FileSystem.readAsStringAsync(tempUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Clean up the temp file
-      try {
-        await FileSystem.deleteAsync(tempUri, { idempotent: true });
-      } catch (e) {}
+        base64Pdf = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+      } catch (_readErr) {
+        const tempUri = `${FileSystem.documentDirectory}temp_cv_${Date.now()}.pdf`;
+        try {
+          await FileSystem.copyAsync({ from: uri, to: tempUri });
+          base64Pdf = await FileSystem.readAsStringAsync(tempUri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          await FileSystem.deleteAsync(tempUri, { idempotent: true });
+        } catch (_copyErr) {
+          console.warn('[CV Wizard] Base64 conversion fallback failed:', _copyErr);
+        }
+      }
 
       // Save structure to Django backend
       await apiFetch('/cv/save/', {
