@@ -33,6 +33,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.conf import settings
+from django.db import models
 from django.core.files.base import ContentFile
 from django.core.mail import EmailMultiAlternatives
 from django.views.decorators.csrf import csrf_exempt
@@ -98,7 +99,7 @@ class ApplyThrottle(UserRateThrottle):
 
 
 from .models import (
-    CustomUser, EmployeeProfile, CompanyProfile, Job, Application,
+    CustomUser, UserRole, EmployeeProfile, CompanyProfile, Job, Application,
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
     PaymentStatus,
     CommunityPost, CommunityComment, CommunityPoll, CommunityPollChoice, CommunityPollVote,
@@ -1641,17 +1642,14 @@ class CompanyJobApplicantsView(generics.ListAPIView):
 
     def get_queryset(self):
         job_id = self.kwargs.get('job_id')
-        return Application.objects.filter(
-            job_id=job_id, job__company=self.request.user
+        qs = Application.objects.filter(
+            job__company=self.request.user
         ).select_related(
             'employee', 'employee__employee_profile', 'job', 'shortlist'
-        ).only(
-            'id', 'job__id', 'job__title',
-            'employee__id', 'employee__username', 'employee__first_name', 'employee__last_name',
-            'employee__avatar',
-            'employee__employee_profile__title', 'employee__employee_profile__bio', 'employee__employee_profile__skills',
-            'status', 'applied_at'
         )
+        if job_id and str(job_id) != '0':
+            qs = qs.filter(job_id=job_id)
+        return qs
 
 class ShortlistApplicantView(APIView):
     """POST /api/company/applications/<int:pk>/shortlist/"""
@@ -2375,8 +2373,13 @@ def _build_google_play_service(service_account_json_str: str):
     environment variable (paste the full JSON content of your downloaded key file).
     """
     import json as _json
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
+    import importlib
+    try:
+        service_account = importlib.import_module('google.oauth2.service_account')
+        discovery = importlib.import_module('googleapiclient.discovery')
+        build = discovery.build
+    except Exception:
+        raise ValidationError("Google API client dependencies not installed.")
 
     service_account_info = _json.loads(service_account_json_str)
     credentials = service_account.Credentials.from_service_account_info(
@@ -2980,3 +2983,47 @@ class CommunityReportView(APIView):
         if not created:
             return Response({'detail': 'You have already reported this post.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'detail': 'Report submitted. Thank you for keeping the community safe.'}, status=status.HTTP_201_CREATED)
+
+
+class CommunityMembersView(APIView):
+    """GET /api/community/members/ — returns 20 employee accounts, prioritizing those with profile pictures."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Case, When, Value, IntegerField
+
+        employees = CustomUser.objects.filter(role=UserRole.EMPLOYEE).annotate(
+            has_avatar=Case(
+                When(models.Q(avatar__isnull=False) & ~models.Q(avatar=''), then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ).order_by('-has_avatar', '-created_at')[:20]
+
+        if employees.count() < 20:
+            employees = CustomUser.objects.annotate(
+                has_avatar=Case(
+                    When(models.Q(avatar__isnull=False) & ~models.Q(avatar=''), then=Value(1)),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                )
+            ).order_by('-has_avatar', '-created_at')[:20]
+
+        data = []
+        for u in employees:
+            name = u.get_full_name().strip()
+            if not name:
+                name = u.username or (u.email.split('@')[0] if u.email else 'Employee')
+
+            avatar_url = None
+            if u.avatar:
+                avatar_url = optimize_image_url(request.build_absolute_uri(u.avatar.url))
+
+            data.append({
+                'id': str(u.id),
+                'name': name,
+                'avatar': avatar_url,
+            })
+
+        return Response(data)
+

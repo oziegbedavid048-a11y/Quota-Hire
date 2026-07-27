@@ -111,4 +111,5 @@ urlpatterns = [
     path('community/polls/create/',                   views.CommunityPollCreateView.as_view(),        name='community-poll-create'),
     path('community/polls/<int:pk>/vote/',            views.CommunityPollVoteView.as_view(),          name='community-poll-vote'),
     path('community/my-posts/',                       views.CommunityMyPostsView.as_view(),           name='community-my-posts'),
+    path('community/members/',                        views.CommunityMembersView.as_view(),           name='community-members'),
 ]

@@ -9,11 +9,11 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 
-
 import CompanyPostJob from '@/components/company-post-job';
+import CompanyMyJobs from '@/components/company-my-jobs';
 import { SkeletonJobCard } from '@/components/ui/skeleton';
 import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
@@ -108,6 +108,10 @@ export default function JobsScreen() {
       const approvedOnly = formattedJobs.filter((j: any) => j.status === 'approved');
 
       setJobs(prev => isAppend ? [...prev, ...approvedOnly] : approvedOnly);
+      // Cache page 1 results for instant restore next open
+      if (pageNum === 1 && !isAppend) {
+        SecureStore.setItemAsync('cached_explore_jobs', JSON.stringify(approvedOnly)).catch(() => {});
+      }
       setHasMore(!!nextUrl);
     } catch (e) {
       console.warn("Failed to fetch jobs in explore:", e);
@@ -116,6 +120,19 @@ export default function JobsScreen() {
       setIsFetchingLocal(false);
     }
   };
+
+  // Fast-path: Instant cache restore on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const cached = await SecureStore.getItemAsync('cached_explore_jobs');
+        if (cached) {
+          setJobs(JSON.parse(cached));
+          setIsLoading(false);
+        }
+      } catch (_e) {}
+    })();
+  }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -155,14 +172,24 @@ export default function JobsScreen() {
         >
           {/* Top row: logo + title + save heart */}
           <View style={s.jobTop}>
-            <LinearGradient
-              colors={[Palette.neutral100, '#f8fafc']}
-              style={[s.jobLogo, { borderColor: colors.border }]}
-            >
-              <Text style={[s.jobLogoText, { color: colors.text }]}>
-                {(job.companyName || 'C').charAt(0)}
-              </Text>
-            </LinearGradient>
+            <View style={[s.jobLogo, { borderColor: colors.border }]}>
+              {job.companyLogoUrl ? (
+                <Image
+                  source={{ uri: job.companyLogoUrl }}
+                  style={s.jobLogoImg}
+                  contentFit="cover"
+                />
+              ) : (
+                <LinearGradient
+                  colors={[Palette.neutral100, '#f8fafc']}
+                  style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}
+                >
+                  <Text style={[s.jobLogoText, { color: colors.text }]}>
+                    {(job.companyName || 'C').charAt(0).toUpperCase()}
+                  </Text>
+                </LinearGradient>
+              )}
+            </View>
 
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={[s.jobTitle, { color: colors.text }]} numberOfLines={1}>
@@ -183,7 +210,7 @@ export default function JobsScreen() {
               style={[s.saveBtn, { backgroundColor: saved ? Palette.warm50 : 'transparent' }]}
               hitSlop={8}
             >
-              <Feather name="heart" size={16} color={saved ? Palette.warm500 : colors.textMuted} />
+              <Feather name="bookmark" size={16} color={saved ? Palette.warm600 : colors.textMuted} />
             </Pressable>
           </View>
 
@@ -250,7 +277,12 @@ export default function JobsScreen() {
     );
   };
 
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+
   if (role === 'company') {
+    if (mode === 'my-jobs') {
+      return <CompanyMyJobs />;
+    }
     return <CompanyPostJob />;
   }
 
@@ -316,15 +348,8 @@ export default function JobsScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── JOB LIST — search + filter scroll with jobs via ListHeaderComponent ── */}
-      {isLoading && jobs.length === 0 ? (
-        /* ── Skeleton loading — 4 placeholder job cards ── */
-        <View style={[s.list, { paddingBottom: TabBarHeight + 24, paddingTop: 4 }]}>
-          {/* Hero banner skeleton placeholder area is the real banner above */}
-          {[1,2,3,4].map(k => <SkeletonJobCard key={k} style={{ marginBottom: 12 }} />)}
-        </View>
-      ) : (
-        <FlatList
+      {/* ── JOB LIST — always render FlatList; cache ensures instant data on re-open ── */}
+      <FlatList
           data={jobs}
           keyExtractor={j => j.id}
           renderItem={renderJob}
@@ -453,7 +478,6 @@ export default function JobsScreen() {
             </View>
           }
         />
-      )}
     </View>
   );
 }
@@ -593,6 +617,10 @@ const s = StyleSheet.create({
   jobLogo: {
     width: 44, height: 44, borderRadius: BorderRadius.md,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+    overflow: 'hidden', position: 'relative',
+  },
+  jobLogoImg: {
+    width: 44, height: 44, borderRadius: BorderRadius.md,
   },
   jobLogoText: { fontSize: 17, fontWeight: FontWeight.extrabold },
   jobTitle:    { fontSize: 14, fontWeight: FontWeight.bold, marginBottom: 2 },

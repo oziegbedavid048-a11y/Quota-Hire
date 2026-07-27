@@ -1,7 +1,7 @@
 import { DefaultTheme, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useState, useEffect, useRef } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 import AppTabs from "@/components/app-tabs";
@@ -32,7 +32,6 @@ export default function TabLayout() {
   const [splashFinished, setSplashFinished] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
 
   // ── Stored user info for AppTabs ──────────────────────────────────────────
   const [userName, setUserName] = useState<string | undefined>();
@@ -53,11 +52,16 @@ export default function TabLayout() {
         const storedRole = await SecureStore.getItemAsync("user_role");
 
         if (!token) {
-          setCheckingAuth(false);
           return;
         }
 
-        // ── Try a silent token refresh before mounting the dashboard ──────
+        // Show the dashboard instantly using cached identity
+        if (storedName) setUserName(storedName);
+        if (storedRole) setUserRole(storedRole);
+        setIsLoggedIn(true);
+        setShowOnboarding(false);
+
+        // ── Silently refresh token in background — never block UI ─────────
         const refreshToken = await getRefreshToken();
         if (refreshToken) {
           try {
@@ -73,21 +77,17 @@ export default function TabLayout() {
                 if (data.refresh) await setRefreshToken(data.refresh);
               }
             } else if (res.status === 401) {
+              // Token is truly expired — log user out silently
               await clearTokens();
               await SecureStore.deleteItemAsync("user_name");
               await SecureStore.deleteItemAsync("user_role");
-              setCheckingAuth(false);
+              setIsLoggedIn(false);
               return;
             }
           } catch {
             // Network unavailable — proceed with existing token
           }
         }
-
-        if (storedName) setUserName(storedName);
-        if (storedRole) setUserRole(storedRole);
-        setIsLoggedIn(true);
-        setShowOnboarding(false);
 
         // ── Register push token for returning (auto-login) users ──────────
         // Fire-and-forget — never block the UI
@@ -96,8 +96,6 @@ export default function TabLayout() {
         });
       } catch {
         // SecureStore error — show auth as fallback
-      } finally {
-        setCheckingAuth(false);
       }
     })();
   }, []);
@@ -170,21 +168,6 @@ export default function TabLayout() {
       background: "#FFFBEB",
     },
   };
-
-  if (checkingAuth) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "#FFFBEB",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <ActivityIndicator size="large" color={Palette.accent500} />
-      </View>
-    );
-  }
 
   return (
     <ThemeProvider value={CustomTheme}>

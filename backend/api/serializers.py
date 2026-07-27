@@ -475,6 +475,8 @@ class CompanyApplicantSerializer(serializers.ModelSerializer):
     def get_is_shortlisted(self, obj):
         return hasattr(obj, 'shortlist')
 
+CompanyApplicantListSerializer = CompanyApplicantSerializer
+
 class ShortlistedApplicantSerializer(serializers.ModelSerializer):
     class Meta:
         from .models import ShortlistedApplicant

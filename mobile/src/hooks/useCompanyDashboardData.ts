@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { apiFetch } from '../services/api';
 
@@ -122,6 +123,7 @@ export function useCompanyDashboardData() {
         setupCompleted: uData.setup_completed || false,
       };
       setCompany(normalizedCompany);
+      SecureStore.setItemAsync('cached_company_profile', JSON.stringify(normalizedCompany)).catch(() => {});
 
       // Normalize Company Jobs
       const rawJobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
@@ -135,6 +137,7 @@ export function useCompanyDashboardData() {
         applicantsCount: j.applicants_count || 0,
       }));
       setJobs(normalizedJobs);
+      SecureStore.setItemAsync('cached_company_jobs', JSON.stringify(normalizedJobs)).catch(() => {});
       setIsLoading(false); // Dashboard visible NOW
 
       // ── Phase 2: Secondary data (profile details, applications, analytics) ─
@@ -167,6 +170,7 @@ export function useCompanyDashboardData() {
         appliedAt: a.created_at || a.applied_at || new Date().toISOString(),
       }));
       setApplications(normalizedApps);
+      SecureStore.setItemAsync('cached_company_applications', JSON.stringify(normalizedApps)).catch(() => {});
 
       // Normalize Analytics
       if (analData) {
@@ -209,8 +213,35 @@ export function useCompanyDashboardData() {
     }
   }, []);
 
+  // Fast-path: Instant zero-delay cache restore on mount
+  // Company profile, jobs, and applications restored in parallel — 0ms render
+  useEffect(() => {
+    (async () => {
+      try {
+        const [cachedProfile, cachedJobs, cachedApps] = await Promise.all([
+          SecureStore.getItemAsync('cached_company_profile'),
+          SecureStore.getItemAsync('cached_company_jobs'),
+          SecureStore.getItemAsync('cached_company_applications'),
+        ]);
+        let hasCache = false;
+        if (cachedProfile) { setCompany(JSON.parse(cachedProfile)); hasCache = true; }
+        if (cachedJobs) { setJobs(JSON.parse(cachedJobs)); hasCache = true; }
+        if (cachedApps) { setApplications(JSON.parse(cachedApps)); hasCache = true; }
+        if (hasCache) {
+          setIsLoading(false);
+          setIsFetching(false);
+        }
+      } catch (_e) {}
+    })();
+  }, []);
+
   useEffect(() => {
     fetchLiveCompanyData();
+
+    const sub = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (newUrl: string) => {
+      setCompany(prev => ({ ...prev, avatarUrl: newUrl, logoUrl: newUrl }));
+    });
+    return () => sub.remove();
   }, [fetchLiveCompanyData]);
 
   const activeJobs  = jobs.filter(j => j.status === 'approved');

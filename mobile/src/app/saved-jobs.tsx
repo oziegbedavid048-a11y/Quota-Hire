@@ -49,16 +49,16 @@ function EmptyState({ onBrowse }: { onBrowse: () => void }) {
       <Text style={[s.emptyTitle, { color: colors.text }]}>No saved jobs yet</Text>
       <Text style={[s.emptySub, { color: colors.textMuted }]}>
         When you find a role you like, tap the{' '}
-        <Text style={{ color: '#ef4444', fontWeight: '700' }}>♥ heart icon</Text>
+        <Text style={{ color: Palette.warm600, fontWeight: '700' }}>bookmark icon</Text>
         {' '}to save it here for quick access.
       </Text>
 
       {/* Tips grid */}
       <View style={s.tipsRow}>
         {[
-          { icon: 'search', label: 'Find roles', desc: 'Browse open listings' },
-          { icon: 'heart',  label: 'Save them',  desc: 'Tap the heart icon' },
-          { icon: 'zap',    label: 'Apply fast', desc: 'Come back & apply' },
+          { icon: 'search',   label: 'Find roles', desc: 'Browse open listings' },
+          { icon: 'bookmark', label: 'Save them',  desc: 'Tap the bookmark icon' },
+          { icon: 'zap',      label: 'Apply fast', desc: 'Come back & apply' },
         ].map(({ icon, label, desc }) => (
           <View key={label} style={[s.tipCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
             <View style={[s.tipIcon, { backgroundColor: Palette.accent100 }]}>
@@ -143,12 +143,12 @@ function SavedJobCard({
               </View>
             </View>
 
-            {/* Unsave heart */}
+            {/* Unsave bookmark */}
             <Pressable onPress={handleUnsave} disabled={unsaving} style={s.heartBtn} hitSlop={8}>
               {unsaving ? (
-                <Feather name="loader" size={15} color={Palette.red400} />
+                <Feather name="loader" size={15} color={Palette.warm600} />
               ) : (
-                <Feather name="heart" size={15} color="#ef4444" />
+                <Feather name="bookmark" size={15} color={Palette.warm600} />
               )}
             </Pressable>
           </View>

@@ -34,6 +34,7 @@ export function useNotificationsData() {
         createdAt: n.created_at || n.createdAt || new Date().toISOString(),
       }));
       setNotifications(normalized);
+      SecureStore.setItemAsync('cached_notifications', JSON.stringify(normalized)).catch(() => {});
     } catch (err: any) {
       const msg = String(err?.message || err);
       if (
@@ -49,6 +50,19 @@ export function useNotificationsData() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // Fast-path: Instant zero-delay cache restore on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const cached = await SecureStore.getItemAsync('cached_notifications');
+        if (cached) {
+          setNotifications(JSON.parse(cached));
+          setIsLoading(false);
+        }
+      } catch (_e) {}
+    })();
   }, []);
 
   useEffect(() => {

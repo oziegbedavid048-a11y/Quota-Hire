@@ -4,8 +4,15 @@
  * Static UI (layout, labels, navigation) shows instantly.
  * Only data-dependent content (names, numbers, lists) uses skeleton.
  */
-import React, { useEffect, useRef } from 'react';
-import { Animated, View, StyleSheet, ViewStyle } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 // ─── Base skeleton box ────────────────────────────────────────────────────────
 export function SkeletonBox({
@@ -19,21 +26,28 @@ export function SkeletonBox({
   borderRadius?: number;
   style?: ViewStyle;
 }) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const opacity = useSharedValue(0.3);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.85, duration: 800, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.3,  duration: 800, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [opacity]);
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.85, { duration: 800 }),
+        withTiming(0.3, { duration: 800 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   return (
     <Animated.View
       style={[
-        { width: width as any, height, backgroundColor: '#e2e8f0', borderRadius, opacity },
+        { width: width as any, height, backgroundColor: '#e2e8f0', borderRadius },
+        animatedStyle,
         style,
       ]}
     />

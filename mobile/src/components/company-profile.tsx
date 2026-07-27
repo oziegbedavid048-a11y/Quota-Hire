@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated as RNAnimated,
+  DeviceEventEmitter,
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -232,7 +233,12 @@ export default function CompanyProfile() {
       } as any);
 
       const token = await SecureStore.getItemAsync("access_token");
-      await uploadFileViaXHR(`${API_BASE}/profile/avatar/`, formData, token);
+      const res = await uploadFileViaXHR(`${API_BASE}/profile/avatar/`, formData, token);
+      const url = res?.avatarUrl || res?.logo_url;
+      if (url) {
+        await SecureStore.setItemAsync("user_avatar", url);
+        DeviceEventEmitter.emit("USER_AVATAR_UPDATED", url);
+      }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Company logo updated.");

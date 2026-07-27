@@ -70,10 +70,25 @@ export default function CompanyApplicants() {
   const fetchApplicants = async (id: string) => {
     setLoading(true);
     try {
-      const data = await apiFetch(`/company/jobs/${id}/applicants/`);
-      setApplicants(Array.isArray(data) ? data : data.results || []);
+      let data = await apiFetch(`/company/jobs/${id}/applicants/`);
+      let list = Array.isArray(data) ? data : data.results || [];
+      if (list.length === 0) {
+        // Fallback: fetch overall company applications and filter by job ID
+        const allApps = await apiFetch(`/applications/`);
+        const rawList = Array.isArray(allApps) ? allApps : allApps.results || [];
+        const matched = rawList.filter((a: any) => String(a.job?.id || a.job_id || a.job) === String(id));
+        if (matched.length > 0) list = matched;
+      }
+      setApplicants(list);
     } catch {
-      setApplicants([]);
+      try {
+        const allApps = await apiFetch(`/applications/`);
+        const rawList = Array.isArray(allApps) ? allApps : allApps.results || [];
+        const matched = rawList.filter((a: any) => String(a.job?.id || a.job_id || a.job) === String(id));
+        setApplicants(matched);
+      } catch {
+        setApplicants([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -139,7 +154,27 @@ export default function CompanyApplicants() {
 
       {/* TOP HEADER SELECTOR */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Job Applicants</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.replace('/tracker' as any);
+            }}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: '#ffffff',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: colors.borderMid,
+            }}
+          >
+            <Feather name="arrow-left" size={20} color={Palette.neutral700} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Job Applicants</Text>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.jobChips}>
           {jobs.map(job => (
             <Pressable

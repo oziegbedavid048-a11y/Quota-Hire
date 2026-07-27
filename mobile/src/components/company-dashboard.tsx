@@ -31,6 +31,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
+  withSequence,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -113,9 +115,10 @@ function StatCard({
 
   const handlePress = useCallback(() => {
     if (!onPress) return;
-    scale.value = withSpring(0.95, { damping: 12 }, () => {
-      scale.value = withSpring(1, { damping: 14 });
-    });
+    scale.value = withSequence(
+      withTiming(0.95, { duration: 80 }),
+      withSpring(1, { damping: 14 })
+    );
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   }, [onPress]);

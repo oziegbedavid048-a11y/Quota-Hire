@@ -102,14 +102,7 @@ export default function NotificationsScreen() {
 
           {/* Content Card */}
           <View style={[styles.card, { backgroundColor: colors.cardBg, borderColor: colors.border }, Shadow.card]}>
-            {isLoading ? (
-              // Skeleton loading — matches the shape of real notification rows
-              <View>
-                {[1, 2, 3, 4, 5].map(k => (
-                  <SkeletonNotificationItem key={k} />
-                ))}
-              </View>
-            ) : notifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <View style={styles.empty}>
                 <View style={[styles.emptyIconWrap, { backgroundColor: Palette.neutral50 }]}>
                   <Feather name="bell" size={28} color={Palette.neutral400} />

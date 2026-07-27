@@ -36,10 +36,10 @@ export default function CompanyMyJobs() {
 
   const handleManage = useCallback((job: CompanyJob) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // Navigates to Applicants tab passing the jobId parameter
+    // Navigates to Job Applicants view passing the jobId parameter
     router.push({
-      pathname: '/cv',
-      params: { jobId: job.id },
+      pathname: '/tracker',
+      params: { jobId: job.id, view: 'applicants' },
     } as any);
   }, []);
 

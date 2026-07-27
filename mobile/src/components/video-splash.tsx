@@ -77,16 +77,15 @@ export default function VideoSplash({ onFinish }: VideoSplashProps) {
           )
         );
 
-        // Rotation mirrors the translate: one full spin left, one full spin back.
-        // Continuing counterclockwise (−720 total) keeps it smooth & consistent.
+        // Rotation: Clockwise (0 -> 360 deg) when rolling left, then anticlockwise (360 -> 0 deg) when returning back to text.
         logoRotate.value = withSequence(
-          withTiming(-360, {
+          withTiming(360, {
             duration: 900,
             easing: Easing.inOut(Easing.cubic),
           }),
           withDelay(
             400,
-            withTiming(-720, {
+            withTiming(0, {
               duration: 900,
               easing: Easing.inOut(Easing.cubic),
             })

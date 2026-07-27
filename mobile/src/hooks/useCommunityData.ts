@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { apiFetch } from '../services/api';
 
@@ -60,14 +60,32 @@ export interface CommunityComment {
   parent_author_name?: string | null;
 }
 
+export interface CommunityMember {
+  id: string;
+  name: string;
+  avatar?: string | null;
+}
+
 export function useCommunityData() {
   const [feed, setFeed] = useState<CommunityFeedItem[]>([]);
+  const [members, setMembers] = useState<CommunityMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+
+  const fetchMembers = useCallback(async () => {
+    try {
+      const data = await apiFetch('/community/members/');
+      if (Array.isArray(data) && data.length > 0) {
+        setMembers(data);
+      }
+    } catch (err) {
+      console.warn('[Community] Failed to fetch members:', err);
+    }
+  }, []);
 
   // Fetch feed (Posts & Polls)
   const fetchFeed = useCallback(async (category = '', isRefresh = false, pageNum = 1) => {
@@ -84,11 +102,17 @@ export function useCommunityData() {
       const token = await SecureStore.getItemAsync('access_token');
       if (!token) return;
 
-      // Fetch posts and polls in parallel
-      const [postsData, pollsData] = await Promise.all([
+      // Fetch posts, polls, and members in parallel
+      const [postsData, pollsData, membersData] = await Promise.all([
         apiFetch(`/community/posts/?category=${category}&page=${pageNum}`).catch(() => []),
         pageNum === 1 ? apiFetch('/community/polls/').catch(() => []) : Promise.resolve([]),
+        pageNum === 1 ? apiFetch('/community/members/').catch(() => []) : Promise.resolve([]),
       ]);
+
+      if (Array.isArray(membersData) && membersData.length > 0) {
+        setMembers(membersData);
+        SecureStore.setItemAsync('cached_community_members', JSON.stringify(membersData)).catch(() => {});
+      }
 
       const rawPosts = Array.isArray(postsData) ? postsData : (postsData?.results || []);
       const nextPostsUrl = postsData?.next;
@@ -132,6 +156,10 @@ export function useCommunityData() {
       );
 
       setFeed(prev => (isRefresh || pageNum === 1) ? combined : [...prev, ...combined]);
+      // Cache the first page of the feed for instant restore on next open
+      if (pageNum === 1) {
+        SecureStore.setItemAsync('cached_community_feed', JSON.stringify(combined)).catch(() => {});
+      }
       setHasMore(!!nextPostsUrl);
       if (pageNum > 1 && combined.length > 0) {
         setPage(pageNum);
@@ -467,8 +495,26 @@ export function useCommunityData() {
     }
   }, []);
 
+  // Fast-path: Instant zero-delay community feed & members restore on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const cached = await SecureStore.getItemAsync('cached_community_feed');
+        if (cached) {
+          setFeed(JSON.parse(cached));
+          setIsLoading(false);
+        }
+        const cachedM = await SecureStore.getItemAsync('cached_community_members');
+        if (cachedM) {
+          setMembers(JSON.parse(cachedM));
+        }
+      } catch (_e) {}
+    })();
+  }, []);
+
   return {
     feed,
+    members,
     isLoading,
     isRefreshing,
     isFetchingMore,
@@ -476,6 +522,7 @@ export function useCommunityData() {
     page,
     hasMore,
     fetchFeed,
+    fetchMembers,
     toggleLike,
     createPost,
     editPost,

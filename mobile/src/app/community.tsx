@@ -19,6 +19,98 @@ import { useCommunityData, CommunityFeedItem, CommunityPost, CommunityPoll } fro
 import { HapticPressable } from '@/components/haptic-pressable';
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { SkeletonPostCard } from '@/components/ui/skeleton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const ACTIVE_MEMBERS = [
+  { id: '1', name: 'Sarah M.', title: 'Enterprise AE', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
+  { id: '2', name: 'David K.', title: 'SDR Lead', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
+  { id: '3', name: 'Elena R.', title: 'VP of Sales', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80' },
+  { id: '4', name: 'Marcus B.', title: 'Senior AE', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
+  { id: '5', name: 'Jessica T.', title: 'Account Director', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80' },
+  { id: '6', name: 'Alex Chen', title: 'Sales Ops', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80' },
+  { id: '7', name: 'Rachel P.', title: 'Fintech AE', avatar: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80' },
+  { id: '8', name: 'James W.', title: 'Head of Growth', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80' },
+  { id: '9', name: 'Sophia H.', title: 'Strategic AE', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80' },
+  { id: '10', name: 'Michael O.', title: 'BDR Manager', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80' },
+];
+
+const COMMUNITY_GROUPS = [
+  {
+    id: 'tech-ae',
+    name: 'Tech Sales Account Executives',
+    tag: 'SaaS & Enterprise',
+    memberCount: 24,
+    activeToday: 6,
+    icon: 'code',
+    color: Palette.accent600,
+    bg: Palette.accent50,
+    description: 'High-performing SaaS and software sales reps sharing pitch decks, objection handling, and enterprise deal strategies.',
+    discussions: [
+      { id: 'g1-1', author: 'Sarah M.', time: '2h ago', content: 'What is your go-to response when prospect says "We have no budget until Q4"?' },
+      { id: 'g1-2', author: 'Marcus B.', time: '5h ago', content: 'Just closed a $180k OTE deal using mutual action plans. MAPs are a game changer!' },
+    ],
+  },
+  {
+    id: 'enterprise-closers',
+    name: 'Enterprise Closing Strategies',
+    tag: 'Deal Closing',
+    memberCount: 19,
+    activeToday: 4,
+    icon: 'shield',
+    color: Palette.violet600,
+    bg: Palette.violet50,
+    description: 'Mastering multi-stakeholder deals, procurement negotiation, and executive sponsor alignment.',
+    discussions: [
+      { id: 'g2-1', author: 'Elena R.', time: '1h ago', content: 'How do you handle legal redlines when procurement drags out past end of month?' },
+      { id: 'g2-2', author: 'James W.', time: '4h ago', content: 'Always get your champion to introduce you to procurement early. Saves 3 weeks!' },
+    ],
+  },
+  {
+    id: 'sdr-lounge',
+    name: 'SDR & BDR Sales Lounge',
+    tag: 'Outbound & Cold Calls',
+    memberCount: 31,
+    activeToday: 8,
+    icon: 'phone-call',
+    color: Palette.emerald600,
+    bg: Palette.emerald50,
+    description: 'Cold calling tactics, email sequences that convert, and LinkedIn social selling templates.',
+    discussions: [
+      { id: 'g3-1', author: 'David K.', time: '30m ago', content: 'Tried a 10-second pattern interrupt today on cold calls. Connect rate went up 40%!' },
+      { id: 'g3-2', author: 'Michael O.', time: '3h ago', content: 'Video messages on LinkedIn vs standard InMail — what is working best for you?' },
+    ],
+  },
+  {
+    id: 'comp-ote',
+    name: 'Compensation, OTE & Commission',
+    tag: 'Pay & Structure',
+    memberCount: 28,
+    activeToday: 9,
+    icon: 'dollar-sign',
+    color: Palette.warm600,
+    bg: Palette.warm50,
+    description: 'Benchmark OTE splits, uncapped commission structures, accelerator tiers, and offer negotiations.',
+    discussions: [
+      { id: 'g4-1', author: 'Rachel P.', time: '3h ago', content: 'Is a 50/50 base/commission split standard for Senior FinTech AEs in 2026?' },
+      { id: 'g4-2', author: 'Alex Chen', time: '6h ago', content: 'Make sure your contract specifies clawback periods on annual upfront billing!' },
+    ],
+  },
+  {
+    id: 'remote-sales',
+    name: 'Remote Sales Leaders',
+    tag: 'Remote & Hybrid',
+    memberCount: 22,
+    activeToday: 5,
+    icon: 'globe',
+    color: Palette.blue500,
+    bg: Palette.blue50,
+    description: 'Best practices for managing distributed sales reps, async pipeline reviews, and remote demo mastery.',
+    discussions: [
+      { id: 'g5-1', author: 'Jessica T.', time: '2h ago', content: 'How do you keep energy high during virtual pitch meetings with camera-off prospects?' },
+      { id: 'g5-2', author: 'Sophia H.', time: '7h ago', content: 'Pre-recorded 2-minute demo clips before live calls have doubled our demo-to-SQL rate.' },
+    ],
+  },
+];
 
 const CATEGORIES = [
   { label: '🔥 Trending', value: 'trending' },
@@ -44,45 +136,83 @@ export default function CommunityScreen() {
   const router = useRouter();
 
   const {
-    feed, isLoading, isRefreshing, isFetchingMore, hasError, page, hasMore, fetchFeed,
+    feed, members: apiMembers, isLoading, isRefreshing, isFetchingMore, hasError, page, hasMore, fetchFeed, fetchMembers,
     toggleLike, voteOnPoll, createPost, editPost, updatePostSettings, deletePost, reportPost, createPoll,
   } = useCommunityData();
 
-  // Track whether all avatar images in the current feed have finished loading
-  // Skeleton stays visible until both data is fetched AND images are prefetched
+  const colors = Colors.light;
+
+  // Track whether content is ready for skeleton loader
   const [imagesReady, setImagesReady] = useState(false);
-  const prevIsLoading = useRef(true);
 
   useEffect(() => {
-    // When isLoading transitions from true → false, prefetch all avatar images
-    if (prevIsLoading.current && !isLoading) {
-      prevIsLoading.current = false;
-      const avatarUrls = feed
-        .map(item => item.author?.avatar_url)
-        .filter((url): url is string => typeof url === 'string' && url.length > 0);
-
-      if (avatarUrls.length === 0) {
-        // No images to load — mark ready immediately
-        setImagesReady(true);
-        return;
-      }
-
-      // Prefetch all avatar images in parallel, then mark ready
-      Promise.all(
-        avatarUrls.map(url =>
-          Image.prefetch(url).catch(() => null) // never throw — missing image is OK
-        )
-      ).then(() => {
-        setImagesReady(true);
-      });
-    } else if (isLoading) {
-      // Reset on every new load cycle
-      prevIsLoading.current = true;
+    if (!isLoading) {
+      setImagesReady(true);
+    } else {
       setImagesReady(false);
     }
-  }, [isLoading, feed]);
+  }, [isLoading]);
 
-  const [activeCategory, setActiveCategory] = useState('trending');
+  const insets = useSafeAreaInsets();
+
+  // Tab state: 'feed' vs 'groups'
+  const [activeTab, setActiveTab] = useState<'feed' | 'groups'>('feed');
+
+  // Real community members with 30-second auto-shuffle (minimum 20)
+  const [membersList, setMembersList] = useState<{ id: string; name: string; avatar?: string | null }[]>([]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  useEffect(() => {
+    const list: { id: string; name: string; avatar?: string | null }[] = [];
+    const seenIds = new Set<string>();
+
+    if (apiMembers && apiMembers.length > 0) {
+      apiMembers.forEach(m => {
+        if (m.id && !seenIds.has(m.id)) {
+          seenIds.add(m.id);
+          list.push({ id: m.id, name: m.name, avatar: m.avatar });
+        }
+      });
+    }
+
+    if (feed && feed.length > 0) {
+      feed.forEach(item => {
+        if (item.author && item.author.id && !item.author.name?.includes('Anonymous')) {
+          const authId = item.author.id.toString();
+          if (!seenIds.has(authId)) {
+            seenIds.add(authId);
+            list.push({ id: authId, name: item.author.name, avatar: item.author.avatar_url });
+          }
+        }
+      });
+    }
+
+    if (list.length > 0) {
+      setMembersList(list.slice(0, 20));
+    }
+  }, [apiMembers, feed]);
+
+  useEffect(() => {
+    if (membersList.length <= 1) return;
+    const timer = setInterval(() => {
+      setMembersList(prev => [...prev].sort(() => Math.random() - 0.5));
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [membersList.length]);
+
+  // Group detail modal
+  const [selectedGroup, setSelectedGroup] = useState<typeof COMMUNITY_GROUPS[0] | null>(null);
+  const [groupModalVisible, setGroupModalVisible] = useState(false);
+  const [joinedGroups, setJoinedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleJoinGroup = (groupId: string) => {
+    setJoinedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -139,12 +269,10 @@ export default function CommunityScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  // Smart focus-based refresh: loads all posts in newest order (category="")
-  useFocusEffect(
-    useCallback(() => {
-      fetchFeed('');
-    }, [fetchFeed])
-  );
+  // Fetch feed on initial load cleanly without triggering infinite focus re-renders
+  useEffect(() => {
+    fetchFeed('');
+  }, [fetchFeed]);
 
   const handleRefresh = () => fetchFeed('', true);
 
@@ -512,53 +640,234 @@ export default function CommunityScreen() {
 
       {/* Feed */}
       <FlatList
-        data={isLoading ? ([1, 2, 3, 4, 5] as any[]) : feed}
+        data={activeTab === 'feed' ? feed : []}
         keyExtractor={(item, index) =>
-          isLoading ? `skeleton-${index}` : `${(item as any).type}-${(item as any).id}`
+          `${(item as any).type}-${(item as any).id}`
         }
         renderItem={({ item, index }) => {
-          if (isLoading) {
-            return <SkeletonPostCard style={{ marginBottom: 16, marginHorizontal: 16 }} />;
-          }
           return renderFeedItem({ item: item as CommunityFeedItem, index });
         }}
         ListHeaderComponent={
-          <Animated.View entering={FadeInDown.springify()} style={{ paddingHorizontal: 16, paddingTop: 16, marginBottom: 4 }}>
-            <LinearGradient
-              colors={['#FCEFCF', '#E1F6DD']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.heroBanner}
-            >
-              {/* Decorative blobs */}
-              <View style={styles.blob1} />
-              <View style={styles.blob2} />
-
-              <View style={styles.heroContent}>
-                {/* Text side */}
-                <View style={{ flex: 1, zIndex: 1 }}>
-                  <View style={[styles.heroPill, { backgroundColor: 'rgba(255,255,255,0.65)', borderColor: 'rgba(226, 232, 240, 0.5)' }]}>
-                    <Feather name="users" size={12} color={Palette.accent600} />
-                    <Text style={styles.heroPillText}>Quota Community</Text>
-                  </View>
-                  <Text style={styles.heroTitle}>Connect & Share</Text>
-                  <Text style={styles.heroSub}>
-                    Join conversations, share professional insights, ask questions, or run community polls!
-                  </Text>
-                </View>
-
-                {/* 3D Illustration WebP */}
+          <View>
+            {/* Merged Top Community Header Cover */}
+            <Animated.View entering={FadeInDown.springify()} style={{ marginBottom: 16 }}>
+              <View style={[styles.heroCoverCardHeader, { paddingTop: Math.max(insets.top + 8, 20) }]}>
                 <ExpoImage
                   source={require('@/assets/images/illustrations/community_illustration.webp')}
-                  style={styles.heroImage}
-                  contentFit="contain"
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
                 />
+                {/* Gradient dark overlay */}
+                <LinearGradient
+                  colors={['rgba(15, 23, 42, 0.60)', 'rgba(15, 23, 42, 0.85)']}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                />
+
+                {/* Back button and title inside top bar */}
+                <View style={styles.coverTopBar}>
+                  <Pressable
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.replace('/' as any);
+                    }}
+                    style={({ pressed }) => [
+                      styles.coverBackBtn,
+                      { opacity: pressed ? 0.7 : 1 },
+                    ]}
+                    hitSlop={12}
+                  >
+                    <Feather name="arrow-left" size={20} color="#ffffff" />
+                  </Pressable>
+                  <Text style={styles.coverTopTitle}>QuotaHire Community</Text>
+                  <View style={{ width: 36 }} />
+                </View>
+
+                {/* Title and Subtitle at bottom of header cover */}
+                <View style={styles.heroCoverContent}>
+                  <Text style={styles.heroCoverTitle}>Community</Text>
+                  <Text style={styles.heroCoverSub}>
+                    Connect, share insights & grow with top sales professionals
+                  </Text>
+                </View>
               </View>
-            </LinearGradient>
-          </Animated.View>
+            </Animated.View>
+
+            {/* Members Horizontal Carousel */}
+            <View style={{ marginBottom: 18 }}>
+              <View style={styles.sectionTitleRow}>
+                <Text style={[styles.sectionHeading, { color: Palette.neutral900 }]}>Members</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
+              >
+                {membersList.map((m) => (
+                  <View key={m.id} style={{ alignItems: 'center', width: 62 }}>
+                    <View style={styles.activeAvatarWrap}>
+                      {m.avatar ? (
+                        <Image source={{ uri: m.avatar }} style={styles.activeAvatarImg} />
+                      ) : (
+                        <LinearGradient colors={[Palette.accent200, Palette.accent100]} style={[styles.activeAvatarImg, { justifyContent: 'center', alignItems: 'center' }]}>
+                          <Text style={{ fontWeight: '700', color: Palette.accent700, fontSize: 16 }}>
+                            {(m.name || 'U').charAt(0).toUpperCase()}
+                          </Text>
+                        </LinearGradient>
+                      )}
+                      <View style={styles.onlineStatusBadge} />
+                    </View>
+                    <Text style={[styles.activeMemberName, { color: Palette.neutral900 }]} numberOfLines={1}>
+                      {m.name}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Segmented Tab Control: "Feed" vs "Groups" */}
+            <View style={styles.tabBarContainer}>
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setActiveTab('feed');
+                }}
+                style={[
+                  styles.tabSegment,
+                  activeTab === 'feed' && styles.tabSegmentActive,
+                ]}
+              >
+                <Feather
+                  name="rss"
+                  size={15}
+                  color={activeTab === 'feed' ? '#ffffff' : Palette.neutral500}
+                />
+                <Text
+                  style={[
+                    styles.tabSegmentText,
+                    { color: activeTab === 'feed' ? '#ffffff' : Palette.neutral500 },
+                  ]}
+                >
+                  Feed
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setActiveTab('groups');
+                }}
+                style={[
+                  styles.tabSegment,
+                  activeTab === 'groups' && styles.tabSegmentActive,
+                ]}
+              >
+                <Feather
+                  name="users"
+                  size={15}
+                  color={activeTab === 'groups' ? '#ffffff' : Palette.neutral500}
+                />
+                <Text
+                  style={[
+                    styles.tabSegmentText,
+                    { color: activeTab === 'groups' ? '#ffffff' : Palette.neutral500 },
+                  ]}
+                >
+                  Groups
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Render Groups Hub when activeTab === 'groups' */}
+            {activeTab === 'groups' && (
+              <View style={{ paddingHorizontal: 16, marginTop: 12, gap: 14 }}>
+                {COMMUNITY_GROUPS.map((group) => {
+                  const isJoined = joinedGroups[group.id];
+                  return (
+                    <View
+                      key={group.id}
+                      style={[
+                        styles.groupCard,
+                        { backgroundColor: '#ffffff', borderColor: '#E2E8F0' },
+                        Shadow.card,
+                      ]}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View style={[styles.groupIconWrap, { backgroundColor: group.bg }]}>
+                          <Feather name={group.icon as any} size={20} color={group.color} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.groupName, { color: Palette.neutral900 }]}>{group.name}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                            <Text style={[styles.groupMembersText, { color: Palette.neutral400 }]}>
+                              {group.memberCount} members
+                            </Text>
+                            <Text style={{ fontSize: 10, color: Palette.neutral400 }}>•</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Palette.emerald500 }} />
+                              <Text style={{ fontSize: 11, fontWeight: '600', color: Palette.emerald600 }}>
+                                {group.activeToday} active today
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+
+                      <Text style={[styles.groupDesc, { color: Palette.neutral600 }]}>
+                        {group.description}
+                      </Text>
+
+                      <View style={styles.groupCardFooter}>
+                        <Pressable
+                          onPress={() => {
+                            setSelectedGroup(group);
+                            setGroupModalVisible(true);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }}
+                          style={({ pressed }) => [
+                            styles.groupViewBtn,
+                            { opacity: pressed ? 0.8 : 1 },
+                          ]}
+                        >
+                          <Feather name="message-circle" size={13} color={Palette.accent600} />
+                          <Text style={styles.groupViewBtnText}>View Discussions ({group.discussions.length})</Text>
+                        </Pressable>
+
+                        <Pressable
+                          onPress={() => toggleJoinGroup(group.id)}
+                          style={({ pressed }) => [
+                            styles.groupJoinBtn,
+                            isJoined
+                              ? { backgroundColor: Palette.neutral100, borderColor: Palette.neutral300 }
+                              : { backgroundColor: Palette.accent600 },
+                            { opacity: pressed ? 0.85 : 1 },
+                          ]}
+                        >
+                          <Feather
+                            name={isJoined ? 'check' : 'user-plus'}
+                            size={12}
+                            color={isJoined ? Palette.neutral600 : '#ffffff'}
+                          />
+                          <Text
+                            style={[
+                              styles.groupJoinBtnText,
+                              { color: isJoined ? Palette.neutral600 : '#ffffff' },
+                            ]}
+                          >
+                            {isJoined ? 'Joined' : 'Join'}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
         }
         ListEmptyComponent={
-          (!isLoading && imagesReady) ? (
+          activeTab === 'feed' && imagesReady ? (
             <View style={[styles.centered, { marginTop: 40 }]}>
               <Feather name="message-square" size={48} color={Palette.neutral300} />
               <Text style={styles.emptyTitle}>Nothing here yet</Text>
@@ -870,6 +1179,72 @@ export default function CommunityScreen() {
             </HapticPressable>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── GROUP DISCUSSIONS MODAL ── */}
+      <Modal visible={groupModalVisible} animationType="slide" transparent onRequestClose={() => setGroupModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                {selectedGroup && (
+                  <View style={[styles.groupIconWrap, { backgroundColor: selectedGroup.bg, width: 34, height: 34 }]}>
+                    <Feather name={selectedGroup.icon as any} size={16} color={selectedGroup.color} />
+                  </View>
+                )}
+                <View>
+                  <Text style={[styles.modalTitle, { fontSize: 16 }]} numberOfLines={1}>{selectedGroup?.name}</Text>
+                  <Text style={{ fontSize: 11, color: Palette.neutral400 }}>{selectedGroup?.memberCount} members • {selectedGroup?.activeToday} active today</Text>
+                </View>
+              </View>
+              <HapticPressable onPress={() => setGroupModalVisible(false)} style={styles.closeBtn}>
+                <Feather name="x" size={20} color={Palette.neutral600} />
+              </HapticPressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 8 }}>
+              <Text style={{ fontSize: 13, color: Palette.neutral600, lineHeight: 19, marginBottom: 16 }}>
+                {selectedGroup?.description}
+              </Text>
+
+              <Text style={{ fontSize: 12, fontWeight: '800', color: Palette.neutral900, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Active Discussions ({selectedGroup?.discussions.length})
+              </Text>
+
+              {selectedGroup?.discussions.map((d) => (
+                <View key={d.id} style={{ backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: Palette.neutral900 }}>{d.author}</Text>
+                    <Text style={{ fontSize: 11, color: Palette.neutral400 }}>{d.time}</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, color: Palette.neutral700, lineHeight: 19, marginBottom: 10 }}>{d.content}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <FontAwesome name="heart-o" size={13} color={Palette.neutral400} />
+                      <Text style={{ fontSize: 11, color: Palette.neutral500 }}>4</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Feather name="message-square" size={13} color={Palette.neutral400} />
+                      <Text style={{ fontSize: 11, color: Palette.neutral500 }}>2 replies</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            <HapticPressable
+              onPress={() => {
+                if (selectedGroup) toggleJoinGroup(selectedGroup.id);
+                setGroupModalVisible(false);
+              }}
+              style={[styles.submitBtn, { marginTop: 4 }]}
+            >
+              <Text style={styles.submitBtnText}>
+                {selectedGroup && joinedGroups[selectedGroup.id] ? 'Already Joined' : 'Join Group & Post'}
+              </Text>
+            </HapticPressable>
+          </View>
+        </View>
       </Modal>
 
     </View>
@@ -1360,5 +1735,222 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.bold,
     color: '#fff',
+  },
+  // ── Merged Top Header Cover ──
+  heroCoverCardHeader: {
+    height: 195,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'space-between',
+    elevation: 4,
+  },
+  coverTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    zIndex: 3,
+  },
+  coverBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  coverTopTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -0.3,
+  },
+  heroCoverContent: {
+    padding: 16,
+    zIndex: 2,
+  },
+  communityTagPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 99,
+    marginBottom: 6,
+  },
+  activeDotPulse: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  communityTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.2,
+  },
+  heroCoverTitle: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#ffffff',
+    letterSpacing: -0.5,
+    marginBottom: 2,
+  },
+  heroCoverSub: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '500',
+  },
+  // ── Active Members Carousel ──
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  sectionHeading: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  liveBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  onlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  liveBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  activeAvatarWrap: {
+    position: 'relative',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2.5,
+    borderColor: '#10B981',
+    padding: 1.5,
+  },
+  activeAvatarImg: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
+  },
+  onlineStatusBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  activeMemberName: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  activeMemberTitle: {
+    fontSize: 9,
+    textAlign: 'center',
+  },
+  // ── Tab Bar Container ──
+  tabBarContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    backgroundColor: 'rgba(226, 232, 240, 0.5)',
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 4,
+  },
+  tabSegment: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  tabSegmentActive: {
+    backgroundColor: Palette.accent600,
+  },
+  tabSegmentText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  // ── Group Cards ──
+  groupCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  groupIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  groupName: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  groupMembersText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  groupDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 10,
+    marginBottom: 14,
+  },
+  groupCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  groupViewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  groupViewBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Palette.accent600,
+  },
+  groupJoinBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  groupJoinBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

@@ -1,25 +1,42 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter } from 'react-native';
 import { Image } from 'expo-image';
-import { Tabs, useRouter, useSegments } from 'expo-router';
+import { Tabs, useRouter, useSegments, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
+  withSequence,
   Easing,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Palette, Shadow, BorderRadius } from '@/constants/theme';
+import { Palette, BorderRadius } from '@/constants/theme';
 import Logo from '@/components/logo';
 import { useNotificationsData } from '@/hooks/useNotificationsData';
 import { HapticPressable } from '@/components/haptic-pressable';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
+import Svg, { Path } from 'react-native-svg';
 import { apiFetch } from '@/services/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// ── Navbar geometry constants ─────────────────────────────────────────────────
+const NAV_BAR_H   = 60;          // height of the main navbar
+const FAB_SIZE    = 52;          // diameter of the central FAB circle
+const NOTCH_R     = 36;          // notch half-width
+const NOTCH_DEPTH = 24;          // notch curve depth
+const CORNER_R    = 26;          // pill corner radius
+const NAV_WIDTH   = Math.min(SCREEN_WIDTH - 32, 440);
+
+// Smooth concave notch SVG path
+function getNotchedPathD(w: number, h: number, cr: number, nw: number, nd: number) {
+  const cx = w / 2;
+  return `M ${cr} 0 L ${cx - nw} 0 C ${cx - nw + 14} 0, ${cx - 14} ${nd}, ${cx} ${nd} C ${cx + 14} ${nd}, ${cx + nw - 14} 0, ${cx + nw} 0 L ${w - cr} 0 A ${cr} ${cr} 0 0 1 ${w} ${cr} L ${w} ${h - cr} A ${cr} ${cr} 0 0 1 ${w - cr} ${h} L ${cr} ${h} A ${cr} ${cr} 0 0 1 0 ${h - cr} L 0 ${cr} A ${cr} ${cr} 0 0 1 ${cr} 0 Z`;
+}
 
 // ─── Floating Top Header ──────────────────────────────────────────────────────
 function FloatingHeader({
@@ -47,7 +64,7 @@ function FloatingHeader({
           <Text style={styles.logoText}>Quota Hire</Text>
         </View>
 
-        {/* Right: Notifications + Avatar Profile + Menu */}
+        {/* Right: Notifications + Avatar Profile */}
         <View style={styles.actionsRow}>
           <HapticPressable style={styles.iconButton} onPress={() => router.push('/notifications' as any)}>
             <Feather name="bell" size={19} color={Palette.neutral700} />
@@ -84,8 +101,8 @@ function FloatingHeader({
   );
 }
 
-// ─── Spring-Up "More" Bottom Sheet Menu ───────────────────────────────────────
-function MoreMenuSheet({
+// ─── FAB Speed Dial Quick Action Sheet ────────────────────────────────────────
+function FabMenuSheet({
   isOpen,
   onClose,
   userRole,
@@ -108,26 +125,32 @@ function MoreMenuSheet({
 
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const backdropOpacity = useSharedValue(0);
+  const menuScale = useSharedValue(0.9);
 
   useEffect(() => {
     if (isOpen) {
       backdropOpacity.value = withTiming(1, { duration: 250 });
       translateY.value = withSpring(0, {
         damping: 18,
-        stiffness: 140,
-        mass: 0.9,
+        stiffness: 150,
+        mass: 0.8,
       });
+      menuScale.value = withSpring(1, { damping: 16, stiffness: 180 });
     } else {
       backdropOpacity.value = withTiming(0, { duration: 200 });
       translateY.value = withTiming(SCREEN_HEIGHT, {
-        duration: 250,
+        duration: 220,
         easing: Easing.in(Easing.cubic),
       });
+      menuScale.value = withTiming(0.9, { duration: 200 });
     }
   }, [isOpen]);
 
   const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    transform: [
+      { translateY: translateY.value },
+      { scale: menuScale.value },
+    ],
   }));
 
   const backdropStyle = useAnimatedStyle(() => ({
@@ -137,23 +160,23 @@ function MoreMenuSheet({
 
   const isCompany = userRole === 'company';
 
-  // Menu items for Candidate / Employee
-  const EMPLOYEE_MORE_ITEMS: { name: string; route: string; icon: string; color: string; bg: string; badge?: string; count?: number }[] = [
-    { name: 'Saved Jobs',    route: '/saved-jobs',  icon: 'heart',     color: '#ef4444', bg: '#fee2e2' },
+  // Quick Action menu items for Candidate / Employee
+  const EMPLOYEE_ACTIONS = [
     { name: 'CV Generator', route: '/cv',          icon: 'file-text', color: Palette.accent600, bg: Palette.accent50, badge: 'AI' },
-    { name: 'My Profile',   route: '/profile',     icon: 'user',      color: '#6366f1', bg: '#e0e7ff' },
+    { name: 'Saved Jobs',   route: '/saved-jobs',  icon: 'bookmark',  color: '#d97706', bg: '#fef3c7' },
     { name: 'Notifications',route: '/notifications',icon: 'bell',      color: '#f59e0b', bg: '#fef3c7', count: unreadCount },
     { name: 'Settings',     route: '/settings',    icon: 'settings',  color: '#64748b', bg: '#f1f5f9' },
   ];
 
-  // Menu items for Company / Employer
-  const COMPANY_MORE_ITEMS: { name: string; route: string; icon: string; color: string; bg: string; badge?: string; count?: number }[] = [
-    { name: 'Company Profile', route: '/profile', icon: 'user',     color: Palette.accent600, bg: Palette.accent50 },
-    { name: 'Notifications',   route: '/notifications', icon: 'bell', color: '#f59e0b', bg: '#fef3c7', count: unreadCount },
-    { name: 'Settings',        route: '/settings', icon: 'settings', color: '#64748b', bg: '#f1f5f9' },
+  // Quick Action menu items for Company / Employer
+  const COMPANY_ACTIONS = [
+    { name: 'Post New Role',   route: '/explore',       icon: 'plus-circle', color: Palette.accent600, bg: Palette.accent50, badge: 'NEW' },
+    { name: 'Company Profile', route: '/profile',       icon: 'user',        color: '#6366f1', bg: '#e0e7ff' },
+    { name: 'Notifications',   route: '/notifications', icon: 'bell',        color: '#f59e0b', bg: '#fef3c7', count: unreadCount },
+    { name: 'Settings',        route: '/settings',      icon: 'settings',    color: '#64748b', bg: '#f1f5f9' },
   ];
 
-  const ITEMS = isCompany ? COMPANY_MORE_ITEMS : EMPLOYEE_MORE_ITEMS;
+  const ACTIONS = isCompany ? COMPANY_ACTIONS : EMPLOYEE_ACTIONS;
 
   const navigateTo = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -187,9 +210,15 @@ function MoreMenuSheet({
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      {/* Spring-up sheet container */}
-      <Animated.View style={[styles.sheetContainer, sheetStyle, { paddingBottom: Math.max(insets.bottom + 16, 24) }]}>
-        {/* Top Handle indicator */}
+      {/* Quick Action Sheet container */}
+      <Animated.View
+        style={[
+          styles.sheetContainer,
+          sheetStyle,
+          { paddingBottom: Math.max(insets.bottom + 90, 100) },
+        ]}
+      >
+        {/* Handle bar indicator */}
         <View style={styles.sheetHandleWrap}>
           <View style={styles.sheetHandle} />
         </View>
@@ -198,15 +227,15 @@ function MoreMenuSheet({
         <View style={styles.sheetHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={{ width: 34, height: 34, borderRadius: 17 }} />
+              <Image source={{ uri: avatarUrl }} style={{ width: 36, height: 36, borderRadius: 18 }} />
             ) : (
               <View style={styles.sheetAvatarFallback}>
                 <Text style={styles.sheetAvatarText}>{initial}</Text>
               </View>
             )}
             <View>
-              <Text style={styles.sheetTitle}>{userName || 'User Menu'}</Text>
-              <Text style={styles.sheetSubtitle}>More Navigation Options</Text>
+              <Text style={styles.sheetTitle}>{userName || 'Quick Actions'}</Text>
+              <Text style={styles.sheetSubtitle}>{isCompany ? 'Employer Quick Hub' : 'Candidate Quick Hub'}</Text>
             </View>
           </View>
           <HapticPressable style={styles.sheetCloseBtn} onPress={onClose}>
@@ -214,9 +243,9 @@ function MoreMenuSheet({
           </HapticPressable>
         </View>
 
-        {/* Options Grid */}
+        {/* Quick Action Options Grid */}
         <View style={styles.sheetGrid}>
-          {ITEMS.map((item) => {
+          {ACTIONS.map((item) => {
             const isActive = currentRoute === item.route;
             return (
               <HapticPressable
@@ -225,7 +254,7 @@ function MoreMenuSheet({
                 style={({ pressed }) => [
                   styles.sheetGridItem,
                   isActive && styles.sheetGridItemActive,
-                  pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
+                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
                 ]}
               >
                 <View style={[styles.sheetItemIconWrap, { backgroundColor: item.bg }]}>
@@ -254,7 +283,7 @@ function MoreMenuSheet({
           })}
         </View>
 
-        {/* Sign Out Button */}
+        {/* Sign Out Action */}
         <View style={{ marginTop: 16, paddingHorizontal: 16 }}>
           <HapticPressable style={styles.sheetSignOutBtn} onPress={handleSignOut}>
             <Feather name="log-out" size={18} color={Palette.red500} />
@@ -266,92 +295,194 @@ function MoreMenuSheet({
   );
 }
 
-// ─── Sleek Bottom Navigation Bar ──────────────────────────────────────────────
-function BottomNavBar({
+// ─── Floating Notched Navigation Bar with Center FAB ──────────────────────
+function FloatingPillNavBar({
   userRole,
   currentRoute,
+  isFabOpen,
+  onToggleFab,
   onOpenMore,
 }: {
   userRole?: string;
   currentRoute: string;
+  isFabOpen: boolean;
+  onToggleFab: () => void;
   onOpenMore: () => void;
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isCompany = userRole === 'company';
 
-  // Primary Employee Tabs
-  const EMPLOYEE_NAV = [
-    { key: 'home',      label: 'Home',      route: '/',          icon: 'layout'    },
-    { key: 'explore',   label: 'Browse',    route: '/explore',   icon: 'search'    },
-    { key: 'tracker',   label: 'Tracker',   route: '/tracker',   icon: 'briefcase' },
-    { key: 'community', label: 'Community', route: '/community', icon: 'users'     },
-  ];
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
 
-  // Primary Company Tabs
-  const COMPANY_NAV = [
-    { key: 'home',    label: 'Home',       route: '/',        icon: 'layout'      },
-    { key: 'post',    label: 'Post Role',  route: '/explore', icon: 'plus-circle' },
-    { key: 'tracker', label: 'Applicants', route: '/tracker', icon: 'users'       },
-    { key: 'profile', label: 'Company',    route: '/profile', icon: 'user'        },
-  ];
+  // ── Tab definitions ────────────────────────────────────────────────────────
+  const tab1 = { label: 'Home',   route: '/',                   icon: 'home'       };
+  const tab2 = isCompany
+    ? { label: 'Profile',    route: '/profile',              icon: 'user'       }
+    : { label: 'Browse',     route: '/explore',              icon: 'compass'    };
+  const fabCfg = isCompany
+    ? { label: 'Post Job',   route: '/explore?mode=post-job', icon: 'plus-circle'}
+    : { label: 'Community',  route: '/community',            icon: 'users'      };
+  const tab4 = isCompany
+    ? { label: 'Applicants', route: '/tracker',              icon: 'users'      }
+    : { label: 'Tracker',    route: '/tracker',              icon: 'bar-chart-2'};
+  const tab5 = isCompany
+    ? { label: 'Settings', route: '/settings', icon: 'settings' }
+    : { label: 'More',     route: 'more',      icon: 'more-horizontal' };
 
-  const NAV_ITEMS = isCompany ? COMPANY_NAV : EMPLOYEE_NAV;
+  const isTab1Active = currentRoute === '/';
+  const isTab2Active = isCompany ? currentRoute === '/profile' : currentRoute === '/explore';
+  const isFabActive  = isCompany ? currentRoute === '/explore' : currentRoute === '/community';
+  const isTab4Active = currentRoute === '/tracker';
+  const isTab5Active = isCompany ? currentRoute === '/settings' : (isFabOpen || currentRoute === '/settings');
 
-  // Secondary routes that activate the "More" button indicator
-  const MORE_ROUTES = ['/saved-jobs', '/cv', '/settings', '/notifications', '/profile'];
-  const isMoreActive = MORE_ROUTES.includes(currentRoute) && (!isCompany || currentRoute !== '/profile');
+  // FAB spring-bounce on press
+  const fabScale = useSharedValue(1);
+  const fabStyle = useAnimatedStyle(() => ({ transform: [{ scale: fabScale.value }] }));
 
   const navigateTo = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (currentRoute !== route) {
-      router.replace(route as any);
-    }
+    if (currentRoute !== route) router.replace(route as any);
   };
 
-  return (
-    <View style={[styles.bottomBarWrap, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      <View style={styles.bottomBarContent}>
-        {NAV_ITEMS.map((item) => {
-          const isActive = currentRoute === item.route;
-          return (
-            <HapticPressable
-              key={item.key}
-              onPress={() => navigateTo(item.route)}
-              style={styles.bottomTabItem}
-            >
-              <View style={[styles.tabIconWrap, isActive && styles.tabIconWrapActive]}>
-                <Feather
-                  name={item.icon as any}
-                  size={20}
-                  color={isActive ? Palette.accent600 : Palette.neutral500}
-                />
-              </View>
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                {item.label}
-              </Text>
-            </HapticPressable>
-          );
-        })}
+  const handleFabPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    fabScale.value = withSequence(
+      withTiming(0.88, { duration: 80 }),
+      withSpring(1, { damping: 12, stiffness: 260 })
+    );
+    navigateTo(fabCfg.route);
+  };
 
-        {/* "MORE" Button — Spring-up sheet trigger */}
+  const notchedD = getNotchedPathD(NAV_WIDTH, NAV_BAR_H, CORNER_R, NOTCH_R, NOTCH_DEPTH);
+
+  return (
+    <View
+      style={{
+        alignSelf: 'center',
+        width: NAV_WIDTH,
+        height: NAV_BAR_H,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 10,
+      }}
+    >
+      {/* ── SVG Notched Bar Background ─────────────────────────────────────── */}
+      <Svg
+        width={NAV_WIDTH}
+        height={NAV_BAR_H}
+        style={StyleSheet.absoluteFill}
+      >
+        <Path
+          d={notchedD}
+          fill="rgba(255,255,255,0.98)"
+          stroke="rgba(226, 232, 240, 0.9)"
+          strokeWidth={1.5}
+        />
+      </Svg>
+
+      {/* ── 5 Equal-Width Slot Layout ───────────────────────────────────────── */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          width: '100%',
+          height: '100%',
+          paddingHorizontal: 4,
+        }}
+      >
+        {/* 1. Home */}
+        <HapticPressable
+          onPress={() => navigateTo(tab1.route)}
+          style={styles.pillTabItem}
+        >
+          <Feather
+            name={tab1.icon as any}
+            size={20}
+            color={isTab1Active ? Palette.accent600 : Palette.neutral400}
+          />
+          <Text style={[styles.pillLabel, isTab1Active && styles.pillLabelActive]}>
+            {tab1.label}
+          </Text>
+        </HapticPressable>
+
+        {/* 2. Browse / My Jobs */}
+        <HapticPressable
+          onPress={() => navigateTo(tab2.route)}
+          style={styles.pillTabItem}
+        >
+          <Feather
+            name={tab2.icon as any}
+            size={20}
+            color={isTab2Active ? Palette.accent600 : Palette.neutral400}
+          />
+          <Text style={[styles.pillLabel, isTab2Active && styles.pillLabelActive]}>
+            {tab2.label}
+          </Text>
+        </HapticPressable>
+
+        {/* 3. Center FAB (Post Job for Company / Community for Candidate) floating above Curved Notch */}
+        <View style={styles.pillTabItem}>
+          <View style={{ position: 'absolute', top: -28, alignItems: 'center' }}>
+            <HapticPressable onPress={handleFabPress} style={styles.fabTouchArea}>
+              <LinearGradient
+                colors={
+                  isFabActive
+                    ? [Palette.accent500, Palette.accent700]
+                    : [Palette.accent400, Palette.accent600]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.fabGradient}
+              >
+                <Animated.View style={fabStyle}>
+                  <Feather name={fabCfg.icon as any} size={22} color="#FFFFFF" />
+                </Animated.View>
+              </LinearGradient>
+            </HapticPressable>
+          </View>
+          <View style={{ height: 20 }} />
+          <Text style={[styles.pillLabel, isFabActive && styles.pillLabelActive]}>
+            {fabCfg.label}
+          </Text>
+        </View>
+
+        {/* 4. Applicants / Tracker */}
+        <HapticPressable
+          onPress={() => navigateTo(tab4.route)}
+          style={styles.pillTabItem}
+        >
+          <Feather
+            name={tab4.icon as any}
+            size={20}
+            color={isTab4Active ? Palette.accent600 : Palette.neutral400}
+          />
+          <Text style={[styles.pillLabel, isTab4Active && styles.pillLabelActive]}>
+            {tab4.label}
+          </Text>
+        </HapticPressable>
+
+        {/* 5. Settings (Company) / More (Employee) */}
         <HapticPressable
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onOpenMore();
+            if (isCompany) {
+              navigateTo('/settings');
+            } else {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onOpenMore();
+            }
           }}
-          style={styles.bottomTabItem}
+          style={styles.pillTabItem}
         >
-          <View style={[styles.tabIconWrap, isMoreActive && styles.tabIconWrapActive]}>
-            <Feather
-              name="grid"
-              size={20}
-              color={isMoreActive ? Palette.accent600 : Palette.neutral500}
-            />
-            {isMoreActive && <View style={styles.moreActiveDot} />}
-          </View>
-          <Text style={[styles.tabLabel, isMoreActive && styles.tabLabelActive]}>
-            More
+          <Feather
+            name={tab5.icon as any}
+            size={20}
+            color={isTab5Active ? Palette.accent600 : Palette.neutral400}
+          />
+          <Text style={[styles.pillLabel, isTab5Active && styles.pillLabelActive]}>
+            {tab5.label}
           </Text>
         </HapticPressable>
       </View>
@@ -359,9 +490,9 @@ function BottomNavBar({
   );
 }
 
-// ─── Main App Tabs (root layout) ─────────────────────────────────────────────
+// ─── Main App Tabs Layout ─────────────────────────────────────────────────────
 export default function AppTabs({ userRole, userName }: { userRole?: string; userName?: string }) {
-  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const insets = useSafeAreaInsets();
   const segments = useSegments() as string[];
@@ -369,10 +500,11 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
   const seg0 = (segments[0] as string) ?? '';
   const currentRoute = seg0 === '' || seg0 === '(tabs)' || seg0 === 'index' ? '/' : `/${seg0}`;
 
-  const contentPaddingTop = insets.top + 64;
-  const contentPaddingBottom = Math.max(insets.bottom + 65, 75);
+  const contentPaddingTop = (currentRoute === '/community' || currentRoute === '/community-detail')
+    ? 0
+    : insets.top + 64;
 
-  // Load avatar URL from SecureStore & backend
+  // Fetch avatar cached from SecureStore and backend
   useEffect(() => {
     (async () => {
       try {
@@ -386,18 +518,21 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
           await SecureStore.setItemAsync('user_avatar', url);
         }
       } catch (_e) {
-        // Silently ignore
+        // Silently ignore network failures
       }
     })();
+
+    const sub = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (url: string) => {
+      if (url) setAvatarUrl(url);
+    });
+
+    return () => sub.remove();
   }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFBEB' }}>
-      {/* Background fill */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#FFFBEB' }]} />
-
-      {/* Main Tabs Content */}
-      <View style={{ flex: 1, paddingTop: contentPaddingTop, paddingBottom: contentPaddingBottom }}>
+      {/* Main Screen Stack Content */}
+      <View style={{ flex: 1, paddingTop: contentPaddingTop }}>
         <Tabs
           screenOptions={{
             headerShown: false,
@@ -419,27 +554,43 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
         </Tabs>
       </View>
 
-      {/* Floating Header on top */}
-      <View style={styles.absoluteHeader}>
-        <FloatingHeader
-          onOpenMore={() => setMoreSheetOpen(true)}
-          userName={userName}
-          avatarUrl={avatarUrl}
-          currentRoute={currentRoute}
-        />
-      </View>
+      {/* Floating Brand Header (hidden on community & community-detail) */}
+      {currentRoute !== '/community' && currentRoute !== '/community-detail' && (
+        <View style={styles.absoluteHeader}>
+          <FloatingHeader
+            onOpenMore={() => setFabOpen(true)}
+            userName={userName}
+            avatarUrl={avatarUrl}
+            currentRoute={currentRoute}
+          />
+        </View>
+      )}
 
-      {/* Bottom Navigation Bar (replaces sidebar) */}
-      <BottomNavBar
-        userRole={userRole}
-        currentRoute={currentRoute}
-        onOpenMore={() => setMoreSheetOpen(true)}
-      />
+      {/* Navigation Bar — hidden on post detail screen so user gets unobstructed comment experience, appears instantly on community page */}
+      {currentRoute !== '/community-detail' && (
+        <View
+          style={{
+            width: '100%',
+            alignItems: 'center',
+            paddingTop: 8,
+            paddingBottom: Math.max(insets.bottom + 12, 20),
+            backgroundColor: 'transparent',
+          }}
+        >
+          <FloatingPillNavBar
+            userRole={userRole}
+            currentRoute={currentRoute}
+            isFabOpen={fabOpen}
+            onToggleFab={() => setFabOpen(!fabOpen)}
+            onOpenMore={() => setFabOpen(true)}
+          />
+        </View>
+      )}
 
-      {/* Spring-up "More" Bottom Sheet */}
-      <MoreMenuSheet
-        isOpen={moreSheetOpen}
-        onClose={() => setMoreSheetOpen(false)}
+      {/* Quick Action Speed Dial Sheet */}
+      <FabMenuSheet
+        isOpen={fabOpen}
+        onClose={() => setFabOpen(false)}
         userRole={userRole}
         avatarUrl={avatarUrl}
         userName={userName}
@@ -537,71 +688,53 @@ const styles = StyleSheet.create({
     color: Palette.accent700,
   },
 
-  // Bottom Navigation Bar
-  bottomBarWrap: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.8)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 30,
-  },
-  bottomBarContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingTop: 8,
-    paddingHorizontal: 4,
-  },
-  bottomTabItem: {
+  // ── Navbar tab styles ─────────────────────────────────────────────────────
+  pillTabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    paddingVertical: 2,
+    gap: 2,
+    paddingVertical: 6,
   },
-  tabIconWrap: {
-    width: 38,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  tabIconWrapActive: {
-    backgroundColor: 'rgba(21, 117, 10, 0.1)',
-  },
-  tabLabel: {
+  pillLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Palette.neutral500,
+    textAlign: 'center',
   },
-  tabLabelActive: {
-    color: Palette.accent700,
-    fontWeight: '800',
-  },
-  moreActiveDot: {
-    position: 'absolute',
-    top: 2,
-    right: 6,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Palette.accent600,
+  pillLabelActive: {
+    color: Palette.accent600,
+    fontWeight: '900',
   },
 
-  // Backdrop
+  // ── Center FAB (circle button in the notch) ───────────────────────────────
+  fabTouchArea: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    shadowColor: Palette.accent500,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    elevation: 14,
+  },
+  fabGradient: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+
+  // Backdrop Overlay
   backdrop: {
     backgroundColor: 'rgba(0,0,0,0.45)',
     zIndex: 40,
   },
 
-  // Spring-Up "More" Sheet
+  // FAB Speed Dial Sheet
   sheetContainer: {
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
@@ -635,9 +768,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Palette.neutral100,
   },
   sheetAvatarFallback: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Palette.accent100,
     alignItems: 'center',
     justifyContent: 'center',

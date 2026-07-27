@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, StyleSheet, KeyboardAvoidingView,
   Platform, ActivityIndicator, Alert, Image, Modal,
-  Pressable, Keyboard, PanResponder, BackHandler,
+  Pressable, Keyboard, BackHandler,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import Animated, { SlideInDown, SlideOutDown, FadeIn, FadeOut } from 'react-nati
 
 import { useCommunityData, CommunityPost, CommunityComment } from '@/hooks/useCommunityData';
 import { apiFetch } from '@/services/api';
+import * as SecureStore from 'expo-secure-store';
 import { HapticPressable } from '@/components/haptic-pressable';
 import { Colors, Palette, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 
@@ -277,36 +278,12 @@ export default function CommunityDetailScreen() {
 
   // Native back pop is handled automatically by Expo Router stack
 
-  // ── Swipe-left-from-edge to go back to Community ─────────────────────────
-  const swipeBackRef = useRef({ startX: 0 });
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: (evt, gs) => {
-        const startX = gs.moveX - gs.dx;
-        return startX < 40 && gs.dx > 10 && Math.abs(gs.dy) < Math.abs(gs.dx) * 0.5;
-      },
-      onMoveShouldSetPanResponderCapture: (evt, gs) => {
-        const startX = gs.moveX - gs.dx;
-        return startX < 40 && gs.dx > 10 && Math.abs(gs.dy) < Math.abs(gs.dx) * 0.5;
-      },
-      onPanResponderRelease: (evt, gs) => {
-        const startX = gs.moveX - gs.dx;
-        if (startX < 40 && gs.dx > 60) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.replace('/community' as any);
-        }
-      },
-    })
-  ).current;
-
-  // ── Hardware Back Button handler (Android) ────────────────────────────────
+  // ── Hardware Back Button handler (Android) ─────────────
   useEffect(() => {
     const onBackPress = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.replace('/community' as any);
-      return true; // prevent default (dashboard navigation)
+      return true; // prevent default
     };
 
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -334,9 +311,23 @@ export default function CommunityDetailScreen() {
   // Action sheet state
   const [actionSheet, setActionSheet] = useState<ActionSheetComment | null>(null);
 
-  // Fetch post
+  // Fetch post — try cache first for instant display, then refresh silently
   const fetchPost = useCallback(async () => {
     if (!id) return;
+    // Try to find the post in the cached community feed for instant display
+    try {
+      const cached = await SecureStore.getItemAsync('cached_community_feed');
+      if (cached) {
+        const feed = JSON.parse(cached);
+        const found = feed.find((p: any) => p.id?.toString() === id && p.type === 'post');
+        if (found) {
+          setPost(found as CommunityPost);
+          setIsLoadingPost(false);
+        }
+      }
+    } catch (_e) {}
+
+    // Always fetch fresh from API in background
     setIsLoadingPost(true);
     try {
       const data = await apiFetch(`/community/posts/?category=`);
@@ -539,16 +530,25 @@ export default function CommunityDetailScreen() {
   const groups = buildGroups(comments);
   const topLevelCount = comments.filter(c => !c.parent).length;
 
-  if (isLoadingPost || !post) {
+  if (!post) {
+    // Post not in cache yet — render empty shell, content will arrive shortly
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Palette.accent500} />
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <View style={[styles.centered, { paddingTop: 80 }]}>
+          <Feather name="message-square" size={32} color={Palette.neutral300} />
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
+    <View style={styles.container}>
       {/* Dashboard visual background gradient */}
       <LinearGradient
         colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
@@ -656,9 +656,9 @@ export default function CommunityDetailScreen() {
           }
         />
 
-        {/* Comment input */}
+        {/* Comment input bar — fixed at bottom of screen when post is open */}
         {!post.comments_disabled ? (
-          <View style={[styles.inputWrapper, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 12 }]}>
+          <View style={[styles.inputWrapper, { paddingBottom: Math.max(insets.bottom + 8, 14) }]}>
             {(replyToComment || editingComment) && (
               <View style={styles.contextBar}>
                 <Feather
@@ -700,7 +700,7 @@ export default function CommunityDetailScreen() {
             </View>
           </View>
         ) : (
-          <View style={[styles.disabledBar, { paddingBottom: insets.bottom > 0 ? insets.bottom + 8 : 16 }]}>
+          <View style={[styles.disabledBar, { paddingBottom: Math.max(insets.bottom + 8, 16) }]}>
             <Feather name="lock" size={14} color={Palette.neutral400} />
             <Text style={styles.disabledText}>Comments are disabled for this post</Text>
           </View>

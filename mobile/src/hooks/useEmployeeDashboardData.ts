@@ -9,6 +9,7 @@
  * the loading state and an error/retry banner covers fetch failures.
  */
 import { useState, useEffect, useCallback } from "react";
+import { DeviceEventEmitter } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { apiFetch } from "../services/api";
 
@@ -139,8 +140,16 @@ function normalizeJobs(rawJobs: any[]): Job[] {
   return rawJobs.map((j: any) => ({
     id: j.id.toString(),
     title: j.title,
-    companyName: j.company_name,
-    companyLogoUrl: j.company_logo_url,
+    companyName: j.company_name || j.companyName || j.company?.name || "Company",
+    companyLogoUrl:
+      j.company_logo_url ||
+      j.company_logo ||
+      j.companyLogoUrl ||
+      j.companyLogo ||
+      j.company?.logo ||
+      j.company?.avatar_url ||
+      j.company?.logo_url ||
+      undefined,
     companyIsVerified: true,
     location: j.location,
     workType: j.is_remote ? "Remote" : ("Hybrid" as const),
@@ -212,11 +221,14 @@ export function useEmployeeDashboardData() {
 
       const normalizedUser = normalizeUser(uData);
       setUser(normalizedUser);
+      SecureStore.setItemAsync("cached_user_profile", JSON.stringify(normalizedUser)).catch(() => {});
 
       const rawJobs = Array.isArray(jobsData)
         ? jobsData
         : jobsData?.results || [];
-      setJobs(normalizeJobs(rawJobs));
+      const normalizedJobsList = normalizeJobs(rawJobs);
+      setJobs(normalizedJobsList);
+      SecureStore.setItemAsync("cached_jobs", JSON.stringify(normalizedJobsList)).catch(() => {});
       setIsLoading(false); // ← Dashboard is now visible!
 
       // ── Phase 2: Secondary data — fills in the rest in the background ─────
@@ -228,25 +240,20 @@ export function useEmployeeDashboardData() {
 
       // Merge employee profile details into user state
       if (empProfile) {
-        setUser((prev) => ({
-          ...prev,
-          title: empProfile.title || prev.title || "",
-          bio: empProfile.bio || prev.bio || "",
-          skills: empProfile.skills || prev.skills || [],
-          education: empProfile.education || prev.education || "",
-          resumeUrl:
-            empProfile.resume_url ||
-            empProfile.resume_file ||
-            prev.resumeUrl ||
-            "",
-          phone: empProfile.phone_number || prev.phone || "",
-          location:
-            empProfile.city && empProfile.country
-              ? `${empProfile.city}, ${empProfile.country}`
-              : prev.location || "",
-          experienceYears:
-            empProfile.experience_years || prev.experienceYears || 0,
-        }));
+        setUser((prev) => {
+          const updated = {
+            ...prev,
+            title: empProfile.title || prev.title,
+            bio: empProfile.bio || prev.bio,
+            skills: empProfile.skills || prev.skills,
+            education: empProfile.education || prev.education,
+            resumeUrl: empProfile.resume_url || empProfile.resume_file || prev.resumeUrl,
+            phone: empProfile.phone_number || prev.phone,
+            experienceYears: empProfile.experience_years || prev.experienceYears,
+          };
+          SecureStore.setItemAsync("cached_user_profile", JSON.stringify(updated)).catch(() => {});
+          return updated;
+        });
       }
 
       const rawApps = Array.isArray(appsData)
@@ -254,7 +261,11 @@ export function useEmployeeDashboardData() {
         : appsData?.results || [];
       const normalizedApps = normalizeApps(rawApps);
       setApplications(normalizedApps);
-      setAnalytics(normalizeAnalytics(analData, normalizedApps.length));
+      SecureStore.setItemAsync("cached_applications", JSON.stringify(normalizedApps)).catch(() => {});
+
+      const normalizedAnalytics = normalizeAnalytics(analData, normalizedApps.length);
+      setAnalytics(normalizedAnalytics);
+      SecureStore.setItemAsync("cached_analytics", JSON.stringify(normalizedAnalytics)).catch(() => {});
 
       // Saved jobs from /auth/me/
       if (uData.saved_jobs) {
@@ -286,8 +297,47 @@ export function useEmployeeDashboardData() {
     }
   }, []);
 
+  // Fast-path: Instant zero-delay cache restore on mount
+  // All 4 data shapes are restored simultaneously — user sees full UI in 0ms
+  useEffect(() => {
+    (async () => {
+      try {
+        const [cachedUser, cachedJobs, cachedApps, cachedAnalytics] = await Promise.all([
+          SecureStore.getItemAsync("cached_user_profile"),
+          SecureStore.getItemAsync("cached_jobs"),
+          SecureStore.getItemAsync("cached_applications"),
+          SecureStore.getItemAsync("cached_analytics"),
+        ]);
+        let hasCache = false;
+        if (cachedUser) { setUser(JSON.parse(cachedUser)); hasCache = true; }
+        if (cachedJobs) { setJobs(JSON.parse(cachedJobs)); hasCache = true; }
+        if (cachedApps) { setApplications(JSON.parse(cachedApps)); hasCache = true; }
+        if (cachedAnalytics) { setAnalytics(JSON.parse(cachedAnalytics)); hasCache = true; }
+        if (hasCache) {
+          setIsLoading(false);
+          setIsFetching(false);
+        }
+      } catch (_e) {}
+    })();
+  }, []);
+
   useEffect(() => {
     fetchLiveDashboard();
+
+    const subAvatar = DeviceEventEmitter.addListener("USER_AVATAR_UPDATED", (newUrl: string) => {
+      setUser((prev) => ({ ...prev, avatarUrl: newUrl }));
+    });
+
+    const subData = DeviceEventEmitter.addListener("USER_DATA_UPDATED", (partialData: Partial<UserProfile>) => {
+      if (partialData) {
+        setUser((prev) => ({ ...prev, ...partialData }));
+      }
+    });
+
+    return () => {
+      subAvatar.remove();
+      subData.remove();
+    };
   }, [fetchLiveDashboard]);
 
   const toggleSavedJob = useCallback(async (jobId: string) => {

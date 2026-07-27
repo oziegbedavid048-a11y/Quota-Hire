@@ -12,6 +12,8 @@ import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 
 import CompanyMyJobs from '@/components/company-my-jobs';
+import CompanyApplicants from '@/components/company-applicants';
+import { useLocalSearchParams } from 'expo-router';
 import { SkeletonApplicationCard } from '@/components/ui/skeleton';
 import {
   Colors, Palette, Shadow, BorderRadius, TabBarHeight,
@@ -59,7 +61,12 @@ export default function TrackerScreen() {
     return acc;
   }, {} as Record<string, number>);
 
+  const params = useLocalSearchParams<{ jobId?: string; view?: string }>();
+
   if (role === 'company') {
+    if (params.view === 'applicants' || params.jobId) {
+      return <CompanyApplicants />;
+    }
     return <CompanyMyJobs />;
   }
 
@@ -168,12 +175,7 @@ export default function TrackerScreen() {
 
         {/* ── Application list (matches web card-soft exactly) ── */}
         <View style={[s.listCard, { backgroundColor: '#ffffff', borderColor: c.border }]}>
-          {isLoading ? (
-            // Skeleton loading — matches shape of real application cards
-            <View style={{ gap: 12, padding: 4 }}>
-              {[1, 2, 3].map(k => <SkeletonApplicationCard key={k} />)}
-            </View>
-          ) : filtered.length === 0 ? (
+          {filtered.length === 0 ? (
             <View style={s.empty}>
               <View style={[s.emptyIconWrap, { backgroundColor: isDark ? Palette.neutral800 : Palette.neutral100 }]}>
                 <Feather name="inbox" size={24} color={c.textMuted} />

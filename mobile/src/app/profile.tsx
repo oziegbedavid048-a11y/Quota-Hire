@@ -27,6 +27,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated as RNAnimated,
+  DeviceEventEmitter,
 } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -287,6 +288,7 @@ export default function ProfileScreen() {
       const res = await uploadFileViaXHR(`${API_BASE}/profile/avatar/`, formData, token);
       if (res?.avatarUrl) {
         await SecureStore.setItemAsync("user_avatar", res.avatarUrl);
+        DeviceEventEmitter.emit("USER_AVATAR_UPDATED", res.avatarUrl);
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -1061,13 +1063,9 @@ export default function ProfileScreen() {
             </View>
 
             {/* Name + title */}
-            {isFetching && !user.name ? (
-              <Skeleton width={140} height={20} borderRadius={6} style={{ marginBottom: 6 }} />
-            ) : (
-              <Text style={[s.heroName, { color: colors.text }]}>
-                {user.name}
-              </Text>
-            )}
+            <Text style={[s.heroName, { color: colors.text }]}>
+              {user.name}
+            </Text>
             <View style={s.titleRow}>
               {user.title && (
                 <Text style={[s.heroTitle, { color: colors.textSecondary }]}>
@@ -1091,13 +1089,9 @@ export default function ProfileScreen() {
               <Text style={[s.scoreLabel, { color: colors.textMuted }]}>
                 Profile Score
               </Text>
-              {isFetching ? (
-                <Skeleton width={36} height={16} borderRadius={4} />
-              ) : (
-                <Text style={[s.scoreVal, { color: Palette.accent500 }]}>
-                  {profileScore}%
-                </Text>
-              )}
+              <Text style={[s.scoreVal, { color: Palette.accent500 }]}>
+                {profileScore}%
+              </Text>
             </View>
             <View style={[s.progressBg, { backgroundColor: colors.border }]}>
               <LinearGradient
@@ -1158,16 +1152,12 @@ export default function ProfileScreen() {
                       <Text style={[s.sectionLabel, { color: colors.text }]}>
                         {item.label}
                       </Text>
-                      {isFetching ? (
-                        <Skeleton width={120} height={12} borderRadius={4} style={{ marginTop: 4 }} />
-                      ) : (
-                        <Text
+                      <Text
                           style={[s.sectionSub, { color: colors.textMuted }]}
                           numberOfLines={1}
                         >
                           {item.subtitle}
                         </Text>
-                      )}
                     </View>
 
                     {item.actionText ? (

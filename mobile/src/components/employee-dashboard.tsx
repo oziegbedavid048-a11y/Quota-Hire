@@ -5,7 +5,7 @@
  * Sections (in order, matching web):
  *  1. Hero banner  — gradient + 3D employee_welcome.png + CTA buttons
  *  2. KPI stat cards (horizontal scroll on mobile)
- *  3. Application Activity bar chart
+ *  3. Application Activity line/area chart (touch-enabled, responsive)
  *  4. Pipeline Breakdown donut chart
  *  5. Market Salary Trends area chart
  *  6. Recent Applications list
@@ -13,7 +13,7 @@
  *  8. Recommended Roles (horizontal scroll)
  */
 
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -33,11 +33,13 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
+  withSequence,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { BarChart, PieChart, LineChart } from 'react-native-gifted-charts';
-import Svg, { Polygon, Line, Circle, Text as SvgText, G } from 'react-native-svg';
+import { PieChart, LineChart } from 'react-native-gifted-charts';
+import Svg, { Polygon, Line, Circle, Text as SvgText, G, Path, Defs, LinearGradient as SvgLinearGradient, Stop, Rect } from 'react-native-svg';
 
 import {
   Colors, Palette, Shadow, BorderRadius,
@@ -49,6 +51,7 @@ import { GlassView } from 'expo-glass-effect';
 const { width: SCREEN_W } = Dimensions.get('window');
 const H_PAD = 16;
 const CHART_W = SCREEN_W - H_PAD * 2 - 32;
+const LINE_CHART_W = SCREEN_W - H_PAD * 2 - 48; // slightly narrower for line charts
 
 function Skeleton({ width, height, borderRadius, style }: { width?: any; height?: any; borderRadius?: number; style?: any }) {
   const opacity = useRef(new RNAnimated.Value(0.3)).current;
@@ -276,9 +279,10 @@ function StatCard({
 
   const handlePress = useCallback(() => {
     if (!onPress) return;
-    scale.value = withSpring(0.95, { damping: 12 }, () => {
-      scale.value = withSpring(1, { damping: 14 });
-    });
+    scale.value = withSequence(
+      withTiming(0.95, { duration: 80 }),
+      withSpring(1, { damping: 14 })
+    );
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   }, [onPress]);
@@ -324,6 +328,695 @@ function SectionCard({ children, delay = 0, style }: {
         {children}
       </LiquidGlassCard>
     </Animated.View>
+  );
+}
+
+// ─── Application Activity — Custom SVG Area Chart ────────────────────────────
+function ApplicationActivitySection({
+  analytics, colors,
+}: { analytics: any; colors: any }) {
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const weeks: { week: string; apps: number; interviews: number }[] =
+    analytics.applicationActivityData || [];
+
+  // ── Dimensions ─────────────────────────────────────────────────────────────
+  const PAD = { top: 28, right: 12, bottom: 36, left: 34 };
+  const CHART_H = 210;
+  const CHART_W_SVG = SCREEN_W - H_PAD * 2 - 32; // full card width minus card padding
+  const plotW = CHART_W_SVG - PAD.left - PAD.right;
+  const plotH = CHART_H - PAD.top - PAD.bottom;
+
+  // ── Derived values ──────────────────────────────────────────────────────────
+  const allVals = weeks.flatMap(w => [w.apps, w.interviews]);
+  const rawMax  = Math.max(...allVals, 1);
+  const niceMax = Math.ceil(rawMax * 1.2); // 20% headroom
+
+  const totalApps       = weeks.reduce((s, w) => s + w.apps, 0);
+  const totalInterviews = weeks.reduce((s, w) => s + w.interviews, 0);
+  const convRate        = totalApps > 0 ? Math.round((totalInterviews / totalApps) * 100) : 0;
+
+  // WoW change for apps (last week vs previous week)
+  const wowChange = weeks.length >= 2
+    ? weeks[weeks.length - 1].apps - weeks[weeks.length - 2].apps
+    : null;
+
+  // ── Coordinate helpers ──────────────────────────────────────────────────────
+  const getX = (i: number) =>
+    PAD.left + (weeks.length <= 1 ? plotW / 2 : (i / (weeks.length - 1)) * plotW);
+  const getY = (v: number) =>
+    PAD.top + plotH - (v / niceMax) * plotH;
+
+  // ── Cubic bezier path builder ────────────────────────────────────────────────
+  const buildPath = (vals: number[]): string => {
+    if (!vals.length) return '';
+    if (vals.length === 1) return `M ${getX(0)} ${getY(vals[0])}`;
+    let d = `M ${getX(0)} ${getY(vals[0])}`;
+    for (let i = 1; i < vals.length; i++) {
+      const x0 = getX(i - 1), y0 = getY(vals[i - 1]);
+      const x1 = getX(i),     y1 = getY(vals[i]);
+      const cpx = (x0 + x1) / 2;
+      d += ` C ${cpx} ${y0}, ${cpx} ${y1}, ${x1} ${y1}`;
+    }
+    return d;
+  };
+
+  const buildArea = (vals: number[]): string => {
+    const line = buildPath(vals);
+    if (!line) return '';
+    const baseY = PAD.top + plotH;
+    return `${line} L ${getX(vals.length - 1)} ${baseY} L ${getX(0)} ${baseY} Z`;
+  };
+
+  const appVals = weeks.map(w => w.apps);
+  const intVals = weeks.map(w => w.interviews);
+  const appLinePath  = buildPath(appVals);
+  const appAreaPath  = buildArea(appVals);
+  const intLinePath  = buildPath(intVals);
+  const intAreaPath  = buildArea(intVals);
+
+  // ── Grid ────────────────────────────────────────────────────────────────────
+  const gridTicks = [0, 0.25, 0.5, 0.75, 1].map(pct => ({
+    y:     PAD.top + plotH * (1 - pct),
+    label: pct === 0 ? '0' : String(Math.round(niceMax * pct)),
+  }));
+
+  const hasData = weeks.length > 0;
+  const sel     = selectedIdx !== null ? weeks[selectedIdx] : null;
+
+  // ── Tooltip position — clamp so it never clips card edge ───────────────────
+  const tooltipW = 150;
+  const rawTipX  = selectedIdx !== null ? getX(selectedIdx) - tooltipW / 2 : 0;
+  const tipX     = Math.max(0, Math.min(rawTipX, CHART_W_SVG - tooltipW));
+  const tipY     = selectedIdx !== null
+    ? Math.min(getY(Math.max(weeks[selectedIdx].apps, weeks[selectedIdx].interviews)) - 70, PAD.top - 4)
+    : 0;
+
+  return (
+    <SectionCard delay={300} style={{ marginBottom: 16 }}>
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <View style={styles.chartHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.chartTitle, { color: colors.text }]}>Application Activity</Text>
+          <Text style={[styles.chartSub, { color: colors.textMuted }]}>
+            Tap any week for a breakdown
+          </Text>
+        </View>
+        <View style={{ gap: 4, alignItems: 'flex-end' }}>
+          <View style={[styles.chip, { backgroundColor: Palette.accent50 }]}>
+            <Feather name="trending-up" size={11} color={Palette.indigo500} />
+            <Text style={[styles.chipText, { color: Palette.indigo500 }]}>4-Week</Text>
+          </View>
+          {wowChange !== null && (
+            <View style={[styles.chip, {
+              backgroundColor: wowChange >= 0 ? Palette.emerald50 : Palette.red50,
+              paddingHorizontal: 7,
+            }]}>
+              <Feather
+                name={wowChange >= 0 ? 'arrow-up' : 'arrow-down'}
+                size={9}
+                color={wowChange >= 0 ? Palette.emerald500 : Palette.red500}
+              />
+              <Text style={[styles.chipText, {
+                color: wowChange >= 0 ? Palette.emerald500 : Palette.red500,
+                fontSize: 9,
+              }]}>
+                {Math.abs(wowChange)} vs last wk
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {hasData ? (
+        <>
+          {/* ── SVG chart ────────────────────────────────────────────────── */}
+          <View style={{ position: 'relative' }}>
+            <Svg width={CHART_W_SVG} height={CHART_H} style={{ overflow: 'visible' }}>
+              <Defs>
+                {/* Gradient fills */}
+                <SvgLinearGradient id="actAppGrad" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={Palette.indigo500} stopOpacity="0.28" />
+                  <Stop offset="1" stopColor={Palette.indigo500} stopOpacity="0.00" />
+                </SvgLinearGradient>
+                <SvgLinearGradient id="actIntGrad" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={Palette.emerald500} stopOpacity="0.18" />
+                  <Stop offset="1" stopColor={Palette.emerald500} stopOpacity="0.00" />
+                </SvgLinearGradient>
+              </Defs>
+
+              {/* ── Grid lines + Y labels ─────────────────────────────────── */}
+              {gridTicks.map((gt, i) => (
+                <G key={`grid-${i}`}>
+                  <Line
+                    x1={PAD.left} y1={gt.y}
+                    x2={CHART_W_SVG - PAD.right} y2={gt.y}
+                    stroke={i === gridTicks.length - 1 ? 'rgba(0,0,0,0)' : 'rgba(0,0,0,0.06)'}
+                    strokeWidth={1}
+                    strokeDasharray={i === 0 ? undefined : '4 3'}
+                  />
+                  <SvgText
+                    x={PAD.left - 6} y={gt.y + 4}
+                    fontSize={9} fill={colors.textMuted}
+                    textAnchor="end" fontWeight="600"
+                  >
+                    {gt.label}
+                  </SvgText>
+                </G>
+              ))}
+
+              {/* ── X axis baseline ───────────────────────────────────────── */}
+              <Line
+                x1={PAD.left} y1={PAD.top + plotH}
+                x2={CHART_W_SVG - PAD.right} y2={PAD.top + plotH}
+                stroke="rgba(0,0,0,0.10)" strokeWidth={1}
+              />
+
+              {/* ── Selected-week vertical rule ───────────────────────────── */}
+              {selectedIdx !== null && (
+                <Line
+                  x1={getX(selectedIdx)} y1={PAD.top}
+                  x2={getX(selectedIdx)} y2={PAD.top + plotH}
+                  stroke={Palette.indigo500}
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                  strokeOpacity={0.45}
+                />
+              )}
+
+              {/* ── Area fills ───────────────────────────────────────────── */}
+              <Path d={appAreaPath}  fill="url(#actAppGrad)" />
+              <Path d={intAreaPath}  fill="url(#actIntGrad)" />
+
+              {/* ── Stroke lines ──────────────────────────────────────────── */}
+              <Path
+                d={appLinePath}
+                fill="none"
+                stroke={Palette.indigo500}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <Path
+                d={intLinePath}
+                fill="none"
+                stroke={Palette.emerald500}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* ── Data points ───────────────────────────────────────────── */}
+              {weeks.map((w, i) => {
+                const isActive = selectedIdx === i;
+                return (
+                  <G key={`pts-${i}`}>
+                    {/* Halo rings on active */}
+                    {isActive && (
+                      <>
+                        <Circle cx={getX(i)} cy={getY(w.apps)} r={11} fill={Palette.indigo500} fillOpacity={0.1} />
+                        <Circle cx={getX(i)} cy={getY(w.interviews)} r={11} fill={Palette.emerald500} fillOpacity={0.1} />
+                      </>
+                    )}
+                    {/* Apps point */}
+                    <Circle
+                      cx={getX(i)} cy={getY(w.apps)}
+                      r={isActive ? 6 : 4}
+                      fill="#ffffff"
+                      stroke={Palette.indigo500}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                    {/* Interviews point */}
+                    <Circle
+                      cx={getX(i)} cy={getY(w.interviews)}
+                      r={isActive ? 6 : 4}
+                      fill="#ffffff"
+                      stroke={Palette.emerald500}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                    {/* Value labels on active week */}
+                    {isActive && w.apps > 0 && (
+                      <SvgText
+                        x={getX(i)} y={getY(w.apps) - 10}
+                        fontSize={10} fill={Palette.indigo700}
+                        textAnchor="middle" fontWeight="800"
+                      >
+                        {w.apps}
+                      </SvgText>
+                    )}
+                    {isActive && w.interviews > 0 && (
+                      <SvgText
+                        x={getX(i)} y={getY(w.interviews) - 10}
+                        fontSize={10} fill="#047857"
+                        textAnchor="middle" fontWeight="800"
+                      >
+                        {w.interviews}
+                      </SvgText>
+                    )}
+                    {/* X-axis label */}
+                    <SvgText
+                      x={getX(i)} y={CHART_H - 6}
+                      fontSize={10} fill={isActive ? Palette.indigo500 : colors.textMuted}
+                      textAnchor="middle" fontWeight={isActive ? '800' : '600'}
+                    >
+                      {w.week}
+                    </SvgText>
+                  </G>
+                );
+              })}
+            </Svg>
+
+            {/* ── Floating tooltip ─────────────────────────────────────── */}
+            {sel !== null && selectedIdx !== null && (
+              <Animated.View
+                entering={FadeInDown.duration(180).springify()}
+                style={{
+                  position: 'absolute',
+                  left: tipX,
+                  top: Math.max(2, getY(Math.max(sel.apps, sel.interviews)) - 62),
+                  width: tooltipW,
+                  backgroundColor: '#1e293b',
+                  borderRadius: 10,
+                  padding: 10,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.25,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 6,
+                }}
+              >
+                {/* Tooltip header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700' }}>
+                    {sel.week}
+                  </Text>
+                  <Pressable onPress={() => setSelectedIdx(null)} hitSlop={8}>
+                    <Feather name="x" size={11} color="#64748b" />
+                  </Pressable>
+                </View>
+                {/* Apps row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Palette.indigo500 }} />
+                  <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}>Applications</Text>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', marginLeft: 'auto' as any }}>
+                    {sel.apps}
+                  </Text>
+                </View>
+                {/* Interviews row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Palette.emerald500 }} />
+                  <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600' }}>Interviews</Text>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', marginLeft: 'auto' as any }}>
+                    {sel.interviews}
+                  </Text>
+                </View>
+                {/* Rate */}
+                {sel.apps > 0 && (
+                  <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' }}>
+                    <Text style={{ color: '#64748b', fontSize: 9, fontWeight: '600' }}>
+                      Success rate: {Math.round((sel.interviews / sel.apps) * 100)}%
+                    </Text>
+                  </View>
+                )}
+              </Animated.View>
+            )}
+
+            {/* ── Touch column zones (transparent, over SVG) ─────────────── */}
+            <View style={{
+              position: 'absolute',
+              top: PAD.top,
+              left: PAD.left,
+              width: plotW,
+              height: plotH,
+              flexDirection: 'row',
+            }}>
+              {weeks.map((_, i) => (
+                <Pressable
+                  key={`zone-${i}`}
+                  style={{ flex: 1, height: '100%' }}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedIdx(prev => prev === i ? null : i);
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* ── Horizontal summary metrics (inline, no card layout) ─────────────── */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            marginTop: 14,
+            paddingTop: 12,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(0,0,0,0.06)',
+          }}>
+            {/* Total Applications */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Palette.indigo500 }} />
+              <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>{totalApps}</Text>
+              <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>Total Apps</Text>
+            </View>
+
+            {/* Total Interviews */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Palette.emerald500 }} />
+              <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>{totalInterviews}</Text>
+              <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>Interviews</Text>
+            </View>
+
+            {/* Conversion Rate */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Feather name="zap" size={13} color={Palette.violet500} />
+              <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>{convRate}%</Text>
+              <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: '600' }}>Conv. Rate</Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        /* ── Empty state ──────────────────────────────────────────────────── */
+        <View style={styles.emptyChart}>
+          <View style={[styles.emptyIconWrap, { backgroundColor: Palette.accent50 }]}>
+            <Feather name="trending-up" size={28} color={Palette.accent500} />
+          </View>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No activity yet
+          </Text>
+          <Text style={[styles.emptySub, { color: colors.textMuted }]}>
+            Submit your first application and your trend will appear here
+          </Text>
+        </View>
+      )}
+    </SectionCard>
+  );
+}
+
+// ─── Pipeline Breakdown — Donut Chart Section (Touch-enabled) ──────────────────
+function PipelineDonutSection({
+  pieData, applications, colors,
+}: { pieData: any[]; applications: any[]; colors: any }) {
+  const [selectedSlice, setSelectedSlice] = useState<any>(null);
+  const enhancedPieData = pieData.map(d => ({
+    ...d,
+    onPress: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedSlice((prev: any) => prev?.label === d.label ? null : d);
+    },
+    shiftX: selectedSlice?.label === d.label ? 4 : 0,
+    shiftY: selectedSlice?.label === d.label ? -4 : 0,
+  }));
+
+  return (
+    <SectionCard delay={360} style={{ marginBottom: 16 }}>
+      <View style={styles.chartHeader}>
+        <View>
+          <Text style={[styles.chartTitle, { color: colors.text }]}>Pipeline Breakdown</Text>
+          <Text style={[styles.chartSub, { color: colors.textMuted }]}>Tap a segment to see details</Text>
+        </View>
+      </View>
+
+      {pieData.length > 0 ? (
+        <View style={styles.pieContainer}>
+          <PieChart
+            data={enhancedPieData}
+            donut
+            showText
+            textColor="white"
+            textSize={10}
+            radius={80}
+            innerRadius={50}
+            centerLabelComponent={() => (
+              <Pressable
+                onPress={() => setSelectedSlice(null)}
+                style={{ alignItems: 'center', padding: 8 }}
+              >
+                {selectedSlice ? (
+                  <>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: selectedSlice.color }}>{selectedSlice.value}</Text>
+                    <Text style={{ fontSize: 9, color: colors.textMuted, fontWeight: '600', textAlign: 'center' }}>{selectedSlice.label}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text }}>{applications.length}</Text>
+                    <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: '600' }}>Total</Text>
+                  </>
+                )}
+              </Pressable>
+            )}
+            isAnimated
+            animationDuration={600}
+          />
+          <View style={styles.pieLegend}>
+            {pieData.map(d => (
+              <Pressable
+                key={d.label}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedSlice((prev: any) => prev?.label === d.label ? null : d);
+                }}
+                style={[styles.legendItem, {
+                  paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+                  backgroundColor: selectedSlice?.label === d.label ? d.color + '22' : 'transparent',
+                }]}
+              >
+                <View style={[styles.legendDot, { backgroundColor: d.color, width: 10, height: 10 }]} />
+                <Text style={[styles.legendText, { color: selectedSlice?.label === d.label ? d.color : colors.textSecondary }]}>
+                  {d.label}: {d.value}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.emptyChart}>
+          <Feather name="pie-chart" size={32} color={colors.textMuted} />
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>No applications yet</Text>
+        </View>
+      )}
+    </SectionCard>
+  );
+}
+
+// ─── Skill Match Analysis Section — Radar + real skill data ─────────────────────
+function SkillMatchSection({
+  skillMatchData, userSkills, colors,
+}: { skillMatchData: any[]; userSkills: string[]; colors: any }) {
+  const derivedData = React.useMemo(() => {
+    if (skillMatchData && skillMatchData.length > 0) {
+      return skillMatchData.map(d => ({
+        ...d,
+        subject: d.subject || d.skill || 'Unknown',
+        A: d.A ?? d.yourScore ?? 50,
+        B: d.B ?? d.marketDemand ?? 80,
+      }));
+    }
+
+    const fallbackSkills = [
+      'Enterprise Sales', 'SDR / BDR', 'Closing', 'Cold Outreach', 'CRM Tools', 'Presentation',
+    ];
+    const userSkillsLower = userSkills.map(s => s.toLowerCase());
+    return fallbackSkills.map((skill, i) => {
+      const hasSkill = userSkillsLower.some(us =>
+        us.includes(skill.toLowerCase().split(' ')[0]) ||
+        skill.toLowerCase().includes(us.split(' ')[0])
+      );
+      return {
+        subject: skill.length > 12 ? skill.slice(0, 11) + '…' : skill,
+        A: hasSkill ? 110 + Math.round(Math.random() * 20) : 45 + Math.round(Math.random() * 25),
+        B: 85 + Math.round(Math.random() * 40),
+      };
+    });
+  }, [skillMatchData, userSkills]);
+
+  const hasRealSkills = userSkills.length > 0;
+  const matchedCount = skillMatchData.filter(d => d.A >= d.B).length;
+  const totalSkills = skillMatchData.length;
+
+  return (
+    <SectionCard delay={390} style={{ marginBottom: 16 }}>
+      <View style={styles.chartHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.chartTitle, { color: colors.text }]}>Skill Match Analysis</Text>
+          <Text style={[styles.chartSub, { color: colors.textMuted }]}>
+            {hasRealSkills
+              ? `${userSkills.length} skills on your profile vs. market demand`
+              : 'Add skills to your profile to personalise this chart'}
+          </Text>
+        </View>
+        {skillMatchData.length > 0 && (
+          <View style={[styles.chip, {
+            backgroundColor: matchedCount >= totalSkills * 0.5 ? Palette.emerald50 : Palette.amber50,
+          }]}>
+            <Feather
+              name={matchedCount >= totalSkills * 0.5 ? 'check-circle' : 'alert-circle'}
+              size={11}
+              color={matchedCount >= totalSkills * 0.5 ? Palette.emerald600 : Palette.amber700}
+            />
+            <Text style={[styles.chipText, {
+              color: matchedCount >= totalSkills * 0.5 ? Palette.emerald600 : Palette.amber700,
+            }]}>
+              {matchedCount}/{totalSkills} match
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {!hasRealSkills && skillMatchData.length === 0 ? (
+        <View style={styles.emptyChart}>
+          <View style={[styles.emptyIconWrap, { backgroundColor: Palette.violet50 || '#f5f3ff' }]}>
+            <Feather name="target" size={28} color={Palette.violet600 || '#7c3aed'} />
+          </View>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No skills added yet</Text>
+          <Text style={[styles.emptySub, { color: colors.textMuted }]}>Add skills to your profile to see your match vs. market demand</Text>
+        </View>
+      ) : (
+        <View style={{ alignItems: 'center' }}>
+          <RadarChartSvg
+            data={derivedData}
+            width={CHART_W}
+            height={240}
+          />
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Palette.warm500 }]} />
+              <Text style={[styles.legendText, { color: colors.textSecondary }]}>Your Skills</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Palette.indigo500 }]} />
+              <Text style={[styles.legendText, { color: colors.textSecondary }]}>Market Demand</Text>
+            </View>
+          </View>
+          {skillMatchData.length === 0 && userSkills.length > 0 && (
+            <Text style={{ fontSize: 10, color: colors.textMuted, textAlign: 'center', marginTop: 6 }}>
+              Showing estimated match based on your {userSkills.length} profile skill{userSkills.length !== 1 ? 's' : ''}
+            </Text>
+          )}
+        </View>
+      )}
+    </SectionCard>
+  );
+}
+
+// ─── Market Salary Trends — Area Chart Section (Touch-enabled) ─────────────────
+function MarketSalarySection({
+  salaryData1, salaryData2, colors,
+}: { salaryData1: any[]; salaryData2: any[]; colors: any }) {
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+
+  const touchData1 = salaryData1.map((d, i) => ({
+    ...d,
+    onPress: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedIdx(prev => prev === i ? null : i);
+    },
+  }));
+  const touchData2 = salaryData2.map((d, i) => ({
+    ...d,
+    onPress: () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedIdx(prev => prev === i ? null : i);
+    },
+  }));
+
+  const hasData = salaryData1.length > 0;
+  const selOTE = selectedIdx !== null ? salaryData1[selectedIdx] : null;
+  const selBase = selectedIdx !== null ? salaryData2[selectedIdx] : null;
+
+  return (
+    <SectionCard delay={420} style={{ marginBottom: 16 }}>
+      <View style={styles.chartHeader}>
+        <View>
+          <Text style={[styles.chartTitle, { color: colors.text }]}>Market Salary Trends</Text>
+          <Text style={[styles.chartSub, { color: colors.textMuted }]}>Tap any point for details · 6 months</Text>
+        </View>
+        <View style={[styles.chip, { backgroundColor: Palette.emerald50 }]}>
+          <Feather name="trending-up" size={11} color={Palette.emerald500} />
+          <Text style={[styles.chipText, { color: Palette.emerald500 }]}>Live</Text>
+        </View>
+      </View>
+
+      {hasData ? (
+        <>
+          {selOTE && (
+            <View style={{
+              backgroundColor: '#1e293b', borderRadius: 10, padding: 10,
+              marginBottom: 10, flexDirection: 'row', gap: 16, alignItems: 'center',
+              shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
+            }}>
+              <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: '700' }}>{selOTE.label}</Text>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Palette.indigo500 }} />
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>${selOTE.value.toFixed(0)}k OTE</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Palette.emerald500 }} />
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>${selBase?.value.toFixed(0)}k Base</Text>
+                </View>
+              </View>
+              <Pressable onPress={() => setSelectedIdx(null)} hitSlop={8}>
+                <Feather name="x" size={14} color="#64748b" />
+              </Pressable>
+            </View>
+          )}
+          <LineChart
+            data={touchData1}
+            data2={touchData2}
+            width={LINE_CHART_W}
+            height={160}
+            areaChart
+            curved
+            color1={Palette.indigo500}
+            color2={Palette.emerald500}
+            startFillColor1={Palette.indigo500}
+            startFillColor2={Palette.emerald500}
+            startOpacity1={0.2}
+            startOpacity2={0.15}
+            endOpacity1={0}
+            endOpacity2={0}
+            thickness1={2.5}
+            thickness2={2.5}
+            noOfSections={4}
+            yAxisThickness={0}
+            xAxisThickness={0}
+            rulesColor="rgba(0,0,0,0.06)"
+            yAxisTextStyle={{ color: colors.textMuted, fontSize: 9, fontWeight: '600' }}
+            xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: '600' }}
+            formatYLabel={(v) => `${Number(v).toFixed(0)}k`}
+            isAnimated
+            animationDuration={800}
+            hideDataPoints={false}
+            dataPointsRadius1={5}
+            dataPointsRadius2={5}
+            dataPointsColor1={Palette.indigo500}
+            dataPointsColor2={Palette.emerald500}
+            focusEnabled
+            showStripOnFocus
+            stripColor="rgba(0,0,0,0.08)"
+            stripWidth={2}
+          />
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Palette.indigo500 }]} />
+              <Text style={[styles.legendText, { color: colors.textSecondary }]}>OTE</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: Palette.emerald500 }]} />
+              <Text style={[styles.legendText, { color: colors.textSecondary }]}>Base Salary</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 10, color: colors.textMuted, textAlign: 'center', marginTop: 4 }}>
+            Tap any data point to see details
+          </Text>
+        </>
+      ) : (
+        <View style={styles.emptyChart}>
+          <Feather name="trending-up" size={32} color={colors.textMuted} />
+          <Text style={[styles.emptyText, { color: colors.textMuted }]}>No salary data yet</Text>
+        </View>
+      )}
+    </SectionCard>
   );
 }
 
@@ -432,13 +1125,6 @@ export default function EmployeeDashboardScreen() {
   const approvedJobs = jobs.filter(j => j.status === 'approved').slice(0, 4);
   const infiniteApprovedJobs = Array.from({ length: 50 }, () => approvedJobs).flat();
   const skillMatchData  = analytics?.skillMatchData || [];
-  const displaySkillData = skillMatchData.length > 0 ? skillMatchData : [
-    { subject: 'Product Knowledge', A: 110, B: 95 },
-    { subject: 'Closing Deals', A: 125, B: 110 },
-    { subject: 'Cold Outreach', A: 85, B: 90 },
-    { subject: 'Relationship Bldg', A: 115, B: 100 },
-    { subject: 'Presentation', A: 100, B: 115 },
-  ];
 
   const pendingApps     = applications.filter(a => a.status === 'pending').length;
   const underReviewApps = applications.filter(a => a.status === 'under_review').length;
@@ -456,11 +1142,6 @@ export default function EmployeeDashboardScreen() {
     { value: acceptedApps,    color: Palette.emerald500,  label: 'Offer',     text: String(acceptedApps) },
     { value: rejectedApps,    color: Palette.red400,      label: 'Rejected',  text: String(rejectedApps) },
   ].filter(d => d.value > 0);
-
-  const barData = analytics.applicationActivityData.flatMap((w: { week: string; apps: number; interviews: number }) => ([
-    { value: w.apps,       label: w.week, frontColor: Palette.indigo500, spacing: 2, topLabelComponent: () => null },
-    { value: w.interviews, label: '',     frontColor: Palette.emerald500 },
-  ]));
 
   const salaryData1 = analytics.marketInsightsData.map((m: { month: string; ote: number; base: number }) => ({
     value: m.ote / 1000, label: m.month, dataPointColor: Palette.indigo500,
@@ -634,345 +1315,73 @@ export default function EmployeeDashboardScreen() {
         <View style={styles.kpiGrid}>
           <StatCard
             label="Active Applications" 
-            value={isFetching ? <Skeleton width={60} height={26} /> : analytics.activeApps}
+            value={analytics.activeApps ?? 0}
             iconName="briefcase" iconBg={Palette.accent50} iconColor={Palette.accent600}
-            sub={isFetching ? <Skeleton width={90} height={14} style={{ marginTop: 4 }} /> : `${pendingApps} pending review`}
+            sub={`${pendingApps} pending review`}
             onPress={() => router.push('/tracker' as any)} delay={60}
             style={styles.kpiGridItem}
           />
           <StatCard
             label="Saved Roles" 
-            value={isFetching ? <Skeleton width={60} height={26} /> : savedJobs.length}
-            iconName="heart" iconBg={Palette.warm50} iconColor={Palette.warm500}
-            sub={isFetching ? <Skeleton width={90} height={14} style={{ marginTop: 4 }} /> : "Jobs bookmarked"}
+            value={savedJobs.length}
+            iconName="bookmark" iconBg={Palette.warm50} iconColor={Palette.warm600}
+            sub="Jobs bookmarked"
             onPress={() => router.push('/explore' as any)} delay={120}
             style={styles.kpiGridItem}
           />
           <StatCard
             label="Profile Score" 
-            value={isFetching ? <Skeleton width={60} height={26} /> : `${profileScore}%`}
+            value={`${profileScore}%`}
             iconName="target" iconBg={Palette.emerald50} iconColor={Palette.emerald600}
-            sub={isFetching ? <Skeleton width={90} height={14} style={{ marginTop: 4 }} /> : (profileScore === 100 ? 'Fully complete!' : 'Complete your profile')}
+            sub={profileScore === 100 ? 'Fully complete!' : 'Complete your profile'}
             onPress={() => router.push('/profile' as any)} delay={180}
             style={styles.kpiGridItem}
           />
           <StatCard
             label="Interviews Won" 
-            value={isFetching ? <Skeleton width={60} height={26} /> : acceptedApps}
+            value={acceptedApps}
             iconName="check-circle" iconBg={Palette.violet50} iconColor={Palette.violet600}
-            sub={isFetching ? <Skeleton width={90} height={14} style={{ marginTop: 4 }} /> : "Applications accepted"} 
+            sub="Applications accepted"
             delay={240}
             style={styles.kpiGridItem}
           />
         </View>
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 3 — APPLICATION ACTIVITY (Bar Chart)
-            Matches web: Applications & interview invites per week, 4-Week View
+            SECTION 3 — APPLICATION ACTIVITY (Line / Area Chart)
+            Touch-enabled, responsive line chart showing apps & interviews per week
             ════════════════════════════════════════════════════════════════════ */}
-        <SectionCard delay={300} style={{ marginBottom: 16 }}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={[styles.chartTitle, { color: colors.text }]}>Application Activity</Text>
-              <Text style={[styles.chartSub, { color: colors.textMuted }]}>Applications & interview invites per week</Text>
-            </View>
-            <View style={[styles.chip, { backgroundColor: Palette.accent50 }]}>
-              <Feather name="activity" size={11} color={Palette.indigo500} />
-              <Text style={[styles.chipText, { color: Palette.indigo500 }]}>4-Week</Text>
-            </View>
-          </View>
-
-          {isFetching ? (
-            <View style={{ paddingVertical: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 180 + 24 }}>
-                <View style={{ width: 28, height: 180, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4, paddingBottom: 0 }}>
-                  <Skeleton width={14} height={10} />
-                  <Skeleton width={14} height={10} />
-                  <Skeleton width={14} height={10} />
-                  <Skeleton width={14} height={10} />
-                </View>
-                <View style={{ flex: 1, height: 180, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-around', paddingLeft: 12 }}>
-                  <Skeleton width={18} height={120} borderRadius={4} />
-                  <Skeleton width={18} height={80} borderRadius={4} />
-                  <Skeleton width={18} height={150} borderRadius={4} />
-                  <Skeleton width={18} height={100} borderRadius={4} />
-                  <Skeleton width={18} height={60} borderRadius={4} />
-                </View>
-              </View>
-            </View>
-          ) : barData.length > 0 ? (
-            <>
-              {/* Big, well-arranged bar chart using custom View bars */}
-              {(() => {
-                // Group into weeks: each pair is [apps, interviews]
-                const weeks = analytics.applicationActivityData as { week: string; apps: number; interviews: number }[];
-                if (!weeks.length) return null;
-                const allVals = weeks.flatMap(w => [w.apps, w.interviews]);
-                const maxVal = Math.max(...allVals, 1);
-                const chartHeight = 180;
-                const barGroupWidth = (CHART_W - 16) / weeks.length;
-
-                return (
-                  <View style={{ paddingVertical: 8 }}>
-                    {/* Y-axis labels + bars */}
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: chartHeight + 24 }}>
-                      {/* Y labels */}
-                      <View style={{ width: 28, height: chartHeight, justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 4, paddingBottom: 0 }}>
-                        {[maxVal, Math.round(maxVal * 0.66), Math.round(maxVal * 0.33), 0].map((v, i) => (
-                          <Text key={i} style={{ fontSize: 9, color: colors.textMuted, fontWeight: '600' }}>{v}</Text>
-                        ))}
-                      </View>
-                      {/* Bars area */}
-                      <View style={{ flex: 1, height: chartHeight + 24 }}>
-                        {/* Grid lines */}
-                        {[0, 0.33, 0.66, 1].map((pct, i) => (
-                          <View key={i} style={{
-                            position: 'absolute',
-                            left: 0, right: 0,
-                            top: chartHeight * (1 - pct),
-                            height: 1,
-                            backgroundColor: 'rgba(0,0,0,0.06)',
-                          }} />
-                        ))}
-                        {/* Bar groups */}
-                        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: chartHeight, gap: 0 }}>
-                          {weeks.map((w, wi) => {
-                            const appH = maxVal > 0 ? Math.max((w.apps / maxVal) * chartHeight, w.apps > 0 ? 4 : 0) : 0;
-                            const intH = maxVal > 0 ? Math.max((w.interviews / maxVal) * chartHeight, w.interviews > 0 ? 4 : 0) : 0;
-                            const bw = Math.max((barGroupWidth - 16) / 2, 12);
-                            return (
-                              <View key={wi} style={{ flex: 1, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4, alignSelf: 'flex-end' }}>
-                                {/* Apps bar */}
-                                <View style={{ width: bw, height: appH, backgroundColor: Palette.indigo500, borderRadius: 4, borderTopLeftRadius: 5, borderTopRightRadius: 5 }}>
-                                  {w.apps > 0 && appH > 16 && (
-                                    <Text style={{ position: 'absolute', top: 4, alignSelf: 'center', fontSize: 8, color: '#fff', fontWeight: '800' }}>{w.apps}</Text>
-                                  )}
-                                </View>
-                                {/* Interviews bar */}
-                                <View style={{ width: bw, height: intH, backgroundColor: Palette.emerald500, borderRadius: 4, borderTopLeftRadius: 5, borderTopRightRadius: 5 }}>
-                                  {w.interviews > 0 && intH > 16 && (
-                                    <Text style={{ position: 'absolute', top: 4, alignSelf: 'center', fontSize: 8, color: '#fff', fontWeight: '800' }}>{w.interviews}</Text>
-                                  )}
-                                </View>
-                              </View>
-                            );
-                          })}
-                        </View>
-                        {/* X labels */}
-                        <View style={{ flexDirection: 'row', marginTop: 6 }}>
-                          {weeks.map((w, wi) => (
-                            <View key={wi} style={{ flex: 1, alignItems: 'center' }}>
-                              <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: '600' }} numberOfLines={1}>{w.week}</Text>
-                            </View>
-                          ))}
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-                );
-              })()}
-              <View style={styles.legendRow}>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: Palette.indigo500 }]} />
-                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Applications</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: Palette.emerald500 }]} />
-                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Interviews</Text>
-                </View>
-              </View>
-            </>
-          ) : (
-            <View style={styles.emptyChart}>
-              <Feather name="bar-chart-2" size={32} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No application activity yet</Text>
-              <Text style={[styles.emptySub, { color: colors.textMuted }]}>Start applying to see your activity here</Text>
-            </View>
-          )}
-        </SectionCard>
+        <ApplicationActivitySection
+          analytics={analytics}
+          colors={colors}
+        />
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 4 — PIPELINE BREAKDOWN (Donut / Pie chart)
-            Matches web: Status of your applications
+            SECTION 4 — PIPELINE BREAKDOWN (Donut / Pie chart) — Touch enabled
             ════════════════════════════════════════════════════════════════════ */}
-        <SectionCard delay={360} style={{ marginBottom: 16 }}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={[styles.chartTitle, { color: colors.text }]}>Pipeline Breakdown</Text>
-              <Text style={[styles.chartSub, { color: colors.textMuted }]}>Status of your applications</Text>
-            </View>
-          </View>
-
-          {isFetching ? (
-            <View style={{ alignItems: 'center', paddingVertical: 16, gap: 20 }}>
-              <Skeleton width={120} height={120} borderRadius={60} />
-              <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Skeleton width={70} height={16} borderRadius={8} />
-                <Skeleton width={70} height={16} borderRadius={8} />
-                <Skeleton width={70} height={16} borderRadius={8} />
-              </View>
-            </View>
-          ) : pieData.length > 0 ? (
-            <View style={styles.pieContainer}>
-              <PieChart
-                data={pieData}
-                donut
-                showText
-                textColor="white"
-                textSize={10}
-                radius={72}
-                innerRadius={44}
-                centerLabelComponent={() => (
-                  <View style={{ alignItems: 'center' }}>
-                    <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text }}>
-                      {applications.length}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: '600' }}>
-                      Total
-                    </Text>
-                  </View>
-                )}
-                isAnimated
-                animationDuration={600}
-              />
-              <View style={styles.pieLegend}>
-                {pieData.map(d => (
-                  <View key={d.label} style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: d.color }]} />
-                    <Text style={[styles.legendText, { color: colors.textSecondary }]}>
-                      {d.label}: {d.value}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : (
-            <View style={styles.emptyChart}>
-              <Feather name="pie-chart" size={32} color={colors.textMuted} />
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>No applications yet</Text>
-            </View>
-          )}
-        </SectionCard>
+        <PipelineDonutSection
+          pieData={pieData}
+          applications={applications}
+          colors={colors}
+        />
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 4.5 — SKILL MATCH ANALYSIS (Radar / Empty)
-            Matches web: Your skills vs. market demand
+            SECTION 4.5 — SKILL MATCH ANALYSIS (Radar) — real profile data
             ════════════════════════════════════════════════════════════════════ */}
-        <SectionCard delay={390} style={{ marginBottom: 16 }}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={[styles.chartTitle, { color: colors.text }]}>Skill Match Analysis</Text>
-              <Text style={[styles.chartSub, { color: colors.textMuted }]}>Your skills vs. market demand</Text>
-            </View>
-          </View>
-
-          {isFetching ? (
-            <View style={{ alignItems: 'center', paddingVertical: 16, gap: 16 }}>
-              <Skeleton width={160} height={160} borderRadius={80} />
-              <View style={{ flexDirection: 'row', gap: 16, marginTop: 12 }}>
-                <Skeleton width={80} height={14} borderRadius={6} />
-                <Skeleton width={80} height={14} borderRadius={6} />
-              </View>
-            </View>
-          ) : (
-            <View style={{ alignItems: 'center' }}>
-              <RadarChartSvg
-                data={displaySkillData}
-                width={CHART_W}
-                height={220}
-              />
-              <View style={styles.legendRow}>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: Palette.warm500 }]} />
-                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Your Skills</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: Palette.indigo500 }]} />
-                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Market Demand</Text>
-                </View>
-              </View>
-            </View>
-          )}
-        </SectionCard>
+        <SkillMatchSection
+          skillMatchData={skillMatchData}
+          userSkills={user.skills || []}
+          colors={colors}
+        />
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 5 — MARKET SALARY TRENDS (Area Chart)
-            Matches web: Average Base vs. OTE over 6 months
+            SECTION 5 — MARKET SALARY TRENDS (Area Chart) — Touch enabled
             ════════════════════════════════════════════════════════════════════ */}
-        <SectionCard delay={420} style={{ marginBottom: 16 }}>
-          <View style={styles.chartHeader}>
-            <View>
-              <Text style={[styles.chartTitle, { color: colors.text }]}>Market Salary Trends</Text>
-              <Text style={[styles.chartSub, { color: colors.textMuted }]}>Average Base vs. OTE over 6 months</Text>
-            </View>
-            <View style={[styles.chip, { backgroundColor: Palette.emerald50 }]}>
-              <Feather name="trending-up" size={11} color={Palette.emerald500} />
-              <Text style={[styles.chipText, { color: Palette.emerald500 }]}>Live</Text>
-            </View>
-          </View>
-
-          {isFetching ? (
-            <View style={{ paddingVertical: 8, gap: 12 }}>
-              <View style={{ height: 160, justifyContent: 'flex-end', gap: 8 }}>
-                <Skeleton width="100%" height={110} borderRadius={10} />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                  <Skeleton width={35} height={12} />
-                  <Skeleton width={35} height={12} />
-                  <Skeleton width={35} height={12} />
-                  <Skeleton width={35} height={12} />
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 16, marginTop: 4 }}>
-                <Skeleton width={60} height={14} />
-                <Skeleton width={60} height={14} />
-              </View>
-            </View>
-          ) : (
-            <>
-              <LineChart
-                data={salaryData1}
-                data2={salaryData2}
-                width={CHART_W}
-                height={160}
-                areaChart
-                curved
-                color1={Palette.indigo500}
-                color2={Palette.emerald500}
-                startFillColor1={Palette.indigo500}
-                startFillColor2={Palette.emerald500}
-                startOpacity1={0.2}
-                startOpacity2={0.15}
-                endOpacity1={0}
-                endOpacity2={0}
-                thickness1={2.5}
-                thickness2={2.5}
-                noOfSections={4}
-                yAxisThickness={0}
-                xAxisThickness={0}
-                rulesColor="rgba(0,0,0,0.06)"
-                yAxisTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: '600' }}
-                xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: '600' }}
-                formatYLabel={(v) => `${Number(v).toFixed(0)}k`}
-                isAnimated
-                animationDuration={800}
-                hideDataPoints={false}
-                dataPointsColor1={Palette.indigo500}
-                dataPointsColor2={Palette.emerald500}
-                dataPointsRadius={3}
-              />
-              <View style={styles.legendRow}>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: Palette.indigo500 }]} />
-                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>OTE</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, { backgroundColor: Palette.emerald500 }]} />
-                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>Base Salary</Text>
-                </View>
-              </View>
-            </>
-          )}
-        </SectionCard>
+        <MarketSalarySection
+          salaryData1={salaryData1}
+          salaryData2={salaryData2}
+          colors={colors}
+        />
 
         {/* ════════════════════════════════════════════════════════════════════
             SECTION 6 — RECENT APPLICATIONS
@@ -986,20 +1395,7 @@ export default function EmployeeDashboardScreen() {
             </Pressable>
           </View>
 
-          {isFetching ? (
-            <View style={{ gap: 10, marginTop: 4 }}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={[styles.appRow, { borderColor: colors.border }]}>
-                  <Skeleton width={40} height={40} borderRadius={10} />
-                  <View style={{ flex: 1, gap: 6 }}>
-                    <Skeleton width="60%" height={14} />
-                    <Skeleton width="40%" height={10} />
-                  </View>
-                  <Skeleton width={70} height={20} borderRadius={10} />
-                </View>
-              ))}
-            </View>
-          ) : applications.length === 0 ? (
+          {applications.length === 0 ? (
             <View style={styles.emptyChart}>
               <View style={[styles.emptyIconWrap, { backgroundColor: Palette.accent50 }]}>
                 <Feather name="briefcase" size={28} color={Palette.accent400} />
@@ -1215,7 +1611,7 @@ export default function EmployeeDashboardScreen() {
                             style={[styles.heartBtn, { backgroundColor: isSaved ? Palette.warm100 : 'transparent' }]}
                             hitSlop={8}
                           >
-                            <Feather name="heart" size={16} color={isSaved ? Palette.warm500 : colors.textMuted} />
+                            <Feather name="bookmark" size={16} color={isSaved ? Palette.warm600 : colors.textMuted} />
                           </Pressable>
                         </View>
 

@@ -1,27 +1,19 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
 import EmployeeDashboard from '@/components/employee-dashboard';
 import CompanyDashboard from '@/components/company-dashboard';
-import { Palette } from '@/constants/theme';
 import * as SecureStore from 'expo-secure-store';
 
 export default function DashboardScreen() {
-  const { user, isLoading } = useEmployeeDashboardData();
-
-  // Detect role — prefer SecureStore (real login) over mock
+  // Read role from SecureStore — cached from login, available instantly
   const [role, setRole] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    SecureStore.getItemAsync('user_role').then(r => setRole(r || user?.role || 'employee'));
-  }, [user]);
 
-  if (isLoading || role === null) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFBEB' }}>
-        <ActivityIndicator size="large" color={Palette.accent500} />
-      </View>
-    );
-  }
+  React.useEffect(() => {
+    SecureStore.getItemAsync('user_role').then(r => setRole(r || 'employee'));
+  }, []);
+
+  // If role hasn't been read yet, render nothing (not a spinner — just an invisible frame)
+  // SecureStore read is typically < 5ms, so this is imperceptible
+  if (role === null) return null;
 
   if (role === 'company') {
     return <CompanyDashboard />;

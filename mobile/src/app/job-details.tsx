@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
-  Dimensions, ActivityIndicator, Alert,
+  Dimensions, ActivityIndicator, Alert, PanResponder, BackHandler,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -28,7 +28,6 @@ export default function JobDetailsScreen() {
     user, jobs, savedJobs, toggleSavedJob, applications,
     profileScore, refreshData, isLoading,
   } = useEmployeeDashboardData();
-
   const [modalVisible, setModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,22 +67,25 @@ export default function JobDetailsScreen() {
     setModalVisible(true);
   };
 
+  // Android hardware back button handler -> returns to /explore
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace('/explore' as any);
+        return true;
+      };
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [router])
+  );
+
   if (isLoading) {
     return (
       <View style={[s.root, { backgroundColor: '#FFFBEB' }]}>
         <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }} />
-        <View style={[s.header, { backgroundColor: 'transparent', borderBottomWidth: 0, height: 48 }]}>
-          <Pressable
-            style={({ pressed }) => [s.headerBackBtn, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.back()}
-          >
-            <Feather name="chevron-left" size={24} color={Palette.accent600} />
-            <Text style={[s.headerBackText, { color: Palette.accent600 }]}>Back</Text>
-          </Pressable>
-        </View>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 100, gap: 16 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 100, gap: 16, paddingTop: 16 }}
           showsVerticalScrollIndicator={false}
         >
           {/* ─── Hero card skeleton ─── */}
@@ -169,24 +171,10 @@ export default function JobDetailsScreen() {
     <View style={[s.root, { backgroundColor: '#FFFBEB' }]}>
       <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }} />
 
-      {/* ── TOP NAV BAR ── */}
-      <View style={[s.header, { backgroundColor: 'transparent', borderBottomWidth: 0, height: 48 }]}>
-        <Pressable
-          style={({ pressed }) => [s.headerBackBtn, { opacity: pressed ? 0.7 : 1 }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            router.back();
-          }}
-        >
-          <Feather name="chevron-left" size={24} color={Palette.accent600} />
-          <Text style={[s.headerBackText, { color: Palette.accent600 }]}>Back</Text>
-        </Pressable>
-      </View>
-
       {/* ── SCROLLABLE BODY ── */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, { paddingTop: 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── HERO CARD ── */}
@@ -297,48 +285,52 @@ export default function JobDetailsScreen() {
             )}
           </View>
         </View>
-      </ScrollView>
 
-      {/* ── BOTTOM STICKY BAR ── */}
-      <View style={[s.actionBar, Shadow.cardMd, { backgroundColor: '#ffffff', borderColor: colors.border }]}>
-        {/* Heart Bookmark */}
-        <Pressable
-          style={({ pressed }) => [
-            s.heartAction,
-            {
-              backgroundColor: isSaved ? Palette.warm50 : Palette.neutral100,
-              opacity: pressed ? 0.8 : 1,
-            }
-          ]}
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          <Feather name="heart" size={20} color={isSaved ? Palette.warm500 : colors.textSecondary} />
-        </Pressable>
-
-        {/* Apply Button */}
-        {hasApplied ? (
-          <View style={s.appliedBtn}>
-            <Feather name="check-circle" size={15} color={Palette.emerald600} />
-            <Text style={s.appliedBtnText}>Already Applied</Text>
-          </View>
-        ) : (
-          <LinearGradient
-            colors={[Palette.accent600, Palette.accent500]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={s.applyActionWrap}
+        {/* ── ACTION BUTTONS ── */}
+        <View style={s.actionBarPage}>
+          {/* Save Job Button */}
+          <Pressable
+            style={({ pressed }) => [
+              s.saveJobBtn,
+              {
+                backgroundColor: isSaved ? Palette.warm50 : '#ffffff',
+                borderColor: isSaved ? Palette.warm500 : colors.border,
+                opacity: pressed ? 0.85 : 1,
+              }
+            ]}
+            onPress={handleSave}
+            disabled={isSaving}
           >
-            <Pressable
-              style={({ pressed }) => [s.applyAction, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={handleApply}
+            <Feather name="bookmark" size={17} color={isSaved ? Palette.warm600 : colors.textSecondary} />
+            <Text style={[s.saveJobBtnText, { color: isSaved ? Palette.warm600 : colors.textSecondary }]}>
+              {isSaved ? 'Saved' : 'Save Job'}
+            </Text>
+          </Pressable>
+
+          {/* Apply Button */}
+          {hasApplied ? (
+            <View style={s.appliedBtn}>
+              <Feather name="check-circle" size={15} color={Palette.emerald600} />
+              <Text style={s.appliedBtnText}>Already Applied</Text>
+            </View>
+          ) : (
+            <LinearGradient
+              colors={[Palette.accent600, Palette.accent500]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.applyActionWrap}
             >
-              <Feather name="send" size={15} color="#fff" />
-              <Text style={s.applyActionText}>Apply for this Role</Text>
-            </Pressable>
-          </LinearGradient>
-        )}
-      </View>
+              <Pressable
+                style={({ pressed }) => [s.applyAction, { opacity: pressed ? 0.85 : 1 }]}
+                onPress={handleApply}
+              >
+                <Feather name="send" size={15} color="#fff" />
+                <Text style={s.applyActionText}>Apply for this Role</Text>
+              </Pressable>
+            </LinearGradient>
+          )}
+        </View>
+      </ScrollView>
 
       <ApplyJobModal
         visible={modalVisible}
@@ -377,7 +369,7 @@ const s = StyleSheet.create({
   // Body Scroll
   scrollContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 32,
     gap: 16,
   },
 
@@ -531,25 +523,26 @@ const s = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Sticky Action Bar
-  actionBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 72,
+  // Action Bar directly on page background (no card container/border/shadow layout)
+  actionBarPage: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    borderTopWidth: 1,
     gap: 12,
+    marginTop: 16,
   },
-  heartAction: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.md,
+  saveJobBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    height: 48,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  saveJobBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   applyActionWrap: {
     flex: 1,
