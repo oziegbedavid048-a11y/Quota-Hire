@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter } from 'react-native';
 import { Image } from 'expo-image';
 import { Tabs, useRouter, useSegments, useLocalSearchParams } from 'expo-router';
@@ -9,6 +9,7 @@ import Animated, {
   withSpring,
   withTiming,
   withSequence,
+  withRepeat,
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,21 +39,97 @@ function getNotchedPathD(w: number, h: number, cr: number, nw: number, nd: numbe
   return `M ${cr} 0 L ${cx - nw} 0 C ${cx - nw + 14} 0, ${cx - 14} ${nd}, ${cx} ${nd} C ${cx + 14} ${nd}, ${cx + nw - 14} 0, ${cx + nw} 0 L ${w - cr} 0 A ${cr} ${cr} 0 0 1 ${w} ${cr} L ${w} ${h - cr} A ${cr} ${cr} 0 0 1 ${w - cr} ${h} L ${cr} ${h} A ${cr} ${cr} 0 0 1 0 ${h - cr} L 0 ${cr} A ${cr} ${cr} 0 0 1 ${cr} 0 Z`;
 }
 
+// ─── Marquee Banner (Incomplete Profile Alert) ────────────────────────────────
+function MarqueeBanner({
+  text,
+  onPress,
+}: {
+  text: string;
+  onPress: () => void;
+}) {
+  const [textWidth, setTextWidth] = useState(0);
+  const translateX = useSharedValue(0);
+
+  useEffect(() => {
+    if (textWidth > 0) {
+      const distance = textWidth + 60;
+      const duration = Math.round((distance / 35) * 1000); // Constant natural reading speed
+
+      translateX.value = 0;
+      translateX.value = withRepeat(
+        withTiming(-distance, { duration, easing: Easing.linear }),
+        -1,
+        false
+      );
+    }
+  }, [textWidth]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  return (
+    <HapticPressable onPress={onPress} style={styles.marqueeBannerWrap}>
+      <LinearGradient
+        colors={['#FEF3C7', '#FDE68A', '#FEF3C7']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.marqueeGradient}
+      >
+        <Feather name="alert-circle" size={13} color="#b45309" style={{ marginRight: 6 }} />
+        <View style={{ flex: 1, overflow: 'hidden' }}>
+          <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap' }, animatedStyle]}>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="clip"
+              onLayout={(e) => {
+                const w = e.nativeEvent.layout.width;
+                if (w > 0 && Math.abs(w - textWidth) > 2) {
+                  setTextWidth(w);
+                }
+              }}
+              style={[styles.marqueeText, { flexShrink: 0, flexWrap: 'nowrap' }]}
+            >
+              {text}
+            </Text>
+            <Text
+              numberOfLines={1}
+              ellipsizeMode="clip"
+              style={[styles.marqueeText, { marginLeft: 60, flexShrink: 0, flexWrap: 'nowrap' }]}
+            >
+              {text}
+            </Text>
+          </Animated.View>
+        </View>
+        <Feather name="chevron-right" size={14} color="#b45309" style={{ marginLeft: 6 }} />
+      </LinearGradient>
+    </HapticPressable>
+  );
+}
+
 // ─── Floating Top Header ──────────────────────────────────────────────────────
 function FloatingHeader({
   onOpenMore,
   userName,
   avatarUrl,
   currentRoute,
+  userRole,
+  isProfileIncomplete,
 }: {
   onOpenMore: () => void;
   userName?: string;
   avatarUrl?: string;
   currentRoute?: string;
+  userRole?: string;
+  isProfileIncomplete?: boolean;
 }) {
   const router = useRouter();
   const { unreadCount } = useNotificationsData();
   const initial = (userName || 'U').charAt(0).toUpperCase();
+
+  const marqueeMessage = userRole === 'company'
+    ? "Action Required: Your organization profile is incomplete. Complete your company profile to verify your account and publish job listings to top talent. Tap to update →"
+    : "Action Required: Your profile is incomplete. Complete your profile details to increase your visibility to top hiring companies and unlock recommendations. Tap to update →";
 
   return (
     <View style={styles.headerContainer}>
@@ -78,7 +155,7 @@ function FloatingHeader({
           </HapticPressable>
 
           <HapticPressable
-            style={styles.avatarButton}
+            style={styles.avatarPillButton}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.push('/profile' as any);
@@ -91,11 +168,26 @@ function FloatingHeader({
                 contentFit="cover"
               />
             ) : (
-              <Text style={styles.avatarText}>{initial}</Text>
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarText}>{initial}</Text>
+              </View>
             )}
+            <Feather name="chevron-down" size={13} color={Palette.neutral600} style={{ marginLeft: 1, marginRight: 2 }} />
           </HapticPressable>
         </View>
       </View>
+
+      {/* Infinitely moving marquee banner if profile or avatar is missing */}
+      {isProfileIncomplete && (
+        <MarqueeBanner
+          text={marqueeMessage}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push('/profile' as any);
+          }}
+        />
+      )}
+
       <View style={styles.headerBorder} />
     </View>
   );
@@ -322,19 +414,19 @@ function FloatingPillNavBar({
     : { label: 'Browse',     route: '/explore',              icon: 'compass'    };
   const fabCfg = isCompany
     ? { label: 'Post Job',   route: '/explore?mode=post-job', icon: 'plus-circle'}
-    : { label: 'Community',  route: '/community',            icon: 'users'      };
+    : currentRoute === '/community'
+      ? { label: 'Create',    route: '/community',            icon: 'plus'}
+      : { label: 'Community', route: '/community',            icon: 'users'};
   const tab4 = isCompany
     ? { label: 'Applicants', route: '/tracker',              icon: 'users'      }
     : { label: 'Tracker',    route: '/tracker',              icon: 'bar-chart-2'};
-  const tab5 = isCompany
-    ? { label: 'Settings', route: '/settings', icon: 'settings' }
-    : { label: 'More',     route: 'more',      icon: 'more-horizontal' };
+  const tab5 = { label: 'Settings', route: '/settings', icon: 'settings' };
 
   const isTab1Active = currentRoute === '/';
   const isTab2Active = isCompany ? currentRoute === '/profile' : currentRoute === '/explore';
   const isFabActive  = isCompany ? currentRoute === '/explore' : currentRoute === '/community';
   const isTab4Active = currentRoute === '/tracker';
-  const isTab5Active = isCompany ? currentRoute === '/settings' : (isFabOpen || currentRoute === '/settings');
+  const isTab5Active = currentRoute === '/settings';
 
   // FAB spring-bounce on press
   const fabScale = useSharedValue(1);
@@ -351,7 +443,11 @@ function FloatingPillNavBar({
       withTiming(0.88, { duration: 80 }),
       withSpring(1, { damping: 12, stiffness: 260 })
     );
-    navigateTo(fabCfg.route);
+    if (!isCompany && currentRoute === '/community') {
+      DeviceEventEmitter.emit('open-create-post-modal');
+    } else {
+      navigateTo(fabCfg.route);
+    }
   };
 
   const notchedD = getNotchedPathD(NAV_WIDTH, NAV_BAR_H, CORNER_R, NOTCH_R, NOTCH_DEPTH);
@@ -464,16 +560,9 @@ function FloatingPillNavBar({
           </Text>
         </HapticPressable>
 
-        {/* 5. Settings (Company) / More (Employee) */}
+        {/* 5. Settings */}
         <HapticPressable
-          onPress={() => {
-            if (isCompany) {
-              navigateTo('/settings');
-            } else {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              onOpenMore();
-            }
-          }}
+          onPress={() => navigateTo('/settings')}
           style={styles.pillTabItem}
         >
           <Feather
@@ -494,40 +583,91 @@ function FloatingPillNavBar({
 export default function AppTabs({ userRole, userName }: { userRole?: string; userName?: string }) {
   const [fabOpen, setFabOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const [isProfileIncomplete, setIsProfileIncomplete] = useState<boolean>(false);
   const insets = useSafeAreaInsets();
   const segments = useSegments() as string[];
 
   const seg0 = (segments[0] as string) ?? '';
   const currentRoute = seg0 === '' || seg0 === '(tabs)' || seg0 === 'index' ? '/' : `/${seg0}`;
 
+  const showBanner = isProfileIncomplete && currentRoute !== '/community' && currentRoute !== '/community-detail';
   const contentPaddingTop = (currentRoute === '/community' || currentRoute === '/community-detail')
     ? 0
-    : insets.top + 64;
+    : insets.top + (showBanner ? 92 : 64);
 
-  // Fetch avatar cached from SecureStore and backend
-  useEffect(() => {
-    (async () => {
-      try {
-        const cachedAvatar = await SecureStore.getItemAsync('user_avatar');
-        if (cachedAvatar) setAvatarUrl(cachedAvatar);
+  // Fetch avatar and check profile completion state in real-time
+  const checkProfileStatus = useCallback(async () => {
+    try {
+      const cachedAvatar = await SecureStore.getItemAsync('user_avatar');
+      if (cachedAvatar) setAvatarUrl(cachedAvatar);
 
-        const data = await apiFetch('/auth/me/');
-        const url = data?.avatarUrl || data?.avatar_url;
+      const uData = await apiFetch('/auth/me/').catch(() => null);
+      if (!uData) return;
+
+      const userRole = uData?.role || 'employee';
+
+      if (userRole === 'company') {
+        const compProfile = await apiFetch('/profile/company/').catch(() => null);
+
+        const logoUrl = compProfile?.logo_url || compProfile?.logo || uData?.avatarUrl || uData?.avatar_url || cachedAvatar || '';
+        if (logoUrl) {
+          setAvatarUrl(logoUrl);
+          await SecureStore.setItemAsync('user_avatar', logoUrl).catch(() => {});
+        } else {
+          setAvatarUrl(undefined);
+          await SecureStore.deleteItemAsync('user_avatar').catch(() => {});
+        }
+
+        const hasLogo = !!logoUrl;
+        const hasName = !!(compProfile?.company_name || uData?.companyName || uData?.name);
+        const hasIndustry = !!(compProfile?.industry || uData?.industry);
+        const hasAbout = !!(compProfile?.about_company && compProfile.about_company.trim().length > 0);
+        const hasPhone = !!(compProfile?.contact_phone || uData?.phone || uData?.phoneNumber);
+
+        const isIncomplete = !hasLogo || !hasName || !hasIndustry || !hasAbout || !hasPhone;
+        setIsProfileIncomplete(isIncomplete);
+      } else {
+        const empProfile = await apiFetch('/profile/employee/').catch(() => null);
+
+        const url = uData?.avatarUrl || uData?.avatar_url || uData?.avatar || cachedAvatar || '';
         if (url) {
           setAvatarUrl(url);
-          await SecureStore.setItemAsync('user_avatar', url);
+          await SecureStore.setItemAsync('user_avatar', url).catch(() => {});
+        } else {
+          setAvatarUrl(undefined);
+          await SecureStore.deleteItemAsync('user_avatar').catch(() => {});
         }
-      } catch (_e) {
-        // Silently ignore network failures
-      }
-    })();
 
-    const sub = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (url: string) => {
-      if (url) setAvatarUrl(url);
+        const hasAvatar = !!url;
+        const hasBio = !!(empProfile?.bio && empProfile.bio.trim().length > 0);
+        const hasPhone = !!(empProfile?.phone_number || uData?.phone);
+        const hasLocation = !!(empProfile?.city || empProfile?.country || uData?.location);
+        const hasSkills = !!(empProfile?.skills && empProfile.skills.length > 0);
+
+        const isIncomplete = !hasAvatar || !hasBio || !hasPhone || !hasLocation || !hasSkills;
+        setIsProfileIncomplete(isIncomplete);
+      }
+    } catch (_e) {
+      // Silently ignore network failures
+    }
+  }, []);
+
+  useEffect(() => {
+    checkProfileStatus();
+
+    const sub1 = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', () => {
+      checkProfileStatus();
     });
 
-    return () => sub.remove();
-  }, []);
+    const sub2 = DeviceEventEmitter.addListener('USER_PROFILE_UPDATED', () => {
+      checkProfileStatus();
+    });
+
+    return () => {
+      sub1.remove();
+      sub2.remove();
+    };
+  }, [checkProfileStatus]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFBEB' }}>
@@ -562,6 +702,8 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
             userName={userName}
             avatarUrl={avatarUrl}
             currentRoute={currentRoute}
+            userRole={userRole}
+            isProfileIncomplete={showBanner}
           />
         </View>
       )}
@@ -667,23 +809,33 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#ffffff',
   },
-  avatarButton: {
-    width: 36, height: 36,
-    borderRadius: 18,
+  avatarPillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 3,
+    paddingRight: 6,
+    paddingVertical: 3,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderWidth: 1.5,
+    borderColor: Palette.neutral200,
+    gap: 3,
+  },
+  avatarImg: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  avatarFallback: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: Palette.accent100,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: Palette.accent200,
-    overflow: 'hidden',
-  },
-  avatarImg: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
   },
   avatarText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: Palette.accent700,
   },
@@ -875,5 +1027,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: Palette.red500,
+  },
+
+  // Marquee Banner
+  marqueeBannerWrap: {
+    height: 28,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  marqueeGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FCD34D',
+  },
+  marqueeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400e',
+    letterSpacing: 0.1,
+    flexShrink: 0,
   },
 });

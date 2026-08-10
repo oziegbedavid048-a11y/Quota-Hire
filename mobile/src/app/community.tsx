@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import {
   View, Text, FlatList, TextInput, StyleSheet, Modal,
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
-  Alert, TouchableOpacity, Pressable, Image, Switch,
+  Alert, TouchableOpacity, Pressable, Image, Switch, DeviceEventEmitter,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Feather, FontAwesome } from '@expo/vector-icons';
@@ -34,83 +34,7 @@ const ACTIVE_MEMBERS = [
   { id: '10', name: 'Michael O.', title: 'BDR Manager', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80' },
 ];
 
-const COMMUNITY_GROUPS = [
-  {
-    id: 'tech-ae',
-    name: 'Tech Sales Account Executives',
-    tag: 'SaaS & Enterprise',
-    memberCount: 24,
-    activeToday: 6,
-    icon: 'code',
-    color: Palette.accent600,
-    bg: Palette.accent50,
-    description: 'High-performing SaaS and software sales reps sharing pitch decks, objection handling, and enterprise deal strategies.',
-    discussions: [
-      { id: 'g1-1', author: 'Sarah M.', time: '2h ago', content: 'What is your go-to response when prospect says "We have no budget until Q4"?' },
-      { id: 'g1-2', author: 'Marcus B.', time: '5h ago', content: 'Just closed a $180k OTE deal using mutual action plans. MAPs are a game changer!' },
-    ],
-  },
-  {
-    id: 'enterprise-closers',
-    name: 'Enterprise Closing Strategies',
-    tag: 'Deal Closing',
-    memberCount: 19,
-    activeToday: 4,
-    icon: 'shield',
-    color: Palette.violet600,
-    bg: Palette.violet50,
-    description: 'Mastering multi-stakeholder deals, procurement negotiation, and executive sponsor alignment.',
-    discussions: [
-      { id: 'g2-1', author: 'Elena R.', time: '1h ago', content: 'How do you handle legal redlines when procurement drags out past end of month?' },
-      { id: 'g2-2', author: 'James W.', time: '4h ago', content: 'Always get your champion to introduce you to procurement early. Saves 3 weeks!' },
-    ],
-  },
-  {
-    id: 'sdr-lounge',
-    name: 'SDR & BDR Sales Lounge',
-    tag: 'Outbound & Cold Calls',
-    memberCount: 31,
-    activeToday: 8,
-    icon: 'phone-call',
-    color: Palette.emerald600,
-    bg: Palette.emerald50,
-    description: 'Cold calling tactics, email sequences that convert, and LinkedIn social selling templates.',
-    discussions: [
-      { id: 'g3-1', author: 'David K.', time: '30m ago', content: 'Tried a 10-second pattern interrupt today on cold calls. Connect rate went up 40%!' },
-      { id: 'g3-2', author: 'Michael O.', time: '3h ago', content: 'Video messages on LinkedIn vs standard InMail — what is working best for you?' },
-    ],
-  },
-  {
-    id: 'comp-ote',
-    name: 'Compensation, OTE & Commission',
-    tag: 'Pay & Structure',
-    memberCount: 28,
-    activeToday: 9,
-    icon: 'dollar-sign',
-    color: Palette.warm600,
-    bg: Palette.warm50,
-    description: 'Benchmark OTE splits, uncapped commission structures, accelerator tiers, and offer negotiations.',
-    discussions: [
-      { id: 'g4-1', author: 'Rachel P.', time: '3h ago', content: 'Is a 50/50 base/commission split standard for Senior FinTech AEs in 2026?' },
-      { id: 'g4-2', author: 'Alex Chen', time: '6h ago', content: 'Make sure your contract specifies clawback periods on annual upfront billing!' },
-    ],
-  },
-  {
-    id: 'remote-sales',
-    name: 'Remote Sales Leaders',
-    tag: 'Remote & Hybrid',
-    memberCount: 22,
-    activeToday: 5,
-    icon: 'globe',
-    color: Palette.blue500,
-    bg: Palette.blue50,
-    description: 'Best practices for managing distributed sales reps, async pipeline reviews, and remote demo mastery.',
-    discussions: [
-      { id: 'g5-1', author: 'Jessica T.', time: '2h ago', content: 'How do you keep energy high during virtual pitch meetings with camera-off prospects?' },
-      { id: 'g5-2', author: 'Sophia H.', time: '7h ago', content: 'Pre-recorded 2-minute demo clips before live calls have doubled our demo-to-SQL rate.' },
-    ],
-  },
-];
+
 
 const CATEGORIES = [
   { label: '🔥 Trending', value: 'trending' },
@@ -154,9 +78,6 @@ export default function CommunityScreen() {
   }, [isLoading]);
 
   const insets = useSafeAreaInsets();
-
-  // Tab state: 'feed' vs 'groups'
-  const [activeTab, setActiveTab] = useState<'feed' | 'groups'>('feed');
 
   // Real community members with 10-second batch rotation (20 per batch, cycling through all employees)
   const [allEmployeesPool, setAllEmployeesPool] = useState<{ id: string; name: string; avatar?: string | null }[]>([]);
@@ -229,15 +150,7 @@ export default function CommunityScreen() {
     return () => clearInterval(timer);
   }, [allEmployeesPool.length]);
 
-  // Group detail modal
-  const [selectedGroup, setSelectedGroup] = useState<typeof COMMUNITY_GROUPS[0] | null>(null);
-  const [groupModalVisible, setGroupModalVisible] = useState(false);
-  const [joinedGroups, setJoinedGroups] = useState<Record<string, boolean>>({});
 
-  const toggleJoinGroup = (groupId: string) => {
-    setJoinedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
 
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
@@ -294,6 +207,14 @@ export default function CommunityScreen() {
     setBookmarkedPosts(prev => ({ ...prev, [id]: !prev[id] }));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
+
+  // Listen for bottom tab bar plus button tap on community page
+  useEffect(() => {
+    const listener = DeviceEventEmitter.addListener('open-create-post-modal', () => {
+      setPostModalVisible(true);
+    });
+    return () => listener.remove();
+  }, []);
 
   // Fetch feed on initial load cleanly without triggering infinite focus re-renders
   useEffect(() => {
@@ -666,7 +587,7 @@ export default function CommunityScreen() {
 
       {/* Feed */}
       <FlatList
-        data={activeTab === 'feed' ? feed : []}
+        data={feed}
         keyExtractor={(item, index) =>
           `${(item as any).type}-${(item as any).id}`
         }
@@ -691,28 +612,9 @@ export default function CommunityScreen() {
                   end={{ x: 0, y: 1 }}
                 />
 
-                {/* Back button and title inside top bar */}
-                <View style={styles.coverTopBar}>
-                  <Pressable
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.replace('/' as any);
-                    }}
-                    style={({ pressed }) => [
-                      styles.coverBackBtn,
-                      { opacity: pressed ? 0.7 : 1 },
-                    ]}
-                    hitSlop={12}
-                  >
-                    <Feather name="arrow-left" size={20} color="#ffffff" />
-                  </Pressable>
-                  <Text style={styles.coverTopTitle}>QuotaHire Community</Text>
-                  <View style={{ width: 36 }} />
-                </View>
-
-                {/* Title and Subtitle at bottom of header cover */}
+                {/* Title and Subtitle inside header cover */}
                 <View style={styles.heroCoverContent}>
-                  <Text style={styles.heroCoverTitle}>Community</Text>
+                  <Text style={styles.coverTopTitle}>Quotahire Community</Text>
                   <Text style={styles.heroCoverSub}>
                     Connect, share insights & grow with top sales professionals
                   </Text>
@@ -751,149 +653,10 @@ export default function CommunityScreen() {
                 ))}
               </ScrollView>
             </View>
-
-            {/* Segmented Tab Control: "Feed" vs "Groups" */}
-            <View style={styles.tabBarContainer}>
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setActiveTab('feed');
-                }}
-                style={[
-                  styles.tabSegment,
-                  activeTab === 'feed' && styles.tabSegmentActive,
-                ]}
-              >
-                <Feather
-                  name="rss"
-                  size={15}
-                  color={activeTab === 'feed' ? '#ffffff' : Palette.neutral500}
-                />
-                <Text
-                  style={[
-                    styles.tabSegmentText,
-                    { color: activeTab === 'feed' ? '#ffffff' : Palette.neutral500 },
-                  ]}
-                >
-                  Feed
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setActiveTab('groups');
-                }}
-                style={[
-                  styles.tabSegment,
-                  activeTab === 'groups' && styles.tabSegmentActive,
-                ]}
-              >
-                <Feather
-                  name="users"
-                  size={15}
-                  color={activeTab === 'groups' ? '#ffffff' : Palette.neutral500}
-                />
-                <Text
-                  style={[
-                    styles.tabSegmentText,
-                    { color: activeTab === 'groups' ? '#ffffff' : Palette.neutral500 },
-                  ]}
-                >
-                  Groups
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Render Groups Hub when activeTab === 'groups' */}
-            {activeTab === 'groups' && (
-              <View style={{ paddingHorizontal: 16, marginTop: 12, gap: 14 }}>
-                {COMMUNITY_GROUPS.map((group) => {
-                  const isJoined = joinedGroups[group.id];
-                  return (
-                    <View
-                      key={group.id}
-                      style={[
-                        styles.groupCard,
-                        { backgroundColor: '#ffffff', borderColor: '#E2E8F0' },
-                        Shadow.card,
-                      ]}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <View style={[styles.groupIconWrap, { backgroundColor: group.bg }]}>
-                          <Feather name={group.icon as any} size={20} color={group.color} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.groupName, { color: Palette.neutral900 }]}>{group.name}</Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                            <Text style={[styles.groupMembersText, { color: Palette.neutral400 }]}>
-                              {group.memberCount} members
-                            </Text>
-                            <Text style={{ fontSize: 10, color: Palette.neutral400 }}>•</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Palette.emerald500 }} />
-                              <Text style={{ fontSize: 11, fontWeight: '600', color: Palette.emerald600 }}>
-                                {group.activeToday} active today
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-
-                      <Text style={[styles.groupDesc, { color: Palette.neutral600 }]}>
-                        {group.description}
-                      </Text>
-
-                      <View style={styles.groupCardFooter}>
-                        <Pressable
-                          onPress={() => {
-                            setSelectedGroup(group);
-                            setGroupModalVisible(true);
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          }}
-                          style={({ pressed }) => [
-                            styles.groupViewBtn,
-                            { opacity: pressed ? 0.8 : 1 },
-                          ]}
-                        >
-                          <Feather name="message-circle" size={13} color={Palette.accent600} />
-                          <Text style={styles.groupViewBtnText}>View Discussions ({group.discussions.length})</Text>
-                        </Pressable>
-
-                        <Pressable
-                          onPress={() => toggleJoinGroup(group.id)}
-                          style={({ pressed }) => [
-                            styles.groupJoinBtn,
-                            isJoined
-                              ? { backgroundColor: Palette.neutral100, borderColor: Palette.neutral300 }
-                              : { backgroundColor: Palette.accent600 },
-                            { opacity: pressed ? 0.85 : 1 },
-                          ]}
-                        >
-                          <Feather
-                            name={isJoined ? 'check' : 'user-plus'}
-                            size={12}
-                            color={isJoined ? Palette.neutral600 : '#ffffff'}
-                          />
-                          <Text
-                            style={[
-                              styles.groupJoinBtnText,
-                              { color: isJoined ? Palette.neutral600 : '#ffffff' },
-                            ]}
-                          >
-                            {isJoined ? 'Joined' : 'Join'}
-                          </Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
           </View>
         }
         ListEmptyComponent={
-          activeTab === 'feed' && imagesReady ? (
+          imagesReady ? (
             <View style={[styles.centered, { marginTop: 40 }]}>
               <Feather name="message-square" size={48} color={Palette.neutral300} />
               <Text style={styles.emptyTitle}>Nothing here yet</Text>
@@ -1180,6 +943,26 @@ export default function CommunityScreen() {
             >
               {isSubmittingPost ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitBtnText}>Post</Text>}
             </HapticPressable>
+
+            {/* Create Poll option button at bottom of modal */}
+            <HapticPressable
+              onPress={() => {
+                setPostModalVisible(false);
+                setTimeout(() => setPollModalVisible(true), 150);
+              }}
+              style={styles.pollOptionBtn}
+            >
+              <View style={styles.pollOptionLeft}>
+                <View style={styles.pollIconWrap}>
+                  <Feather name="bar-chart-2" size={16} color={Palette.accent600} />
+                </View>
+                <View>
+                  <Text style={styles.pollOptionTitle}>Create a Poll</Text>
+                  <Text style={styles.pollOptionSub}>Ask the community for votes & feedback</Text>
+                </View>
+              </View>
+              <Feather name="chevron-right" size={16} color={Palette.neutral400} />
+            </HapticPressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1237,71 +1020,7 @@ export default function CommunityScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── GROUP DISCUSSIONS MODAL ── */}
-      <Modal visible={groupModalVisible} animationType="slide" transparent onRequestClose={() => setGroupModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-            <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                {selectedGroup && (
-                  <View style={[styles.groupIconWrap, { backgroundColor: selectedGroup.bg, width: 34, height: 34 }]}>
-                    <Feather name={selectedGroup.icon as any} size={16} color={selectedGroup.color} />
-                  </View>
-                )}
-                <View>
-                  <Text style={[styles.modalTitle, { fontSize: 16 }]} numberOfLines={1}>{selectedGroup?.name}</Text>
-                  <Text style={{ fontSize: 11, color: Palette.neutral400 }}>{selectedGroup?.memberCount} members • {selectedGroup?.activeToday} active today</Text>
-                </View>
-              </View>
-              <HapticPressable onPress={() => setGroupModalVisible(false)} style={styles.closeBtn}>
-                <Feather name="x" size={20} color={Palette.neutral600} />
-              </HapticPressable>
-            </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 8 }}>
-              <Text style={{ fontSize: 13, color: Palette.neutral600, lineHeight: 19, marginBottom: 16 }}>
-                {selectedGroup?.description}
-              </Text>
-
-              <Text style={{ fontSize: 12, fontWeight: '800', color: Palette.neutral900, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                Active Discussions ({selectedGroup?.discussions.length})
-              </Text>
-
-              {selectedGroup?.discussions.map((d) => (
-                <View key={d.id} style={{ backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, marginBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: Palette.neutral900 }}>{d.author}</Text>
-                    <Text style={{ fontSize: 11, color: Palette.neutral400 }}>{d.time}</Text>
-                  </View>
-                  <Text style={{ fontSize: 13, color: Palette.neutral700, lineHeight: 19, marginBottom: 10 }}>{d.content}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <FontAwesome name="heart-o" size={13} color={Palette.neutral400} />
-                      <Text style={{ fontSize: 11, color: Palette.neutral500 }}>4</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Feather name="message-square" size={13} color={Palette.neutral400} />
-                      <Text style={{ fontSize: 11, color: Palette.neutral500 }}>2 replies</Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-
-            <HapticPressable
-              onPress={() => {
-                if (selectedGroup) toggleJoinGroup(selectedGroup.id);
-                setGroupModalVisible(false);
-              }}
-              style={[styles.submitBtn, { marginTop: 4 }]}
-            >
-              <Text style={styles.submitBtnText}>
-                {selectedGroup && joinedGroups[selectedGroup.id] ? 'Already Joined' : 'Join Group & Post'}
-              </Text>
-            </HapticPressable>
-          </View>
-        </View>
-      </Modal>
 
     </View>
   );
@@ -1792,6 +1511,40 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
     color: '#fff',
   },
+  pollOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: BorderRadius.md,
+    padding: 12,
+    marginTop: 12,
+  },
+  pollOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  pollIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Palette.accent50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pollOptionTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Palette.neutral800,
+  },
+  pollOptionSub: {
+    fontSize: 11,
+    color: Palette.neutral400,
+    marginTop: 1,
+  },
   // ── Merged Top Header Cover ──
   heroCoverCardHeader: {
     height: 195,
@@ -1818,20 +1571,23 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   coverTopTitle: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: '800',
     color: '#ffffff',
     letterSpacing: -0.3,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   heroCoverContent: {
     padding: 16,
     zIndex: 2,
+    alignItems: 'center',
   },
   communityTagPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     paddingHorizontal: 9,
     paddingVertical: 3,
@@ -1851,16 +1607,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   heroCoverTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '900',
     color: '#ffffff',
     letterSpacing: -0.5,
     marginBottom: 2,
+    textAlign: 'center',
   },
   heroCoverSub: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.85)',
     fontWeight: '500',
+    textAlign: 'center',
   },
   // ── Active Members Carousel ──
   sectionTitleRow: {
@@ -1924,89 +1682,5 @@ const styles = StyleSheet.create({
   activeMemberTitle: {
     fontSize: 9,
     textAlign: 'center',
-  },
-  // ── Tab Bar Container ──
-  tabBarContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    backgroundColor: 'rgba(226, 232, 240, 0.5)',
-    borderRadius: 12,
-    padding: 3,
-    marginBottom: 4,
-  },
-  tabSegment: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-  tabSegmentActive: {
-    backgroundColor: Palette.accent600,
-  },
-  tabSegmentText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  // ── Group Cards ──
-  groupCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-  },
-  groupIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  groupName: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  groupMembersText: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  groupDesc: {
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 10,
-    marginBottom: 14,
-  },
-  groupCardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  groupViewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  groupViewBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Palette.accent600,
-  },
-  groupJoinBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  groupJoinBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
   },
 });
