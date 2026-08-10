@@ -1,7 +1,7 @@
-import { DefaultTheme, ThemeProvider } from "expo-router";
+import { DefaultTheme, ThemeProvider, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useState, useEffect, useRef } from "react";
-import { View } from "react-native";
+import { View, StyleSheet } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 import AppTabs from "@/components/app-tabs";
@@ -183,17 +183,25 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={CustomTheme}>
-      {!splashFinished ? (
-        <VideoSplash
-          onFinish={() => setSplashFinished(true)}
-        />
-      ) : showOnboarding ? (
-        <Onboarding onFinish={() => setShowOnboarding(false)} />
-      ) : !isLoggedIn ? (
-        <AuthScreens onLogin={handleLogin as any} />
-      ) : (
-        <AppTabs userRole={userRole} userName={userName} />
-      )}
+      <View style={{ flex: 1, backgroundColor: "#FFFBEB" }}>
+        {isLoggedIn && (
+          <AppTabs userRole={userRole} userName={userName} />
+        )}
+
+        {!splashFinished ? (
+          <View style={StyleSheet.absoluteFill}>
+            <VideoSplash onFinish={() => setSplashFinished(true)} />
+          </View>
+        ) : showOnboarding ? (
+          <View style={StyleSheet.absoluteFill}>
+            <Onboarding onFinish={() => setShowOnboarding(false)} />
+          </View>
+        ) : !isLoggedIn ? (
+          <View style={StyleSheet.absoluteFill}>
+            <AuthScreens onLogin={handleLogin as any} />
+          </View>
+        ) : null}
+      </View>
     </ThemeProvider>
   );
 }
