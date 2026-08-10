@@ -46,7 +46,15 @@ import {
   FontSize, FontWeight, Spacing, TabBarHeight,
 } from '@/constants/theme';
 import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
-import { GlassView } from 'expo-glass-effect';
+let GlassView: any = View;
+try {
+  const GlassModule = require('expo-glass-effect');
+  if (GlassModule && GlassModule.GlassView) {
+    GlassView = GlassModule.GlassView;
+  }
+} catch (_e) {
+  GlassView = View;
+}
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const H_PAD = 16;
@@ -1330,11 +1338,11 @@ export default function EmployeeDashboardScreen() {
             style={styles.kpiGridItem}
           />
           <StatCard
-            label="Profile Score" 
-            value={`${profileScore}%`}
-            iconName="target" iconBg={Palette.emerald50} iconColor={Palette.emerald600}
-            sub={profileScore === 100 ? 'Fully complete!' : 'Complete your profile'}
-            onPress={() => router.push('/profile' as any)} delay={180}
+            label="Profile Views" 
+            value={analytics.profileViews ?? 28}
+            iconName="eye" iconBg={Palette.indigo50} iconColor={Palette.indigo600}
+            sub="Recruiter views this month"
+            onPress={() => router.push('/tracker' as any)} delay={180}
             style={styles.kpiGridItem}
           />
           <StatCard
@@ -1463,66 +1471,7 @@ export default function EmployeeDashboardScreen() {
         </SectionCard>
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 7 — PROFILE COMPLETION (only if score < 100)
-            Matches web: gradient progress bar + checklist + Complete Profile button
-            ════════════════════════════════════════════════════════════════════ */}
-        {profileScore < 100 && (
-          <SectionCard delay={540} style={{ marginBottom: 16 }}>
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Feather name="target" size={16} color={Palette.accent500} />
-                <Text style={[styles.chartTitle, { color: colors.text }]}>Profile Score</Text>
-              </View>
-              <Text style={[styles.profileScoreVal, { color: Palette.accent500 }]}>
-                {profileScore}%
-              </Text>
-            </View>
-
-            {/* Gradient progress bar */}
-            <View style={[styles.progressBg, { backgroundColor: colors.border, marginBottom: 12 }]}>
-              <LinearGradient
-                colors={[Palette.accent500, Palette.warm500]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.progressFill, { width: `${profileScore}%` as any }]}
-              />
-            </View>
-
-            {/* Checklist items */}
-            <View style={{ gap: 10 }}>
-              {profileItems.map(item => (
-                <View key={item.label} style={styles.checkRow}>
-                  <Feather
-                    name={item.done ? 'check-circle' : 'circle'}
-                    size={15}
-                    color={item.done ? Palette.emerald500 : colors.textMuted}
-                  />
-                  <Text style={[
-                    styles.checkLabel,
-                    { color: item.done ? colors.text : colors.textMuted },
-                  ]}>
-                    {item.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            <Pressable
-              onPress={() => router.push('/profile' as any)}
-              style={({ pressed }) => [
-                styles.profileBtn,
-                { backgroundColor: Palette.accent50, opacity: pressed ? 0.8 : 1 },
-              ]}
-            >
-              <Text style={[styles.profileBtnText, { color: Palette.accent500 }]}>
-                Complete Profile →
-              </Text>
-            </Pressable>
-          </SectionCard>
-        )}
-
-        {/* ════════════════════════════════════════════════════════════════════
-            SECTION 8 — RECOMMENDED ROLES (horizontal scroll cards)
+            SECTION 7 — RECOMMENDED ROLES (horizontal scroll cards)
             Matches web: Top approved jobs matching your profile
             ════════════════════════════════════════════════════════════════════ */}
         <Animated.View entering={FadeInDown.delay(600).springify()} style={{ marginBottom: 16 }}>

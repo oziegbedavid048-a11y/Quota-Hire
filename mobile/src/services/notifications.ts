@@ -48,18 +48,21 @@ try {
   };
 }
 
-// ── Foreground notification behaviour ────────────────────────────────────────
-// Show alert + play sound + update badge even when the app is open in the
-// foreground (default Expo behaviour is to swallow foreground notifications).
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+try {
+  if (isNotificationsSupported && Notifications && typeof Notifications.setNotificationHandler === 'function') {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  }
+} catch (_e) {
+  // Ignore if setNotificationHandler is unavailable in sandbox
+}
 
 // ── Main registration function ────────────────────────────────────────────────
 

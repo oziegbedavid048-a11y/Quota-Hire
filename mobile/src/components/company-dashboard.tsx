@@ -43,7 +43,15 @@ import {
   FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
 import { useCompanyDashboardData } from '@/hooks/useCompanyDashboardData';
-import { GlassView } from 'expo-glass-effect';
+let GlassView: any = View;
+try {
+  const GlassModule = require('expo-glass-effect');
+  if (GlassModule && GlassModule.GlassView) {
+    GlassView = GlassModule.GlassView;
+  }
+} catch (_e) {
+  GlassView = View;
+}
 import { SkeletonBox as Skeleton, SkeletonLine } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -619,65 +627,6 @@ export default function CompanyDashboardScreen() {
             </View>
           )}
         </SectionCard>
-
-        {/* ════════════════════════════════════════════════════════════════════
-            SECTION 7 — PROFILE COMPLETION (only if score < 100)
-            Matches web: blue gradient progress bar + checklist
-            ════════════════════════════════════════════════════════════════════ */}
-        {completionScore < 100 && (
-          <SectionCard delay={540} style={{ marginBottom: 16 }}>
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Feather name="target" size={16} color={Palette.blue500} />
-                <Text style={[styles.chartTitle, { color: colors.text }]}>Profile Score</Text>
-              </View>
-              <Text style={[styles.profileScoreVal, { color: Palette.blue600 }]}>
-                {completionScore}%
-              </Text>
-            </View>
-
-            {/* Blue → indigo gradient progress bar (matches web) */}
-            <View style={[styles.progressBg, { backgroundColor: colors.border, marginBottom: 12 }]}>
-              <LinearGradient
-                colors={[Palette.blue500, Palette.indigo600]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.progressFill, { width: `${completionScore}%` as any }]}
-              />
-            </View>
-
-            {/* Completion checklist */}
-            <View style={{ gap: 10 }}>
-              {completionItems.map(item => (
-                <View key={item.label} style={styles.checkRow}>
-                  <Feather
-                    name={item.done ? 'check-circle' : 'circle'}
-                    size={15}
-                    color={item.done ? Palette.emerald500 : colors.textMuted}
-                  />
-                  <Text style={[
-                    styles.checkLabel,
-                    { color: item.done ? colors.text : colors.textMuted },
-                  ]}>
-                    {item.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            <Pressable
-              onPress={() => router.push('/profile' as any)}
-              style={({ pressed }) => [
-                styles.profileBtn,
-                { backgroundColor: Palette.blue50, opacity: pressed ? 0.8 : 1 },
-              ]}
-            >
-              <Text style={[styles.profileBtnText, { color: Palette.blue600 }]}>
-                Complete Profile →
-              </Text>
-            </Pressable>
-          </SectionCard>
-        )}
 
       </ScrollView>
     </View>

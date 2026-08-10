@@ -46,7 +46,15 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
-import { GlassView } from "expo-glass-effect";
+let GlassView: any = View;
+try {
+  const GlassModule = require("expo-glass-effect");
+  if (GlassModule && GlassModule.GlassView) {
+    GlassView = GlassModule.GlassView;
+  }
+} catch (_e) {
+  GlassView = View;
+}
 import Animated, {
   FadeIn,
   FadeOut,
