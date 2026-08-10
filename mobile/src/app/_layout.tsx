@@ -25,7 +25,11 @@ import {
   Notifications,
 } from "@/services/notifications";
 
-SplashScreen.preventAutoHideAsync();
+try {
+  SplashScreen.preventAutoHideAsync().catch(() => {});
+} catch {
+  // Ignore if native splash screen is unavailable
+}
 
 export default function TabLayout() {
   const router = useRouter();
@@ -104,29 +108,37 @@ export default function TabLayout() {
   // Runs once after the component mounts. Listens for the user tapping a
   // push notification banner and navigates them to the correct screen.
   useEffect(() => {
-    // Listen for taps on notifications (app is open or in background)
-    notifResponseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response: any) => {
-        const data = response.notification.request.content.data as Record<
-          string,
-          unknown
-        >;
-        const path = getNavigationPathFromPush(data);
-
-        // Small delay to ensure the navigator is mounted before pushing
-        setTimeout(() => {
+    try {
+      notifResponseListener.current =
+        Notifications.addNotificationResponseReceivedListener((response: any) => {
           try {
-            router.push(path as any);
+            const data = response.notification.request.content.data as Record<
+              string,
+              unknown
+            >;
+            const path = getNavigationPathFromPush(data);
+
+            setTimeout(() => {
+              try {
+                router.push(path as any);
+              } catch {
+                // Navigator not ready yet — skip navigation gracefully
+              }
+            }, 300);
           } catch {
-            // Navigator not ready yet — skip navigation gracefully
+            // Ignore payload error
           }
-        }, 300);
-      });
+        });
+    } catch {
+      // Notifications module unavailable in current environment
+    }
 
     return () => {
-      if (notifResponseListener.current) {
-        notifResponseListener.current.remove();
-      }
+      try {
+        if (notifResponseListener.current) {
+          notifResponseListener.current.remove();
+        }
+      } catch {}
     };
   }, [router]);
 

@@ -57,67 +57,73 @@ export default function VideoSplash({ onFinish }: VideoSplashProps) {
   const containerOpacity = useSharedValue(1);
 
   useEffect(() => {
-    SplashScreen.hideAsync().finally(() => {
-      setTimeout(() => {
+    let finishedRef = false;
+    const safeFinish = () => {
+      if (!finishedRef) {
+        finishedRef = true;
+        onFinish();
+      }
+    };
 
-        // ── Phase 1 (0–900ms): roll LEFT to near the left screen edge
-        // ── Phase 4 (1300–2200ms): roll RIGHT back to centre (after 400ms wait)
-        logoTranslateX.value = withSequence(
-          withTiming(LEFT_EDGE_OFFSET, {
-            duration: 900,
-            easing: Easing.inOut(Easing.cubic),
-          }),
-          // 400ms pause at the left edge before rolling back
-          withDelay(
-            400,
-            withTiming(0, {
+    // Safety fallback: guaranteed finish after 3.8s even if native animation stutters
+    const fallbackTimer = setTimeout(safeFinish, 3800);
+
+    try {
+      SplashScreen.hideAsync().catch(() => {}).finally(() => {
+        setTimeout(() => {
+          logoTranslateX.value = withSequence(
+            withTiming(LEFT_EDGE_OFFSET, {
               duration: 900,
               easing: Easing.inOut(Easing.cubic),
-            })
-          )
-        );
+            }),
+            withDelay(
+              400,
+              withTiming(0, {
+                duration: 900,
+                easing: Easing.inOut(Easing.cubic),
+              })
+            )
+          );
 
-        // Rotation: Clockwise (0 -> 360 deg) when rolling left, then anticlockwise (360 -> 0 deg) when returning back to text.
-        logoRotate.value = withSequence(
-          withTiming(360, {
-            duration: 900,
-            easing: Easing.inOut(Easing.cubic),
-          }),
-          withDelay(
-            400,
-            withTiming(0, {
+          logoRotate.value = withSequence(
+            withTiming(360, {
               duration: 900,
               easing: Easing.inOut(Easing.cubic),
+            }),
+            withDelay(
+              400,
+              withTiming(0, {
+                duration: 900,
+                easing: Easing.inOut(Easing.cubic),
+              })
+            )
+          );
+
+          textOpacity.value = withDelay(
+            1100,
+            withTiming(1, { duration: 400, easing: Easing.out(Easing.quad) })
+          );
+          textTranslateX.value = withDelay(
+            1100,
+            withSequence(
+              withTiming(-6, { duration: 700, easing: Easing.out(Easing.cubic) }),
+              withTiming(0,  { duration: 130, easing: Easing.inOut(Easing.quad) })
+            )
+          );
+
+          containerOpacity.value = withDelay(
+            3000,
+            withTiming(0, { duration: 450 }, (finished) => {
+              if (finished) runOnJS(safeFinish)();
             })
-          )
-        );
+          );
+        }, 100);
+      });
+    } catch {
+      safeFinish();
+    }
 
-        // ── Phase 3 (1100–1930ms): text slides in while logo is waiting
-        // Starts 200ms into the logo's 400ms wait → text is fully settled
-        // BEFORE the logo begins rolling back, so both meet perfectly at centre.
-        textOpacity.value = withDelay(
-          1100,
-          withTiming(1, { duration: 400, easing: Easing.out(Easing.quad) })
-        );
-        textTranslateX.value = withDelay(
-          1100,
-          withSequence(
-            // Slide in from right with a subtle overshoot for a natural spring feel
-            withTiming(-6, { duration: 700, easing: Easing.out(Easing.cubic) }),
-            withTiming(0,  { duration: 130, easing: Easing.inOut(Easing.quad) })
-          )
-        );
-
-        // ── Phase 6 (3500ms): fade the whole splash out
-        containerOpacity.value = withDelay(
-          3500,
-          withTiming(0, { duration: 450 }, (finished) => {
-            if (finished) runOnJS(onFinish)();
-          })
-        );
-
-      }, 120);
-    });
+    return () => clearTimeout(fallbackTimer);
   }, [onFinish]);
 
   // ─── Animated styles ────────────────────────────────────────────────────────
@@ -125,7 +131,7 @@ export default function VideoSplash({ onFinish }: VideoSplashProps) {
   const logoStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: logoTranslateX.value },
-      { rotate: logoRotate.value + "deg" },
+      { rotate: `${logoRotate.value}deg` },
     ],
   }));
 
