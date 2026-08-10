@@ -12,9 +12,17 @@ import {
   Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import * as LocalAuthentication from "expo-local-authentication";
 const API_BASE = "https://quotahire-backend.onrender.com/api";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+let LocalAuthentication: any = null;
+try {
+  LocalAuthentication = require("expo-local-authentication");
+} catch (_e) {
+  console.warn(
+    "[LocalAuth] Native module not found. Biometric authentication is disabled in Expo Go."
+  );
+}
 let GoogleSignin: any = null;
 let statusCodes: any = {};
 let isGoogleSigninSupported = false;
@@ -267,6 +275,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
 
   useEffect(() => {
     async function checkBiometrics() {
+      if (!LocalAuthentication) return;
       try {
         const hasHardware = await LocalAuthentication.hasHardwareAsync();
         const isEnrolled = await LocalAuthentication.isEnrolledAsync();
@@ -282,6 +291,13 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   }, []);
 
   const handleBiometricAuth = async () => {
+    if (!LocalAuthentication) {
+      Alert.alert(
+        "Development Build Required",
+        "Biometric authentication (Fingerprint / FaceID) requires a standalone APK or custom Development Build. It is disabled in Expo Go."
+      );
+      return;
+    }
     try {
       const hasToken = await SecureStore.getItemAsync("access_token");
       const uName = await SecureStore.getItemAsync("user_name");
