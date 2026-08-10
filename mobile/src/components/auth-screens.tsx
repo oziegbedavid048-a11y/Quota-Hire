@@ -12,6 +12,7 @@ import {
   Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import * as LocalAuthentication from "expo-local-authentication";
 const API_BASE = "https://quotahire-backend.onrender.com/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 let GoogleSignin: any = null;
@@ -260,6 +261,63 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   const [loginOtpSubmitting, setLoginOtpSubmitting] = useState(false);
   const [loginOtpResending, setLoginOtpResending] = useState(false);
   const [loginOtpFocus, setLoginOtpFocus] = useState("");
+
+  // ── Biometric State (Fingerprint / FaceID) ───────────────────────────────
+  const [hasBiometricSupport, setHasBiometricSupport] = useState(false);
+
+  useEffect(() => {
+    async function checkBiometrics() {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        const hasToken = await SecureStore.getItemAsync("access_token");
+        if (hasHardware && isEnrolled && hasToken) {
+          setHasBiometricSupport(true);
+        }
+      } catch {
+        setHasBiometricSupport(false);
+      }
+    }
+    checkBiometrics();
+  }, []);
+
+  const handleBiometricAuth = async () => {
+    try {
+      const hasToken = await SecureStore.getItemAsync("access_token");
+      const uName = await SecureStore.getItemAsync("user_name");
+      const uRole = (await SecureStore.getItemAsync("user_role")) || "employee";
+
+      if (!hasToken || !uName) {
+        Alert.alert(
+          "Session Required",
+          "Please sign in with your email first to enable fingerprint login."
+        );
+        return;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Sign in to Quota Hire",
+        fallbackLabel: "Use Email Code",
+        cancelLabel: "Cancel",
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        onLogin(uName, uRole);
+      } else if (
+        result.error &&
+        result.error !== "user_cancel" &&
+        result.error !== "system_cancel"
+      ) {
+        Alert.alert(
+          "Fingerprint Verification Failed",
+          "Could not verify fingerprint. Please sign in with your email code."
+        );
+      }
+    } catch (err) {
+      console.warn("[Biometrics]", err);
+    }
+  };
 
   // ── Signup state (unchanged) ─────────────────────────────────────────────
   const [role, setRole] = useState<"employee" | "company">("employee");
@@ -705,6 +763,22 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       <GoogleG />
                       <Text style={gs.googleBtnText}>Continue with Google</Text>
                     </Pressable>
+
+                    {/* Sign in with Fingerprint / FaceID */}
+                    {hasBiometricSupport && (
+                      <Pressable
+                        onPress={handleBiometricAuth}
+                        style={({ pressed }) => [
+                          gs.bioBtn,
+                          { opacity: pressed ? 0.8 : 1, marginTop: 12 },
+                        ]}
+                      >
+                        <View style={gs.btnRow}>
+                          <Feather name="shield" size={18} color={ACCENT_600} />
+                          <Text style={gs.bioBtnText}>Sign in with Fingerprint / FaceID</Text>
+                        </View>
+                      </Pressable>
+                    )}
 
                     <View style={gs.divider} />
                     <View style={gs.switchRow}>
@@ -1231,6 +1305,25 @@ const gs = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#3c4043", // Google's text colour
+    letterSpacing: 0.1,
+  },
+
+  // ── Biometric Button ───────────────────────────────────────────────────
+  bioBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    height: 50,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: ACCENT_600,
+    backgroundColor: "#f0fdf4",
+  },
+  bioBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: ACCENT_600,
     letterSpacing: 0.1,
   },
 
