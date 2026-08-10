@@ -42,6 +42,9 @@ urlpatterns = [
     path('auth/mobile/verify-otp/',      views.MobileVerifyOTPView.as_view(),      name='mobile-verify-otp'),
     path('auth/mobile/reset-password/',  views.MobileResetPasswordView.as_view(),  name='mobile-reset-password'),
 
+    # ── Passwordless Login (Email OTP) — mobile app ───────────────────────────
+    path('auth/login-otp/request/', views.LoginOTPRequestView.as_view(), name='login-otp-request'),
+    path('auth/login-otp/verify/',  views.LoginOTPVerifyView.as_view(),  name='login-otp-verify'),
 
     # ── Profiles ──────────────────────────────────────────────────────────────
     path('profile/employee/',       views.EmployeeProfileView.as_view(),         name='profile-employee'),

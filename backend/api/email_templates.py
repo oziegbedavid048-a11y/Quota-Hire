@@ -238,6 +238,31 @@ def get_mobile_otp_email_html(user, otp_code):
     return _build_email(title="Your Password Reset Code - Quota Hire", body_html=body)
 
 
+def get_login_otp_email_html(user, otp_code):
+    """Generates the HTML email for passwordless email-OTP login on the mobile app."""
+    body = (
+        _h1("Your Login Code", "Use this code to sign in to the Quota Hire app") +
+        _p(f"Hi <strong>{user}</strong>,") +
+        _p(
+            "You requested a one-time sign-in code for your Quota Hire account. "
+            "Enter the 6-digit code below in the app to access your dashboard:"
+        ) +
+        '<div style="background-color:#f4fbf2;border:2px dashed #1A6515;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">'
+        f'<div style="font-size:36px;font-weight:900;letter-spacing:12px;color:#1A6515;font-family:monospace;">{otp_code}</div>'
+        '</div>' +
+        _p(
+            "This code is valid for <strong>30 minutes</strong> and can only be used once. "
+            "Do not share this code with anyone — Quota Hire staff will never ask for it."
+        ) +
+        _p(
+            "If you did not try to sign in, please ignore this email. "
+            "Your account is safe and no action is required."
+        ) +
+        _signoff()
+    )
+    return _build_email(title="Your Login Code - Quota Hire", body_html=body)
+
+
 
 # =============================================================================
 # 3. WELCOME EMAIL (sent after email verification)

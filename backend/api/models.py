@@ -14,9 +14,13 @@ import uuid
 # ── User Roles ───────────────────────────────────────────────────────────────
 
 class UserRole(models.TextChoices):
-    EMPLOYEE = 'employee', 'Employee'
-    COMPANY  = 'company',  'Company'
-    ADMIN    = 'admin',    'Admin'
+    EMPLOYEE      = 'employee',      'Employee'
+    COMPANY       = 'company',       'Company'
+    ADMIN         = 'admin',         'Admin'
+    SALES_CAM     = 'SALES_CAM',     'Sales CAM'
+    HR_OPS        = 'HR_OPS',        'HR Ops'
+    FINANCE_ADMIN = 'FINANCE_ADMIN', 'Finance Admin'
+    SUPERADMIN    = 'SUPERADMIN',    'Superadmin'
 
 
 # ── Custom User ──────────────────────────────────────────────────────────────
@@ -35,6 +39,12 @@ class CustomUser(AbstractUser):
     push_token       = models.CharField(max_length=300, blank=True, null=True, default=None,
                                         help_text="Expo push token for mobile push notifications")
     created_at       = models.DateTimeField(auto_now_add=True)
+
+    # ── Passwordless Login OTP (mobile email-OTP login) ───────────────────────
+    login_otp_code      = models.CharField(max_length=6, blank=True, default='',
+                                           help_text="6-digit OTP for passwordless login")
+    login_otp_expires_at = models.DateTimeField(null=True, blank=True,
+                                                help_text="When the login OTP expires (30 min window)")
 
     # Use email as the primary login identifier
     email            = models.EmailField(unique=True)
@@ -800,5 +810,139 @@ class PasswordResetOTP(models.Model):
     def is_expired(self):
         from django.utils import timezone
         return timezone.now() > self.expires_at
+
+
+# ── Enterprise System Models (PRD v1.2) ────────────────────────────────────────
+
+class PackageType(models.TextChoices):
+    RECRUITMENT_ONLY         = 'RECRUITMENT_ONLY',         'Recruitment Only'
+    RECRUITMENT_PLUS_MANAGED = 'RECRUITMENT_PLUS_MANAGED', 'Recruitment + Managed Staffing'
+
+
+class RequestPaymentStatus(models.TextChoices):
+    DEPOSIT_PAID = 'DEPOSIT_PAID', 'Deposit Paid'
+    FULL_PAYMENT = 'FULL_PAYMENT', 'Full Payment'
+    PENDING      = 'PENDING',      'Pending'
+
+
+class OperationalStatus(models.TextChoices):
+    NEW_REQUEST = 'NEW_REQUEST', 'New Request'
+    IN_SOURCING = 'IN_SOURCING', 'In Sourcing'
+    DEPLOYED    = 'DEPLOYED',    'Deployed'
+
+
+class ExpenseCategory(models.TextChoices):
+    OPERATIONAL    = 'OPERATIONAL',    'Operational'
+    MARKETING      = 'MARKETING',      'Marketing'
+    COMMISSION     = 'COMMISSION',     'Commission'
+    SALARY_PAYROLL = 'SALARY_PAYROLL', 'Salary Payroll'
+    INFRASTRUCTURE = 'INFRASTRUCTURE', 'Infrastructure'
+    OTHER          = 'OTHER',          'Other'
+
+
+class CompanyLead(models.Model):
+    company_name          = models.CharField(max_length=255)
+    nature_of_business    = models.CharField(max_length=255, blank=True)
+    contact_person_name   = models.CharField(max_length=255)
+    phone                 = models.CharField(max_length=50)
+    email                 = models.EmailField()
+    created_by            = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='created_leads')
+    created_at            = models.DateTimeField(auto_now_add=True)
+    updated_at            = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'Company Lead'
+        verbose_name_plural = 'Company Leads'
+
+    def __str__(self):
+        return f'{self.company_name} ({self.contact_person_name})'
+
+
+class CompanyRequest(models.Model):
+    company              = models.ForeignKey(CompanyLead, on_delete=models.CASCADE, related_name='requests')
+    staff_needed_count   = models.PositiveIntegerField(default=1)
+    role_title           = models.CharField(max_length=255)
+    salary_budget        = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    commission_structure = models.CharField(max_length=255, blank=True)
+    resumption_date      = models.DateField(null=True, blank=True)
+    job_description      = models.TextField(blank=True)
+    package_type         = models.CharField(max_length=50, choices=PackageType.choices, default=PackageType.RECRUITMENT_ONLY)
+    payment_status       = models.CharField(max_length=50, choices=RequestPaymentStatus.choices, default=RequestPaymentStatus.PENDING)
+    amount_paid          = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    operational_status   = models.CharField(max_length=50, choices=OperationalStatus.choices, default=OperationalStatus.NEW_REQUEST)
+    created_at           = models.DateTimeField(auto_now_add=True)
+    updated_at           = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'Company Request'
+        verbose_name_plural = 'Company Requests'
+
+    def __str__(self):
+        return f'Request #{self.id:03d}: {self.staff_needed_count}x {self.role_title} @ {self.company.company_name}'
+
+
+class ManagedStaff(models.Model):
+    assigned_company = models.ForeignKey(CompanyLead, on_delete=models.CASCADE, related_name='managed_staff')
+    request          = models.ForeignKey(CompanyRequest, on_delete=models.SET_NULL, null=True, blank=True, related_name='staff')
+    full_name        = models.CharField(max_length=255)
+    phone            = models.CharField(max_length=50)
+    email            = models.EmailField()
+    gross_salary     = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    bank_name        = models.CharField(max_length=100, blank=True)
+    account_number   = models.CharField(max_length=50, blank=True)
+    offer_letter_pdf = models.FileField(upload_to='offer_letters/', null=True, blank=True)
+    created_at       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'Managed Staff'
+        verbose_name_plural = 'Managed Staff Roster'
+
+    def __str__(self):
+        return f'{self.full_name} ({self.assigned_company.company_name})'
+
+    @property
+    def net_salary(self):
+        deductions = self.gross_salary * Decimal('0.10')
+        return self.gross_salary - deductions
+
+
+class PayrollRecord(models.Model):
+    month_year       = models.CharField(max_length=20)
+    company          = models.ForeignKey(CompanyLead, on_delete=models.CASCADE, related_name='payroll_records')
+    total_gross      = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    total_deductions = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    total_net        = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    created_at       = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'Payroll Record'
+        verbose_name_plural = 'Payroll Records'
+
+    def __str__(self):
+        return f'Payroll {self.month_year} — {self.company.company_name} (₦{self.total_net:,.2f})'
+
+
+class ExpenseRecord(models.Model):
+    expense_title = models.CharField(max_length=255)
+    category      = models.CharField(max_length=50, choices=ExpenseCategory.choices, default=ExpenseCategory.OPERATIONAL)
+    amount        = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    date_incurred = models.DateField()
+    notes         = models.TextField(blank=True)
+    receipt_proof = models.FileField(upload_to='receipts/', null=True, blank=True)
+    logged_by     = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='logged_expenses')
+    created_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering            = ['-created_at']
+        verbose_name        = 'Expense Record'
+        verbose_name_plural = 'Expense Records'
+
+    def __str__(self):
+        return f'[{self.category}] {self.expense_title} — ₦{self.amount:,.2f}'
+
 
 

@@ -465,8 +465,137 @@ class GoogleLoginView(APIView):
             return Response({'error': 'An unexpected error occurred during Google sign-in'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# ── Passwordless Login (Email OTP) ────────────────────────────────────────────
+
+class LoginOTPRequestView(APIView):
+    """
+    POST /api/auth/login-otp/request/
+    Step 1: Check if the email exists, generate a 6-digit OTP, send it.
+
+    Request body:  { "email": "user@example.com" }
+    Success (200): { "message": "Login code sent to your email." }
+    Failure (400): { "error": "No account found with this email address." }
+    """
+    permission_classes = []
+    authentication_classes = []
+    throttle_classes = [AuthEmailThrottle]  # 5 requests per IP per hour
+
+    def post(self, request):
+        email = (request.data.get('email') or '').strip().lower()
+        if not email:
+            return Response({'error': 'Email address is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            # Explicitly tell the user the email is not registered — this is a login, not sensitive
+            return Response(
+                {'error': 'No account found with this email address. Please check and try again.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Generate a secure 6-digit OTP
+        import random
+        otp_code = f"{random.SystemRandom().randint(0, 999999):06d}"
+
+        # Store on the user (expires in 30 minutes)
+        user.login_otp_code = otp_code
+        user.login_otp_expires_at = timezone.now() + timedelta(minutes=30)
+        user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
+
+        # Send the OTP email
+        try:
+            from .email_templates import get_login_otp_email_html, send_courier_email
+            display_name = user.get_full_name() or user.email
+            html_content = get_login_otp_email_html(user=display_name, otp_code=otp_code)
+            text_content = (
+                f"Hi {display_name},\n\n"
+                f"Your Quota Hire login code is: {otp_code}\n\n"
+                "This code expires in 30 minutes. Do not share it with anyone."
+            )
+            send_courier_email(
+                to_email=user.email,
+                subject="Your Login Code - Quota Hire",
+                text_content=text_content,
+                html_content=html_content,
+            )
+        except Exception as e:
+            logger.error("Login OTP email failed for %s: %s", user.email, e, exc_info=True)
+            # Clear the OTP so user can retry
+            user.login_otp_code = ''
+            user.login_otp_expires_at = None
+            user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
+            return Response(
+                {'error': 'Could not send the login code. Please try again in a moment.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        return Response({'message': 'Login code sent to your email.'}, status=status.HTTP_200_OK)
+
+
+class LoginOTPVerifyView(APIView):
+    """
+    POST /api/auth/login-otp/verify/
+    Step 2: Verify the OTP and return JWT tokens.
+
+    Request body:  { "email": "user@example.com", "otp_code": "123456" }
+    Success (200): { "access": "...", "refresh": "...", "user": { name, role, email } }
+    Failure (400): { "error": "Invalid or expired code. Please try again." }
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, request):
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        email = (request.data.get('email') or '').strip().lower()
+        otp_code = (request.data.get('otp_code') or '').strip()
+
+        if not email or not otp_code:
+            return Response({'error': 'Email and OTP code are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'Invalid or expired code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate OTP code
+        if not user.login_otp_code or user.login_otp_code != otp_code:
+            return Response({'error': 'Invalid or expired code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check expiry
+        if not user.login_otp_expires_at or timezone.now() > user.login_otp_expires_at:
+            # Clear expired OTP
+            user.login_otp_code = ''
+            user.login_otp_expires_at = None
+            user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
+            return Response({'error': 'This code has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ── Success: clear OTP and issue JWT tokens ────────────────────────────
+        user.login_otp_code = ''
+        user.login_otp_expires_at = None
+        # Also mark email as verified when they successfully log in via OTP
+        if not user.email_verified:
+            user.email_verified = True
+        user.save(update_fields=['login_otp_code', 'login_otp_expires_at', 'email_verified'])
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {
+                'id': str(user.id),
+                'email': user.email,
+                'role': user.role,
+                'name': user.get_full_name() or user.email,
+                'full_name': user.get_full_name() or user.email,
+            },
+        }, status=status.HTTP_200_OK)
+
 
 class MeView(generics.RetrieveUpdateAPIView):
+
     """GET/PUT /api/auth/me/ — get or update the currently logged-in user."""
     serializer_class   = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
