@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useScreenInit } from '../useScreenInit';
 import { ShaderAnimation } from '../components/ui/ShaderAnimation';
 
@@ -178,7 +179,7 @@ export const Privacy = () => {
 
             <h3>Delete Your Personal Data</h3>
             <p>You have the right to delete or request that We assist in deleting the Personal Data that We have collected about You.</p>
-            <p>You may update, amend, or delete Your information at any time by signing in to Your Account and visiting the account settings section. You may also contact Us to request access to, correct, or delete any Personal Data that You have provided to Us.</p>
+            <p>You may update, amend, or delete Your information at any time by signing in to Your Account and visiting the account settings section. Alternatively, you can submit an online request via our public <Link to="/delete-account" className="text-accent-600 dark:text-accent-400 font-semibold hover:underline">Account & Data Deletion Request Page</Link> or contact us directly at support@quotahire.com.</p>
             <p>Please note, however, that We may need to retain certain information when we have a legal obligation or lawful basis to do so.</p>
 
             <h3>Disclosure of Your Personal Data</h3>

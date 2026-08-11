@@ -41,6 +41,7 @@ const ApplicationTracker = React.lazy(() => import('./pages/employee/Application
 const SavedJobs = React.lazy(() => import('./pages/jobs/SavedJobs').then(m => ({ default: m.SavedJobs })));
 const Contact = React.lazy(() => import('./pages/Contact').then(m => ({ default: m.Contact })));
 const Privacy = React.lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })));
+const DeleteAccount = React.lazy(() => import('./pages/DeleteAccount').then(m => ({ default: m.DeleteAccount })));
 const CVGeneratorPage = React.lazy(() => import('./pages/employee/CVGeneratorPage').then(m => ({ default: m.CVGeneratorPage })));
 const Why = React.lazy(() => import('./pages/Why').then(m => ({ default: m.Why })));
 const Settings = React.lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
@@ -113,6 +114,7 @@ const AppRoutes = () => {
 
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
 
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />

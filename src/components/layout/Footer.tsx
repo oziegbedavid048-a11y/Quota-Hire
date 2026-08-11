@@ -44,6 +44,7 @@ const footerLinks: FooterSection[] = [
 			{ title: 'Why Quotahire', href: '/why' },
 			{ title: 'Contact', href: '/contact' },
 			{ title: 'Privacy Policy', href: '/privacy' },
+			{ title: 'Delete Account', href: '/delete-account' },
 		],
 	},
 
