@@ -202,6 +202,7 @@ export default function CompanyProfile() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Profile updated successfully.");
+      DeviceEventEmitter.emit("USER_PROFILE_UPDATED");
       fetchProfile();
     } catch (err: any) {
       Alert.alert(

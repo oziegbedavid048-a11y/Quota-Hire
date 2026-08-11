@@ -63,20 +63,21 @@ const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 
 // ─── Standard template HTML compiler ──────────────────────────────────────────
 const compileStandardHTML = (profile: any, data: any) => {
-  const name = profile?.name || 'Applicant';
+  const name = data.name || profile?.name || 'Applicant';
   const email = data.email || profile?.email || '';
   const phone = data.phone || profile?.employee_profile?.phone_number || profile?.phone_number || profile?.phone || '';
-  const location = profile?.location || '';
-  const linkedin = data.linkedinUrl || profile?.employee_profile?.linkedin_url || profile?.linkedinUrl || '';
+  const location = data.location || profile?.location || '';
+  const linkedin = data.linkedin || data.linkedinUrl || profile?.employee_profile?.linkedin_url || profile?.linkedinUrl || '';
+  const headerBg = data.themeColor || '#1B4F8A';
   
   const bulletsForDuties = (duties: string) => {
-    return duties.split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 3);
+    return (duties || '').split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 3);
   };
 
-  const skillsList = data.skills ? data.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-  const certList = data.certifications ? data.certifications.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-  const langList = data.languages ? data.languages.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-  const strengthList = data.strengths ? data.strengths.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+  const skillsList = data.skills ? (typeof data.skills === 'string' ? data.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : data.skills) : [];
+  const certList = data.certifications ? (typeof data.certifications === 'string' ? data.certifications.split(',').map((s: string) => s.trim()).filter(Boolean) : data.certifications) : [];
+  const langList = data.languages ? (typeof data.languages === 'string' ? data.languages.split(',').map((s: string) => s.trim()).filter(Boolean) : data.languages) : [];
+  const strengthList = data.strengths ? (typeof data.strengths === 'string' ? data.strengths.split(',').map((s: string) => s.trim()).filter(Boolean) : data.strengths) : [];
 
   return `
     <!DOCTYPE html>
@@ -84,34 +85,31 @@ const compileStandardHTML = (profile: any, data: any) => {
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1f2937; margin: 0; padding: 40px; line-height: 1.5; font-size: 13px; }
-        .header { background-color: #1B4F8A; padding: 30px; color: #ffffff; position: relative; border-radius: 8px 8px 0 0; }
-        .hd-name { font-size: 28px; font-weight: bold; margin: 0; }
-        .hd-role { font-size: 14px; color: #bfdbfe; margin-top: 5px; font-weight: bold; }
-        .hd-contact { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; font-size: 11px; color: #bfdbfe; }
-        .content { padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
-        .sec-header { background-color: #1B4F8A; padding: 6px 12px; margin-top: 20px; margin-bottom: 12px; border-radius: 4px; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1f2937; margin: 0; padding: 20px; line-height: 1.5; font-size: 13px; }
+        .header { background-color: ${headerBg}; padding: 25px; color: #ffffff; position: relative; border-radius: 8px 8px 0 0; }
+        .hd-name { font-size: 24px; font-weight: bold; margin: 0; }
+        .hd-role { font-size: 13px; color: #bfdbfe; margin-top: 4px; font-weight: bold; }
+        .hd-contact { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; font-size: 11px; color: #bfdbfe; }
+        .content { padding: 20px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+        .sec-header { background-color: ${headerBg}; padding: 5px 10px; margin-top: 16px; margin-bottom: 10px; border-radius: 4px; }
         .sec-title { font-size: 11px; font-weight: bold; color: #ffffff; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
-        .summary-txt { font-size: 12px; color: #374151; line-height: 1.6; }
-        .job-block { margin-bottom: 15px; }
-        .job-head { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; color: #111827; }
-        .job-co { font-size: 12px; color: #2563eb; margin: 3px 0 6px 0; font-weight: 600; }
-        .job-date { font-size: 11px; color: #9ca3af; font-weight: normal; }
-        .bullet-list { margin: 5px 0 0 15px; padding: 0; }
-        .bullet-item { font-size: 12px; color: #374151; margin-bottom: 4px; }
-        .two-col { display: flex; gap: 30px; }
+        .summary-txt { font-size: 12px; color: #374151; line-height: 1.5; }
+        .job-block { margin-bottom: 12px; }
+        .job-head { display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; color: #111827; }
+        .job-co { font-size: 11px; color: #2563eb; margin: 2px 0 4px 0; font-weight: 600; }
+        .bullet-list { margin: 4px 0 0 14px; padding: 0; }
+        .bullet-item { font-size: 11px; color: #374151; margin-bottom: 3px; }
+        .two-col { display: flex; gap: 20px; }
         .col { flex: 1; }
-        .col-title { font-size: 12px; font-weight: bold; color: #1B4F8A; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-        .list-item { font-size: 12px; color: #374151; margin-bottom: 4px; }
-        .ach-block { background-color: #f0f4ff; border-left: 4px solid #1B4F8A; padding: 12px; margin-top: 5px; border-radius: 0 4px 4px 0; }
-        .ach-txt { font-size: 12px; color: #374151; line-height: 1.5; margin: 0; }
-        .ref-text { font-size: 11px; color: #9ca3af; font-style: italic; }
+        .col-title { font-size: 11px; font-weight: bold; color: ${headerBg}; margin-bottom: 6px; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
+        .list-item { font-size: 11px; color: #374151; margin-bottom: 3px; }
+        .ref-text { font-size: 10px; color: #9ca3af; font-style: italic; }
       </style>
     </head>
     <body>
       <div class="header">
         <div class="hd-name">${name}</div>
-        <div class="hd-role">${data.headline}</div>
+        <div class="hd-role">${data.headline || 'Professional'}</div>
         <div class="hd-contact">
           ${email ? `<span>✉ ${email}</span>` : ''}
           ${phone ? `<span>☎ ${phone}</span>` : ''}
@@ -122,7 +120,7 @@ const compileStandardHTML = (profile: any, data: any) => {
       <div class="content">
         <div class="sec-header"><h3 class="sec-title">Professional Summary</h3></div>
         <div class="summary-txt">
-          ${data.summary || `${data.headline} with expertise in key sales methodologies. Committed to driving execution, outbound pipelines, and delivering customer success.`}
+          ${data.summary || `${data.headline || 'Professional'} with expertise in key domain methodologies. Committed to driving execution, outbound pipelines, and delivering customer success.`}
         </div>
 
         ${data.workEntries && data.workEntries.length > 0 ? `
@@ -131,7 +129,7 @@ const compileStandardHTML = (profile: any, data: any) => {
             <div class="job-block">
               <div class="job-head">
                 <span>${exp.role}</span>
-                <span class="job-date">${exp.period}</span>
+                <span style="font-size:10px; color:#6b7280;">${exp.period}</span>
               </div>
               <div class="job-co">${exp.company}</div>
               <ul class="bullet-list">
@@ -148,7 +146,7 @@ const compileStandardHTML = (profile: any, data: any) => {
             ${skillsList.map((sk: string) => `<div class="list-item">• ${sk}</div>`).join('')}
 
             ${certList.length > 0 ? `
-              <div class="col-title" style="margin-top: 15px;">Certifications</div>
+              <div class="col-title" style="margin-top: 12px;">Certifications</div>
               ${certList.map((c: string) => `<div class="list-item">• ${c}</div>`).join('')}
             ` : ''}
           </div>
@@ -159,7 +157,7 @@ const compileStandardHTML = (profile: any, data: any) => {
             ` : ''}
 
             ${strengthList.length > 0 ? `
-              <div class="col-title" style="margin-top: 15px;">Strengths</div>
+              <div class="col-title" style="margin-top: 12px;">Strengths</div>
               ${strengthList.map((s: string) => `<div class="list-item">• ${s}</div>`).join('')}
             ` : ''}
           </div>
@@ -390,6 +388,191 @@ const compileEuropassHTML = (profile: any, data: any) => {
   `;
 };
 
+const compileVividSidebarHTML = (profile: any, data: any) => {
+  const name = data.name || (data.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : '') || profile?.name || 'Applicant';
+  const headline = data.headline || data.target_role || profile?.title || 'Professional';
+  const email = data.email || profile?.email || '';
+  const phone = data.phone || profile?.employee_profile?.phone_number || profile?.phone_number || profile?.phone || '';
+  const location = data.location || data.address || profile?.location || '';
+  const linkedin = data.linkedin || data.linkedinUrl || profile?.employee_profile?.linkedin_url || profile?.linkedinUrl || '';
+
+  const skillsList = data.skills ? (typeof data.skills === 'string' ? data.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : data.skills) : (profile?.skills || []);
+  const certList = data.certifications ? (typeof data.certifications === 'string' ? data.certifications.split(',').map((s: string) => s.trim()).filter(Boolean) : data.certifications) : [];
+  const langList = data.languages ? (typeof data.languages === 'string' ? data.languages.split(',').map((s: string) => s.trim()).filter(Boolean) : data.languages) : [];
+
+  const bulletsForDuties = (duties: string) => {
+    return (duties || '').split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 3);
+  };
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; font-size: 12px; display: flex; min-height: 100vh; }
+        .sidebar { width: 34%; background: #4f46e5; color: #ffffff; padding: 25px 15px; box-sizing: border-box; }
+        .main { width: 66%; background: #ffffff; padding: 25px 20px; box-sizing: border-box; }
+        .sb-name { font-size: 20px; font-weight: bold; color: #ffffff; margin-bottom: 4px; }
+        .sb-role { font-size: 12px; color: #c7d2fe; font-weight: bold; margin-bottom: 20px; }
+        .sb-title { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #a5b4fc; border-bottom: 1px solid #6366f1; padding-bottom: 3px; margin-top: 16px; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .sb-text { font-size: 10px; color: #e0e7ff; margin-bottom: 5px; word-break: break-word; }
+        .main-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #4f46e5; border-bottom: 2px solid #e0e7ff; padding-bottom: 3px; margin-top: 16px; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .summary-txt { font-size: 11px; color: #334155; line-height: 1.5; margin-bottom: 12px; }
+        .job-block { margin-bottom: 12px; }
+        .job-head { font-size: 11px; font-weight: bold; color: #0f172a; display: flex; justify-content: space-between; }
+        .job-co { font-size: 10px; color: #4f46e5; font-weight: bold; margin: 2px 0 4px 0; }
+        .bullet-list { margin: 4px 0 0 12px; padding: 0; }
+        .bullet-item { font-size: 10px; color: #475569; margin-bottom: 2px; }
+      </style>
+    </head>
+    <body>
+      <div class="sidebar">
+        <div class="sb-name">${name}</div>
+        <div class="sb-role">${headline}</div>
+        
+        <div class="sb-title">Contact Information</div>
+        ${email ? `<div class="sb-text">✉ ${email}</div>` : ''}
+        ${phone ? `<div class="sb-text">☎ ${phone}</div>` : ''}
+        ${location ? `<div class="sb-text">📍 ${location}</div>` : ''}
+        ${linkedin ? `<div class="sb-text">in ${linkedin}</div>` : ''}
+
+        ${skillsList.length > 0 ? `
+          <div class="sb-title">Core Skills</div>
+          ${skillsList.map((s: string) => `<div class="sb-text">• ${s}</div>`).join('')}
+        ` : ''}
+
+        ${certList.length > 0 ? `
+          <div class="sb-title">Certifications</div>
+          ${certList.map((c: string) => `<div class="sb-text">• ${c}</div>`).join('')}
+        ` : ''}
+
+        ${langList.length > 0 ? `
+          <div class="sb-title">Languages</div>
+          ${langList.map((l: string) => `<div class="sb-text">• ${l}</div>`).join('')}
+        ` : ''}
+      </div>
+      <div class="main">
+        <div class="main-title">Professional Profile</div>
+        <div class="summary-txt">
+          ${data.summary || `${headline} with high track record of delivering revenue growth, client satisfaction, and strategy execution.`}
+        </div>
+
+        ${data.workEntries && data.workEntries.length > 0 ? `
+          <div class="main-title">Work Experience</div>
+          ${data.workEntries.map((exp: any) => `
+            <div class="job-block">
+              <div class="job-head">
+                <span>${exp.role}</span>
+                <span style="color: #64748b; font-size: 9px; font-weight: normal;">${exp.period}</span>
+              </div>
+              <div class="job-co">${exp.company}</div>
+              <ul class="bullet-list">
+                ${bulletsForDuties(exp.duties).map(b => `<li class="bullet-item">${b}</li>`).join('')}
+              </ul>
+            </div>
+          `).join('')}
+        ` : ''}
+
+        ${data.education ? `
+          <div class="main-title">Education</div>
+          <div class="summary-txt">${data.education}</div>
+        ` : ''}
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+const compileMinimalistHTML = (profile: any, data: any) => {
+  const name = data.name || (data.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : '') || profile?.name || 'Applicant';
+  const headline = data.headline || data.target_role || profile?.title || 'Professional';
+  const email = data.email || profile?.email || '';
+  const phone = data.phone || profile?.employee_profile?.phone_number || profile?.phone_number || profile?.phone || '';
+  const location = data.location || data.address || profile?.location || '';
+  const linkedin = data.linkedin || data.linkedinUrl || profile?.employee_profile?.linkedin_url || profile?.linkedinUrl || '';
+
+  const skillsList = data.skills ? (typeof data.skills === 'string' ? data.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : data.skills) : (profile?.skills || []);
+
+  const bulletsForDuties = (duties: string) => {
+    return (duties || '').split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 3);
+  };
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #111827; margin: 0; padding: 30px; font-size: 12px; line-height: 1.5; }
+        .hdr { text-align: center; border-bottom: 2px solid #10b981; padding-bottom: 14px; margin-bottom: 18px; }
+        .name { font-size: 24px; font-weight: bold; color: #111827; letter-spacing: -0.5px; }
+        .role { font-size: 12px; font-weight: bold; color: #10b981; margin-top: 3px; }
+        .meta { display: flex; justify-content: center; gap: 12px; font-size: 10px; color: #6b7280; margin-top: 6px; }
+        .sec-h { font-size: 10px; font-weight: bold; color: #10b981; text-transform: uppercase; letter-spacing: 1px; margin-top: 16px; margin-bottom: 6px; }
+        .job-b { margin-bottom: 10px; }
+        .job-h { display: flex; justify-content: space-between; font-weight: bold; font-size: 11px; }
+        .job-c { font-size: 10px; color: #059669; font-weight: 600; margin: 2px 0 3px 0; }
+        .bullets { margin: 3px 0 0 12px; padding: 0; }
+        .b-item { font-size: 10px; color: #374151; margin-bottom: 2px; }
+        .sk-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+        .sk-chip { background: #ecfdf5; color: #047857; font-size: 9px; font-weight: bold; padding: 3px 7px; border-radius: 4px; border: 1px solid #a7f3d0; }
+      </style>
+    </head>
+    <body>
+      <div class="hdr">
+        <div class="name">${name}</div>
+        <div class="role">${headline}</div>
+        <div class="meta">
+          ${email ? `<span>✉ ${email}</span>` : ''}
+          ${phone ? `<span>☎ ${phone}</span>` : ''}
+          ${location ? `<span>📍 ${location}</span>` : ''}
+          ${linkedin ? `<span>in ${linkedin}</span>` : ''}
+        </div>
+      </div>
+
+      <div class="sec-h">Professional Summary</div>
+      <div style="font-size: 11px; color: #374151; line-height: 1.5;">
+        ${data.summary || `${headline} dedicated to operational excellence, client management, and strategic execution.`}
+      </div>
+
+      ${data.workEntries && data.workEntries.length > 0 ? `
+        <div class="sec-h">Work History</div>
+        ${data.workEntries.map((exp: any) => `
+          <div class="job-b">
+            <div class="job-h"><span>${exp.role}</span><span style="color: #9ca3af; font-weight: normal; font-size: 9px;">${exp.period}</span></div>
+            <div class="job-c">${exp.company}</div>
+            <ul class="bullets">
+              ${bulletsForDuties(exp.duties).map(b => `<li class="b-item">${b}</li>`).join('')}
+            </ul>
+          </div>
+        `).join('')}
+      ` : ''}
+
+      ${skillsList.length > 0 ? `
+        <div class="sec-h">Core Competencies & Skills</div>
+        <div class="sk-row">
+          ${skillsList.map((sk: string) => `<span class="sk-chip">${sk}</span>`).join('')}
+        </div>
+      ` : ''}
+
+      ${data.education ? `
+        <div class="sec-h">Education</div>
+        <div style="font-size: 11px; color: #374151;">${data.education}</div>
+      ` : ''}
+    </body>
+    </html>
+  `;
+};
+
+const compileDarkGreenHTML = (profile: any, data: any) => {
+  return compileStandardHTML(profile, { ...data, themeColor: '#1A3C2A' });
+};
+
+const compileCrimsonHTML = (profile: any, data: any) => {
+  return compileStandardHTML(profile, { ...data, themeColor: '#8B1A1A' });
+};
+
 const buildCoverLetterText = (
   profile: any,
   headline: string,
@@ -434,6 +617,15 @@ const buildCoverLetterText = (
   return [p1, p2, p3, p4].join('\n\n');
 };
 
+const TEMPLATES = [
+  { id: 'steelblue',  name: 'Steel Blue Banner', color: '#1B4F8A' },
+  { id: 'europass',   name: 'Europass Classic',  color: '#003399' },
+  { id: 'vivid',      name: 'Vivid Sidebar',     color: '#6366F1' },
+  { id: 'minimalist', name: 'Minimalist White',  color: '#10B981' },
+  { id: 'darkgreen',  name: 'Dark Green Pro',    color: '#1A3C2A' },
+  { id: 'crimson',    name: 'Crimson Banner',    color: '#8B1A1A' },
+];
+
 export default function CVWizardModal({ visible, onClose, templateType, onSuccess, prefilledHeadline, job }: CVWizardModalProps) {
   const colors = Colors.light;
 
@@ -442,7 +634,10 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [profile, setProfile] = useState<any>(null);
 
   const isEuropass = templateType === 'europass';
-  const totalSteps = isEuropass ? (job ? 6 : 5) : (job ? 4 : 3);
+  const totalSteps = isEuropass ? (job ? 7 : 6) : (job ? 5 : 4);
+
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(isEuropass ? 'europass' : 'steelblue');
+  const [selectedTemplateName, setSelectedTemplateName] = useState<string>(isEuropass ? 'Europass Classic' : 'Steel Blue Banner');
 
   // ── Form State ──────────────────────────────────────────────────────────────
   // Common / Standard States
@@ -478,17 +673,30 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [otherCompetencies, setOtherCompetencies] = useState('');
   const [drivingLicence, setDrivingLicence] = useState('');
   const [hobbies, setHobbies] = useState('');
+
   const getCompiledHTML = () => {
-    if (isEuropass) {
-      return compileEuropassHTML(profile, {
-        firstName, lastName, dateOfBirth, nationality, address, phone, email, linkedinUrl, website, summary,
-        workEntries, eduEntries, motherTongue, foreignLanguages, digitalSkills,
-        communicationCompetencies, organisationalCompetencies, jobRelatedCompetencies, otherCompetencies, drivingLicence, certifications, hobbies
-      });
-    } else {
-      return compileStandardHTML(profile, {
-        headline, education, skills, languages, certifications, strengths, workEntries
-      });
+    const data = isEuropass ? {
+      firstName, lastName, dateOfBirth, nationality, address, phone, email, linkedinUrl, website, summary,
+      workEntries, eduEntries, motherTongue, foreignLanguages, digitalSkills,
+      communicationCompetencies, organisationalCompetencies, jobRelatedCompetencies, otherCompetencies, drivingLicence, certifications, hobbies
+    } : {
+      headline, education, skills, languages, certifications, strengths, workEntries, summary
+    };
+
+    switch (selectedTemplateId) {
+      case 'europass':
+        return compileEuropassHTML(profile, data);
+      case 'vivid':
+        return compileVividSidebarHTML(profile, data);
+      case 'minimalist':
+        return compileMinimalistHTML(profile, data);
+      case 'darkgreen':
+        return compileDarkGreenHTML(profile, data);
+      case 'crimson':
+        return compileCrimsonHTML(profile, data);
+      case 'steelblue':
+      default:
+        return compileStandardHTML(profile, data);
     }
   };
 
@@ -667,38 +875,22 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const generateAndSaveCV = async () => {
     setLoading(true);
     try {
-      let htmlContent = '';
-      if (isEuropass) {
-        htmlContent = compileEuropassHTML(profile, {
-          firstName, lastName, dateOfBirth, nationality, address, phone, email, linkedinUrl, website, summary,
-          workEntries, eduEntries, motherTongue, foreignLanguages, digitalSkills,
-          communicationCompetencies, organisationalCompetencies, jobRelatedCompetencies, otherCompetencies, drivingLicence, certifications, hobbies
-        });
-      } else {
-        htmlContent = compileStandardHTML(profile, {
-          headline, education, skills, languages, certifications, strengths, workEntries
-        });
-      }
+      const htmlContent = getCompiledHTML();
 
-      // Generate PDF locally on device
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      // Generate PDF locally on device with base64: true directly from native engine
+      const printResult = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: true,
+      });
 
-      // Read PDF file contents as Base64 (direct read first to avoid Android Print cache locks)
-      let base64Pdf = '';
-      try {
-        base64Pdf = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-      } catch (_readErr) {
-        const tempUri = `${FileSystem.documentDirectory}temp_cv_${Date.now()}.pdf`;
+      let base64Pdf = printResult.base64 || '';
+      if (!base64Pdf && printResult.uri) {
         try {
-          await FileSystem.copyAsync({ from: uri, to: tempUri });
-          base64Pdf = await FileSystem.readAsStringAsync(tempUri, {
+          base64Pdf = await FileSystem.readAsStringAsync(printResult.uri, {
             encoding: FileSystem.EncodingType.Base64,
           });
-          await FileSystem.deleteAsync(tempUri, { idempotent: true });
-        } catch (_copyErr) {
-          console.warn('[CV Wizard] Base64 conversion fallback failed:', _copyErr);
+        } catch (_readErr) {
+          console.warn('[CV Wizard] Base64 conversion fallback warning:', _readErr);
         }
       }
 
@@ -706,8 +898,8 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
       await apiFetch('/cv/save/', {
         method: 'POST',
         body: JSON.stringify({
-          template_id: isEuropass ? 'EU1' : 'T14',
-          template_name: isEuropass ? 'Europass Template' : 'Steel Blue Banner',
+          template_id: selectedTemplateId,
+          template_name: selectedTemplateName,
           target_role: isEuropass ? (headline || 'Europe CV') : headline,
           target_company: job?.companyName || '',
           cv_pdf_base64: base64Pdf,
@@ -919,42 +1111,6 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           placeholder="e.g. HubSpot Sales, AWS Practitioner"
                           placeholderTextColor={colors.textMuted}
                           style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
-                    </Animated.View>
-                  )}
-
-                  {step === 4 && job && (
-                    <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
-                      <Text style={[s.sectionTitle, { color: colors.text, marginBottom: 4 }]}>Final Application Review</Text>
-                      
-                      {/* CV Design Preview */}
-                      <View style={{ marginBottom: 12 }}>
-                        <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>Tailored CV Design Preview</Text>
-                        <View style={[s.previewContainer, { borderColor: colors.border, backgroundColor: '#fff' }]}>
-                          <WebView
-                            originWhitelist={['*']}
-                            source={{ html: getCompiledHTML() }}
-                            style={{ flex: 1 }}
-                            scalesPageToFit={true}
-                          />
-                          {/* Absolute overlay to intercept touches and prevent clicking/scrolling */}
-                          <View style={StyleSheet.absoluteFill} onStartShouldSetResponder={() => true} />
-                        </View>
-                      </View>
-
-                      {/* Cover Letter Section */}
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Generated Cover Letter</Text>
-                        <Text style={[s.sectionSub, { color: colors.textSecondary, marginBottom: 8 }]}>
-                          Tailored for the {job.title} position at {job.companyName || 'your organisation'}. Customize it below.
-                        </Text>
-                        <TextInput
-                          value={coverLetter}
-                          onChangeText={setCoverLetter}
-                          multiline
-                          numberOfLines={10}
-                          style={[s.textArea, { borderColor: colors.border, color: colors.text, height: 220 }]}
                         />
                       </View>
                     </Animated.View>
@@ -1364,43 +1520,86 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                       </View>
                     </Animated.View>
                   )}
-
-                  {step === 6 && job && (
-                    <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
-                      <Text style={[s.sectionTitle, { color: colors.text, marginBottom: 4 }]}>Final Application Review</Text>
-                      
-                      {/* CV Design Preview */}
-                      <View style={{ marginBottom: 12 }}>
-                        <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>Tailored CV Design Preview</Text>
-                        <View style={[s.previewContainer, { borderColor: colors.border, backgroundColor: '#fff' }]}>
-                          <WebView
-                            originWhitelist={['*']}
-                            source={{ html: getCompiledHTML() }}
-                            style={{ flex: 1 }}
-                            scalesPageToFit={true}
-                          />
-                          {/* Absolute overlay to intercept touches and prevent clicking/scrolling */}
-                          <View style={StyleSheet.absoluteFill} onStartShouldSetResponder={() => true} />
-                        </View>
-                      </View>
-
-                      {/* Cover Letter Section */}
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Generated Cover Letter</Text>
-                        <Text style={[s.sectionSub, { color: colors.textSecondary, marginBottom: 8 }]}>
-                          Tailored for the {job.title} position at {job.companyName || 'your organisation'}. Customize it below.
-                        </Text>
-                        <TextInput
-                          value={coverLetter}
-                          onChangeText={setCoverLetter}
-                          multiline
-                          numberOfLines={10}
-                          style={[s.textArea, { borderColor: colors.border, color: colors.text, height: 220 }]}
-                        />
-                      </View>
-                    </Animated.View>
-                  )}
                 </>
+              )}
+
+              {/* ── COMMON PREVIEW & TEMPLATE SELECTION STEP (FOR ALL FLOWS) ── */}
+              {step === totalSteps && (
+                <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
+                  <Text style={[s.sectionTitle, { color: colors.text, marginBottom: 4 }]}>
+                    {job ? 'Final Application Review' : 'Preview & Save CV'}
+                  </Text>
+                  
+                  {/* Cover Letter Section for Job Applications */}
+                  {job && (
+                    <View style={s.inputRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Feather name="file-text" size={15} color={Palette.accent600} />
+                        <Text style={[s.label, { color: colors.text, fontSize: 13 }]}>Tailored Letterhead Cover Letter</Text>
+                      </View>
+                      <Text style={[s.sectionSub, { color: colors.textSecondary, marginBottom: 8 }]}>
+                        Generated cover letter for the position at {job.companyName || 'the target organisation'}. Customize it below:
+                      </Text>
+                      <TextInput
+                        value={coverLetter}
+                        onChangeText={setCoverLetter}
+                        multiline
+                        numberOfLines={7}
+                        style={[s.textArea, { borderColor: colors.border, color: colors.text, height: 160 }]}
+                      />
+                    </View>
+                  )}
+
+                  {/* Template Switcher Bar */}
+                  <View style={{ marginTop: 4, marginBottom: 6 }}>
+                    <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>
+                      Change CV Design Template
+                    </Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                      {TEMPLATES.map((tmpl) => {
+                        const isSelected = selectedTemplateId === tmpl.id;
+                        return (
+                          <Pressable
+                            key={tmpl.id}
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                              setSelectedTemplateId(tmpl.id);
+                              setSelectedTemplateName(tmpl.name);
+                            }}
+                            style={[
+                              s.templatePill,
+                              { borderColor: tmpl.color },
+                              isSelected && { backgroundColor: tmpl.color }
+                            ]}
+                          >
+                            <View style={[s.templateDot, { backgroundColor: isSelected ? '#ffffff' : tmpl.color }]} />
+                            <Text style={[s.templatePillText, { color: isSelected ? '#ffffff' : tmpl.color }]}>
+                              {tmpl.name}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+
+                  {/* Tailored CV Preview */}
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>
+                      Tailored CV Preview ({selectedTemplateName})
+                    </Text>
+                    <View style={[s.previewContainer, { borderColor: colors.border, backgroundColor: '#fff', height: 290 }]}>
+                      <WebView
+                        key={selectedTemplateId}
+                        originWhitelist={['*']}
+                        source={{ html: getCompiledHTML() }}
+                        style={{ flex: 1 }}
+                        scalesPageToFit={true}
+                      />
+                      {/* Absolute overlay to intercept touches and prevent clicking/scrolling */}
+                      <View style={StyleSheet.absoluteFill} onStartShouldSetResponder={() => true} />
+                    </View>
+                  </View>
+                </Animated.View>
               )}
 
               {/* Action Buttons */}
@@ -1422,7 +1621,9 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                   {loading ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={s.nextBtnText}>{step === totalSteps ? 'Generate & Save' : 'Continue'}</Text>
+                    <Text style={s.nextBtnText}>
+                      {step === totalSteps ? (job ? 'Save CV & Apply' : 'Save CV to Profile') : 'Continue'}
+                    </Text>
                   )}
                 </Pressable>
               </View>
@@ -1487,6 +1688,25 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     marginBottom: 4,
+  },
+  templatePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    gap: 6,
+    backgroundColor: '#f8fafc',
+  },
+  templateDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  templatePillText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
   titleRow: {
     flexDirection: 'row',

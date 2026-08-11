@@ -467,6 +467,20 @@ class GoogleLoginView(APIView):
 
 # ── Passwordless Login (Email OTP) ────────────────────────────────────────────
 
+REVIEWER_EMAILS = {
+    'reviewer@quotahire.com',
+    'playstore@quotahire.com',
+    'demo@quotahire.com',
+    'playstore-reviewer@quotahire.com',
+    'google-reviewer@quotahire.com',
+    'test@quotahire.com'
+}
+
+def is_reviewer_email(email: str) -> bool:
+    email = (email or '').strip().lower()
+    return email in REVIEWER_EMAILS or email.startswith('reviewer') or email.startswith('playstore') or email.startswith('google-reviewer')
+
+
 class LoginOTPRequestView(APIView):
     """
     POST /api/auth/login-otp/request/
@@ -484,6 +498,22 @@ class LoginOTPRequestView(APIView):
         email = (request.data.get('email') or '').strip().lower()
         if not email:
             return Response({'error': 'Email address is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Handle Play Store / App Store reviewer bypass accounts automatically
+        if is_reviewer_email(email):
+            user, _ = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username': email.replace('@', '_at_').replace('.', '_'),
+                    'role': 'employee',
+                    'setup_completed': True,
+                    'email_verified': True
+                }
+            )
+            user.login_otp_code = '123456'
+            user.login_otp_expires_at = timezone.now() + timedelta(days=365)
+            user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
+            return Response({'message': 'Login code sent to your email.'}, status=status.HTTP_200_OK)
 
         try:
             user = CustomUser.objects.get(email=email)
@@ -554,22 +584,36 @@ class LoginOTPVerifyView(APIView):
         if not email or not otp_code:
             return Response({'error': 'Email and OTP code are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            user = CustomUser.objects.get(email=email)
-        except CustomUser.DoesNotExist:
-            return Response({'error': 'Invalid or expired code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Reviewer bypass check (Allows 123456 for reviewer accounts)
+        is_reviewer_bypass = is_reviewer_email(email) and otp_code == '123456'
 
-        # Validate OTP code
-        if not user.login_otp_code or user.login_otp_code != otp_code:
-            return Response({'error': 'Invalid or expired code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+        if is_reviewer_bypass:
+            user, _ = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={
+                    'username': email.replace('@', '_at_').replace('.', '_'),
+                    'role': 'employee',
+                    'setup_completed': True,
+                    'email_verified': True
+                }
+            )
+        else:
+            try:
+                user = CustomUser.objects.get(email=email)
+            except CustomUser.DoesNotExist:
+                return Response({'error': 'Invalid or expired code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check expiry
-        if not user.login_otp_expires_at or timezone.now() > user.login_otp_expires_at:
-            # Clear expired OTP
-            user.login_otp_code = ''
-            user.login_otp_expires_at = None
-            user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
-            return Response({'error': 'This code has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+            # Validate OTP code
+            if not user.login_otp_code or user.login_otp_code != otp_code:
+                return Response({'error': 'Invalid or expired code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check expiry
+            if not user.login_otp_expires_at or timezone.now() > user.login_otp_expires_at:
+                # Clear expired OTP
+                user.login_otp_code = ''
+                user.login_otp_expires_at = None
+                user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
+                return Response({'error': 'This code has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # ── Success: clear OTP and issue JWT tokens ────────────────────────────
         user.login_otp_code = ''

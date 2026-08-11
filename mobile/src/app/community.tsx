@@ -588,10 +588,10 @@ export default function CommunityScreen() {
       {/* Feed */}
       <FlatList
         data={feed}
-        keyExtractor={(item, index) =>
-          `${(item as any).type}-${(item as any).id}`
+        keyExtractor={(item: any, index: number) =>
+          `${item.type}-${item.id}`
         }
-        renderItem={({ item, index }) => {
+        renderItem={({ item, index }: { item: any; index: number }) => {
           return renderFeedItem({ item: item as CommunityFeedItem, index });
         }}
         ListHeaderComponent={
@@ -618,6 +618,23 @@ export default function CommunityScreen() {
                   <Text style={styles.heroCoverSub}>
                     Connect, share insights & grow with top sales professionals
                   </Text>
+                  <TouchableOpacity
+                    onPress={() => setPostModalVisible(true)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: Palette.accent600,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      marginTop: 10,
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="edit-3" size={13} color="#fff" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>Share a Post</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </Animated.View>
@@ -678,49 +695,7 @@ export default function CommunityScreen() {
         ) : null}
       />
 
-      {/* FAB overlay dim */}
-      <Animated.View style={[StyleSheet.absoluteFill, styles.fabOverlay, overlayStyle]} pointerEvents={fabOpen ? 'auto' : 'none'}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={closeFab} />
-      </Animated.View>
 
-      {/* FAB container */}
-      <View style={styles.fabContainer} pointerEvents="box-none">
-        {/* Sub-buttons only rendered when FAB is open — avoids invisible-but-blocking issue */}
-        {fabOpen && (
-          <>
-            {/* Sub button 2: Poll */}
-            <Animated.View entering={FadeInDown.duration(120)} style={[styles.subFabWrapper, { bottom: 80 }]}>
-              <TouchableOpacity
-                onPress={() => openModal('poll')}
-                style={[styles.subFab, { backgroundColor: Palette.warm500 }]}
-                activeOpacity={0.85}
-              >
-                <Feather name="bar-chart-2" size={18} color="#fff" />
-                <Text style={styles.subFabLabel}>Poll</Text>
-              </TouchableOpacity>
-            </Animated.View>
-
-            {/* Sub button 1: Post */}
-            <Animated.View entering={FadeInDown.duration(80)} style={[styles.subFabWrapper, { bottom: 148 }]}>
-              <TouchableOpacity
-                onPress={() => openModal('post')}
-                style={[styles.subFab, { backgroundColor: Palette.accent500 }]}
-                activeOpacity={0.85}
-              >
-                <Feather name="edit-3" size={18} color="#fff" />
-                <Text style={styles.subFabLabel}>Post</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </>
-        )}
-
-        {/* Main + FAB */}
-        <TouchableOpacity onPress={toggleFab} style={styles.mainFab} activeOpacity={0.85}>
-          <Animated.View style={fabIconStyle}>
-            <Feather name="plus" size={26} color="#fff" />
-          </Animated.View>
-        </TouchableOpacity>
-      </View>
 
       {/* ── 3-DOT POST SETTINGS MENU (author only) ── */}
       <Modal visible={postMenuVisible} transparent animationType="fade" onRequestClose={() => setPostMenuVisible(false)}>
@@ -994,7 +969,7 @@ export default function CommunityScreen() {
                   placeholder={`Choice ${i + 1}`}
                   placeholderTextColor={Palette.neutral400}
                   value={choice}
-                  onChangeText={(text) => {
+                  onChangeText={(text: string) => {
                     const next = [...pollChoices];
                     next[i] = text;
                     setPollChoices(next);

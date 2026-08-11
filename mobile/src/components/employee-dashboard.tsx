@@ -46,15 +46,6 @@ import {
   FontSize, FontWeight, Spacing, TabBarHeight,
 } from '@/constants/theme';
 import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
-let GlassView: any = View;
-try {
-  const GlassModule = require('expo-glass-effect');
-  if (GlassModule && GlassModule.GlassView) {
-    GlassView = GlassModule.GlassView;
-  }
-} catch (_e) {
-  GlassView = View;
-}
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const H_PAD = 16;

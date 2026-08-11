@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quota Hire — Play Store Mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gd:#15750a;--gm:#116108;--gl:#72dd15;--g50:#f4fbf2;
+  --w50:#fffbeb;--w500:#f59e0b;--w600:#d97706;
+  --i50:#eef2ff;--i500:#6366f1;--i600:#4f46e5;--i700:#4338ca;
+  --e50:#ecfdf5;--e500:#10b981;--e600:#059669;
+  --v50:#f5f3ff;--v500:#8b5cf6;
+  --a50:#fffbeb;--a500:#f59e0b;--a700:#b45309;
+  --p50:#faf5ff;--p500:#a855f7;--p700:#7e22ce;
+  --r50:#fef2f2;--r400:#f87171;
+  --b50:#eff6ff;--b500:#3b82f6;--b600:#2563eb;
+  --n50:#F8FAFC;--n100:#F1F5F9;--n200:#E2E8F0;--n300:#CBD5E1;
+  --n400:#94A3B8;--n500:#64748B;--n600:#475569;--n700:#334155;
+  --n800:#1E293B;--n900:#0F172A;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:#060e07;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+
+/* CAROUSEL */
+.cw{width:1080px;height:1920px;position:relative;overflow:hidden}
+.ct{display:flex;width:calc(1080px*5);height:1920px;transition:transform .55s cubic-bezier(.65,0,.35,1)}
+.sl{width:1080px;height:1920px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.s1{background:linear-gradient(145deg,#071a09 0%,#0d2e10 40%,#071a09 100%)}
+.s2{background:linear-gradient(145deg,#07101e,#0b1a30,#050d18)}
+.s3{background:linear-gradient(145deg,#120820,#1a0e30,#0c0618)}
+.s4{background:linear-gradient(145deg,#141200,#221f06,#0e0c00)}
+.s5{background:linear-gradient(145deg,#061414,#0b2020,#040e0e)}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.22;pointer-events:none}
+
+/* PHONE */
+.pw{position:relative;width:340px;height:680px;z-index:10;margin-top:90px}
+.pf{width:340px;height:680px;background:#0a0a0a;border-radius:50px;padding:10px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 40px 120px rgba(0,0,0,.8),0 20px 60px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.1);
+  position:relative}
+.pf::before{content:'';position:absolute;top:10px;left:50%;transform:translateX(-50%);width:88px;height:24px;background:#0a0a0a;border-radius:0 0 14px 14px;z-index:20}
+.ps{width:100%;height:100%;border-radius:42px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.ga{background:linear-gradient(135deg,#FFFBEB 0%,#F1FAF4 50%,#FFFBEB 100%)}
+
+/* STATUS BAR */
+.sb{height:34px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 20px 5px;font-size:10px;font-weight:700;color:var(--n800);flex-shrink:0}
+.st{font-size:11px;font-weight:800}
+
+/* NAV BAR */
+.nb{height:62px;background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-around;padding:0 8px;flex-shrink:0}
+.ni{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;opacity:.38;font-size:8px;font-weight:600;color:var(--n600)}
+.ni.a{opacity:1;color:var(--gd)}
+.hb{height:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hp{width:96px;height:4px;background:rgba(0,0,0,.18);border-radius:2px}
+
+/* HERO BANNER */
+.hbr{background:linear-gradient(135deg,#15750a 0%,#0e4f06 60%,#1a6515 100%);padding:13px 15px 14px;position:relative;overflow:hidden;flex-shrink:0}
+.hbr::after{content:'';position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(114,221,21,.14);border-radius:50%}
+.hg{font-size:9px;font-weight:600;color:rgba(255,255,255,.7);margin-bottom:1px}
+.hn{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.3px}
+.hs{font-size:8px;color:rgba(255,255,255,.6);margin-top:1px;margin-bottom:9px}
+.hbs{display:flex;gap:6px}
+.bp{background:var(--gl);color:var(--n900);border:none;border-radius:10px;padding:7px 12px;font-size:9px;font-weight:800;display:flex;align-items:center;gap:4px}
+.bs{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:7px 12px;font-size:9px;font-weight:700;display:flex;align-items:center;gap:4px}
+
+/* KPI */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:7px 9px 4px;flex-shrink:0}
+.kc{background:#fff;border-radius:13px;padding:9px 11px;box-shadow:0 1px 5px rgba(0,0,0,.05);border:1px solid var(--n100)}
+.ki{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;margin-bottom:4px}
+.kv{font-size:17px;font-weight:800;color:var(--n900)}
+.kl{font-size:7.5px;font-weight:600;color:var(--n400);margin-top:1px}
+.ks{font-size:7px;color:var(--n400);margin-top:1px}
+
+/* SECTION CARD */
+.sc{background:#fff;border-radius:15px;padding:11px 11px 9px;margin:0 9px 7px;box-shadow:0 1px 5px rgba(0,0,0,.04);border:1px solid var(--n100);flex-shrink:0}
+.ct2{font-size:11px;font-weight:800;color:var(--n800)}
+.cs{font-size:7.5px;color:var(--n400);margin-top:1px}
+.ch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px}
+.ck{background:var(--g50);color:var(--i500);border-radius:999px;padding:3px 8px;font-size:7.5px;font-weight:700;display:flex;align-items:center;gap:3px}
+
+/* SEARCH */
+.sh{padding:11px 11px 7px;background:#fff;border-bottom:1px solid var(--n100);flex-shrink:0}
+.srb{background:var(--n50);border:1px solid var(--n200);border-radius:13px;padding:8px 11px;display:flex;align-items:center;gap:7px;font-size:9px;color:var(--n400);font-weight:500}
+.fr{display:flex;gap:5px;margin-top:7px;overflow:hidden}
+.fc{padding:4px 11px;border-radius:999px;font-size:7.5px;font-weight:700;border:1px solid var(--n200);color:var(--n500);background:#fff;white-space:nowrap;flex-shrink:0}
+.fc.a{background:var(--gd);color:#fff;border-color:var(--gd)}
+.jl{padding:7px 9px;flex:1;overflow:hidden;display:flex;flex-direction:column;gap:6px}
+.jc{background:#fff;border-radius:15px;padding:11px;border:1px solid var(--n100);box-shadow:0 1px 5px rgba(0,0,0,.04)}
+.jt{display:flex;align-items:flex-start;gap:9px;margin-bottom:7px}
+.cl{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.jti{font-size:9.5px;font-weight:800;color:var(--n800);line-height:1.3}
+.jco{font-size:7.5px;color:var(--n500);font-weight:600;margin-top:1px}
+.jtg{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+.jg{padding:2px 6px;border-radius:999px;font-size:7px;font-weight:700;background:var(--n100);color:var(--n500)}
+.jg.g{background:var(--g50);color:var(--gd)}
+.jg.b{background:var(--b50);color:var(--b600)}
+.jf{display:flex;align-items:center;justify-content:space-between}
+.sal{font-size:10px;font-weight:800;color:var(--gd)}
+.slb{font-size:7px;color:var(--n400);font-weight:500}
+.ab{background:var(--gd);color:#fff;border-radius:9px;padding:5px 13px;font-size:7.5px;font-weight:800;border:none}
+.nb2{background:var(--gl);color:#0a1f0a;border-radius:999px;padding:1px 6px;font-size:6.5px;font-weight:800;margin-left:auto}
+
+/* TRACKER */
+.th{padding:11px 11px 9px;background:rgba(255,255,255,.75);border-radius:0 0 15px 15px;margin-bottom:5px;flex-shrink:0}
+.tt{font-size:15px;font-weight:800;color:var(--n800)}
+.tt span{color:var(--gm)}
+.tsb{font-size:7.5px;color:var(--n500);margin-top:2px;margin-bottom:7px}
+.sr{display:flex;gap:5px}
+.sp{flex:1;border-radius:9px;padding:5px 3px;text-align:center;border:1px solid rgba(0,0,0,.06)}
+.sn{font-size:13px;font-weight:800;color:var(--n800)}
+.sl2{font-size:7px;font-weight:600;color:var(--n400)}
+.al{padding:0 9px;flex:1;overflow:hidden;display:flex;flex-direction:column;gap:5px}
+.ai{background:#fff;border-radius:13px;padding:9px 11px;border:1px solid var(--n100);display:flex;align-items:center;gap:9px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.alo{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.ain{flex:1;min-width:0}
+.ar{font-size:8.5px;font-weight:700;color:var(--n800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac{font-size:7px;color:var(--n400);font-weight:500}
+.scp{border-radius:999px;padding:3px 8px;font-size:7px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.fs{display:flex;gap:4px;padding:5px 9px;overflow:hidden;flex-shrink:0}
+.fi{padding:3px 9px;border-radius:999px;font-size:7px;font-weight:700;border:1px solid var(--n200);color:var(--n400);background:#fff;white-space:nowrap}
+.fi.a{background:var(--gd);color:#fff;border-color:var(--gd)}
+
+/* CV */
+.cvh{background:linear-gradient(135deg,#1e293b,#0f172a);padding:13px 13px 14px;flex-shrink:0}
+.cvht{font-size:16px;font-weight:800;color:#fff}
+.cvhs{font-size:7.5px;color:rgba(255,255,255,.45);margin-top:2px}
+.cvs{padding:9px 9px 5px;flex:1;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.cvi{background:#fff;border-radius:11px;padding:9px 11px;border:1px solid var(--n100);display:flex;align-items:center;gap:9px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.cvic{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.cvil{font-size:8.5px;font-weight:700;color:var(--n700);flex:1}
+.cvis{font-size:13px}
+.cvp{margin:5px 9px 7px;background:#fff;border-radius:13px;padding:9px;border:1px solid var(--n100);box-shadow:0 2px 9px rgba(0,0,0,.07);flex-shrink:0}
+.cvph{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.cvpn{font-size:8.5px;font-weight:800;color:var(--n800)}
+.cvpt{font-size:7px;color:var(--i500);font-weight:600}
+.cvl{height:4px;background:var(--n100);border-radius:2px;margin-bottom:3px}
+.gb{margin:0 9px 7px;background:var(--gd);color:#fff;border-radius:13px;padding:11px;text-align:center;font-size:9.5px;font-weight:800;border:none;flex-shrink:0}
+
+/* COMMUNITY */
+.comh{background:linear-gradient(135deg,rgba(21,117,10,.07) 0%,#fff 50%,rgba(245,158,11,.07) 100%);padding:11px 11px 9px;border-bottom:1px solid var(--n100);flex-shrink:0}
+.comt{font-size:15px;font-weight:800;color:var(--n800)}
+.coms{font-size:7.5px;color:var(--n400);font-weight:500;margin-top:1px}
+.pc{background:#fff;border-radius:13px;margin:0 9px 6px;padding:10px 11px;border:1px solid var(--n100);box-shadow:0 1px 3px rgba(0,0,0,.04);flex-shrink:0}
+.ph2{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.pa{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.pau{font-size:8.5px;font-weight:700;color:var(--n800)}
+.pme{font-size:7px;color:var(--n400);font-weight:500}
+.pt{font-size:7.5px;color:var(--n600);line-height:1.5;margin-bottom:7px}
+.ptg{display:inline-block;background:var(--i50);color:var(--i600);border-radius:999px;padding:2px 7px;font-size:7px;font-weight:700}
+.pf2{display:flex;gap:11px;margin-top:6px;padding-top:5px;border-top:1px solid var(--n100)}
+.pac{font-size:7.5px;color:var(--n400);font-weight:600;display:flex;align-items:center;gap:3px}
+.pac.lk{color:var(--r400)}
+.tjr{display:flex;gap:5px;padding:0 9px 6px;overflow:hidden;flex-shrink:0}
+.mj{background:#fff;border-radius:11px;padding:7px 9px;border:1px solid var(--n100);flex:1;min-width:0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.mjc{font-size:7.5px;font-weight:700;color:var(--n600)}
+.mjt{font-size:7.5px;font-weight:800;color:var(--n800);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mjs{font-size:7.5px;font-weight:700;color:var(--gd)}
+
+/* SLIDE CHROME */
+.slhdr{position:absolute;top:72px;left:0;right:0;text-align:center;z-index:20}
+.slnum{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:10px}
+.slt{font-size:42px;font-weight:900;color:#fff;line-height:1.1;letter-spacing:-1.5px}
+.slt span{color:var(--gl)}
+.slt.bl span{color:#60a5fa}
+.slt.pu span{color:#c084fc}
+.slt.am span{color:var(--a500)}
+.slt.te span{color:#2dd4bf}
+.slft{position:absolute;bottom:88px;left:0;right:0;text-align:center;z-index:20}
+.slft p{font-size:17px;font-weight:600;color:rgba(255,255,255,.4);letter-spacing:-.3px}
+.slft strong{color:rgba(255,255,255,.7);font-weight:700}
+
+/* CALLOUTS */
+.ca{position:absolute;width:236px;z-index:20}
+.cab{background:rgba(255,255,255,.055);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.11);border-radius:19px;padding:17px 20px}
+.cai{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:9px}
+.cat{font-size:14px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:5px}
+.cas{font-size:10.5px;font-weight:500;color:rgba(255,255,255,.5);line-height:1.5}
+
+/* LOGO */
+.lm{position:absolute;top:48px;left:48px;display:flex;align-items:center;gap:9px;z-index:50}
+.lm svg{width:34px;height:34px}
+.lmt{font-size:15px;font-weight:800;color:rgba(255,255,255,.65);letter-spacing:-.3px}
+.cb{position:absolute;top:48px;right:48px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:7px 13px;font-size:10px;font-weight:700;color:rgba(255,255,255,.45);letter-spacing:.5px;z-index:50}
+
+/* PROGRESS */
+.pb{position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.08);z-index:200}
+.pf2b{height:100%;background:var(--gl);transition:width .55s cubic-bezier(.65,0,.35,1)}
+
+/* ARROWS */
+.na{position:absolute;top:50%;transform:translateY(-50%);width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100;backdrop-filter:blur(8px);transition:all .2s;font-size:21px;color:rgba(255,255,255,.75)}
+.na:hover{background:rgba(255,255,255,.13)}
+.na:disabled{opacity:.18;pointer-events:none}
+#pv{left:26px} #nx{right:26px}
+
+/* DOTS */
+.nd{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);display:flex;gap:9px;z-index:100}
+.dt{width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.22);cursor:pointer;transition:all .3s}
+.dt.a{width:26px;background:var(--gl)}
+
+/* LOGO SVG SHORTHAND */
+</style>
+</head>
+<body>
+<div class="cw">
+  <div class="pb"><div class="pf2b" id="pf" style="width:20%"></div></div>
+  <div class="ct" id="tr">
+
+  <!-- ─── SLIDE 1: DASHBOARD ──────────────────────────────────────────── -->
+  <div class="sl s1">
+    <div class="orb" style="width:480px;height:480px;background:#15750a;top:-90px;left:-90px"></div>
+    <div class="orb" style="width:280px;height:280px;background:#72dd15;bottom:220px;right:-40px"></div>
+    <div class="lm"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#1A6515"/><circle cx="50" cy="50" r="35" fill="#5DDE2A"/><circle cx="50" cy="50" r="21" fill="#1A6515"/><rect x="39" y="46" width="22" height="14" rx="2.5" fill="white"/><path d="M43.5 46L43.5 42Q43.5 40 50 40Q56.5 40 56.5 42L56.5 46" stroke="white" stroke-width="2.8" fill="none" stroke-linecap="round"/><rect x="39" y="52.5" width="22" height="2" rx="1" fill="#1A6515"/><rect x="47" y="51" width="6" height="5.5" rx="1.5" fill="#1A6515"/></svg><span class="lmt">Quota Hire</span></div>
+    <div class="cb">01 / 05</div>
+    <div class="slhdr"><div class="slnum">Employee Dashboard</div><div class="slt">Your career,<br><span>at a glance</span></div></div>
+
+    <div class="ca" style="left:48px;top:46%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(114,221,21,.1)">📊</div><div class="cat">Live KPI Cards</div><div class="cas">Applications, saved roles, profile score &amp; interview wins — one view</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:40%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(99,102,241,.1)">📈</div><div class="cat">Activity Chart</div><div class="cas">Custom SVG bezier chart — tap any week for a full breakdown</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:62%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(16,185,129,.1)">🎯</div><div class="cat">Recommended Roles</div><div class="cas">Auto-scrolling job carousel matched to your profile &amp; skills</div></div>
+    </div>
+
+    <div class="pw">
+      <div class="pf">
+        <div class="ps ga">
+          <div class="sb" style="background:rgba(21,117,10,.92);color:rgba(255,255,255,.88)"><span class="st">9:41</span><span style="font-size:8px">●●● WiFi 🔋</span></div>
+          <div class="hbr">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between">
+              <div><div class="hg">Good morning 👋</div><div class="hn">Alex Johnson</div><div class="hs">Senior Account Executive</div></div>
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:15px">👤</div>
+            </div>
+            <div class="hbs" style="margin-top:7px"><button class="bp">🔍 Browse Jobs</button><button class="bs">⭐ CV Builder</button></div>
+          </div>
+          <div class="kg">
+            <div class="kc"><div class="ki" style="background:var(--g50)">💼</div><div class="kv">5</div><div class="kl">Active Apps</div><div class="ks">3 pending review</div></div>
+            <div class="kc"><div class="ki" style="background:#fff0f0">❤️</div><div class="kv">12</div><div class="kl">Saved Roles</div><div class="ks">Jobs bookmarked</div></div>
+            <div class="kc"><div class="ki" style="background:var(--e50)">🎯</div><div class="kv">85%</div><div class="kl">Profile Score</div><div class="ks">Almost complete!</div></div>
+            <div class="kc"><div class="ki" style="background:var(--v50)">✅</div><div class="kv">2</div><div class="kl">Interviews Won</div><div class="ks">Keep it up!</div></div>
+          </div>
+          <div class="sc">
+            <div class="ch"><div><div class="ct2">Application Activity</div><div class="cs">Tap any week for breakdown</div></div><div class="ck">📈 4-Week</div></div>
+            <svg width="278" height="78" viewBox="0 0 278 78">
+              <defs>
+                <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6366f1" stop-opacity=".24"/><stop offset="1" stop-color="#6366f1" stop-opacity="0"/></linearGradient>
+                <linearGradient id="ig" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10b981" stop-opacity=".17"/><stop offset="1" stop-color="#10b981" stop-opacity="0"/></linearGradient>
+              </defs>
+              <line x1="28" y1="10" x2="272" y2="10" stroke="rgba(0,0,0,.05)" stroke-width="1" stroke-dasharray="4 3"/>
+              <line x1="28" y1="30" x2="272" y2="30" stroke="rgba(0,0,0,.05)" stroke-width="1" stroke-dasharray="4 3"/>
+              <line x1="28" y1="50" x2="272" y2="50" stroke="rgba(0,0,0,.05)" stroke-width="1" stroke-dasharray="4 3"/>
+              <line x1="28" y1="66" x2="272" y2="66" stroke="rgba(0,0,0,.08)" stroke-width="1"/>
+              <text x="22" y="12" font-size="7" fill="#94a3b8" text-anchor="end">5</text>
+              <text x="22" y="32" font-size="7" fill="#94a3b8" text-anchor="end">3</text>
+              <text x="22" y="52" font-size="7" fill="#94a3b8" text-anchor="end">1</text>
+              <path d="M38 50C90 50,90 18,132 18C174 18,174 32,212 32C252 32,252 12,272 12L272 66L38 66Z" fill="url(#ag)"/>
+              <path d="M38 58C90 58,90 42,132 42C174 42,174 48,212 48C252 48,252 34,272 34L272 66L38 66Z" fill="url(#ig)"/>
+              <path d="M38 50C90 50,90 18,132 18C174 18,174 32,212 32C252 32,252 12,272 12" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
+              <path d="M38 58C90 58,90 42,132 42C174 42,174 48,212 48C252 48,252 34,272 34" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="38" cy="50" r="3" fill="white" stroke="#6366f1" stroke-width="1.5"/>
+              <circle cx="132" cy="18" r="3" fill="white" stroke="#6366f1" stroke-width="1.5"/>
+              <circle cx="212" cy="32" r="3" fill="white" stroke="#6366f1" stroke-width="1.5"/>
+              <circle cx="272" cy="12" r="4" fill="white" stroke="#6366f1" stroke-width="2"/>
+              <circle cx="38" cy="58" r="3" fill="white" stroke="#10b981" stroke-width="1.5"/>
+              <circle cx="132" cy="42" r="3" fill="white" stroke="#10b981" stroke-width="1.5"/>
+              <circle cx="212" cy="48" r="3" fill="white" stroke="#10b981" stroke-width="1.5"/>
+              <circle cx="272" cy="34" r="4" fill="white" stroke="#10b981" stroke-width="2"/>
+              <text x="38" y="76" font-size="7" fill="#94a3b8" text-anchor="middle" font-weight="600">Wk1</text>
+              <text x="132" y="76" font-size="7" fill="#94a3b8" text-anchor="middle" font-weight="600">Wk2</text>
+              <text x="212" y="76" font-size="7" fill="#94a3b8" text-anchor="middle" font-weight="600">Wk3</text>
+              <text x="272" y="76" font-size="7" fill="#6366f1" text-anchor="middle" font-weight="800">Wk4</text>
+            </svg>
+            <div style="display:flex;align-items:center;justify-content:space-around;margin-top:7px;padding-top:7px;border-top:1px solid var(--n100)">
+              <div style="display:flex;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:var(--i500)"></div><span style="font-size:10px;font-weight:800;color:var(--n800)">14</span><span style="font-size:7.5px;color:var(--n400);font-weight:600">Total Apps</span></div>
+              <div style="display:flex;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:var(--e500)"></div><span style="font-size:10px;font-weight:800;color:var(--n800)">6</span><span style="font-size:7.5px;color:var(--n400);font-weight:600">Interviews</span></div>
+              <div style="display:flex;align-items:center;gap:4px"><span style="font-size:10px">⚡</span><span style="font-size:10px;font-weight:800;color:var(--n800)">43%</span><span style="font-size:7.5px;color:var(--n400);font-weight:600">Conv.</span></div>
+            </div>
+          </div>
+          <div style="flex:1"></div>
+          <div class="nb"><div class="ni a"><span style="font-size:15px">🏠</span><span>Home</span></div><div class="ni"><span style="font-size:15px">🔍</span><span>Explore</span></div><div class="ni"><span style="font-size:15px">📋</span><span>Tracker</span></div><div class="ni"><span style="font-size:15px">💬</span><span>Community</span></div><div class="ni"><span style="font-size:15px">👤</span><span>Profile</span></div></div>
+          <div class="hb"><div class="hp"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="slft"><p>Swipe to explore <strong>all features →</strong></p></div>
+  </div>
+
+  <!-- ─── SLIDE 2: JOB SEARCH ─────────────────────────────────────────── -->
+  <div class="sl s2">
+    <div class="orb" style="width:420px;height:420px;background:#2563eb;top:-70px;right:-70px"></div>
+    <div class="orb" style="width:280px;height:280px;background:#6366f1;bottom:180px;left:-40px"></div>
+    <div class="lm"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#1A6515"/><circle cx="50" cy="50" r="35" fill="#5DDE2A"/><circle cx="50" cy="50" r="21" fill="#1A6515"/><rect x="39" y="46" width="22" height="14" rx="2.5" fill="white"/><path d="M43.5 46L43.5 42Q43.5 40 50 40Q56.5 40 56.5 42L56.5 46" stroke="white" stroke-width="2.8" fill="none" stroke-linecap="round"/><rect x="39" y="52.5" width="22" height="2" rx="1" fill="#1A6515"/><rect x="47" y="51" width="6" height="5.5" rx="1.5" fill="#1A6515"/></svg><span class="lmt">Quota Hire</span></div>
+    <div class="cb">02 / 05</div>
+    <div class="slhdr"><div class="slnum">Job Discovery</div><div class="slt bl">Find your next<br><span>sales role</span></div></div>
+
+    <div class="ca" style="left:48px;top:44%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(96,165,250,.1)">🔍</div><div class="cat">Smart Search</div><div class="cas">Search by title, company or skill — results update instantly as you type</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:42%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(16,185,129,.1)">💰</div><div class="cat">Real OTE Salaries</div><div class="cas">Every role shows base + commission so you know exactly what you'll earn</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:63%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(99,102,241,.1)">❤️</div><div class="cat">Save &amp; Apply</div><div class="cas">Bookmark roles or apply instantly — every application tracked automatically</div></div>
+    </div>
+
+    <div class="pw">
+      <div class="pf">
+        <div class="ps ga">
+          <div class="sb"><span class="st">9:41</span><span style="font-size:8px">●●● WiFi 🔋</span></div>
+          <div class="sh">
+            <div class="srb"><span style="font-size:12px">🔍</span><span>Search sales roles, companies...</span></div>
+            <div class="fr"><div class="fc a">All</div><div class="fc">Remote</div><div class="fc">Full-time</div><div class="fc">£50k+</div><div class="fc">SDR</div></div>
+          </div>
+          <div style="padding:5px 11px 3px;font-size:7.5px;font-weight:700;color:var(--n500)">247 roles found</div>
+          <div class="jl">
+            <div class="jc">
+              <div class="jt"><div class="cl" style="background:#0070d2;color:white">SF</div><div style="flex:1"><div class="jti">Enterprise Account Executive</div><div class="jco">Salesforce UK ✓</div></div><span class="nb2">NEW</span><span style="font-size:15px;color:var(--r400)">❤️</span></div>
+              <div class="jtg"><span class="jg g">Remote</span><span class="jg">Full-time</span><span class="jg b">Enterprise</span><span class="jg">London</span></div>
+              <div class="jf"><div><div class="sal">£70k–£90k</div><div class="slb">+£40k OTE commission</div></div><button class="ab">Apply Now</button></div>
+            </div>
+            <div class="jc">
+              <div class="jt"><div class="cl" style="background:#ff4500;color:white">HB</div><div style="flex:1"><div class="jti">Senior SDR / BDR</div><div class="jco">HubSpot ✓</div></div><span style="font-size:15px;color:var(--n300)">🤍</span></div>
+              <div class="jtg"><span class="jg g">Hybrid</span><span class="jg">Full-time</span><span class="jg b">SaaS</span></div>
+              <div class="jf"><div><div class="sal">£45k–£55k</div><div class="slb">+£25k OTE commission</div></div><button class="ab">Apply Now</button></div>
+            </div>
+            <div class="jc">
+              <div class="jt"><div class="cl" style="background:#00bcd4;color:white">ZM</div><div style="flex:1"><div class="jti">Regional Sales Manager</div><div class="jco">Zoom ✓</div></div><span style="font-size:15px;color:var(--n300)">🤍</span></div>
+              <div class="jtg"><span class="jg g">Remote</span><span class="jg">Full-time</span></div>
+              <div class="jf"><div><div class="sal">£80k–£100k</div><div class="slb">+£50k OTE commission</div></div><button class="ab">Apply Now</button></div>
+            </div>
+          </div>
+          <div class="nb"><div class="ni"><span style="font-size:15px">🏠</span><span>Home</span></div><div class="ni a"><span style="font-size:15px">🔍</span><span>Explore</span></div><div class="ni"><span style="font-size:15px">📋</span><span>Tracker</span></div><div class="ni"><span style="font-size:15px">💬</span><span>Community</span></div><div class="ni"><span style="font-size:15px">👤</span><span>Profile</span></div></div>
+          <div class="hb"><div class="hp"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="slft"><p>247 verified sales roles — <strong>updated daily</strong></p></div>
+  </div>
+
+  <!-- ─── SLIDE 3: TRACKER ────────────────────────────────────────────── -->
+  <div class="sl s3">
+    <div class="orb" style="width:380px;height:380px;background:#7c3aed;top:-60px;left:-55px"></div>
+    <div class="orb" style="width:320px;height:320px;background:#a855f7;bottom:200px;right:-70px"></div>
+    <div class="lm"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#1A6515"/><circle cx="50" cy="50" r="35" fill="#5DDE2A"/><circle cx="50" cy="50" r="21" fill="#1A6515"/><rect x="39" y="46" width="22" height="14" rx="2.5" fill="white"/><path d="M43.5 46L43.5 42Q43.5 40 50 40Q56.5 40 56.5 42L56.5 46" stroke="white" stroke-width="2.8" fill="none" stroke-linecap="round"/><rect x="39" y="52.5" width="22" height="2" rx="1" fill="#1A6515"/><rect x="47" y="51" width="6" height="5.5" rx="1.5" fill="#1A6515"/></svg><span class="lmt">Quota Hire</span></div>
+    <div class="cb">03 / 05</div>
+    <div class="slhdr"><div class="slnum">Application Tracker</div><div class="slt pu">Never lose<br><span>track again</span></div></div>
+
+    <div class="ca" style="left:48px;top:44%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(168,85,247,.1)">🍩</div><div class="cat">Pipeline Chart</div><div class="cas">Visual donut chart — see every application across all stages at a glance</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:42%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(245,158,11,.1)">📋</div><div class="cat">Colour-Coded Status</div><div class="cas">Applied → Reviewing → Interview → Offer — each stage has its own colour</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:63%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(16,185,129,.1)">🔎</div><div class="cat">Smart Filter</div><div class="cas">Filter by stage, search by company — find any application instantly</div></div>
+    </div>
+
+    <div class="pw">
+      <div class="pf">
+        <div class="ps ga">
+          <div class="sb"><span class="st">9:41</span><span style="font-size:8px">●●● WiFi 🔋</span></div>
+          <div class="th">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+              <div><div class="tt">Application <span>Tracker</span></div><div class="tsb">Track every step of your job search</div></div>
+              <div style="margin-left:auto">
+                <svg width="50" height="50" viewBox="0 0 50 50">
+                  <circle cx="25" cy="25" r="19" fill="none" stroke="#E2E8F0" stroke-width="7"/>
+                  <circle cx="25" cy="25" r="19" fill="none" stroke="#a855f7" stroke-width="7" stroke-dasharray="38 81" stroke-dashoffset="-5" stroke-linecap="round"/>
+                  <circle cx="25" cy="25" r="19" fill="none" stroke="#f59e0b" stroke-width="7" stroke-dasharray="19 100" stroke-dashoffset="-43" stroke-linecap="round"/>
+                  <circle cx="25" cy="25" r="19" fill="none" stroke="#10b981" stroke-width="7" stroke-dasharray="11 108" stroke-dashoffset="-62" stroke-linecap="round"/>
+                  <text x="25" y="29" font-size="11" font-weight="800" fill="#1E293B" text-anchor="middle">8</text>
+                </svg>
+              </div>
+            </div>
+            <div class="sr">
+              <div class="sp" style="background:rgba(255,255,255,.65)"><div class="sn">8</div><div class="sl2">Total</div></div>
+              <div class="sp" style="background:var(--a50)"><div class="sn" style="color:var(--w600)">3</div><div class="sl2">Review</div></div>
+              <div class="sp" style="background:var(--p50)"><div class="sn" style="color:var(--p700)">2</div><div class="sl2">Interview</div></div>
+              <div class="sp" style="background:var(--e50)"><div class="sn" style="color:var(--e600)">1</div><div class="sl2">Offer</div></div>
+            </div>
+          </div>
+          <div class="fs"><div class="fi a">All</div><div class="fi">Applied</div><div class="fi">Reviewing</div><div class="fi">Interview</div><div class="fi">Offer</div></div>
+          <div class="al">
+            <div class="ai"><div class="alo" style="background:#0070d2;color:white">SF</div><div class="ain"><div class="ar">Enterprise AE</div><div class="ac">Salesforce · 2 days ago</div></div><div class="scp" style="background:var(--p50);color:var(--p700)">Interview</div></div>
+            <div class="ai"><div class="alo" style="background:#ff4500;color:white">HB</div><div class="ain"><div class="ar">Senior SDR</div><div class="ac">HubSpot · 5 days ago</div></div><div class="scp" style="background:var(--a50);color:var(--a700)">Under Review</div></div>
+            <div class="ai"><div class="alo" style="background:#00bcd4;color:white">ZM</div><div class="ain"><div class="ar">Regional Sales Mgr</div><div class="ac">Zoom · 1 week ago</div></div><div class="scp" style="background:var(--e50);color:var(--e600)">Offer! 🎉</div></div>
+            <div class="ai"><div class="alo" style="background:#5c6ac4;color:white">SH</div><div class="ain"><div class="ar">Account Executive</div><div class="ac">Shopify · 1 week ago</div></div><div class="scp" style="background:var(--n100);color:var(--n600)">Applied</div></div>
+            <div class="ai"><div class="alo" style="background:#f97316;color:white">SL</div><div class="ain"><div class="ar">Sales Development Rep</div><div class="ac">Slack · 2 weeks ago</div></div><div class="scp" style="background:var(--b50);color:var(--b600)">Decision</div></div>
+          </div>
+          <div class="nb"><div class="ni"><span style="font-size:15px">🏠</span><span>Home</span></div><div class="ni"><span style="font-size:15px">🔍</span><span>Explore</span></div><div class="ni a"><span style="font-size:15px">📋</span><span>Tracker</span></div><div class="ni"><span style="font-size:15px">💬</span><span>Community</span></div><div class="ni"><span style="font-size:15px">👤</span><span>Profile</span></div></div>
+          <div class="hb"><div class="hp"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="slft"><p>From applied to offer — <strong>every step tracked</strong></p></div>
+  </div>
+
+  <!-- ─── SLIDE 4: CV GENERATOR ───────────────────────────────────────── -->
+  <div class="sl s4">
+    <div class="orb" style="width:420px;height:420px;background:#d97706;top:-90px;right:-55px"></div>
+    <div class="orb" style="width:320px;height:320px;background:#f59e0b;bottom:210px;left:-70px"></div>
+    <div class="lm"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#1A6515"/><circle cx="50" cy="50" r="35" fill="#5DDE2A"/><circle cx="50" cy="50" r="21" fill="#1A6515"/><rect x="39" y="46" width="22" height="14" rx="2.5" fill="white"/><path d="M43.5 46L43.5 42Q43.5 40 50 40Q56.5 40 56.5 42L56.5 46" stroke="white" stroke-width="2.8" fill="none" stroke-linecap="round"/><rect x="39" y="52.5" width="22" height="2" rx="1" fill="#1A6515"/><rect x="47" y="51" width="6" height="5.5" rx="1.5" fill="#1A6515"/></svg><span class="lmt">Quota Hire</span></div>
+    <div class="cb">04 / 05</div>
+    <div class="slhdr"><div class="slnum">CV Generator</div><div class="slt am">Stand out from<br><span>the crowd</span></div></div>
+
+    <div class="ca" style="left:48px;top:44%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(245,158,11,.1)">✨</div><div class="cat">AI-Powered Build</div><div class="cas">Pulls your profile data and generates an ATS-optimised CV in seconds</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:42%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(99,102,241,.1)">📄</div><div class="cat">Export as PDF</div><div class="cas">Download a polished PDF CV ready to attach to any application</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:63%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(16,185,129,.1)">🎯</div><div class="cat">ATS Optimised</div><div class="cas">Keywords matched to real sales roles so recruiters can find you easily</div></div>
+    </div>
+
+    <div class="pw">
+      <div class="pf">
+        <div class="ps" style="background:#0f172a">
+          <div class="sb" style="color:rgba(255,255,255,.75)"><span class="st" style="color:white">9:41</span><span style="font-size:8px;color:white">●●● WiFi 🔋</span></div>
+          <div class="cvh">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div><div class="cvht">CV Generator</div><div class="cvhs">AI-powered · ATS optimised</div></div>
+              <div style="width:50px;height:50px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:var(--gl);display:flex;align-items:center;justify-content:center"><span style="font-size:9.5px;font-weight:800;color:white">85%</span></div>
+            </div>
+          </div>
+          <div class="cvs">
+            <div class="cvi"><div class="cvic" style="background:var(--g50)">👤</div><div class="cvil">Personal Info</div><div class="cvis">✅</div></div>
+            <div class="cvi"><div class="cvic" style="background:var(--i50)">💼</div><div class="cvil">Work Experience</div><div class="cvis">✅</div></div>
+            <div class="cvi" style="border:1.5px solid var(--i500)"><div class="cvic" style="background:var(--i50)">⚡</div><div class="cvil" style="color:var(--i600)">Core Skills</div><div style="font-size:7.5px;font-weight:700;color:var(--i500)">Edit</div></div>
+            <div class="cvi"><div class="cvic" style="background:var(--a50)">🎓</div><div class="cvil">Education</div><div class="cvis">⭕</div></div>
+            <div class="cvi"><div class="cvic" style="background:var(--v50)">🏆</div><div class="cvil">Achievements</div><div class="cvis">⭕</div></div>
+          </div>
+          <div class="cvp">
+            <div class="cvph"><div style="width:22px;height:22px;border-radius:50%;background:var(--i500);display:flex;align-items:center;justify-content:center;font-size:9px;color:white;font-weight:800">A</div><div><div class="cvpn">Alex Johnson</div><div class="cvpt">Senior Account Executive · London</div></div></div>
+            <div><div class="cvl" style="width:92%"></div><div class="cvl" style="width:77%"></div><div class="cvl" style="width:85%"></div><div class="cvl" style="width:62%;background:var(--i50)"></div></div>
+          </div>
+          <button class="gb">✨ Generate My CV</button>
+          <div style="text-align:center;font-size:7.5px;color:rgba(255,255,255,.28);padding:0 0 5px">Export as PDF · Share instantly</div>
+          <div class="nb" style="background:rgba(255,255,255,.04);border-top-color:rgba(255,255,255,.07)"><div class="ni" style="color:rgba(255,255,255,.28)"><span style="font-size:15px">🏠</span><span>Home</span></div><div class="ni" style="color:rgba(255,255,255,.28)"><span style="font-size:15px">🔍</span><span>Explore</span></div><div class="ni" style="color:rgba(255,255,255,.28)"><span style="font-size:15px">📋</span><span>Tracker</span></div><div class="ni" style="color:rgba(255,255,255,.28)"><span style="font-size:15px">💬</span><span>Community</span></div><div class="ni a" style="color:var(--gl)"><span style="font-size:15px">👤</span><span>Profile</span></div></div>
+          <div class="hb"><div class="hp" style="background:rgba(255,255,255,.14)"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="slft"><p>Professional CV <strong>in under 60 seconds</strong></p></div>
+  </div>
+
+  <!-- ─── SLIDE 5: COMMUNITY ───────────────────────────────────────────── -->
+  <div class="sl s5">
+    <div class="orb" style="width:380px;height:380px;background:#0d9488;top:-70px;right:-55px"></div>
+    <div class="orb" style="width:300px;height:300px;background:#2dd4bf;bottom:210px;left:-70px"></div>
+    <div class="lm"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#1A6515"/><circle cx="50" cy="50" r="35" fill="#5DDE2A"/><circle cx="50" cy="50" r="21" fill="#1A6515"/><rect x="39" y="46" width="22" height="14" rx="2.5" fill="white"/><path d="M43.5 46L43.5 42Q43.5 40 50 40Q56.5 40 56.5 42L56.5 46" stroke="white" stroke-width="2.8" fill="none" stroke-linecap="round"/><rect x="39" y="52.5" width="22" height="2" rx="1" fill="#1A6515"/><rect x="47" y="51" width="6" height="5.5" rx="1.5" fill="#1A6515"/></svg><span class="lmt">Quota Hire</span></div>
+    <div class="cb">05 / 05</div>
+    <div class="slhdr"><div class="slnum">Sales Community</div><div class="slt te">Grow with<br><span>your tribe</span></div></div>
+
+    <div class="ca" style="left:48px;top:44%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(45,212,191,.1)">💬</div><div class="cat">Real Discussions</div><div class="cas">Share wins, ask questions and connect with thousands of sales professionals</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:42%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(99,102,241,.1)">🏆</div><div class="cat">Top Earners</div><div class="cas">See what top performers are doing differently and level up your game</div></div>
+    </div>
+    <div class="ca" style="right:48px;top:63%;transform:translateY(-50%)">
+      <div class="cab"><div class="cai" style="background:rgba(245,158,11,.1)">🔥</div><div class="cat">Hot Roles Feed</div><div class="cas">Top-paying roles highlighted in the community so you never miss out</div></div>
+    </div>
+
+    <div class="pw">
+      <div class="pf">
+        <div class="ps ga">
+          <div class="sb"><span class="st">9:41</span><span style="font-size:8px">●●● WiFi 🔋</span></div>
+          <div class="comh"><div class="comt">Sales Community</div><div class="coms">Connect · Share · Grow</div></div>
+          <div style="padding:5px 9px 2px;font-size:7.5px;font-weight:700;color:var(--n500)">🔥 Hot Roles This Week</div>
+          <div class="tjr">
+            <div class="mj"><div class="mjc">Salesforce</div><div class="mjt">Enterprise AE</div><div class="mjs">£90k OTE</div></div>
+            <div class="mj"><div class="mjc">HubSpot</div><div class="mjt">Senior SDR</div><div class="mjs">£55k OTE</div></div>
+            <div class="mj"><div class="mjc">Zoom</div><div class="mjt">Sales Manager</div><div class="mjs">£120k OTE</div></div>
+          </div>
+          <div style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+            <div class="pc">
+              <div class="ph2"><div class="pa" style="background:var(--i500)">SJ</div><div><div class="pau">Sarah Johnson</div><div class="pme">Account Executive · 2h ago</div></div><span class="ptg" style="margin-left:auto">Win 🏆</span></div>
+              <div class="pt">Just closed my biggest deal — £150k ARR! 🎉 For anyone struggling with enterprise sales, the key was consistency in follow-ups. Happy to share my email sequence!</div>
+              <div class="pf2"><span class="pac lk">❤️ 47</span><span class="pac">💬 12</span><span class="pac">🔗 Share</span></div>
+            </div>
+            <div class="pc">
+              <div class="ph2"><div class="pa" style="background:var(--e500)">MK</div><div><div class="pau">Marcus King</div><div class="pme">SDR at Salesforce · 5h ago</div></div><span class="ptg" style="background:var(--g50);color:var(--gd);margin-left:auto">Tip 💡</span></div>
+              <div class="pt">Cold email subject lines that actually get replies in 2025... (thread 🧵)</div>
+              <div class="pf2"><span class="pac lk">❤️ 93</span><span class="pac">💬 34</span><span class="pac">🔗 Share</span></div>
+            </div>
+          </div>
+          <div class="nb"><div class="ni"><span style="font-size:15px">🏠</span><span>Home</span></div><div class="ni"><span style="font-size:15px">🔍</span><span>Explore</span></div><div class="ni"><span style="font-size:15px">📋</span><span>Tracker</span></div><div class="ni a"><span style="font-size:15px">💬</span><span>Community</span></div><div class="ni"><span style="font-size:15px">👤</span><span>Profile</span></div></div>
+          <div class="hb"><div class="hp"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="slft"><p>Built for <strong>ambitious sales people</strong> 🚀</p></div>
+  </div>
+
+  </div><!-- /track -->
+
+  <button class="na" id="pv" onclick="nav(-1)" disabled>&#8592;</button>
+  <button class="na" id="nx" onclick="nav(1)">&#8594;</button>
+  <div class="nd"><div class="dt a" onclick="go(0)"></div><div class="dt" onclick="go(1)"></div><div class="dt" onclick="go(2)"></div><div class="dt" onclick="go(3)"></div><div class="dt" onclick="go(4)"></div></div>
+</div>
+
+<script>
+let c=0,T=5;
+const tr=document.getElementById('tr'),pf=document.getElementById('pf');
+const pv=document.getElementById('pv'),nx=document.getElementById('nx');
+const dots=document.querySelectorAll('.dt');
+function upd(){tr.style.transform=`translateX(-${c*1080}px)`;dots.forEach((d,i)=>d.classList.toggle('a',i===c));pv.disabled=c===0;nx.disabled=c===T-1;pf.style.width=`${(c+1)/T*100}%`}
+function nav(d){c=Math.max(0,Math.min(T-1,c+d));upd()}
+function go(i){c=i;upd()}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')nav(1);if(e.key==='ArrowLeft')nav(-1)});
+let sx=0;
+document.querySelector('.cw').addEventListener('touchstart',e=>{sx=e.touches[0].clientX});
+document.querySelector('.cw').addEventListener('touchend',e=>{const d=sx-e.changedTouches[0].clientX;if(Math.abs(d)>50)nav(d>0?1:-1)});
+upd();
+</script>
+</body>
+</html>

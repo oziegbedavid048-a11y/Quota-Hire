@@ -12,49 +12,40 @@ import {
   Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import * as LocalAuthentication from "expo-local-authentication";
 const API_BASE = "https://quotahire-backend.onrender.com/api";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-let LocalAuthentication: any = null;
-try {
-  LocalAuthentication = require("expo-local-authentication");
-} catch (_e) {
-  console.warn(
-    "[LocalAuth] Native module not found. Biometric authentication is disabled in Expo Go."
-  );
-}
 let GoogleSignin: any = null;
 let statusCodes: any = {};
 let isGoogleSigninSupported = false;
+
+function initGoogleSignIn() {
+  if (isGoogleSigninSupported && GoogleSignin?.configure) {
+    try {
+      GoogleSignin.configure({
+        webClientId: "741329909708-cljluh4tepm3rpadt16lqdhqohhs5sd7.apps.googleusercontent.com",
+        offlineAccess: true,
+      });
+    } catch (e) {
+      console.warn("[Google Sign-In] Configure error:", e);
+    }
+  }
+}
 
 try {
   const GoogleSignInModule = require("@react-native-google-signin/google-signin");
   GoogleSignin = GoogleSignInModule.GoogleSignin;
   statusCodes = GoogleSignInModule.statusCodes;
-
-  GoogleSignin.configure({
-    webClientId: "741329909708-cljluh4tepm3rpadt16lqdhqohhs5sd7.apps.googleusercontent.com",
-    offlineAccess: true,
-  });
   isGoogleSigninSupported = true;
 } catch (e) {
   console.warn(
-    "[Google Sign-In] Native module not found. Google Sign-In is disabled (this is normal in Expo Go). To use Google Sign-In, please run in a Development Build or standalone APK."
+    "[Google Sign-In] Native module not found. Google Sign-In is disabled (this is normal in Expo Go)."
   );
 }
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
-let GlassView: any = View;
-try {
-  const GlassModule = require("expo-glass-effect");
-  if (GlassModule && GlassModule.GlassView) {
-    GlassView = GlassModule.GlassView;
-  }
-} catch (_e) {
-  GlassView = View;
-}
 import Animated, {
   FadeIn,
   FadeOut,
@@ -282,14 +273,16 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   const [hasBiometricSupport, setHasBiometricSupport] = useState(false);
 
   useEffect(() => {
+    initGoogleSignIn();
     async function checkBiometrics() {
-      if (!LocalAuthentication) return;
       try {
-        const hasHardware = await LocalAuthentication.hasHardwareAsync();
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-        const hasToken = await SecureStore.getItemAsync("access_token");
-        if (hasHardware && isEnrolled && hasToken) {
-          setHasBiometricSupport(true);
+        if (LocalAuthentication && typeof LocalAuthentication.hasHardwareAsync === 'function') {
+          const hasHardware = await LocalAuthentication.hasHardwareAsync();
+          const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+          const hasToken = await SecureStore.getItemAsync("access_token");
+          if (hasHardware && isEnrolled && hasToken) {
+            setHasBiometricSupport(true);
+          }
         }
       } catch {
         setHasBiometricSupport(false);
@@ -299,13 +292,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   }, []);
 
   const handleBiometricAuth = async () => {
-    if (!LocalAuthentication) {
-      Alert.alert(
-        "Development Build Required",
-        "Biometric authentication (Fingerprint / FaceID) requires a standalone APK or custom Development Build. It is disabled in Expo Go."
-      );
-      return;
-    }
     try {
       const hasToken = await SecureStore.getItemAsync("access_token");
       const uName = await SecureStore.getItemAsync("user_name");
@@ -366,6 +352,10 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   const [switcherWidth, setSwitcherWidth] = useState(0);
 
   useEffect(() => {
+    initGoogleSignIn();
+  }, []);
+
+  useEffect(() => {
     setLError("");
     setSError("");
     setLoginOtpError("");
@@ -400,6 +390,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     }
 
     try {
+      initGoogleSignIn();
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
       

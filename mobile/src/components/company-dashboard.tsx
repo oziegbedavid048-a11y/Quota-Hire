@@ -43,15 +43,6 @@ import {
   FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
 import { useCompanyDashboardData } from '@/hooks/useCompanyDashboardData';
-let GlassView: any = View;
-try {
-  const GlassModule = require('expo-glass-effect');
-  if (GlassModule && GlassModule.GlassView) {
-    GlassView = GlassModule.GlassView;
-  }
-} catch (_e) {
-  GlassView = View;
-}
 import { SkeletonBox as Skeleton, SkeletonLine } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W } = Dimensions.get('window');

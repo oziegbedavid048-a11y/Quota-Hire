@@ -1,7 +1,7 @@
-import { DefaultTheme, ThemeProvider, Stack } from "expo-router";
+import { DefaultTheme, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useState, useEffect, useRef } from "react";
-import { View, StyleSheet } from "react-native";
+import { View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 import AppTabs from "@/components/app-tabs";
@@ -25,11 +25,9 @@ import {
   Notifications,
 } from "@/services/notifications";
 
-try {
-  SplashScreen.preventAutoHideAsync().catch(() => {});
-} catch {
-  // Ignore if native splash screen is unavailable
-}
+SplashScreen.preventAutoHideAsync().catch((_err) => {
+  console.debug("[SplashScreen] preventAutoHideAsync skipped:", _err);
+});
 
 export default function TabLayout() {
   const router = useRouter();
@@ -108,37 +106,29 @@ export default function TabLayout() {
   // Runs once after the component mounts. Listens for the user tapping a
   // push notification banner and navigates them to the correct screen.
   useEffect(() => {
-    try {
-      notifResponseListener.current =
-        Notifications.addNotificationResponseReceivedListener((response: any) => {
-          try {
-            const data = response.notification.request.content.data as Record<
-              string,
-              unknown
-            >;
-            const path = getNavigationPathFromPush(data);
+    // Listen for taps on notifications (app is open or in background)
+    notifResponseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response: any) => {
+        const data = response.notification.request.content.data as Record<
+          string,
+          unknown
+        >;
+        const path = getNavigationPathFromPush(data);
 
-            setTimeout(() => {
-              try {
-                router.push(path as any);
-              } catch {
-                // Navigator not ready yet — skip navigation gracefully
-              }
-            }, 300);
+        // Small delay to ensure the navigator is mounted before pushing
+        setTimeout(() => {
+          try {
+            router.push(path as any);
           } catch {
-            // Ignore payload error
+            // Navigator not ready yet — skip navigation gracefully
           }
-        });
-    } catch {
-      // Notifications module unavailable in current environment
-    }
+        }, 300);
+      });
 
     return () => {
-      try {
-        if (notifResponseListener.current) {
-          notifResponseListener.current.remove();
-        }
-      } catch {}
+      if (notifResponseListener.current) {
+        notifResponseListener.current.remove();
+      }
     };
   }, [router]);
 
@@ -183,25 +173,17 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={CustomTheme}>
-      <View style={{ flex: 1, backgroundColor: "#FFFBEB" }}>
-        {isLoggedIn && (
-          <AppTabs userRole={userRole} userName={userName} />
-        )}
-
-        {!splashFinished ? (
-          <View style={StyleSheet.absoluteFill}>
-            <VideoSplash onFinish={() => setSplashFinished(true)} />
-          </View>
-        ) : showOnboarding ? (
-          <View style={StyleSheet.absoluteFill}>
-            <Onboarding onFinish={() => setShowOnboarding(false)} />
-          </View>
-        ) : !isLoggedIn ? (
-          <View style={StyleSheet.absoluteFill}>
-            <AuthScreens onLogin={handleLogin as any} />
-          </View>
-        ) : null}
-      </View>
+      {!splashFinished ? (
+        <VideoSplash
+          onFinish={() => setSplashFinished(true)}
+        />
+      ) : showOnboarding ? (
+        <Onboarding onFinish={() => setShowOnboarding(false)} />
+      ) : !isLoggedIn ? (
+        <AuthScreens onLogin={handleLogin as any} />
+      ) : (
+        <AppTabs userRole={userRole} userName={userName} />
+      )}
     </ThemeProvider>
   );
 }

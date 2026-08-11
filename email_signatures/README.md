@@ -9,6 +9,7 @@ Professional, responsive HTML email signatures created for **Quota Hire** (`quot
 | **hello@quotahire.co.uk** | Talent Acquisition, Partnerships & General Greetings | [`hello_quotahire.html`](file:///c:/Users/David/Desktop/QOUTA%20HIRE/email_signatures/hello_quotahire.html) |
 | **info@quotahire.co.uk** | Corporate Enquiries & General Business Desk | [`info_quotahire.html`](file:///c:/Users/David/Desktop/QOUTA%20HIRE/email_signatures/info_quotahire.html) |
 | **support@quotahire.co.uk** | Client & Candidate Support Helpdesk | [`support_quotahire.html`](file:///c:/Users/David/Desktop/QOUTA%20HIRE/email_signatures/support_quotahire.html) |
+| **job@quotahire.co.uk** | Careers, Job Applications & Recruitment Desk | [`job_quotahire.html`](file:///c:/Users/David/Desktop/QOUTA%20HIRE/email_signatures/job_quotahire.html) |
 
 ---
 

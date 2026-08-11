@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent } from 'react-native';
 import { Image } from 'expo-image';
 import { Tabs, useRouter, useSegments, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -82,7 +82,7 @@ function MarqueeBanner({
             <Text
               numberOfLines={1}
               ellipsizeMode="clip"
-              onLayout={(e) => {
+              onLayout={(e: LayoutChangeEvent) => {
                 const w = e.nativeEvent.layout.width;
                 if (w > 0 && Math.abs(w - textWidth) > 2) {
                   setTextWidth(w);
@@ -343,7 +343,7 @@ function FabMenuSheet({
               <HapticPressable
                 key={item.name}
                 onPress={() => navigateTo(item.route)}
-                style={({ pressed }) => [
+                style={({ pressed }: { pressed: boolean }) => [
                   styles.sheetGridItem,
                   isActive && styles.sheetGridItemActive,
                   pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
@@ -414,9 +414,7 @@ function FloatingPillNavBar({
     : { label: 'Browse',     route: '/explore',              icon: 'compass'    };
   const fabCfg = isCompany
     ? { label: 'Post Job',   route: '/explore?mode=post-job', icon: 'plus-circle'}
-    : currentRoute === '/community'
-      ? { label: 'Create',    route: '/community',            icon: 'plus'}
-      : { label: 'Community', route: '/community',            icon: 'users'};
+    : { label: 'Community', route: '/community',            icon: 'users'};
   const tab4 = isCompany
     ? { label: 'Applicants', route: '/tracker',              icon: 'users'      }
     : { label: 'Tracker',    route: '/tracker',              icon: 'bar-chart-2'};
@@ -443,11 +441,7 @@ function FloatingPillNavBar({
       withTiming(0.88, { duration: 80 }),
       withSpring(1, { damping: 12, stiffness: 260 })
     );
-    if (!isCompany && currentRoute === '/community') {
-      DeviceEventEmitter.emit('open-create-post-modal');
-    } else {
-      navigateTo(fabCfg.route);
-    }
+    navigateTo(fabCfg.route);
   };
 
   const notchedD = getNotchedPathD(NAV_WIDTH, NAV_BAR_H, CORNER_R, NOTCH_R, NOTCH_DEPTH);

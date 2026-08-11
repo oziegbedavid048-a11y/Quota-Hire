@@ -240,20 +240,20 @@ export function useEmployeeDashboardData() {
 
       // Merge employee profile details into user state
       if (empProfile) {
-        setUser((prev) => {
-          const updated = {
-            ...prev,
-            title: empProfile.title || prev.title,
-            bio: empProfile.bio || prev.bio,
-            skills: empProfile.skills || prev.skills,
-            education: empProfile.education || prev.education,
-            resumeUrl: empProfile.resume_url || empProfile.resume_file || prev.resumeUrl,
-            phone: empProfile.phone_number || prev.phone,
-            experienceYears: empProfile.experience_years || prev.experienceYears,
-          };
-          SecureStore.setItemAsync("cached_user_profile", JSON.stringify(updated)).catch(() => {});
-          return updated;
-        });
+        const updatedUser: UserProfile = {
+          ...normalizedUser,
+          title: empProfile.title ?? "",
+          bio: empProfile.bio ?? "",
+          skills: empProfile.skills || [],
+          education: empProfile.education ?? "",
+          resumeUrl: empProfile.resume_url || empProfile.resume_file || "",
+          phone: empProfile.phone_number ?? "",
+          location: empProfile.city ? `${empProfile.city}${empProfile.country ? `, ${empProfile.country}` : ""}` : (normalizedUser.location || ""),
+          experienceYears: empProfile.experience_years ?? 0,
+        };
+        setUser(updatedUser);
+        SecureStore.setItemAsync("cached_user_profile", JSON.stringify(updatedUser)).catch(() => {});
+        DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedUser);
       }
 
       const rawApps = Array.isArray(appsData)

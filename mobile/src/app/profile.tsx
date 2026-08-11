@@ -1062,6 +1062,33 @@ export default function ProfileScreen() {
               </Pressable>
             </View>
 
+            {/* + Add Photo pill badge shown when profile picture is not uploaded */}
+            {!user.avatarUrl && (
+              <Pressable
+                disabled={saving}
+                onPress={handleAvatarUpload}
+                style={({ pressed }) => [
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    backgroundColor: Palette.accent600,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 14,
+                    marginTop: 8,
+                    marginBottom: 2,
+                  },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Feather name="plus" size={11} color="#ffffff" />
+                <Text style={{ fontSize: 11, fontWeight: "800", color: "#ffffff" }}>
+                  Add Photo
+                </Text>
+              </Pressable>
+            )}
+
             {/* Name + title */}
             <Text style={[s.heroName, { color: colors.text }]}>
               {user.name}
@@ -1082,24 +1109,6 @@ export default function ProfileScreen() {
                   <Text style={s.verifiedText}>Verified</Text>
                 </View>
               )}
-            </View>
-
-            {/* Profile score */}
-            <View style={s.scoreRow}>
-              <Text style={[s.scoreLabel, { color: colors.textMuted }]}>
-                Profile Score
-              </Text>
-              <Text style={[s.scoreVal, { color: Palette.accent500 }]}>
-                {profileScore}%
-              </Text>
-            </View>
-            <View style={[s.progressBg, { backgroundColor: colors.border }]}>
-              <LinearGradient
-                colors={[Palette.accent500, Palette.warm500]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[s.progressFill, { width: `${profileScore}%` }]}
-              />
             </View>
           </LinearGradient>
         </Animated.View>
@@ -1180,13 +1189,13 @@ export default function ProfileScreen() {
                       <View
                         style={[
                           s.actionChip,
-                          { backgroundColor: "rgba(245,158,11,0.1)" },
+                          { backgroundColor: "rgba(245,158,11,0.14)" },
                         ]}
                       >
                         <Text
-                          style={[s.actionChipText, { color: Palette.warm500 }]}
+                          style={[s.actionChipText, { color: "#b45309", fontWeight: "800" }]}
                         >
-                          Add
+                          + Add
                         </Text>
                       </View>
                     ) : null}

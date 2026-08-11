@@ -10,6 +10,7 @@
     "@react-native-google-signin/google-signin": "^16.1.2",
     "date-fns": "^4.4.0",
     "expo": "~57.0.11",
+    "expo-build-properties": "~57.0.10",
     "expo-clipboard": "^57.0.1",
     "expo-constants": "~57.0.9",
     "expo-device": "~57.0.1",
@@ -59,6 +60,21 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "@expo/ui",
+        "expo",
+        "expo-constants",
+        "expo-image-picker",
+        "expo-notifications",
+        "expo-router",
+        "expo-sharing",
+        "expo-splash-screen",
+        "expo-build-properties"
+      ]
+    }
   },
   "private": true
 }

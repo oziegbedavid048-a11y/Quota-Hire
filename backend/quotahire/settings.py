@@ -12,7 +12,7 @@ from posthog import Posthog
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = config('DEBUG', default=True, cast=bool)
 SECRET_KEY = config('SECRET_KEY', default='insecure-dev-key-change-in-production' if DEBUG else '')
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY must be set in production")
@@ -185,9 +185,10 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
+WHITENOISE_MANIFEST_STRICT = False
 
 # CSRF Trusted Origins for Render (needed for admin login)
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://quotahire-backend.onrender.com,https://quotahire.org,https://quotahire.co.uk,https://www.quotahire.co.uk,http://localhost,http://127.0.0.1').split(',')
@@ -321,6 +322,9 @@ if not DEBUG:
     # Prevent your site from being embedded in iframes on other domains (clickjacking)
     X_FRAME_OPTIONS = 'DENY'
 
-# ── Google OAuth Configuration ────────────────────────────────────────────────
-GOOGLE_WEB_CLIENT_ID = config('GOOGLE_WEB_CLIENT_ID', default='')
+# ── Local Development SSL Overrides ──────────────────────────────────────────
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
 

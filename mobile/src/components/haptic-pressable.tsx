@@ -3,6 +3,7 @@ import { Pressable, PressableProps, GestureResponderEvent } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
 export interface HapticPressableProps extends PressableProps {
+  children?: React.ReactNode;
   hapticStyle?: Haptics.ImpactFeedbackStyle;
 }
 

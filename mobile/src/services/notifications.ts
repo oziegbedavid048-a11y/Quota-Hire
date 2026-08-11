@@ -48,8 +48,11 @@ try {
   };
 }
 
-try {
-  if (isNotificationsSupported && Notifications && typeof Notifications.setNotificationHandler === 'function') {
+// ── Foreground notification behaviour ────────────────────────────────────────
+// Show alert + play sound + update badge even when the app is open in the
+// foreground (default Expo behaviour is to swallow foreground notifications).
+if (isNotificationsSupported && Notifications?.setNotificationHandler) {
+  try {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
@@ -59,9 +62,9 @@ try {
         shouldSetBadge: true,
       }),
     });
+  } catch (_err) {
+    console.debug("[Notifications] setNotificationHandler skipped:", _err);
   }
-} catch (_e) {
-  // Ignore if setNotificationHandler is unavailable in sandbox
 }
 
 // ── Main registration function ────────────────────────────────────────────────

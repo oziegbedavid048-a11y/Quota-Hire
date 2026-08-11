@@ -26,14 +26,13 @@ import {
   Alert,
   Dimensions,
   Platform,
+  NativeModules,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useIAP, finishTransaction } from 'expo-iap';
-
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
 
@@ -60,7 +59,60 @@ type PayState =
   | 'cancelled'
   | 'error';
 
-export default function NativePaymentModal({
+let useIAP: any = () => ({ connected: false, products: [], requestPurchase: async () => {} });
+let finishTransaction: any = async () => {};
+let hasNativeIap = false;
+
+try {
+  if (
+    NativeModules.ExpoIap ||
+    NativeModules.ExpoIapModule ||
+    NativeModules.RNInAppPurchases
+  ) {
+    const iapModule = require('expo-iap');
+    useIAP = iapModule.useIAP;
+    finishTransaction = iapModule.finishTransaction;
+    hasNativeIap = true;
+  }
+} catch (e) {
+  console.warn('[expo-iap] Native module unavailable in Expo Go sandbox.');
+}
+
+function ExpoGoFallbackModal({ visible, onClose }: NativePaymentModalProps) {
+  const colors = Colors.light;
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={s.overlay} onPress={onClose}>
+        <View style={[s.sheet, { backgroundColor: colors.cardBg }]}>
+          <View style={s.header}>
+            <Text style={[s.headerTitle, { color: colors.text }]}>In-App Purchase Notice</Text>
+            <Pressable onPress={onClose} style={s.closeBtn}>
+              <Feather name="x" size={18} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <View style={[s.body, { paddingVertical: 24, alignItems: 'center' }]}>
+            <View style={[s.warnIconWrap, { backgroundColor: Palette.warm50 }]}>
+              <Feather name="alert-triangle" size={24} color={Palette.warm500} />
+            </View>
+            <Text style={[s.successTitle, { color: colors.text, marginTop: 12 }]}>
+              Development Build Required
+            </Text>
+            <Text style={[s.successSub, { color: colors.textSecondary, marginTop: 6, textAlign: 'center' }]}>
+              Google Play Billing requires a standalone APK or custom Development Build. It is disabled in the Expo Go sandbox.
+            </Text>
+            <Pressable onPress={onClose} style={[s.doneBtn, { backgroundColor: Palette.accent600, marginTop: 16 }]}>
+              <Text style={s.doneBtnText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function NativePaymentModalInner({
   visible,
   onClose,
   cvId,
@@ -73,19 +125,11 @@ export default function NativePaymentModal({
   const [errorMessage, setErrorMessage] = useState('');
 
   // ─── expo-iap v4 useIAP hook ────────────────────────────────────────────────
-  const {
-    products,
-    requestPurchase,
-    connected,
-    getProducts,
-    purchaseHistory,
-  } = useIAP({
-    onPurchaseSuccess: async (purchase) => {
-      // Called automatically when Google Play returns a successful purchase
+  const iap = (useIAP as any)({
+    onPurchaseSuccess: async (purchase: any) => {
       await handlePurchaseSuccess(purchase);
     },
     onPurchaseError: (error: any) => {
-      // E_USER_CANCELLED is not really an error — user just dismissed the sheet
       if (
         error?.code === 'E_USER_CANCELLED' ||
         error?.message?.toLowerCase().includes('cancel')
@@ -97,6 +141,11 @@ export default function NativePaymentModal({
       }
     },
   });
+
+  const products: any[] = iap.products || [];
+  const connected: boolean = iap.connected || false;
+  const requestPurchase = iap.requestPurchase;
+  const getProducts = iap.getProducts || iap.fetchProducts || (async () => {});
 
   // ─── Fetch product when modal opens and IAP is connected ─────────────────────
   useEffect(() => {
@@ -180,8 +229,9 @@ export default function NativePaymentModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPayState('purchasing');
     try {
-      // expo-iap v4: requestPurchase takes the product ID string directly
-      await requestPurchase(PRODUCT_ID);
+      await (requestPurchase as any)({ skus: [PRODUCT_ID] }).catch(async () => {
+        await (requestPurchase as any)(PRODUCT_ID);
+      });
       // Result is handled by onPurchaseSuccess / onPurchaseError callbacks above
     } catch (err: any) {
       if (
@@ -236,7 +286,7 @@ export default function NativePaymentModal({
   };
 
   // ─── Price display — use live product price from Play Console ─────────────────
-  const product = products.find((p) => p.productId === PRODUCT_ID);
+  const product = products.find((p: any) => (p?.productId || p?.id || p?.sku) === PRODUCT_ID);
   const displayPrice = (product as any)?.localizedPrice ?? (product as any)?.price ?? '~€1.50';
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -464,6 +514,13 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
   },
+  closeBtn: {
+    padding: 6,
+  },
+  body: {
+    padding: 24,
+    alignItems: 'center',
+  },
   headerIconWrap: {
     width: 32,
     height: 32,
@@ -618,3 +675,10 @@ const s = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
 });
+
+export default function NativePaymentModal(props: NativePaymentModalProps) {
+  if (!hasNativeIap) {
+    return <ExpoGoFallbackModal {...props} />;
+  }
+  return <NativePaymentModalInner {...props} />;
+}

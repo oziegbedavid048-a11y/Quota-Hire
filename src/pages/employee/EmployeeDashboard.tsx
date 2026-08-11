@@ -13,9 +13,6 @@ import {
   Target,
   Activity,
   FileText,
-  Zap,
-  Star,
-  MessageSquare,
   Eye
 } from 'lucide-react';
 import {
@@ -26,7 +23,6 @@ import {
 } from 'recharts';
 import { useAppContext } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
-import { calculateProfileStrength } from '../../utils/profile';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -68,7 +64,6 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
   const { jobs, applications, toggleSavedJob, savedJobs } = useAppContext();
 
   const approvedJobs = jobs.filter((j: any) => j.status === 'approved');
-  const profileScore = calculateProfileStrength(user);
 
   // Real backend data — no fallbacks with mock numbers
   const skillMatchData: any[] = analytics?.skillMatchData || [];
@@ -346,11 +341,8 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
         </motion.div>
       </div>
 
-      {/* ── BOTTOM GRID: Recent Applications + Profile Completion + Quick Tips ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* Recent Applications List */}
-        <motion.div variants={itemVariants} className={`${profileScore < 100 ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-6 shadow-sm`}>
+        <motion.div variants={itemVariants} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-extrabold text-neutral-900 dark:text-white">Recent Applications</h2>
             <button onClick={() => navigate('/employee/tracker')} className="text-xs font-bold text-accent-600 hover:text-accent-700 flex items-center gap-1">
@@ -407,72 +399,6 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
             </div>
           )}
         </motion.div>
-
-        {/* AI Career Accelerator */}
-        <div className="space-y-6">
-          <motion.div variants={itemVariants} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
-                <Zap size={16} className="text-accent-500" /> AI Career Accelerator
-              </h2>
-              <span className="text-[10px] font-extrabold text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full">Pro Tools</span>
-            </div>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 leading-relaxed">
-              Supercharge your tech sales career with AI-powered resume tailoring, high-OTE role matching, and peer discussions.
-            </p>
-
-            <div className="space-y-2.5">
-              <button
-                onClick={() => navigate('/employee/cv')}
-                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-accent-200 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-accent-50 flex items-center justify-center text-accent-600">
-                    <Star size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-accent-600 transition-colors">AI CV Tailor</p>
-                    <p className="text-[11px] text-neutral-400">Match your CV to target jobs</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-neutral-400 group-hover:text-accent-500 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => navigate('/jobs')}
-                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-warm-200 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-warm-50 flex items-center justify-center text-warm-600">
-                    <TrendingUp size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-warm-600 transition-colors">High OTE Tech Roles</p>
-                    <p className="text-[11px] text-neutral-400">$100k+ commission upside</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-neutral-400 group-hover:text-warm-500 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => navigate('/community')}
-                className="w-full text-left flex items-center justify-between p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800 hover:border-indigo-200 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                    <MessageSquare size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-neutral-900 dark:text-white group-hover:text-indigo-600 transition-colors">QuotaHire Community</p>
-                    <p className="text-[11px] text-neutral-400">MEDDIC & quota strategy discussions</p>
-                  </div>
-                </div>
-                <ChevronRight size={14} className="text-neutral-400 group-hover:text-indigo-500 transition-colors" />
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
 
       {/* ── RECOMMENDED JOBS ── */}
       <motion.div variants={itemVariants} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-100 dark:border-neutral-800 p-6 shadow-sm">
