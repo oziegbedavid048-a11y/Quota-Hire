@@ -30,6 +30,7 @@ import { Feather } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight } from '@/constants/theme';
@@ -64,10 +65,8 @@ export default function SettingsScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Preference switches States
+  // Security & Biometric switch state
   const [biometricsEnabled, setBiometricsEnabled] = useState(false);
-  const [pushEnabled, setPushEnabled] = useState(false);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
   // Fetch initial profile & settings data
   const loadSettingsData = async () => {
@@ -91,15 +90,9 @@ export default function SettingsScreen() {
         setPhone(empProfile?.phone_number || '');
       }
 
-      // 4. Load preference switches from SecureStore
+      // 4. Load biometrics preference from SecureStore
       const bioStored = await SecureStore.getItemAsync('biometrics_enabled');
       setBiometricsEnabled(bioStored === 'true');
-
-      const pushStored = await SecureStore.getItemAsync('push_notifications_enabled');
-      setPushEnabled(pushStored === 'true');
-
-      const darkStored = await SecureStore.getItemAsync('dark_mode_enabled');
-      setDarkModeEnabled(darkStored === 'true');
     } catch {
       Alert.alert('Error', 'Could not load your settings data.');
     } finally {
@@ -214,24 +207,38 @@ export default function SettingsScreen() {
     }
   };
 
-  // Toggle Preferences switches
+  // Toggle Biometrics switch
   const toggleBiometrics = async (val: boolean) => {
     setBiometricsEnabled(val);
     await SecureStore.setItemAsync('biometrics_enabled', val.toString());
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
 
-  const togglePush = async (val: boolean) => {
-    setPushEnabled(val);
-    await SecureStore.setItemAsync('push_notifications_enabled', val.toString());
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const toggleDarkMode = async (val: boolean) => {
-    setDarkModeEnabled(val);
-    await SecureStore.setItemAsync('dark_mode_enabled', val.toString());
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert('Preference Saved', 'Color theme preferences will apply on reload.');
+    if (val) {
+      try {
+        if (LocalAuthentication && typeof LocalAuthentication.hasHardwareAsync === 'function') {
+          const hasHardware = await LocalAuthentication.hasHardwareAsync();
+          const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+          if (!hasHardware || !isEnrolled) {
+            Alert.alert(
+              'Biometrics Unavailable',
+              'Fingerprint / Face ID authentication is not set up or enrolled on this device.'
+            );
+          } else {
+            // Perform test verification
+            const res = await LocalAuthentication.authenticateAsync({
+              promptMessage: 'Verify Fingerprint / Face ID',
+              cancelLabel: 'Cancel',
+            });
+            if (!res.success) {
+              setBiometricsEnabled(false);
+              await SecureStore.setItemAsync('biometrics_enabled', 'false');
+            }
+          }
+        }
+      } catch (_e) {
+        // Silently handle
+      }
+    }
   };
 
   const handleSignOut = () => {
@@ -510,11 +517,11 @@ export default function SettingsScreen() {
               </View>
             </View>
 
-            {/* Application Preferences Card */}
+            {/* Biometric Security Card */}
             <View style={s.card}>
               <View style={s.cardHeader}>
-                <Feather name="sliders" size={16} color={Palette.accent600} />
-                <Text style={s.cardTitle}>Preferences</Text>
+                <Feather name="shield" size={16} color={Palette.accent600} />
+                <Text style={s.cardTitle}>Biometric Security</Text>
               </View>
 
               <View style={s.cardBody}>
@@ -522,45 +529,13 @@ export default function SettingsScreen() {
                 <View style={s.preferenceRow}>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={s.preferenceLabel}>Biometric Sign In</Text>
-                    <Text style={s.preferenceSub}>Use Face ID / Fingerprint on login</Text>
+                    <Text style={s.preferenceSub}>Use Fingerprint / Face ID when logging in</Text>
                   </View>
                   <Switch
                     value={biometricsEnabled}
                     onValueChange={toggleBiometrics}
                     trackColor={{ false: '#cbd5e1', true: Palette.accent600 }}
                     thumbColor={Platform.OS === 'ios' ? '#ffffff' : biometricsEnabled ? Palette.accent500 : '#f8fafc'}
-                  />
-                </View>
-
-                <View style={s.divider} />
-
-                {/* Notifications Toggle */}
-                <View style={s.preferenceRow}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={s.preferenceLabel}>Push Notifications</Text>
-                    <Text style={s.preferenceSub}>Opt-in to alerts and application updates</Text>
-                  </View>
-                  <Switch
-                    value={pushEnabled}
-                    onValueChange={togglePush}
-                    trackColor={{ false: '#cbd5e1', true: Palette.accent600 }}
-                    thumbColor={Platform.OS === 'ios' ? '#ffffff' : pushEnabled ? Palette.accent500 : '#f8fafc'}
-                  />
-                </View>
-
-                <View style={s.divider} />
-
-                {/* Dark Mode Toggle */}
-                <View style={s.preferenceRow}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={s.preferenceLabel}>Dark Mode (Beta)</Text>
-                    <Text style={s.preferenceSub}>Toggle color scheme theme selection</Text>
-                  </View>
-                  <Switch
-                    value={darkModeEnabled}
-                    onValueChange={toggleDarkMode}
-                    trackColor={{ false: '#cbd5e1', true: Palette.accent600 }}
-                    thumbColor={Platform.OS === 'ios' ? '#ffffff' : darkModeEnabled ? Palette.accent500 : '#f8fafc'}
                   />
                 </View>
               </View>

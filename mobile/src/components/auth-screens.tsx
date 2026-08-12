@@ -224,6 +224,129 @@ const GInput = ({
   );
 };
 
+const OtpBoxInput = ({
+  value,
+  onChange,
+  length = 6,
+  error,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  length?: number;
+  error?: boolean;
+}) => {
+  const inputRef = React.useRef<TextInput>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handlePress = () => {
+    inputRef.current?.focus();
+  };
+
+  const digits = Array.from({ length }, (_, i) => value[i] || "");
+
+  return (
+    <Pressable onPress={handlePress} style={otpStyles.container}>
+      <TextInput
+        ref={inputRef}
+        value={value}
+        onChangeText={(text) => {
+          const cleaned = text.replace(/[^0-9]/g, "").slice(0, length);
+          onChange(cleaned);
+        }}
+        keyboardType="number-pad"
+        maxLength={length}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        style={otpStyles.hiddenInput}
+        caretHidden={true}
+        contextMenuHidden={false}
+        autoFocus={true}
+      />
+      <View style={otpStyles.boxRow}>
+        {digits.map((digit, idx) => {
+          const isCurrentIndex = value.length === idx;
+          const isLastIndexAndFilled = idx === length - 1 && value.length === length;
+          const isActive = isFocused && (isCurrentIndex || isLastIndexAndFilled);
+          const isFilled = digit !== "";
+
+          return (
+            <View
+              key={idx}
+              style={[
+                otpStyles.box,
+                error ? otpStyles.boxError : isFilled ? otpStyles.boxFilled : null,
+                isActive ? otpStyles.boxActive : null,
+              ]}
+            >
+              <Text style={[otpStyles.boxText, isFilled && otpStyles.boxTextFilled]}>
+                {digit}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </Pressable>
+  );
+};
+
+const otpStyles = StyleSheet.create({
+  container: {
+    marginVertical: 12,
+    width: "100%",
+  },
+  hiddenInput: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    opacity: 0,
+    zIndex: 10,
+  },
+  boxRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    gap: 6,
+  },
+  box: {
+    flex: 1,
+    height: 54,
+    maxWidth: 48,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.45)",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.60)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  boxActive: {
+    borderColor: ACCENT_500,
+    backgroundColor: "rgba(255, 255, 255, 0.90)",
+    shadowColor: ACCENT_500,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  boxFilled: {
+    borderColor: ACCENT_600,
+    backgroundColor: "rgba(255, 255, 255, 0.75)",
+  },
+  boxError: {
+    borderColor: "#f87171",
+    backgroundColor: "rgba(254, 242, 242, 0.60)",
+  },
+  boxText: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: TEXT_900,
+    textAlign: "center",
+  },
+  boxTextFilled: {
+    color: ACCENT_600,
+  },
+});
+
 const ShaderBackground = React.memo(() => {
   return (
     <View style={stylesShader.shaderWrap} pointerEvents="none">
@@ -567,12 +690,18 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     setSError("");
     setSSubmitting(true);
     try {
+      const fullName =
+        role === "employee"
+          ? `${sFirst.trim()} ${sLast.trim()}`.trim()
+          : sCompany.trim();
+
       const body: any = {
+        name: fullName,
         email: sEmail.trim(),
         password: sPass,
-        password_confirm: sPassConf,
+        password2: sPassConf,
         role,
-        phone: sPhone,
+        phone_number: sPhone,
         city: sCity,
         country: sCountry,
       };
@@ -822,17 +951,14 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       </View>
                     )}
 
-                    <View style={[gs.formGap, { marginBottom: 24 }]}>
-                      <GInput
-                        label="6-Digit Login Code"
-                        icon="shield"
+                    <View style={{ marginVertical: 16 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: TEXT_700, marginBottom: 10, textAlign: "center" }}>
+                        Enter 6-Digit Code
+                      </Text>
+                      <OtpBoxInput
                         value={loginOtpCode}
                         onChange={setLoginOtpCode}
-                        kb="number-pad"
-                        ph="123456"
-                        fk="lotp"
-                        focusSet={setLoginOtpFocus}
-                        focusCur={loginOtpFocus}
+                        error={!!loginOtpError}
                       />
                     </View>
 

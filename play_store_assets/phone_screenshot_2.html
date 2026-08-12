@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<title>Phone Screenshot 2 - Quota Hire</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(145deg, #f0f7eb 0%, #dff0d4 30%, #cce8be 60%, #bddfa8 100%);
+    position: relative;
+  }
+  .cube { position: absolute; border-radius: 18px; opacity: 0.5; }
+  .cube-1 { width: 220px; height: 220px; background: linear-gradient(135deg, #9fd08f, #72bc5e); top: -50px; right: -40px; transform: rotate(-18deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.15); }
+  .cube-2 { width: 170px; height: 170px; background: linear-gradient(135deg, #bde5ad, #92d47e); top: 90px; right: 60px; transform: rotate(-18deg); box-shadow: inset -6px -6px 16px rgba(0,0,0,0.12); }
+  .cube-3 { width: 200px; height: 200px; background: linear-gradient(135deg, #acd89a, #7ec96a); top: -40px; left: -30px; transform: rotate(22deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.15); }
+  .cube-4 { width: 160px; height: 160px; background: linear-gradient(135deg, #c8ecba, #9ddb88); top: 100px; left: 60px; transform: rotate(22deg); box-shadow: inset -6px -6px 16px rgba(0,0,0,0.12); }
+  .cube-5 { width: 250px; height: 250px; background: linear-gradient(135deg, #9ecf8e, #6dba58); bottom: -60px; left: -50px; transform: rotate(28deg); box-shadow: inset -10px -10px 24px rgba(0,0,0,0.15); }
+  .cube-6 { width: 200px; height: 200px; background: linear-gradient(135deg, #b5e0a5, #88cf78); bottom: 70px; left: 60px; transform: rotate(28deg); box-shadow: inset -6px -6px 16px rgba(0,0,0,0.12); }
+  .cube-7 { width: 270px; height: 270px; background: linear-gradient(135deg, #9ccc8c, #6ab856); bottom: -70px; right: -60px; transform: rotate(-22deg); box-shadow: inset -10px -10px 24px rgba(0,0,0,0.15); }
+  .cube-8 { width: 210px; height: 210px; background: linear-gradient(135deg, #bee8ae, #93d882); bottom: 90px; right: 60px; transform: rotate(-22deg); box-shadow: inset -6px -6px 16px rgba(0,0,0,0.12); }
+
+  .top-text { position: absolute; top: 110px; left: 70px; z-index: 10; }
+  .top-text h1 { font-size: 86px; font-weight: 900; color: #1a1a1a; line-height: 1.05; letter-spacing: -2px; text-transform: uppercase; }
+
+  .phone-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -48%); z-index: 20; }
+  .phone-frame { width: 580px; height: 1180px; background: #111; border-radius: 66px; padding: 18px; box-shadow: 0 60px 120px rgba(0,0,0,0.45), 0 20px 40px rgba(0,0,0,0.3), inset 0 0 0 2px #333; position: relative; }
+  .phone-notch { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 160px; height: 36px; background: #111; border-radius: 0 0 20px 20px; z-index: 30; }
+  .phone-screen { width: 100%; height: 100%; border-radius: 50px; overflow: hidden; background: #f5f0e8; position: relative; }
+  .screen-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+
+  .bottom-text { position: absolute; bottom: 110px; right: 70px; z-index: 10; text-align: right; }
+  .bottom-text p { font-size: 52px; font-weight: 800; color: #1a1a1a; line-height: 1.15; text-transform: uppercase; letter-spacing: -1px; }
+</style>
+</head>
+<body>
+  <div class="cube cube-1"></div>
+  <div class="cube cube-2"></div>
+  <div class="cube cube-3"></div>
+  <div class="cube cube-4"></div>
+  <div class="cube cube-5"></div>
+  <div class="cube cube-6"></div>
+  <div class="cube cube-7"></div>
+  <div class="cube cube-8"></div>
+
+  <div class="top-text">
+    <h1>BUILD YOUR<br>PERFECT<br>CV</h1>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <img class="screen-img" src="Screenshot_2026-08-11-19-27-24-36_e66e5bc39d7a66a7069feea54c79b99c.jpg" alt="Quota Hire CV Generator Screen">
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-text">
+    <p>AI-POWERED.<br>TAILORED<br>TO YOU.</p>
+  </div>
+</body>
+</html>

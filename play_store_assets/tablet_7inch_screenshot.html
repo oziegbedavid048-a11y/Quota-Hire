@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>7-inch Tablet Screenshot - Quota Hire</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px;
+    height: 1920px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(145deg, #e8f5e0 0%, #d4edca 30%, #c5e8b8 60%, #b8e0aa 100%);
+    position: relative;
+  }
+
+  .cube { position: absolute; border-radius: 20px; opacity: 0.5; }
+  .cube-1 { width: 230px; height: 230px; background: linear-gradient(135deg, #a8d89a, #7ec86a); top: -50px; left: -40px; transform: rotate(20deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.15); }
+  .cube-2 { width: 180px; height: 180px; background: linear-gradient(135deg, #c5e8b8, #9dd988); top: 90px; left: 65px; transform: rotate(20deg); box-shadow: inset -6px -6px 16px rgba(0,0,0,0.12); }
+  .cube-3 { width: 250px; height: 250px; background: linear-gradient(135deg, #b2dba2, #85c972); top: -65px; right: -35px; transform: rotate(-16deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.15); }
+  .cube-4 { width: 195px; height: 195px; background: linear-gradient(135deg, #caefc0, #a3dc90); top: 105px; right: 55px; transform: rotate(-16deg); box-shadow: inset -6px -6px 16px rgba(0,0,0,0.12); }
+  .cube-5 { width: 260px; height: 260px; background: linear-gradient(135deg, #a8d89a, #78c268); bottom: -55px; left: -50px; transform: rotate(25deg); box-shadow: inset -10px -10px 24px rgba(0,0,0,0.15); }
+  .cube-6 { width: 210px; height: 210px; background: linear-gradient(135deg, #b8e0aa, #8ed07c); bottom: 65px; left: 65px; transform: rotate(25deg); box-shadow: inset -6px -6px 16px rgba(0,0,0,0.12); }
+  .cube-7 { width: 280px; height: 280px; background: linear-gradient(135deg, #a0d490, #6ebf5c); bottom: -75px; right: -55px; transform: rotate(-20deg); box-shadow: inset -10px -10px 24px rgba(0,0,0,0.15); }
+  .cube-8 { width: 215px; height: 215px; background: linear-gradient(135deg, #c0e8b0, #95d882); bottom: 85px; right: 55px; transform: rotate(-20deg); box-shadow: inset -6px -6px 16px rgba(0,0,0,0.12); }
+
+  /* Two-column layout for tablet */
+  .layout {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    z-index: 20;
+    padding: 80px 70px;
+  }
+
+  .text-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 40px;
+  }
+  .text-col h1 {
+    font-size: 100px;
+    font-weight: 900;
+    color: #1a1a1a;
+    line-height: 1.0;
+    letter-spacing: -2.5px;
+    text-transform: uppercase;
+  }
+  .text-col p {
+    font-size: 44px;
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    opacity: 0.8;
+  }
+  .badge {
+    display: inline-block;
+    background: #2e8b2e;
+    color: #fff;
+    font-size: 32px;
+    font-weight: 700;
+    padding: 14px 36px;
+    border-radius: 50px;
+    letter-spacing: 1px;
+    width: fit-content;
+  }
+
+  .phone-col {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 36px;
+    align-items: center;
+  }
+
+  .phone-frame {
+    width: 360px;
+    height: 730px;
+    background: #111;
+    border-radius: 46px;
+    padding: 14px;
+    box-shadow: 0 50px 100px rgba(0,0,0,0.42), 0 18px 36px rgba(0,0,0,0.28), inset 0 0 0 1.5px #333;
+    position: relative;
+  }
+  .phone-frame.tilt-left { transform: rotate(-4deg); }
+  .phone-frame.tilt-right { transform: rotate(4deg) translateY(30px); }
+  .phone-notch { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 100px; height: 24px; background: #111; border-radius: 0 0 14px 14px; z-index: 30; }
+  .phone-screen { width: 100%; height: 100%; border-radius: 34px; overflow: hidden; background: #f5f0e8; }
+  .screen-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+</style>
+</head>
+<body>
+  <div class="cube cube-1"></div>
+  <div class="cube cube-2"></div>
+  <div class="cube cube-3"></div>
+  <div class="cube cube-4"></div>
+  <div class="cube cube-5"></div>
+  <div class="cube cube-6"></div>
+  <div class="cube cube-7"></div>
+  <div class="cube cube-8"></div>
+
+  <div class="layout">
+    <div class="text-col">
+      <h1>YOUR NEXT<br>JOB<br>STARTS<br>HERE</h1>
+      <p>FROM CV<br>GENERATION<br>TO INTERVIEW<br>WINS.</p>
+      <div class="badge">QUOTA HIRE</div>
+    </div>
+    <div class="phone-col">
+      <div class="phone-frame tilt-left">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <img class="screen-img" src="Screenshot_2026-08-11-19-26-37-07_e66e5bc39d7a66a7069feea54c79b99c.jpg" alt="Profile Screen">
+        </div>
+      </div>
+      <div class="phone-frame tilt-right">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <img class="screen-img" src="Screenshot_2026-08-11-19-27-24-36_e66e5bc39d7a66a7069feea54c79b99c.jpg" alt="CV Generator Screen">
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

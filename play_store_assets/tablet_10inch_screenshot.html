@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>10-inch Tablet Screenshot - Quota Hire</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 2560px;
+    height: 1600px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #eaf6e2 0%, #d6eccc 35%, #c2e2b6 65%, #b0d8a2 100%);
+    position: relative;
+  }
+
+  /* Background cubes */
+  .cube { position: absolute; border-radius: 24px; opacity: 0.5; }
+  .cube-tl1 { width: 340px; height: 340px; background: linear-gradient(135deg, #a5d494, #76c062); top: -70px; left: -55px; transform: rotate(20deg); box-shadow: inset -10px -10px 28px rgba(0,0,0,0.15); }
+  .cube-tl2 { width: 265px; height: 265px; background: linear-gradient(135deg, #bde5ae, #92d47e); top: 130px; left: 90px; transform: rotate(20deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.12); }
+  .cube-tr1 { width: 360px; height: 360px; background: linear-gradient(135deg, #9ecf8e, #70bb5c); top: -75px; right: -55px; transform: rotate(-18deg); box-shadow: inset -10px -10px 28px rgba(0,0,0,0.15); }
+  .cube-tr2 { width: 280px; height: 280px; background: linear-gradient(135deg, #c6eab6, #9bda88); top: 140px; right: 85px; transform: rotate(-18deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.12); }
+  .cube-bl1 { width: 380px; height: 380px; background: linear-gradient(135deg, #a2ce92, #72be60); bottom: -80px; left: -60px; transform: rotate(25deg); box-shadow: inset -12px -12px 30px rgba(0,0,0,0.15); }
+  .cube-bl2 { width: 295px; height: 295px; background: linear-gradient(135deg, #badeaa, #8dcc7a); bottom: 120px; left: 92px; transform: rotate(25deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.12); }
+  .cube-br1 { width: 400px; height: 400px; background: linear-gradient(135deg, #9ccc8c, #6ab858); bottom: -85px; right: -65px; transform: rotate(-22deg); box-shadow: inset -12px -12px 30px rgba(0,0,0,0.15); }
+  .cube-br2 { width: 310px; height: 310px; background: linear-gradient(135deg, #bce2ae, #91d07e); bottom: 130px; right: 88px; transform: rotate(-22deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.12); }
+
+  /* Landscape layout: left text, 3 phones right */
+  .layout {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 100px 120px;
+    z-index: 20;
+    gap: 80px;
+  }
+
+  .text-col {
+    flex: 0 0 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+  }
+  .text-col h1 {
+    font-size: 160px;
+    font-weight: 900;
+    color: #1a1a1a;
+    line-height: 1.0;
+    letter-spacing: -4px;
+    text-transform: uppercase;
+  }
+  .text-col p {
+    font-size: 60px;
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: -1.5px;
+    opacity: 0.82;
+  }
+  .badge {
+    display: inline-block;
+    background: #2e8b2e;
+    color: #fff;
+    font-size: 48px;
+    font-weight: 700;
+    padding: 20px 55px;
+    border-radius: 60px;
+    letter-spacing: 2px;
+    width: fit-content;
+  }
+
+  .phones-col {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 50px;
+  }
+
+  .phone-frame {
+    width: 480px;
+    height: 970px;
+    background: #111;
+    border-radius: 60px;
+    padding: 18px;
+    box-shadow: 0 60px 120px rgba(0,0,0,0.42), 0 20px 40px rgba(0,0,0,0.28), inset 0 0 0 2px #333;
+    position: relative;
+  }
+  .phone-frame.tilt-l { transform: rotate(-5deg); }
+  .phone-frame.tilt-c { transform: translateY(-30px); }
+  .phone-frame.tilt-r { transform: rotate(5deg); }
+  .phone-notch { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 130px; height: 30px; background: #111; border-radius: 0 0 16px 16px; z-index: 30; }
+  .phone-screen { width: 100%; height: 100%; border-radius: 44px; overflow: hidden; background: #f5f0e8; }
+  .screen-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+</style>
+</head>
+<body>
+  <div class="cube cube-tl1"></div>
+  <div class="cube cube-tl2"></div>
+  <div class="cube cube-tr1"></div>
+  <div class="cube cube-tr2"></div>
+  <div class="cube cube-bl1"></div>
+  <div class="cube cube-bl2"></div>
+  <div class="cube cube-br1"></div>
+  <div class="cube cube-br2"></div>
+
+  <div class="layout">
+    <div class="text-col">
+      <h1>UNLOCK<br>YOUR<br>CAREER</h1>
+      <p>FROM CV<br>GENERATION<br>TO INTERVIEW<br>WINS.</p>
+      <div class="badge">QUOTA HIRE</div>
+    </div>
+
+    <div class="phones-col">
+      <div class="phone-frame tilt-l">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <img class="screen-img" src="Screenshot_2026-08-11-19-26-37-07_e66e5bc39d7a66a7069feea54c79b99c.jpg" alt="Profile Screen">
+        </div>
+      </div>
+      <div class="phone-frame tilt-c">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <img class="screen-img" src="Screenshot_2026-08-11-19-27-24-36_e66e5bc39d7a66a7069feea54c79b99c.jpg" alt="CV Generator Screen">
+        </div>
+      </div>
+      <div class="phone-frame tilt-r">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <img class="screen-img" src="Screenshot_2026-08-11-19-27-05-89_e66e5bc39d7a66a7069feea54c79b99c.jpg" alt="Community Screen">
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

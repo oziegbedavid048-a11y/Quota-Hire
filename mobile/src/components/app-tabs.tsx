@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent, Modal } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { registerForPushNotificationsAsync } from '@/services/notifications';
 import { Image } from 'expo-image';
 import { Tabs, useRouter, useSegments, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -578,6 +580,81 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
   const [fabOpen, setFabOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const [isProfileIncomplete, setIsProfileIncomplete] = useState<boolean>(false);
+  const [showBiometricsModal, setShowBiometricsModal] = useState(false);
+  const [showPushModal, setShowPushModal] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const bioPrompted = await SecureStore.getItemAsync('has_prompted_biometrics');
+        if (!bioPrompted) {
+          setTimeout(() => setShowBiometricsModal(true), 600);
+        } else {
+          const pushPrompted = await SecureStore.getItemAsync('has_prompted_notifications');
+          if (!pushPrompted) {
+            setTimeout(() => setShowPushModal(true), 600);
+          }
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  const handleEnableBiometrics = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (LocalAuthentication && typeof LocalAuthentication.authenticateAsync === 'function') {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        if (hasHardware && isEnrolled) {
+          const res = await LocalAuthentication.authenticateAsync({
+            promptMessage: 'Confirm Fingerprint / Face ID to enable biometric login',
+            cancelLabel: 'Cancel',
+          });
+          if (res.success) {
+            await SecureStore.setItemAsync('biometrics_enabled', 'true');
+          }
+        } else {
+          await SecureStore.setItemAsync('biometrics_enabled', 'true');
+        }
+      }
+    } catch { /* ignore */ }
+    await SecureStore.setItemAsync('has_prompted_biometrics', 'true');
+    setShowBiometricsModal(false);
+
+    const pushPrompted = await SecureStore.getItemAsync('has_prompted_notifications');
+    if (!pushPrompted) {
+      setTimeout(() => setShowPushModal(true), 400);
+    }
+  };
+
+  const handleSkipBiometrics = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await SecureStore.setItemAsync('biometrics_enabled', 'false');
+    await SecureStore.setItemAsync('has_prompted_biometrics', 'true');
+    setShowBiometricsModal(false);
+
+    const pushPrompted = await SecureStore.getItemAsync('has_prompted_notifications');
+    if (!pushPrompted) {
+      setTimeout(() => setShowPushModal(true), 400);
+    }
+  };
+
+  const handleEnablePush = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await registerForPushNotificationsAsync().catch(() => {});
+      await SecureStore.setItemAsync('push_notifications_enabled', 'true');
+    } catch { /* ignore */ }
+    await SecureStore.setItemAsync('has_prompted_notifications', 'true');
+    setShowPushModal(false);
+  };
+
+  const handleSkipPush = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await SecureStore.setItemAsync('push_notifications_enabled', 'false');
+    await SecureStore.setItemAsync('has_prompted_notifications', 'true');
+    setShowPushModal(false);
+  };
   const insets = useSafeAreaInsets();
   const segments = useSegments() as string[];
 
@@ -731,9 +808,166 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
         avatarUrl={avatarUrl}
         userName={userName}
       />
+
+      {/* ── First-Time Biometrics Setup Modal ── */}
+      <Modal
+        visible={showBiometricsModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleSkipBiometrics}
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <View style={[modalStyles.iconBadge, { backgroundColor: 'rgba(21, 117, 10, 0.12)' }]}>
+              <Feather name="shield" size={32} color={Palette.accent600} />
+            </View>
+
+            <Text style={modalStyles.title}>Enable Biometric Sign In</Text>
+            <Text style={modalStyles.subtitle}>
+              Log in faster and more securely using your Fingerprint or Face ID next time you open Quota Hire.
+            </Text>
+
+            <View style={modalStyles.buttonColumn}>
+              <HapticPressable onPress={handleEnableBiometrics} style={modalStyles.primaryBtn}>
+                <LinearGradient
+                  colors={[Palette.accent600, Palette.accent500]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={modalStyles.gradientBtn}
+                >
+                  <Feather name="unlock" size={16} color="#ffffff" style={{ marginRight: 8 }} />
+                  <Text style={modalStyles.primaryBtnText}>Enable Biometric Login</Text>
+                </LinearGradient>
+              </HapticPressable>
+
+              <HapticPressable onPress={handleSkipBiometrics} style={modalStyles.secondaryBtn}>
+                <Text style={modalStyles.secondaryBtnText}>Skip for Now</Text>
+              </HapticPressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── First-Time Push Notifications Setup Modal ── */}
+      <Modal
+        visible={showPushModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleSkipPush}
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <View style={[modalStyles.iconBadge, { backgroundColor: 'rgba(21, 117, 10, 0.12)' }]}>
+              <Feather name="bell" size={32} color={Palette.accent600} />
+            </View>
+
+            <Text style={modalStyles.title}>Turn On Notifications</Text>
+            <Text style={modalStyles.subtitle}>
+              Get real-time alerts for job application updates, interview invitations, and recruiter messages.
+            </Text>
+
+            <View style={modalStyles.buttonColumn}>
+              <HapticPressable onPress={handleEnablePush} style={modalStyles.primaryBtn}>
+                <LinearGradient
+                  colors={[Palette.accent600, Palette.accent500]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={modalStyles.gradientBtn}
+                >
+                  <Feather name="bell" size={16} color="#ffffff" style={{ marginRight: 8 }} />
+                  <Text style={modalStyles.primaryBtnText}>Turn On Notifications</Text>
+                </LinearGradient>
+              </HapticPressable>
+
+              <HapticPressable onPress={handleSkipPush} style={modalStyles.secondaryBtn}>
+                <Text style={modalStyles.secondaryBtnText}>Maybe Later</Text>
+              </HapticPressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  iconBadge: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Palette.neutral900,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: Palette.neutral500,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 24,
+  },
+  buttonColumn: {
+    width: '100%',
+    gap: 10,
+  },
+  primaryBtn: {
+    width: '100%',
+    height: 48,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  gradientBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  secondaryBtn: {
+    width: '100%',
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Palette.neutral100,
+  },
+  secondaryBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Palette.neutral600,
+  },
+});
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({

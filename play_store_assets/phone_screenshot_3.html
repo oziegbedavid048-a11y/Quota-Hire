@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080">
+<title>Phone Screenshot 3 - Quota Hire Community</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(160deg, #eaf6e2 0%, #d8eece 35%, #c6e5ba 65%, #b5dca6 100%);
+    position: relative;
+  }
+  .cube { position: absolute; border-radius: 18px; opacity: 0.52; }
+  .cube-1 { width: 190px; height: 190px; background: linear-gradient(135deg, #a5d494, #77c262); top: -40px; left: -30px; transform: rotate(15deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.14); }
+  .cube-2 { width: 155px; height: 155px; background: linear-gradient(135deg, #bfe5af, #94d480); top: 75px; left: 55px; transform: rotate(15deg); box-shadow: inset -5px -5px 14px rgba(0,0,0,0.11); }
+  .cube-3 { width: 210px; height: 210px; background: linear-gradient(135deg, #aed89e, #80c870); top: -55px; right: -35px; transform: rotate(-20deg); box-shadow: inset -8px -8px 20px rgba(0,0,0,0.14); }
+  .cube-4 { width: 165px; height: 165px; background: linear-gradient(135deg, #c8eabc, #9dd98a); top: 90px; right: 55px; transform: rotate(-20deg); box-shadow: inset -5px -5px 14px rgba(0,0,0,0.11); }
+  .cube-5 { width: 230px; height: 230px; background: linear-gradient(135deg, #a2d092, #72be60); bottom: -55px; left: -45px; transform: rotate(30deg); box-shadow: inset -10px -10px 24px rgba(0,0,0,0.14); }
+  .cube-6 { width: 185px; height: 185px; background: linear-gradient(135deg, #b8dfaa, #8acc7c); bottom: 65px; left: 58px; transform: rotate(30deg); box-shadow: inset -5px -5px 14px rgba(0,0,0,0.11); }
+  .cube-7 { width: 255px; height: 255px; background: linear-gradient(135deg, #9ece8e, #6cba5a); bottom: -65px; right: -55px; transform: rotate(-18deg); box-shadow: inset -10px -10px 24px rgba(0,0,0,0.14); }
+  .cube-8 { width: 200px; height: 200px; background: linear-gradient(135deg, #bce4ae, #91d280); bottom: 85px; right: 55px; transform: rotate(-18deg); box-shadow: inset -5px -5px 14px rgba(0,0,0,0.11); }
+
+  .top-text { position: absolute; top: 110px; left: 70px; z-index: 10; }
+  .top-text h1 { font-size: 86px; font-weight: 900; color: #1a1a1a; line-height: 1.05; letter-spacing: -2px; text-transform: uppercase; }
+
+  .phone-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -48%); z-index: 20; }
+  .phone-frame { width: 580px; height: 1180px; background: #111; border-radius: 66px; padding: 18px; box-shadow: 0 60px 120px rgba(0,0,0,0.45), 0 20px 40px rgba(0,0,0,0.3), inset 0 0 0 2px #333; position: relative; }
+  .phone-notch { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 160px; height: 36px; background: #111; border-radius: 0 0 20px 20px; z-index: 30; }
+  .phone-screen { width: 100%; height: 100%; border-radius: 50px; overflow: hidden; background: #f5f0e8; position: relative; }
+  .screen-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+
+  .bottom-text { position: absolute; bottom: 110px; right: 70px; z-index: 10; text-align: right; }
+  .bottom-text p { font-size: 52px; font-weight: 800; color: #1a1a1a; line-height: 1.15; text-transform: uppercase; letter-spacing: -1px; }
+</style>
+</head>
+<body>
+  <div class="cube cube-1"></div>
+  <div class="cube cube-2"></div>
+  <div class="cube cube-3"></div>
+  <div class="cube cube-4"></div>
+  <div class="cube cube-5"></div>
+  <div class="cube cube-6"></div>
+  <div class="cube cube-7"></div>
+  <div class="cube cube-8"></div>
+
+  <div class="top-text">
+    <h1>GROW WITH<br>YOUR<br>COMMUNITY</h1>
+  </div>
+
+  <div class="phone-wrap">
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <img class="screen-img" src="Screenshot_2026-08-11-19-27-05-89_e66e5bc39d7a66a7069feea54c79b99c.jpg" alt="Quota Hire Community Screen">
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-text">
+    <p>CONNECT &amp;<br>SHARE WITH<br>TOP PROS.</p>
+  </div>
+</body>
+</html>
