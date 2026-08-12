@@ -148,6 +148,12 @@ export default function TabLayout() {
     await clearTokens();
     await SecureStore.deleteItemAsync("user_name");
     await SecureStore.deleteItemAsync("user_role");
+    await SecureStore.deleteItemAsync("user_avatar");
+    await SecureStore.deleteItemAsync("cached_user_profile");
+    await SecureStore.deleteItemAsync("cached_jobs");
+    await SecureStore.deleteItemAsync("cached_applications");
+    await SecureStore.deleteItemAsync("cached_analytics");
+    await SecureStore.deleteItemAsync("cached_notifications");
     setUserName(undefined);
     setUserRole(undefined);
     setIsLoggedIn(false);

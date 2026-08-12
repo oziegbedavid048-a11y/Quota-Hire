@@ -660,11 +660,11 @@ export default function ProfileScreen() {
     setSaving(true);
     try {
       await apiFetch("/auth/me/", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ name: fullName }),
       });
       await apiFetch("/profile/employee/", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({
           phone_number: phone,
           city,
@@ -685,7 +685,7 @@ export default function ProfileScreen() {
     setSaving(true);
     try {
       await apiFetch("/profile/employee/", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ bio }),
       });
       refreshData();
@@ -705,7 +705,7 @@ export default function ProfileScreen() {
         .map((s) => s.trim())
         .filter(Boolean);
       await apiFetch("/profile/employee/", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ skills: skillsArray }),
       });
       refreshData();
@@ -721,7 +721,7 @@ export default function ProfileScreen() {
     setSaving(true);
     try {
       await apiFetch("/profile/employee/", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ experience_years: parseInt(expYears) || 0 }),
       });
       refreshData();
@@ -737,7 +737,7 @@ export default function ProfileScreen() {
     setSaving(true);
     try {
       await apiFetch("/profile/employee/", {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ education }),
       });
       refreshData();
@@ -770,7 +770,7 @@ export default function ProfileScreen() {
 
       if (Object.keys(profilePayload).length > 0) {
         await apiFetch("/profile/employee/", {
-          method: "PUT",
+          method: "PATCH",
           body: JSON.stringify(profilePayload),
         });
       }
@@ -779,7 +779,7 @@ export default function ProfileScreen() {
       if (parsedResume.location) {
         try {
           await apiFetch("/auth/me/", {
-            method: "PUT",
+            method: "PATCH",
             body: JSON.stringify({ location: parsedResume.location }),
           });
         } catch (err) {
@@ -1245,7 +1245,7 @@ export default function ProfileScreen() {
         statusBarTranslucent
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
         >
           <View style={s.overlay}>

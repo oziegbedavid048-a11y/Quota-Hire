@@ -30,6 +30,13 @@ export default function NotificationsScreen() {
   // Expands/collapses items accordion style
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
 
+  // Auto-mark all as read when opening the screen
+  React.useEffect(() => {
+    if (notifications.some(n => !n.read)) {
+      markAllRead();
+    }
+  }, [notifications, markAllRead]);
+
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Just now';
     try {
