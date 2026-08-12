@@ -59,23 +59,23 @@ type PayState =
   | 'cancelled'
   | 'error';
 
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+
 let useIAP: any = () => ({ connected: false, products: [], requestPurchase: async () => {} });
 let finishTransaction: any = async () => {};
 let hasNativeIap = false;
 
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 try {
-  if (
-    NativeModules.ExpoIap ||
-    NativeModules.ExpoIapModule ||
-    NativeModules.RNInAppPurchases
-  ) {
+  if (!isExpoGo) {
     const iapModule = require('expo-iap');
     useIAP = iapModule.useIAP;
     finishTransaction = iapModule.finishTransaction;
     hasNativeIap = true;
   }
 } catch (e) {
-  console.warn('[expo-iap] Native module unavailable in Expo Go sandbox.');
+  console.warn('[expo-iap] Native module unavailable:', e);
 }
 
 function ExpoGoFallbackModal({ visible, onClose }: NativePaymentModalProps) {
