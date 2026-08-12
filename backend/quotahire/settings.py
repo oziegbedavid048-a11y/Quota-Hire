@@ -293,6 +293,9 @@ CV_DOWNLOAD_FEE_EUR = float(config('CV_DOWNLOAD_FEE_EUR', default='1.50'))
 # Approximate NGN per EUR — used to compute a floor kobo amount for validation
 NGN_PER_EUR = int(config('NGN_PER_EUR', default='1650'))
 
+# ── Google OAuth Authentication ──────────────────────────────────────────────
+GOOGLE_WEB_CLIENT_ID = config('GOOGLE_WEB_CLIENT_ID', default='741329909708-cljluh4tepm3rpadt16lqdhqohhs5sd7.apps.googleusercontent.com')
+
 # ── Google Play Billing (mobile IAP) ─────────────────────────────────────────────
 # Service account JSON (as a string) for Play Developer API purchase verification.
 # Set this env var on Render with the full JSON content of your service account key file.
