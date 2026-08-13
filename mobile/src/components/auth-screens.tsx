@@ -888,25 +888,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       </LinearGradient>
                     </Pressable>
 
-                    {/* OR divider */}
-                    <View style={gs.orRow}>
-                      <View style={gs.orLine} />
-                      <Text style={gs.orText}>or</Text>
-                      <View style={gs.orLine} />
-                    </View>
 
-                    {/* Continue with Google */}
-                    <Pressable
-                      disabled={lSubmitting || sSubmitting}
-                      onPress={handleGoogleSignIn}
-                      style={({ pressed }) => [
-                        gs.googleBtn,
-                        { opacity: (pressed || lSubmitting || sSubmitting) ? 0.65 : 1 },
-                      ]}
-                    >
-                      <GoogleG />
-                      <Text style={gs.googleBtnText}>Continue with Google</Text>
-                    </Pressable>
 
                     {/* Sign in with Fingerprint / FaceID */}
                     {hasBiometricSupport && (
@@ -1243,25 +1225,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       </LinearGradient>
                     </Pressable>
 
-                    {/* OR divider */}
-                    <View style={gs.orRow}>
-                      <View style={gs.orLine} />
-                      <Text style={gs.orText}>or</Text>
-                      <View style={gs.orLine} />
-                    </View>
 
-                    {/* Sign up with Google */}
-                    <Pressable
-                      disabled={lSubmitting || sSubmitting}
-                      onPress={handleGoogleSignIn}
-                      style={({ pressed }) => [
-                        gs.googleBtn,
-                        { opacity: (pressed || lSubmitting || sSubmitting) ? 0.65 : 1 },
-                      ]}
-                    >
-                      <GoogleG />
-                      <Text style={gs.googleBtnText}>Sign up with Google</Text>
-                    </Pressable>
 
                     <View style={gs.divider} />
                     <View style={gs.switchRow}>
