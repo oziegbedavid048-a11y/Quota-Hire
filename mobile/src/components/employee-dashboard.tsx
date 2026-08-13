@@ -1329,10 +1329,10 @@ export default function EmployeeDashboardScreen() {
             style={styles.kpiGridItem}
           />
           <StatCard
-            label="Profile Views" 
-            value={analytics.profileViews ?? 28}
-            iconName="eye" iconBg={Palette.indigo50} iconColor={Palette.indigo600}
-            sub="Recruiter views this month"
+            label="Response Rate" 
+            value={`${applications.length > 0 ? Math.round((acceptedApps / applications.length) * 100) : 0}%`}
+            iconName="zap" iconBg={Palette.emerald50} iconColor={Palette.emerald600}
+            sub="Application success rate"
             onPress={() => router.push('/tracker' as any)} delay={180}
             style={styles.kpiGridItem}
           />
