@@ -1692,10 +1692,19 @@ class NotificationListView(generics.ListAPIView):
 
 
 class MarkNotificationReadView(APIView):
-    """PUT /api/notifications/<id>/read/ — mark a notification as read."""
+    """POST/PUT/PATCH /api/notifications/<id>/read/ — mark a notification as read."""
     permission_classes = [permissions.IsAuthenticated]
 
+    def post(self, request, pk):
+        return self._mark_read(request, pk)
+
     def put(self, request, pk):
+        return self._mark_read(request, pk)
+
+    def patch(self, request, pk):
+        return self._mark_read(request, pk)
+
+    def _mark_read(self, request, pk):
         try:
             notif = Notification.objects.get(pk=pk, user=request.user)
         except Notification.DoesNotExist:
@@ -1703,6 +1712,32 @@ class MarkNotificationReadView(APIView):
         notif.read = True
         notif.save(update_fields=['read'])
         return Response(NotificationSerializer(notif).data)
+
+
+class MarkAllNotificationsReadView(APIView):
+    """POST/PUT /api/notifications/mark-all-read/ — mark all current user's notifications as read."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        Notification.objects.filter(user=request.user, read=False).update(read=True)
+        return Response({'status': 'ok', 'message': 'All notifications marked as read.'})
+
+    def put(self, request):
+        return self.post(request)
+
+
+class NotificationDetailView(APIView):
+    """DELETE /api/notifications/<id>/ — delete a notification."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk):
+        try:
+            notif = Notification.objects.get(pk=pk, user=request.user)
+            notif.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Notification.DoesNotExist:
+            return Response({'error': 'Notification not found.'}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 # ── Admin-only Endpoints ──────────────────────────────────────────────────────

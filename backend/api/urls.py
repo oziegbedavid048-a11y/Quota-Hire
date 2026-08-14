@@ -90,7 +90,9 @@ urlpatterns = [
 
     # ── Notifications ─────────────────────────────────────────────────────────
     path('notifications/',                  views.NotificationListView.as_view(),      name='notifications'),
+    path('notifications/mark-all-read/',    views.MarkAllNotificationsReadView.as_view(), name='notifications-mark-all-read'),
     path('notifications/<int:pk>/read/',    views.MarkNotificationReadView.as_view(),  name='notification-read'),
+    path('notifications/<int:pk>/',         views.NotificationDetailView.as_view(),    name='notification-detail'),
     path('notifications/push-token/',       views.SavePushTokenView.as_view(),         name='push-token'),
 
     # ── Admin endpoints ───────────────────────────────────────────────────────
