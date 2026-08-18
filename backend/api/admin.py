@@ -803,9 +803,9 @@ class GeneratedCVAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentTransaction)
 class PaymentTransactionAdmin(admin.ModelAdmin):
-    list_display   = ('reference', 'user', 'cv', 'status', 'payment_source', 'amount_eur', 'amount_kobo', 'paystack_id', 'google_order_id', 'created_at')
-    list_filter    = ('status', 'payment_source', 'created_at')
-    search_fields  = ('reference', 'user__email', 'user__first_name', 'user__last_name', 'paystack_id', 'google_order_id')
+    list_display   = ('reference', 'user', 'cv', 'status', 'payment_source', 'amount_eur', 'google_ack_failed', 'google_order_id', 'created_at')
+    list_filter    = ('status', 'payment_source', 'google_ack_failed', 'created_at')
+    search_fields  = ('reference', 'user__email', 'user__first_name', 'user__last_name', 'paystack_id', 'google_order_id', 'google_purchase_token')
     readonly_fields = ('reference', 'created_at', 'updated_at', 'paystack_id', 'amount_kobo', 'google_order_id', 'google_purchase_token')
     ordering       = ('-created_at',)
     date_hierarchy = 'created_at'
@@ -813,7 +813,19 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Transaction Info', {'fields': ('reference', 'status', 'payment_source', 'amount_eur', 'amount_kobo')}),
         ('Paystack (Web)', {'fields': ('paystack_id',), 'classes': ('collapse',)}),
-        ('Google Play Billing (Mobile)', {'fields': ('google_order_id', 'google_purchase_token'), 'classes': ('collapse',)}),
+        (
+            'Google Play Billing (Mobile)',
+            {
+                'fields': ('google_order_id', 'google_purchase_token', 'google_ack_failed'),
+                'description': (
+                    '⚠️ If <b>google_ack_failed</b> is True, the purchase was verified and '
+                    'saved but the acknowledgment call to Google Play failed. Google will '
+                    'AUTO-REFUND unacknowledged purchases within 3 days. Go to '
+                    'Google Play Console → Order management and manually acknowledge this order.'
+                ),
+                'classes': ('collapse',),
+            },
+        ),
         ('Linked Records', {'fields': ('user', 'cv')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
     )

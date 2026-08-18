@@ -2581,6 +2581,10 @@ def _build_google_play_service(service_account_json_str: str):
     Build an authenticated Google Play Developer API client using a service account.
     The service account JSON is stored as a string in the GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
     environment variable (paste the full JSON content of your downloaded key file).
+
+    Raises:
+        ValidationError — if python google-api-python-client is not installed.
+        ValueError      — if the JSON string is malformed or missing required fields.
     """
     import json as _json
     import importlib
@@ -2588,10 +2592,39 @@ def _build_google_play_service(service_account_json_str: str):
         service_account = importlib.import_module('google.oauth2.service_account')
         discovery = importlib.import_module('googleapiclient.discovery')
         build = discovery.build
-    except Exception:
-        raise ValidationError("Google API client dependencies not installed.")
+    except ImportError as e:
+        logger.error(f'Google API client library not installed: {e}')
+        raise ValidationError(
+            'Google API client dependencies are not installed on the server. '
+            'Ensure google-api-python-client and google-auth are in requirements.txt.'
+        )
 
-    service_account_info = _json.loads(service_account_json_str)
+    # ── Validate JSON is well-formed before attempting to use it ──────────────
+    try:
+        service_account_info = _json.loads(service_account_json_str)
+    except _json.JSONDecodeError as e:
+        logger.error(
+            f'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is malformed JSON: {e}. '
+            f'Check the Render env var — it must be the full raw JSON content of the key file.'
+        )
+        raise ValueError(
+            'Server payment configuration is malformed (invalid JSON). '
+            'Please contact support — reference error: JSONDecodeError.'
+        )
+
+    # ── Validate the JSON has the expected service account structure ───────────
+    required_keys = ('type', 'project_id', 'private_key', 'client_email')
+    missing = [k for k in required_keys if k not in service_account_info]
+    if missing:
+        logger.error(
+            f'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is missing required fields: {missing}. '
+            f'Ensure you pasted the full downloaded JSON key file content.'
+        )
+        raise ValueError(
+            f'Server payment configuration is incomplete (missing: {missing}). '
+            'Please contact support.'
+        )
+
     credentials = service_account.Credentials.from_service_account_info(
         service_account_info,
         scopes=['https://www.googleapis.com/auth/androidpublisher'],
@@ -2669,15 +2702,43 @@ class PlayBillingVerifyView(APIView):
         package_name         = settings.GOOGLE_PLAY_PACKAGE_NAME
 
         if not service_account_json:
-            logger.error('PlayBilling verify: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not configured.')
+            logger.error(
+                'PlayBilling verify: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON env var is empty or not set. '
+                'Add it in your Render dashboard → Environment variables.'
+            )
             return Response(
-                {'error': 'server_config_error', 'message': 'Server payment configuration error. Contact support.'},
+                {
+                    'error': 'server_config_error',
+                    'message': 'Server payment configuration error. Contact support.',
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        # ─ Build the Google Play API service (validates JSON + credentials)
+        try:
+            service = _build_google_play_service(service_account_json)
+        except ValueError as cfg_err:
+            # Malformed or incomplete service account JSON
+            logger.error(f'PlayBilling: service account JSON invalid: {cfg_err}')
+            return Response(
+                {
+                    'error': 'server_config_error',
+                    'message': str(cfg_err),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except ValidationError as dep_err:
+            logger.error(f'PlayBilling: missing dependencies: {dep_err}')
+            return Response(
+                {
+                    'error': 'server_config_error',
+                    'message': 'Server is missing required payment libraries. Contact support.',
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
         # ─ Call Google Play Developer API to verify the purchase
         try:
-            service = _build_google_play_service(service_account_json)
             result = (
                 service.purchases()
                 .products()
@@ -2689,9 +2750,15 @@ class PlayBillingVerifyView(APIView):
                 .execute()
             )
         except Exception as e:
-            logger.error(f'Google Play verify API error: {e}')
+            logger.error(
+                f'Google Play verify API call failed: {type(e).__name__}: {e}. '
+                f'token={purchase_token[:20]}... product={product_id} package={package_name}'
+            )
             return Response(
-                {'error': 'verify_failed', 'message': 'Could not verify purchase with Google Play. Please try again.'},
+                {
+                    'error': 'verify_failed',
+                    'message': 'Could not verify purchase with Google Play. Please try again in a moment.',
+                },
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
@@ -2722,7 +2789,7 @@ class PlayBillingVerifyView(APIView):
         )
 
         # ─ Acknowledge the purchase on Google Play
-        # Required within 3 days — unacknowledged purchases are automatically refunded.
+        # Required within 3 days — unacknowledged purchases are automatically refunded by Google.
         try:
             (
                 service.purchases()
@@ -2737,11 +2804,26 @@ class PlayBillingVerifyView(APIView):
             )
             logger.info(
                 f'Google Play purchase acknowledged: user={request.user.pk} '
-                f'cv={cv_obj.pk} order={order_id}'
+                f'cv={cv_obj.pk} order={order_id} tx={transaction.pk}'
             )
         except Exception as ack_err:
-            # Non-fatal — we already verified and saved the tx. Log it but don't fail.
-            logger.warning(f'Google Play acknowledge error (non-fatal): {ack_err}')
+            # Non-fatal — purchase is verified and transaction is saved.
+            # However, Google Play will AUTO-REFUND the purchase within 3 days
+            # if it is never acknowledged. Log a WARNING so this can be caught
+            # and manually resolved via the Google Play Console if needed.
+            logger.warning(
+                f'[ACTION REQUIRED] Google Play acknowledge FAILED (non-fatal for user) — '
+                f'user={request.user.pk} cv={cv_obj.pk} order={order_id} tx={transaction.pk} '
+                f'token={purchase_token[:20]}... error={type(ack_err).__name__}: {ack_err}. '
+                f'This purchase may be AUTO-REFUNDED in 3 days if not acknowledged. '
+                f'Check Google Play Console > Order management to manually acknowledge if needed.'
+            )
+            # Mark the transaction so a management command can retry acknowledgment later
+            try:
+                transaction.google_ack_failed = True
+                transaction.save(update_fields=['google_ack_failed'])
+            except Exception:
+                pass  # If field doesn't exist yet (before migration), silently skip
 
         # ─ Bust dashboard cache
         try:

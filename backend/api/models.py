@@ -468,6 +468,11 @@ class PaymentTransaction(models.Model):
     google_order_id     = models.CharField(max_length=200, blank=True)
     # The purchaseToken returned by Google Play — used for server-side verification
     google_purchase_token = models.CharField(max_length=500, blank=True)
+    # True if the Google Play acknowledge() call failed after a successful verification.
+    # Google will auto-refund unacknowledged purchases within 3 days.
+    # Monitor this field via the admin or a management command and manually
+    # acknowledge via Google Play Console > Order management if needed.
+    google_ack_failed = models.BooleanField(default=False, db_index=True)
     created_at  = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at  = models.DateTimeField(auto_now=True)
 
