@@ -6,8 +6,9 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0034_companylead_companyrequest_expenserecord_and_more'),
+        ('api', '0033_add_password_reset_otp'),
     ]
+
 
     operations = [
         migrations.AddField(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   View,
@@ -15,6 +15,13 @@ import * as SecureStore from "expo-secure-store";
 import * as LocalAuthentication from "expo-local-authentication";
 const API_BASE = "https://quotahire-backend.onrender.com/api";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SearchablePickerModal, PickerItem } from "./searchable-picker-modal";
+import {
+  getAllCountries,
+  getCountryByName,
+  getCitiesForCountry,
+  extractSubscriberNumber,
+} from "../constants/countries-data";
 let GoogleSignin: any = null;
 let statusCodes: any = {};
 let isGoogleSigninSupported = false;
@@ -220,6 +227,77 @@ const GInput = ({
           </Pressable>
         )}
       </View>
+    </View>
+  );
+};
+
+// ─── Glass Select / Dropdown Input ──────────────────────────────────────
+const GSelect = ({
+  label,
+  icon,
+  value,
+  placeholder,
+  onPress,
+  flag,
+  badge,
+  err,
+  disabled,
+}: {
+  label: string;
+  icon: string;
+  value: string;
+  placeholder?: string;
+  onPress: () => void;
+  flag?: string;
+  badge?: string;
+  err?: boolean;
+  disabled?: boolean;
+}) => {
+  const hasValue = !!value;
+  const borderColor = err ? "#f87171" : INPUT_BORDER_DEFAULT;
+  const iconColor = err ? "#f87171" : hasValue ? ACCENT_500 : "#6b7280";
+
+  return (
+    <View style={gs.inputBlock}>
+      <Text style={gs.inputLabel}>{label}</Text>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        style={({ pressed }) => [
+          gs.inputWrap,
+          { borderColor, flexDirection: "row", alignItems: "center" },
+          pressed && { opacity: 0.85, backgroundColor: "#f0fdf4" },
+          disabled && { opacity: 0.6 },
+        ]}
+      >
+        <View style={gs.inputIconSlot}>
+          {flag ? (
+            <Text style={{ fontSize: 18 }}>{flag}</Text>
+          ) : (
+            <Feather name={icon as any} size={20} color={iconColor} />
+          )}
+        </View>
+        <View style={{ flex: 1, justifyContent: "center", minWidth: 0, paddingRight: 4 }}>
+          <Text
+            style={[
+              gs.inputFieldText,
+              !hasValue && { color: TEXT_400 },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {hasValue ? value : (placeholder ?? `Select ${label}`)}
+          </Text>
+        </View>
+        {badge ? (
+          <View style={gs.selectBadge}>
+            <Text style={gs.selectBadgeText}>{badge}</Text>
+          </View>
+        ) : null}
+        <View style={gs.inputChevron}>
+          <Feather name="chevron-down" size={18} color="#9ca3af" />
+        </View>
+      </Pressable>
     </View>
   );
 };
@@ -469,6 +547,65 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   const [sFocus, setSFocus] = useState("");
   const [sSubmitting, setSSubmitting] = useState(false);
   const [showVerify, setShowVerify] = useState(false);
+
+  // ── Country & City picker state ──
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const selectedCountryData = useMemo(() => getCountryByName(sCountry), [sCountry]);
+
+  const countryPickerItems: PickerItem[] = useMemo(() => {
+    return getAllCountries().map(c => ({
+      label: c.name,
+      value: c.name,
+      flag: c.flag,
+      badge: c.dialCode,
+      subtitle: `${c.code} • ${c.dialCode}`,
+    }));
+  }, []);
+
+  const cityPickerItems: PickerItem[] = useMemo(() => {
+    if (!sCountry) return [];
+    const cities = getCitiesForCountry(sCountry);
+    return cities.map(city => ({
+      label: city,
+      value: city,
+      subtitle: sCountry,
+    }));
+  }, [sCountry]);
+
+  const handleSelectCountry = (item: PickerItem) => {
+    const country = getCountryByName(item.value);
+    setSCountry(item.value);
+    setSCity("");
+
+    if (country) {
+      const existingSubscriber = extractSubscriberNumber(sPhone, country.dialCode);
+      if (existingSubscriber) {
+        setSPhone(`${country.dialCode} ${existingSubscriber}`);
+      } else {
+        setSPhone(`${country.dialCode} `);
+      }
+    }
+  };
+
+  const handleSelectCity = (item: PickerItem) => {
+    setSCity(item.value);
+  };
+
+  const handlePressCity = () => {
+    if (!sCountry) {
+      Alert.alert(
+        "Select Country First",
+        "Please choose your country before selecting a city.",
+        [
+          { text: "Select Country", onPress: () => setShowCountryPicker(true) },
+          { text: "Cancel", style: "cancel" },
+        ]
+      );
+      return;
+    }
+    setShowCityPicker(true);
+  };
 
   // ── Role switcher animation — CSS transition-all duration-300 in Signup.tsx
   const sliderX = useSharedValue(0);
@@ -1110,38 +1247,37 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                         focusCur={sFocus}
                       />
 
+                      <View style={gs.row}>
+                        <View style={gs.half}>
+                          <GSelect
+                            label="Country"
+                            icon="globe"
+                            value={sCountry}
+                            flag={selectedCountryData?.flag}
+                            badge={selectedCountryData?.dialCode}
+                            placeholder="Select Country"
+                            onPress={() => setShowCountryPicker(true)}
+                          />
+                        </View>
+                        <View style={gs.half}>
+                          <GSelect
+                            label="City"
+                            icon="map-pin"
+                            value={sCity}
+                            placeholder={sCountry ? "Select City" : "Select Country first"}
+                            onPress={handlePressCity}
+                          />
+                        </View>
+                      </View>
+
                       <GInput
                         label="Phone Number"
                         icon="phone"
                         value={sPhone}
                         onChange={setSPhone}
                         kb="phone-pad"
-                        ph="+1 (555) 000-0000"
+                        ph={selectedCountryData ? `${selectedCountryData.dialCode} 000 000 0000` : "+1 (555) 000-0000"}
                         fk="sp"
-                        focusSet={setSFocus}
-                        focusCur={sFocus}
-                      />
-
-                      <GInput
-                        label="Country"
-                        icon="map-pin"
-                        value={sCountry}
-                        onChange={setSCountry}
-                        cap="words"
-                        ph="e.g. United States"
-                        fk="sco"
-                        focusSet={setSFocus}
-                        focusCur={sFocus}
-                      />
-
-                      <GInput
-                        label="City"
-                        icon="map-pin"
-                        value={sCity}
-                        onChange={setSCity}
-                        cap="words"
-                        ph="e.g. New York"
-                        fk="sct"
                         focusSet={setSFocus}
                         focusCur={sFocus}
                       />
@@ -1293,6 +1429,30 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
           </Animated.View>
         </View>
       )}
+
+      {/* ── Searchable Country & City Modals ── */}
+      <SearchablePickerModal
+        visible={showCountryPicker}
+        onClose={() => setShowCountryPicker(false)}
+        title="Select Country"
+        placeholder="Search country or code..."
+        items={countryPickerItems}
+        selectedValue={sCountry}
+        onSelect={handleSelectCountry}
+        emptyMessage="No countries found"
+      />
+
+      <SearchablePickerModal
+        visible={showCityPicker}
+        onClose={() => setShowCityPicker(false)}
+        title={`Select City (${sCountry || ""})`}
+        placeholder="Search city..."
+        items={cityPickerItems}
+        selectedValue={sCity}
+        onSelect={handleSelectCity}
+        emptyMessage={`No standard cities listed for ${sCountry}`}
+        allowCustom={true}
+      />
     </View>
   );
 }
@@ -1374,6 +1534,9 @@ const gs = StyleSheet.create({
   //            NO borderWidth here — that was the cause of the thick black frame
   cardShadow: {
     borderRadius: 28,
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
     // iOS drop-shadow only (no elevation — Android elevation = dark halo)
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
@@ -1475,6 +1638,27 @@ const gs = StyleSheet.create({
   },
   // absolute right-3 p-1
   inputEye: { paddingHorizontal: 12, paddingVertical: 14 },
+  inputFieldText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: TEXT_900,
+    paddingVertical: 14,
+  },
+  inputChevron: {
+    paddingRight: 14,
+  },
+  selectBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: "#f0fdf4",
+    marginRight: 6,
+  },
+  selectBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: ACCENT_600,
+  },
 
   // space-y-4 sm:space-y-5 → gap: 20
   formGap: { gap: 20 },

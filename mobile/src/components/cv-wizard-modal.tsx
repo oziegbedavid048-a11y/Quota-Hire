@@ -23,6 +23,7 @@ import { WebView } from 'react-native-webview';
 
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 
@@ -627,10 +628,13 @@ const TEMPLATES = [
 ];
 
 export default function CVWizardModal({ visible, onClose, templateType, onSuccess, prefilledHeadline, job }: CVWizardModalProps) {
+  const insets = useSafeAreaInsets();
   const colors = Colors.light;
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [isAiSuggesting, setIsAiSuggesting] = useState(false);
+  const [isStepping, setIsStepping] = useState(false);
   const [profile, setProfile] = useState<any>(null);
 
   const isEuropass = templateType === 'europass';
@@ -744,29 +748,121 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
   // AI Suggest for Standard template
   const handleAISuggest = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (!headline.trim()) {
-      Alert.alert('Error', 'Please enter a Target Headline first.');
-      return;
+    if (isAiSuggesting) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsAiSuggesting(true);
+
+    let targetRole = headline.trim();
+    if (!targetRole && job?.title) {
+      targetRole = job.title;
+      setHeadline(job.title);
+    } else if (!targetRole) {
+      targetRole = 'Account Executive';
+      setHeadline('Account Executive');
     }
-    setWorkEntries([
-      {
-        role: headline,
-        company: 'Acme SaaS Corp',
-        period: '2023 - Present',
-        duties: 'Led B2B outbound prospecting using MEDDIC qualification framework.\nManaged key enterprise accounts and exceeded quarterly pipeline quotas by 120%.\nCollaborated with product marketing to align campaigns and improve customer acquisition.',
-      },
-      {
-        role: 'Sales Executive',
-        company: 'Global Tech Solution',
-        period: '2021 - 2023',
-        duties: 'Owned full sales cycle from initial contact to close.\nDelivered technical product demos and addressed customer pain points.\nConsistently ranked top 10% among account executives in EMEA regional team.',
-      },
-    ]);
-    setStrengths('MEDDIC, Consultative Selling, Pipeline Management, Value Negotiation');
-    setCertifications('Salesforce Certified AE, Sandler Sales Mastery');
-    setLanguages('English (Native), Spanish (Conversational)');
-    Alert.alert('AI Suggestions Applied!', 'We pre-filled optimized work history and strengths. Feel free to customize them.');
+
+    setTimeout(() => {
+      setIsAiSuggesting(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      const roleLower = targetRole.toLowerCase();
+      if (roleLower.includes('engineer') || roleLower.includes('developer') || roleLower.includes('tech') || roleLower.includes('software')) {
+        setWorkEntries([
+          {
+            role: targetRole,
+            company: 'TechFlow Systems',
+            period: '2022 - Present',
+            duties: 'Architected and deployed scalable cloud microservices reducing latency by 35%.\nCollaborated with cross-functional product teams using Agile/Scrum methodologies.\nMaintained 99.9% uptime across production Kubernetes clusters.',
+          },
+          {
+            role: 'Software Engineer',
+            company: 'Global Software Lab',
+            period: '2020 - 2022',
+            duties: 'Developed responsive frontend modules and robust RESTful APIs in TypeScript & Python.\nRefactored legacy codebases improving test coverage from 60% to 92%.\nMentored junior developers and participated in architectural code reviews.',
+          },
+        ]);
+        setStrengths('System Architecture, Cloud Infrastructure, Agile Delivery, Performance Optimization');
+        setCertifications('AWS Certified Solutions Architect, CKA (Certified Kubernetes Admin)');
+        setLanguages('English (Fluent), Spanish (Conversational)');
+        if (!skills) setSkills('TypeScript, Python, React, Node.js, Docker, AWS, PostgreSQL, CI/CD');
+        if (!education) setEducation('B.Sc. Computer Science - University of Technology');
+      } else if (roleLower.includes('product') || roleLower.includes('manager') || roleLower.includes('project')) {
+        setWorkEntries([
+          {
+            role: targetRole,
+            company: 'Apex Innovations',
+            period: '2022 - Present',
+            duties: 'Led end-to-end product discovery and delivery for flagship mobile & web products.\nIncreased user retention by 28% through data-driven feature prioritization and UX research.\nManaged sprint planning, roadmap execution, and stakeholder communication.',
+          },
+          {
+            role: 'Associate Product Manager',
+            company: 'Nova Digital Group',
+            period: '2020 - 2022',
+            duties: 'Conducted user interviews, analyzed cohort retention metrics, and defined MVP requirements.\nCollaborated closely with engineering, design, and GTM teams to launch 4 major feature releases.',
+          },
+        ]);
+        setStrengths('Product Strategy, User Research, Roadmapping, Data Analytics, Cross-functional Leadership');
+        setCertifications('Certified Scrum Product Owner (CSPO), Pragmatic Institute Certified');
+        setLanguages('English (Native), French (Professional)');
+        if (!skills) setSkills('Product Roadmapping, SQL, Figma, JIRA, User Testing, Metrics Analysis');
+        if (!education) setEducation('B.A. Business & Information Systems');
+      } else {
+        setWorkEntries([
+          {
+            role: targetRole,
+            company: 'Acme SaaS Corp',
+            period: '2023 - Present',
+            duties: 'Led B2B outbound prospecting using MEDDIC qualification framework.\nManaged key enterprise accounts and exceeded quarterly pipeline quotas by 120%.\nCollaborated with product marketing to align campaigns and improve customer acquisition.',
+          },
+          {
+            role: 'Sales Executive',
+            company: 'Global Tech Solution',
+            period: '2021 - 2023',
+            duties: 'Owned full sales cycle from initial contact to close.\nDelivered technical product demos and addressed customer pain points.\nConsistently ranked top 10% among account executives in EMEA regional team.',
+          },
+        ]);
+        setStrengths('MEDDIC, Consultative Selling, Pipeline Management, Value Negotiation, Enterprise Closing');
+        setCertifications('Salesforce Certified AE, Sandler Sales Mastery');
+        setLanguages('English (Native), Spanish (Conversational)');
+        if (!skills) setSkills('Salesforce, Outbound Prospecting, MEDDIC, Contract Negotiation, CRM Management');
+        if (!education) setEducation('B.Sc. Business Administration & Marketing');
+      }
+
+      if (isEuropass) {
+        if (!firstName.trim()) setFirstName(profile?.first_name || 'Alex');
+        if (!lastName.trim()) setLastName(profile?.last_name || 'Morgan');
+        if (!email.trim()) setEmail(profile?.email || 'alex.morgan@example.com');
+        if (!phone.trim()) setPhone(profile?.phone_number || '+44 7700 900077');
+        if (!address.trim()) setAddress(profile?.location || 'London, United Kingdom');
+        if (!nationality.trim()) setNationality('British');
+        if (!dateOfBirth.trim()) setDateOfBirth('12/05/1992');
+        setSummary(`Dedicated and results-oriented ${targetRole} with proven expertise in driving measurable outcomes, cross-functional collaboration, and technical excellence.`);
+        setDigitalSkills('Microsoft 365, Google Workspace, JIRA, Slack, CRM, Cloud Collaboration, Git');
+        setMotherTongue('English');
+        setForeignLanguages([
+          { language: 'French', listening: 'B2', reading: 'B2', spokenInteraction: 'B1', spokenProduction: 'B1', writing: 'B2' }
+        ]);
+        setEduEntries([
+          {
+            dates: '2015 - 2019',
+            qualification: roleLower.includes('engineer') || roleLower.includes('tech') || roleLower.includes('software') || roleLower.includes('developer')
+              ? 'B.Sc. Computer Science & Software Engineering'
+              : 'B.Sc. Business Management & International Trade',
+            institution: 'University of London',
+            location: 'London, United Kingdom',
+            fieldOfStudy: 'First Class Honours',
+          }
+        ]);
+        setCommunicationCompetencies('Excellent communication skills gained through leading team meetings, presenting technical solutions to non-technical stakeholders, and mentoring junior colleagues.');
+        setOrganisationalCompetencies('Strong leadership and agile project management skills. Successfully coordinated cross-functional sprints of up to 10 team members.');
+        setJobRelatedCompetencies('Deep understanding of modern workflows, problem solving, and architecture. Proficient in delivering high-impact business solutions.');
+        setOtherCompetencies('Adaptable, high-ownership mindset with strong focus on delivering customer and business value.');
+        setDrivingLicence('Category B');
+        setHobbies('Open-source contributing, Playing chess, Photography, Running');
+      }
+
+      Alert.alert('AI Suggestions Applied!', 'We pre-filled tailored work history, education, skills, and strengths. Feel free to customize them.');
+    }, 700);
   };
 
   // Work entries helper
@@ -866,7 +962,11 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
     }
 
     if (step < totalSteps) {
-      setStep(step + 1);
+      setIsStepping(true);
+      setTimeout(() => {
+        setIsStepping(false);
+        setStep(step + 1);
+      }, 350);
     } else {
       generateAndSaveCV();
     }
@@ -915,7 +1015,15 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
       onClose();
     } catch (err) {
       console.error(err);
-      Alert.alert('Generation Failed', 'Could not save your CV. Please check your network.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Generation Failed',
+        'Something went wrong saving your CV. Please try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Try Again', onPress: generateAndSaveCV }
+        ]
+      );
     } finally {
       setLoading(false);
     }
@@ -930,7 +1038,17 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
         <View style={s.overlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
-        <Animated.View entering={SlideInDown.springify()} exiting={SlideOutDown} style={[s.sheet, { backgroundColor: colors.cardBg }]}>
+          <Animated.View
+            entering={SlideInDown.springify()}
+            exiting={SlideOutDown}
+            style={[
+              s.sheet,
+              {
+                backgroundColor: colors.cardBg,
+                paddingBottom: Math.max(insets.bottom, 16),
+              },
+            ]}
+          >
           {/* Header */}
           <View style={[s.header, { borderBottomColor: colors.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -939,7 +1057,11 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                 {isEuropass ? 'Europe CV Wizard' : 'Standard CV Wizard'}
               </Text>
             </View>
-            <Pressable onPress={onClose} hitSlop={12}>
+            <Pressable
+              onPress={onClose}
+              hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+              style={{ padding: 4 }}
+            >
               <Feather name="x" size={20} color={colors.textMuted} />
             </Pressable>
           </View>
@@ -963,7 +1085,13 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
               <ActivityIndicator size="large" color={Palette.accent500} />
             </View>
           ) : (
-            <ScrollView style={s.body} contentContainerStyle={{ paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={s.body}
+              contentContainerStyle={{ paddingBottom: 60 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
+            >
               
               {/* ── STANDARD FLOW STEPS ── */}
               {!isEuropass && (
@@ -972,9 +1100,27 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
                       <View style={s.titleRow}>
                         <Text style={[s.sectionTitle, { color: colors.text }]}>Target Role & AI Helper</Text>
-                        <Pressable onPress={handleAISuggest} style={[s.aiBtn, { backgroundColor: Palette.accent50 }]}>
-                          <Feather name="zap" size={12} color={Palette.accent700} />
-                          <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                        <Pressable
+                          disabled={isAiSuggesting}
+                          onPress={handleAISuggest}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          style={({ pressed }) => [
+                            s.aiBtn,
+                            { backgroundColor: Palette.accent50 },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          {isAiSuggesting ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                              <ActivityIndicator size="small" color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <Feather name="zap" size={12} color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                            </>
+                          )}
                         </Pressable>
                       </View>
 
@@ -1123,7 +1269,31 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                 <>
                   {step === 1 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <Text style={[s.sectionTitle, { color: colors.text }]}>Personal Details</Text>
+                      <View style={s.titleRow}>
+                        <Text style={[s.sectionTitle, { color: colors.text }]}>Personal Details</Text>
+                        <Pressable
+                          disabled={isAiSuggesting}
+                          onPress={handleAISuggest}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          style={({ pressed }) => [
+                            s.aiBtn,
+                            { backgroundColor: Palette.accent50 },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          {isAiSuggesting ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                              <ActivityIndicator size="small" color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <Feather name="zap" size={12} color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                            </>
+                          )}
+                        </Pressable>
+                      </View>
                       
                       <View style={s.row}>
                         <View style={{ flex: 1, marginRight: 10 }}>
@@ -1232,7 +1402,31 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
                   {step === 2 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <Text style={[s.sectionTitle, { color: colors.text }]}>Work Experience</Text>
+                      <View style={s.titleRow}>
+                        <Text style={[s.sectionTitle, { color: colors.text }]}>Work Experience</Text>
+                        <Pressable
+                          disabled={isAiSuggesting}
+                          onPress={handleAISuggest}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          style={({ pressed }) => [
+                            s.aiBtn,
+                            { backgroundColor: Palette.accent50 },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          {isAiSuggesting ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                              <ActivityIndicator size="small" color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <Feather name="zap" size={12} color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                            </>
+                          )}
+                        </Pressable>
+                      </View>
                       {workEntries.map((entry, index) => (
                         <View key={index} style={[s.entryCard, { borderColor: colors.border }]}>
                           <View style={s.entryCardHeader}>
@@ -1296,7 +1490,31 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
                   {step === 3 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <Text style={[s.sectionTitle, { color: colors.text }]}>Education & Training</Text>
+                      <View style={s.titleRow}>
+                        <Text style={[s.sectionTitle, { color: colors.text }]}>Education & Training</Text>
+                        <Pressable
+                          disabled={isAiSuggesting}
+                          onPress={handleAISuggest}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          style={({ pressed }) => [
+                            s.aiBtn,
+                            { backgroundColor: Palette.accent50 },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          {isAiSuggesting ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                              <ActivityIndicator size="small" color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <Feather name="zap" size={12} color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                            </>
+                          )}
+                        </Pressable>
+                      </View>
                       {eduEntries.map((entry, index) => (
                         <View key={index} style={[s.entryCard, { borderColor: colors.border }]}>
                           <View style={s.entryCardHeader}>
@@ -1359,7 +1577,31 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
                   {step === 4 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <Text style={[s.sectionTitle, { color: colors.text }]}>Languages & Digital Skills</Text>
+                      <View style={s.titleRow}>
+                        <Text style={[s.sectionTitle, { color: colors.text }]}>Languages & Digital Skills</Text>
+                        <Pressable
+                          disabled={isAiSuggesting}
+                          onPress={handleAISuggest}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          style={({ pressed }) => [
+                            s.aiBtn,
+                            { backgroundColor: Palette.accent50 },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          {isAiSuggesting ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                              <ActivityIndicator size="small" color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <Feather name="zap" size={12} color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                            </>
+                          )}
+                        </Pressable>
+                      </View>
                       
                       <View style={s.inputRow}>
                         <Text style={[s.label, { color: colors.textSecondary }]}>Mother Tongue *</Text>
@@ -1436,7 +1678,31 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
                   {step === 5 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <Text style={[s.sectionTitle, { color: colors.text }]}>Competencies & Additional Details</Text>
+                      <View style={s.titleRow}>
+                        <Text style={[s.sectionTitle, { color: colors.text }]}>Competencies & Additional Details</Text>
+                        <Pressable
+                          disabled={isAiSuggesting}
+                          onPress={handleAISuggest}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          style={({ pressed }) => [
+                            s.aiBtn,
+                            { backgroundColor: Palette.accent50 },
+                            pressed && { opacity: 0.7 },
+                          ]}
+                        >
+                          {isAiSuggesting ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                              <ActivityIndicator size="small" color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                            </View>
+                          ) : (
+                            <>
+                              <Feather name="zap" size={12} color={Palette.accent700} />
+                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                            </>
+                          )}
+                        </Pressable>
+                      </View>
                       
                       <View style={s.inputRow}>
                         <Text style={[s.label, { color: colors.textSecondary }]}>Communication Skills</Text>
@@ -1610,7 +1876,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                   </Pressable>
                 )}
                 <Pressable
-                  disabled={loading}
+                  disabled={loading || isStepping}
                   onPress={handleNext}
                   style={({ pressed }) => [
                     s.nextBtn,
@@ -1619,7 +1885,15 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                   ]}
                 >
                   {loading ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <ActivityIndicator size="small" color="#fff" />
+                      <Text style={s.nextBtnText}>Saving...</Text>
+                    </View>
+                  ) : isStepping ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <ActivityIndicator size="small" color="#fff" />
+                      <Text style={s.nextBtnText}>Next...</Text>
+                    </View>
                   ) : (
                     <Text style={s.nextBtnText}>
                       {step === totalSteps ? (job ? 'Save CV & Apply' : 'Save CV to Profile') : 'Continue'}
@@ -1641,12 +1915,18 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
+    margin: 0,
+    padding: 0,
   },
   sheet: {
     borderTopLeftRadius: BorderRadius.cardLg,
     borderTopRightRadius: BorderRadius.cardLg,
-    maxHeight: SCREEN_H * 0.85,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    maxHeight: SCREEN_H * 0.88,
+    width: '100%',
     paddingTop: 8,
+    marginBottom: 0,
   },
   header: {
     flexDirection: 'row',

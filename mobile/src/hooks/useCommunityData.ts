@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { apiFetch } from '../services/api';
 
@@ -510,6 +511,28 @@ export function useCommunityData() {
         }
       } catch (_e) {}
     })();
+  }, []);
+
+  // Real-time synchronization of user avatar updates across community feed and member state
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (newAvatarUrl: string) => {
+      if (!newAvatarUrl) return;
+      setFeed(prev =>
+        prev.map(item => {
+          if ('is_author' in item && (item as any).is_author && (item as any).author) {
+            return {
+              ...item,
+              author: {
+                ...(item as any).author,
+                avatar_url: newAvatarUrl,
+              },
+            };
+          }
+          return item;
+        })
+      );
+    });
+    return () => sub.remove();
   }, []);
 
   return {

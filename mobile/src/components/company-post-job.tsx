@@ -54,6 +54,21 @@ const jobTemplates: Record<string, { keywords: string[]; description: string; re
     description: "The VP of Sales will define and execute our go-to-market strategy, build and scale a world-class sales organization, and partner with executive leadership to achieve aggressive growth targets. You will be responsible for revenue planning, team structure, and overall sales culture.",
     requirements: "8+ years of progressive B2B sales experience\n4+ years leading and scaling sales teams\nProven track record of exceeding $10M+ ARR targets\nExperience building sales processes from the ground up\nStrong executive presence and board-level communication skills"
   },
+  'Senior Software Engineer': {
+    keywords: ['software engineer', 'developer', 'engineer', 'frontend', 'backend', 'full stack'],
+    description: "We are looking for an experienced Senior Software Engineer to help architect, develop, and scale our core web & mobile application platforms. You will work in an agile team collaborating closely with product designers and backend engineers.",
+    requirements: "4+ years of professional software engineering experience\nProficiency in TypeScript, React / React Native, Python, or Node.js\nStrong understanding of cloud infrastructure, RESTful APIs, and relational databases\nExperience with CI/CD pipelines and automated testing\nPassion for writing clean, performant, and maintainable code"
+  },
+  'Product Manager': {
+    keywords: ['product manager', 'pm', 'product lead', 'product owner'],
+    description: "As a Product Manager, you will drive product strategy and execution across our portfolio. You will collaborate with engineering, design, and business teams to define roadmap priorities and launch features that delight our users.",
+    requirements: "3+ years of product management experience in SaaS or mobile products\nTrack record of shipping customer-facing features with measurable business impact\nStrong data analysis and SQL skills\nExceptional communication and stakeholder management ability"
+  },
+  'Customer Success Manager': {
+    keywords: ['customer success', 'csm', 'client success', 'account manager'],
+    description: "We are seeking a Customer Success Manager to oversee customer onboarding, product adoption, and retention. You will act as a trusted advisor to clients, ensuring they maximize value and achieve their goals.",
+    requirements: "2+ years of experience in Customer Success, Account Management, or Client Services\nStrong empathy, communication, and relationship-building skills\nExperience analyzing product usage metrics to drive renewal rates\nFamiliarity with CRM and customer success platforms"
+  },
 };
 
 const findMatchingTemplate = (title: string): string | null => {
@@ -141,11 +156,23 @@ export default function CompanyPostJob() {
     setSuggestedTemplate(match || null);
   }, [title]);
 
-  const applyTemplate = () => {
-    if (suggestedTemplate) {
-      setDescription(jobTemplates[suggestedTemplate].description);
-      setRequirements(jobTemplates[suggestedTemplate].requirements);
+  const applyTemplate = (templateOverride?: string) => {
+    const targetName = templateOverride || suggestedTemplate || (title.trim() ? findMatchingTemplate(title) : null) || 'Enterprise Account Executive';
+    const template = jobTemplates[targetName];
+    if (template) {
+      if (!title.trim() || templateOverride) {
+        setTitle(targetName);
+      }
+      setDescription(template.description);
+      setRequirements(template.requirements);
+      if (!salaryRange.trim()) {
+        setSalaryRange(`${selectedCurrencyObj.symbol}80k - ${selectedCurrencyObj.symbol}120k Base`);
+      }
+      if (!commissionRange.trim()) {
+        setCommissionRange(`${selectedCurrencyObj.symbol}40k OTE`);
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Template Applied', `Pre-filled job details from the "${targetName}" template.`);
     }
   };
 
@@ -378,7 +405,31 @@ export default function CompanyPostJob() {
 
           {step === 2 && (
             <Animated.View key="step2" entering={FadeInDown.springify()} style={styles.stepContainer}>
-              <Text style={styles.sectionHeading}>Job Details</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={styles.sectionHeading}>Job Details</Text>
+                <Pressable
+                  onPress={() => applyTemplate()}
+                  style={({ pressed }) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      backgroundColor: Palette.accent50,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: Palette.accent200,
+                    },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Feather name="zap" size={12} color={Palette.accent700} />
+                  <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Palette.accent700 }}>
+                    AI Autofill
+                  </Text>
+                </Pressable>
+              </View>
 
               <View style={styles.field}>
                 <Text style={styles.label}>Job Title</Text>
@@ -391,7 +442,7 @@ export default function CompanyPostJob() {
                     <Text style={styles.templateAlertTitle}>💡 Smart template matches title: {suggestedTemplate}</Text>
                     <Text style={styles.templateAlertSub}>Do you want to pre-fill descriptions & requirements?</Text>
                   </View>
-                  <Pressable onPress={applyTemplate} style={styles.templateBtn}>
+                  <Pressable onPress={() => applyTemplate()} style={styles.templateBtn}>
                     <Text style={styles.templateBtnText}>Apply</Text>
                   </Pressable>
                 </View>

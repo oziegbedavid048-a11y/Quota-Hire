@@ -30,12 +30,8 @@ from .models import (
     CommunityReport,
     CommunityComment,
     CommunityCommentReport,
-    CompanyLead,
-    CompanyRequest,
-    ManagedStaff,
-    PayrollRecord,
-    ExpenseRecord,
 )
+
 
 
 
@@ -1193,63 +1189,4 @@ class CommunityCommentReportAdmin(admin.ModelAdmin):
     view_comment_link.short_description = 'Comment'
 
 
-# ── Enterprise System Model Admins (PRD v1.2) ─────────────────────────────────
-
-@admin.register(CompanyLead)
-class CompanyLeadAdmin(admin.ModelAdmin):
-    list_display    = ('company_name', 'contact_person_name', 'email', 'phone', 'nature_of_business', 'created_by', 'created_at')
-    list_filter     = ('nature_of_business', 'created_at')
-    search_fields   = ('company_name', 'contact_person_name', 'email', 'phone')
-    ordering        = ('-created_at',)
-
-
-@admin.register(CompanyRequest)
-class CompanyRequestAdmin(admin.ModelAdmin):
-    list_display    = ('id', 'company', 'role_title', 'staff_needed_count', 'package_type', 'payment_status', 'operational_status', 'amount_paid', 'created_at')
-    list_filter     = ('package_type', 'payment_status', 'operational_status', 'created_at')
-    search_fields   = ('company__company_name', 'role_title')
-    ordering        = ('-created_at',)
-    actions         = ['mark_as_deployed', 'transfer_to_ops']
-
-    @admin.action(description='🚀 Mark selected requests as Deployed')
-    def mark_as_deployed(self, request, queryset):
-        updated = queryset.update(operational_status='DEPLOYED')
-        self.message_user(request, f'{updated} request(s) marked as Deployed.')
-
-    @admin.action(description='🔄 Transfer selected to Ops (New Request)')
-    def transfer_to_ops(self, request, queryset):
-        updated = queryset.update(operational_status='NEW_REQUEST')
-        self.message_user(request, f'{updated} request(s) transferred to Ops queue.')
-
-
-@admin.register(ManagedStaff)
-class ManagedStaffAdmin(admin.ModelAdmin):
-    list_display    = ('full_name', 'assigned_company', 'email', 'phone', 'gross_salary', 'net_salary_display', 'bank_name', 'created_at')
-    list_filter     = ('assigned_company', 'created_at')
-    search_fields   = ('full_name', 'email', 'phone', 'assigned_company__company_name')
-    ordering        = ('-created_at',)
-
-    @admin.display(description='Net Salary (₦)')
-    def net_salary_display(self, obj):
-        return f"₦{obj.net_salary:,.2f}"
-
-
-@admin.register(PayrollRecord)
-class PayrollRecordAdmin(admin.ModelAdmin):
-    list_display    = ('month_year', 'company', 'total_gross', 'total_deductions', 'total_net', 'created_at')
-    list_filter     = ('month_year', 'company', 'created_at')
-    search_fields   = ('company__company_name', 'month_year')
-    ordering        = ('-created_at',)
-
-
-@admin.register(ExpenseRecord)
-class ExpenseRecordAdmin(admin.ModelAdmin):
-    list_display    = ('expense_title', 'category', 'amount_display', 'date_incurred', 'logged_by', 'created_at')
-    list_filter     = ('category', 'date_incurred', 'created_at')
-    search_fields   = ('expense_title', 'notes', 'logged_by__email')
-    ordering        = ('-created_at',)
-
-    @admin.display(description='Amount (₦)')
-    def amount_display(self, obj):
-        return f"₦{obj.amount:,.2f}"
 

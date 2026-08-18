@@ -57,6 +57,7 @@ import { useEmployeeDashboardData } from "@/hooks/useEmployeeDashboardData";
 import { apiFetch, API_BASE } from "@/services/api";
 import NativePaymentModal from "@/components/native-payment-modal";
 import CompanyProfile from "@/components/company-profile";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function Skeleton({
   width,
@@ -196,6 +197,7 @@ function uploadFileViaXHR(url: string, formData: FormData, token: string | null)
 }
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const colors = Colors.light;
 
   const [role, setRole] = useState<string | null>(null);
@@ -295,9 +297,14 @@ export default function ProfileScreen() {
       Alert.alert("Success", "Profile picture updated!");
       refreshData();
     } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Upload Failed",
         err.message || "Unable to upload profile picture. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleAvatarUpload }
+        ]
       );
     } finally {
       setSaving(false);
@@ -658,6 +665,7 @@ export default function ProfileScreen() {
 
   const handleSaveContact = async () => {
     setSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await apiFetch("/auth/me/", {
         method: "PATCH",
@@ -675,7 +683,15 @@ export default function ProfileScreen() {
       refreshData();
       setActiveSection(null);
     } catch {
-      Alert.alert("Error", "Failed to update contact details.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Save Failed",
+        "Something went wrong saving your contact details. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleSaveContact }
+        ]
+      );
     } finally {
       setSaving(false);
     }
@@ -683,15 +699,25 @@ export default function ProfileScreen() {
 
   const handleSaveBio = async () => {
     setSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await apiFetch("/profile/employee/", {
         method: "PATCH",
         body: JSON.stringify({ bio }),
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
     } catch {
-      Alert.alert("Error", "Failed to update bio summary.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Save Failed",
+        "Something went wrong updating your bio. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleSaveBio }
+        ]
+      );
     } finally {
       setSaving(false);
     }
@@ -699,6 +725,7 @@ export default function ProfileScreen() {
 
   const handleSaveSkills = async () => {
     setSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const skillsArray = skills
         .split(",")
@@ -708,10 +735,19 @@ export default function ProfileScreen() {
         method: "PATCH",
         body: JSON.stringify({ skills: skillsArray }),
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
     } catch {
-      Alert.alert("Error", "Failed to update skills.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Save Failed",
+        "Something went wrong updating your skills. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleSaveSkills }
+        ]
+      );
     } finally {
       setSaving(false);
     }
@@ -719,15 +755,25 @@ export default function ProfileScreen() {
 
   const handleSaveExp = async () => {
     setSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await apiFetch("/profile/employee/", {
         method: "PATCH",
         body: JSON.stringify({ experience_years: parseInt(expYears) || 0 }),
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
     } catch {
-      Alert.alert("Error", "Failed to update work experience.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Save Failed",
+        "Something went wrong updating your work experience. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleSaveExp }
+        ]
+      );
     } finally {
       setSaving(false);
     }
@@ -735,15 +781,25 @@ export default function ProfileScreen() {
 
   const handleSaveEdu = async () => {
     setSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await apiFetch("/profile/employee/", {
         method: "PATCH",
         body: JSON.stringify({ education }),
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
     } catch {
-      Alert.alert("Error", "Failed to update education.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Save Failed",
+        "Something went wrong updating your education. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleSaveEdu }
+        ]
+      );
     } finally {
       setSaving(false);
     }
@@ -753,6 +809,7 @@ export default function ProfileScreen() {
   const handleSaveParsedResume = async () => {
     if (!parsedResume) return;
     setSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const profilePayload: Record<string, any> = {};
       if (parsedResume.title) profilePayload.title = parsedResume.title;
@@ -796,9 +853,14 @@ export default function ProfileScreen() {
       refreshData();
       setActiveSection(null);
     } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        "Error",
+        "Save Failed",
         "Failed to save resume data to profile. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleSaveParsedResume }
+        ]
       );
     } finally {
       setSaving(false);
@@ -811,6 +873,7 @@ export default function ProfileScreen() {
       return;
     }
     setSaving(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await apiFetch("/auth/change-password/", {
         method: "POST",
@@ -819,12 +882,18 @@ export default function ProfileScreen() {
           new_password: newPassword,
         }),
       });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Password changed successfully.");
       setActiveSection(null);
     } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        "Error",
-        "Could not change password. Please verify old password.",
+        "Password Change Failed",
+        "Could not change password. Please verify your old password.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleSavePassword }
+        ]
       );
     } finally {
       setSaving(false);
@@ -1245,22 +1314,34 @@ export default function ProfileScreen() {
         statusBarTranslucent
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1, justifyContent: "flex-end" }}
         >
           <View style={s.overlay}>
             <Pressable
               style={StyleSheet.absoluteFill}
               onPress={() => setActiveSection(null)}
             />
-            <View style={[s.sheet, { backgroundColor: colors.cardBg }]}>
+            <View
+              style={[
+                s.sheet,
+                {
+                  backgroundColor: colors.cardBg,
+                  paddingBottom: Math.max(insets.bottom, 16),
+                },
+              ]}
+            >
               <View
                 style={[s.modalHeader, { borderBottomColor: colors.border }]}
               >
                 <Text style={[s.modalTitle, { color: colors.text }]}>
                   {PROFILE_SECTIONS.find((s) => s.key === activeSection)?.label}
                 </Text>
-                <Pressable onPress={() => setActiveSection(null)}>
+                <Pressable
+                  onPress={() => setActiveSection(null)}
+                  hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                  style={{ padding: 4 }}
+                >
                   <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>
               </View>
@@ -1268,6 +1349,8 @@ export default function ProfileScreen() {
               <ScrollView
                 style={s.modalBody}
                 contentContainerStyle={{ paddingBottom: 24, flexGrow: 0 }}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 showsVerticalScrollIndicator={false}
               >
                 {activeSection === "contact" && (
@@ -1856,7 +1939,7 @@ export default function ProfileScreen() {
                                   color: Palette.accent600,
                                 }}
                               >
-                                Download
+                                {cv.is_paid ? "Download" : "Download (€1.50)"}
                               </Text>
                             </>
                           )}
@@ -2042,14 +2125,20 @@ const s = StyleSheet.create({
   // Modals Sheet styles
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
+    margin: 0,
+    padding: 0,
   },
   sheet: {
     borderTopLeftRadius: BorderRadius.cardLg,
     borderTopRightRadius: BorderRadius.cardLg,
-    maxHeight: SCREEN_H * 0.85,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    maxHeight: SCREEN_H * 0.88,
+    width: "100%",
     paddingTop: 8,
+    marginBottom: 0,
   },
   modalHeader: {
     flexDirection: "row",

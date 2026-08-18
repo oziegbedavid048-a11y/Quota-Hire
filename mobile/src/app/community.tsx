@@ -160,6 +160,31 @@ export default function CommunityScreen() {
     });
   }, []);
 
+  // Listen for real-time profile picture update
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (newAvatarUrl: string) => {
+      if (!newAvatarUrl) return;
+      setAllEmployeesPool(prev =>
+        prev.map(item => {
+          if (currentUserName && item.name === currentUserName) {
+            return { ...item, avatar: newAvatarUrl };
+          }
+          return item;
+        })
+      );
+      setMembersList(prev =>
+        prev.map(item => {
+          if (currentUserName && item.name === currentUserName) {
+            return { ...item, avatar: newAvatarUrl };
+          }
+          return item;
+        })
+      );
+      fetchMembers();
+    });
+    return () => sub.remove();
+  }, [currentUserName, fetchMembers]);
+
   // FAB state
   const [fabOpen, setFabOpen] = useState(false);
   const fabProgress = useSharedValue(0);
@@ -261,8 +286,9 @@ export default function CommunityScreen() {
 
   // Submit Post
   const handleSubmitPost = async () => {
-    if (!postContent.trim()) return;
+    if (!postContent.trim() || isSubmittingPost) return;
     setIsSubmittingPost(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await createPost(postContent.trim(), postCat, {
         is_anonymous: settingAnonymous,
@@ -272,7 +298,15 @@ export default function CommunityScreen() {
       setPostModalVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      Alert.alert('Could not post', err?.message || 'Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Post Failed',
+        err?.message || 'Something went wrong creating your post. Please try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Try Again', onPress: handleSubmitPost }
+        ]
+      );
     } finally {
       setIsSubmittingPost(false);
     }
@@ -281,8 +315,9 @@ export default function CommunityScreen() {
   // Submit Poll
   const handleSubmitPoll = async () => {
     const validChoices = pollChoices.map(c => c.trim()).filter(Boolean);
-    if (!pollQuestion.trim() || validChoices.length < 2) return;
+    if (!pollQuestion.trim() || validChoices.length < 2 || isSubmittingPoll) return;
     setIsSubmittingPoll(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await createPoll(pollQuestion.trim(), pollCat, validChoices);
       setPollQuestion('');
@@ -290,7 +325,15 @@ export default function CommunityScreen() {
       setPollModalVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      Alert.alert('Could not create poll', err?.message || 'Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Poll Creation Failed',
+        err?.message || 'Something went wrong launching your poll. Please try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Try Again', onPress: handleSubmitPoll }
+        ]
+      );
     } finally {
       setIsSubmittingPoll(false);
     }
@@ -336,14 +379,23 @@ export default function CommunityScreen() {
 
   // Submit edit
   const handleSubmitEdit = async () => {
-    if (!contextPost || !editContent.trim()) return;
+    if (!contextPost || !editContent.trim() || isSubmittingEdit) return;
     setIsSubmittingEdit(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await editPost(contextPost.id, editContent.trim());
       setEditModalVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      Alert.alert('Could not edit post', err?.message || 'Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Edit Failed',
+        err?.message || 'Something went wrong saving your changes. Please try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Try Again', onPress: handleSubmitEdit }
+        ]
+      );
     } finally {
       setIsSubmittingEdit(false);
     }
@@ -952,7 +1004,12 @@ export default function CommunityScreen() {
                 <Feather name="x" size={20} color={Palette.neutral600} />
               </HapticPressable>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{ maxHeight: 400 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               <Text style={styles.inputLabel}>Question</Text>
               <TextInput
                 maxLength={300}
@@ -989,7 +1046,14 @@ export default function CommunityScreen() {
               onPress={handleSubmitPoll}
               style={[styles.submitBtn, (!pollQuestion.trim() || pollChoices.filter(c => c.trim()).length < 2) && styles.submitBtnDisabled]}
             >
-              {isSubmittingPoll ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.submitBtnText}>Launch Poll</Text>}
+              {isSubmittingPoll ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.submitBtnText}>Launching...</Text>
+                </View>
+              ) : (
+                <Text style={styles.submitBtnText}>Launch Poll</Text>
+              )}
             </HapticPressable>
           </View>
         </KeyboardAvoidingView>

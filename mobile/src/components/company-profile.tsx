@@ -205,9 +205,14 @@ export default function CompanyProfile() {
       DeviceEventEmitter.emit("USER_PROFILE_UPDATED");
       fetchProfile();
     } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         "Save Failed",
-        err?.message || "Failed to save profile details.",
+        err?.message || "Failed to save profile details. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleSaveProfile }
+        ]
       );
     } finally {
       setSaving(false);
@@ -245,7 +250,15 @@ export default function CompanyProfile() {
       Alert.alert("Success", "Company logo updated.");
       fetchProfile();
     } catch {
-      Alert.alert("Upload Failed", "Unable to upload company logo image.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        "Upload Failed",
+        "Unable to upload company logo image. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Try Again", onPress: handleAvatarUpload }
+        ]
+      );
     } finally {
       setAvatarUploading(false);
     }
@@ -406,6 +419,8 @@ export default function CompanyProfile() {
           styles.scroll,
           { paddingBottom: TabBarHeight + 32 },
         ]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Hero Card */}

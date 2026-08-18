@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, StyleSheet, KeyboardAvoidingView,
   Platform, ActivityIndicator, Alert, Image, Modal,
-  Pressable, Keyboard, BackHandler,
+  Pressable, Keyboard, BackHandler, DeviceEventEmitter,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
@@ -376,6 +376,34 @@ export default function CommunityDetailScreen() {
     loadComments();
   }, [id]);
 
+  // Real-time synchronization of user avatar updates on this post and user comments
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (newAvatarUrl: string) => {
+      if (!newAvatarUrl) return;
+      setPost(prev => {
+        if (prev && prev.is_author && prev.author) {
+          return {
+            ...prev,
+            author: { ...prev.author, avatar_url: newAvatarUrl },
+          };
+        }
+        return prev;
+      });
+      setComments(prev =>
+        prev.map(c => {
+          if (c.is_author && c.author) {
+            return {
+              ...c,
+              author: { ...c.author, avatar_url: newAvatarUrl },
+            };
+          }
+          return c;
+        })
+      );
+    });
+    return () => sub.remove();
+  }, []);
+
   // Like post
   const handleLike = () => {
     if (!post) return;
@@ -408,7 +436,15 @@ export default function CommunityDetailScreen() {
       setCommentText('');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Could not post comment. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Comment Failed',
+        err?.message || 'Something went wrong posting your comment. Please try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Try Again', onPress: handleSubmitComment }
+        ]
+      );
     } finally {
       setIsSubmittingComment(false);
     }

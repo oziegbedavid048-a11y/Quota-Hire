@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { apiFetch } from '../services/api';
 
@@ -9,7 +10,6 @@ export interface NotificationItem {
   read: boolean;
   createdAt: string;
 }
-
 
 export function useNotificationsData() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -26,11 +26,11 @@ export function useNotificationsData() {
       }
       const data = await apiFetch('/notifications/');
       const rawNotifs = Array.isArray(data) ? data : (data?.results || []);
-      const normalized = rawNotifs.map((n: any) => ({
+      const normalized: NotificationItem[] = rawNotifs.map((n: any) => ({
         id: n.id.toString(),
         title: n.title || 'Alert',
         message: n.message || '',
-        read: n.read || false,
+        read: Boolean(n.read),
         createdAt: n.created_at || n.createdAt || new Date().toISOString(),
       }));
       setNotifications(normalized);
@@ -43,7 +43,7 @@ export function useNotificationsData() {
         msg.includes('connection') ||
         msg.includes('Network')
       ) {
-        // Network error — keep existing list (may be empty), no error banner
+        // Network error — keep existing list
       } else {
         setHasError(true);
       }
@@ -65,29 +65,65 @@ export function useNotificationsData() {
     })();
   }, []);
 
+  // Listen for global real-time notifications synchronization
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('NOTIFICATIONS_UPDATED', (updated: NotificationItem[]) => {
+      if (Array.isArray(updated)) {
+        setNotifications(updated);
+      }
+    });
+
+    const subRefresh = DeviceEventEmitter.addListener('REFRESH_NOTIFICATIONS', () => {
+      fetchNotifications();
+    });
+
+    return () => {
+      sub.remove();
+      subRefresh.remove();
+    };
+  }, [fetchNotifications]);
+
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
   const markNotificationRead = useCallback(async (id: string) => {
+    setNotifications(prev => {
+      const updated = prev.map(n => (n.id === id ? { ...n, read: true } : n));
+      SecureStore.setItemAsync('cached_notifications', JSON.stringify(updated)).catch(() => {});
+      DeviceEventEmitter.emit('NOTIFICATIONS_UPDATED', updated);
+      return updated;
+    });
+
     try {
-      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
       await apiFetch(`/notifications/${id}/read/`, { method: 'POST' });
     } catch {
-      // Silently fall back locally
+      // Fallback
     }
   }, []);
 
   const markAllRead = useCallback(async () => {
+    setNotifications(prev => {
+      const updated = prev.map(n => ({ ...n, read: true }));
+      SecureStore.setItemAsync('cached_notifications', JSON.stringify(updated)).catch(() => {});
+      DeviceEventEmitter.emit('NOTIFICATIONS_UPDATED', updated);
+      return updated;
+    });
+
     try {
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       await apiFetch('/notifications/mark-all-read/', { method: 'POST' });
     } catch {}
   }, []);
 
   const deleteNotification = useCallback(async (id: string) => {
+    setNotifications(prev => {
+      const updated = prev.filter(n => n.id !== id);
+      SecureStore.setItemAsync('cached_notifications', JSON.stringify(updated)).catch(() => {});
+      DeviceEventEmitter.emit('NOTIFICATIONS_UPDATED', updated);
+      return updated;
+    });
+
     try {
-      setNotifications(prev => prev.filter(n => n.id !== id));
       await apiFetch(`/notifications/${id}/`, { method: 'DELETE' });
     } catch {}
   }, []);
@@ -105,3 +141,4 @@ export function useNotificationsData() {
     refreshNotifications: fetchNotifications,
   };
 }
+
