@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Upload,
   FileText,
-  Linkedin,
   User,
   Briefcase
 } from 'lucide-react';

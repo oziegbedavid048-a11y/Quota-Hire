@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Mail, Lock, User, Building, Loader2, AlertTriangle, Phone, MapPin } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Building, Loader2, AlertTriangle, Phone, MapPin, RefreshCw } from 'lucide-react';
+
 import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { PasswordStrengthMeter } from '../../components/ui/PasswordStrengthMeter';
@@ -187,11 +188,13 @@ export const Signup = () => {
       setShowVerificationModal(true);
     } catch (error: any) {
       console.error(error);
-      const msg = error.message || '';
+      const msg = error?.message || '';
       if (msg.toLowerCase().includes('already exists')) {
         setGlobalError('An account with this email already exists.');
+      } else if (msg.toLowerCase().includes('password')) {
+        setGlobalError(msg);
       } else {
-        setGlobalError('Registration failed. Please try again.');
+        setGlobalError('Something went wrong. Please try again.');
       }
     }
   };
@@ -256,13 +259,27 @@ export const Signup = () => {
                     exit={{ opacity: 0, height: 0, y: -10 }}
                     className="overflow-hidden"
                   >
-                    <div className="bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-xl p-3 sm:p-4 text-xs sm:text-sm text-red-600 dark:text-red-400 font-bold flex items-start gap-3 shadow-inner mb-1">
-                      <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5" />
-                      <p>{globalError}</p>
+                    <div className="bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-xl p-3 sm:p-4 text-xs sm:text-sm text-red-600 dark:text-red-400 font-bold flex items-center justify-between gap-3 shadow-inner mb-1">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5" />
+                        <p className="break-words">{globalError}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGlobalError('');
+                          handleSubmit(onSubmit)();
+                        }}
+                        className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Try Again</span>
+                      </button>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
+
 
               {/* Role Switcher */}
               <div className="flex p-1 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-md rounded-2xl border border-white/50 dark:border-white/10 shadow-inner relative">

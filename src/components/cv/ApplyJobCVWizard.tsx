@@ -57,6 +57,8 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
   // ── Steps: 1=Role, 2=Experience, 3=Generating, 4=Review ──────────────────
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [renderKey, setRenderKey] = useState(0);
 
   // ── Blob ref: stores the latest PDF blob for the save handler ─────────────
   // (avoids setState-in-render by using a ref instead of state)
@@ -272,9 +274,9 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
         };
         reader.onerror = () => reject(new Error('FileReader failed to read the PDF blob.'));
       });
-    } catch (err: any) {
-      console.error('[CV Wizard] Save error:', err);
-      toast.error(`Failed to save CV: ${err?.message || 'Unknown error'}`);
+    } catch {
+      setSaveError('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -563,7 +565,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                         </div>
 
                         {/* ── BlobProvider: single source of truth for PDF blob ── */}
-                        <BlobProvider document={renderTemplate()}>
+                        <BlobProvider key={renderKey} document={renderTemplate()}>
                           {({ blob, url, loading: blobLoading, error: blobError }) => {
                             // Safe ref update (refs don't trigger re-renders)
                             if (blob) currentBlobRef.current = blob;
@@ -592,13 +594,18 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                                       {!blobLoading && blobError && (
                                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center z-10">
                                           <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
-                                          <p className="text-red-700 font-bold text-sm mb-1">Failed to Render PDF</p>
+                                          <p className="text-red-700 font-bold text-sm mb-1">Something went wrong rendering the PDF</p>
                                           <p className="text-red-500 text-xs mb-4 max-w-xs">
-                                            {blobError.message || 'An unexpected error occurred while rendering the CV template.'}
+                                            Please try again or switch to a different template.
                                           </p>
-                                          <p className="text-gray-400 text-xs">
-                                            Try switching to a different template below, or reload the wizard.
-                                          </p>
+                                          <button
+                                            type="button"
+                                            onClick={() => setRenderKey(k => k + 1)}
+                                            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                                          >
+                                            <RefreshCw className="w-3.5 h-3.5" />
+                                            <span>Try Again</span>
+                                          </button>
                                         </div>
                                       )}
                                     </div>
@@ -636,8 +643,20 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
 
                                 {/* ── Footer Save Button (uses same blob from BlobProvider) ── */}
                                 <div className="pt-2">
+                                  {saveError && (
+                                    <div className="p-3 bg-red-100/80 border border-red-200 rounded-xl flex items-center justify-between gap-2 mb-3">
+                                      <span className="text-xs text-red-700 font-medium">{saveError}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => { setSaveError(null); handleSaveToDjango(blob); }}
+                                        className="shrink-0 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
+                                      >
+                                        <RefreshCw className="w-3 h-3" /> Try Again
+                                      </button>
+                                    </div>
+                                  )}
                                   <button
-                                    onClick={() => handleSaveToDjango(blob)}
+                                    onClick={() => { setSaveError(null); handleSaveToDjango(blob); }}
                                     disabled={blobLoading || saving || !!blobError}
                                     className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl flex items-center justify-center text-sm font-bold transition shadow-lg shadow-emerald-600/30 disabled:shadow-none"
                                   >
@@ -660,7 +679,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                                   </button>
                                   {blobError && (
                                     <p className="text-center text-xs text-red-500 mt-2">
-                                      Cannot save — PDF failed to render. Please try a different template.
+                                      Something went wrong. Please try again or switch to a different template.
                                     </p>
                                   )}
                                 </div>

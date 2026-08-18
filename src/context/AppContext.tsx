@@ -102,15 +102,33 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
   if (!response.ok) {
     if (response.status >= 500) {
-      throw new ApiError('An unexpected server error occurred. Please try again later.', response.status);
+      throw new ApiError('Something went wrong. Please try again.', response.status);
     }
-    let errorMessage = 'An unexpected error occurred.';
+    let errorMessage = 'Something went wrong. Please try again.';
     try {
       const errorData = await response.json();
-      errorMessage = errorData.detail || errorData.error || Object.values(errorData).flat()[0] || errorMessage;
-    } catch (e) {}
-    throw new ApiError(errorMessage as string, response.status);
+      const rawMsg = errorData.detail || errorData.error || Object.values(errorData).flat()[0] || errorMessage;
+      const str = String(rawMsg);
+      // Guard against any internal backend/database exception strings leaking
+      if (
+        str.includes('psycopg2') ||
+        str.includes('Traceback') ||
+        str.includes('IntegrityError') ||
+        str.includes('DatabaseError') ||
+        str.includes('SyntaxError') ||
+        str.includes('Internal Server Error') ||
+        str.includes('OperationalError')
+      ) {
+        errorMessage = 'Something went wrong. Please try again.';
+      } else {
+        errorMessage = str;
+      }
+    } catch (e) {
+      errorMessage = 'Something went wrong. Please try again.';
+    }
+    throw new ApiError(errorMessage, response.status);
   }
+
 
   // Handle 204 No Content
   if (response.status === 204) return null;

@@ -50,8 +50,12 @@ export default function ResumeUpload() {
       const response = await uploadResume(selectedFile);
       setParsedData(response.parsed);
     } catch (err: any) {
-      setError(err.message || 'Failed to parse resume. Please try again or fill manually.');
-      setFile(null);
+      const msg = err?.message || '';
+      if (msg.includes('PDF') || msg.includes('5MB') || msg.includes('Word')) {
+        setError(msg);
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
     } finally {
       setIsParsing(false);
     }
@@ -71,9 +75,12 @@ export default function ResumeUpload() {
     if (e.dataTransfer.files?.length > 0) handleFileChange(e.dataTransfer.files[0]);
   };
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSaveToProfile = async () => {
     if (!parsedData) return;
     setIsSaving(true);
+    setSaveError(null);
     try {
       await updateProfile({
         title: parsedData.title || undefined,
@@ -87,11 +94,13 @@ export default function ResumeUpload() {
       toast.success('Profile updated successfully from resume!');
       navigate('/employee/profile');
     } catch {
-      toast.error('Failed to save parsed data to profile.');
+      setSaveError('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
+
 
   // ── helpers ──
   const Field = ({ label, value }: { label: string; value?: string | number | null }) => (
@@ -168,11 +177,27 @@ export default function ResumeUpload() {
               </div>
 
               {error && (
-                <div className="mx-4 mb-4 flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 text-sm">
-                  <X size={16} className="shrink-0 mt-0.5" />
-                  <span className="break-words">{error}</span>
+                <div className="mx-4 mb-4 flex items-center justify-between gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 text-xs sm:text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <X size={16} className="shrink-0" />
+                    <span className="break-words font-medium">{error}</span>
+                  </div>
+                  {file && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFileChange(file);
+                      }}
+                      className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <RefreshCw size={12} />
+                      <span>Try Again</span>
+                    </button>
+                  )}
                 </div>
               )}
+
             </motion.div>
           )}
 
@@ -300,8 +325,27 @@ export default function ResumeUpload() {
                 </div>
               </div>
 
+              {/* Save error banner */}
+              {saveError && (
+                <div className="flex items-center justify-between gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-2xl text-red-600 dark:text-red-400 text-xs sm:text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <X size={16} className="shrink-0" />
+                    <span className="break-words font-medium">{saveError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSaveToProfile}
+                    className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                  >
+                    <RefreshCw size={12} />
+                    <span>Try Again</span>
+                  </button>
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className="flex flex-col sm:flex-row gap-3 pb-6">
+
                 <button
                   onClick={() => { setParsedData(null); setFile(null); setError(null); }}
                   className="flex-1 px-5 py-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 font-extrabold text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"

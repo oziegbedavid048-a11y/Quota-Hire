@@ -4,8 +4,9 @@ import { BlobProvider } from '@react-pdf/renderer';
 import {
   X, ChevronRight, ChevronLeft, Loader2, FileText,
   Sparkles, User, Briefcase, GraduationCap,
-  Globe, Star, Send, AlertTriangle, Camera, Plus, Trash2
+  Globe, Star, Send, AlertTriangle, Camera, Plus, Trash2, RefreshCw
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
@@ -44,9 +45,12 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
   const [step, setStep] = useState(1);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [renderKey, setRenderKey] = useState(0);
 
   const blobRef = useRef<Blob | null>(null);
   const urlRef  = useRef<string | null>(null);
+
 
   // ── Personal Info ──────────────────────────────────────────────────────────
   const [personal, setPersonal] = useState({
@@ -237,6 +241,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
       toast.error('PDF is still rendering. Please wait a moment.'); return;
     }
     setSaving(true);
+    setSaveError(null);
     try {
       await new Promise<void>((resolve, reject) => {
         const reader = new FileReader();
@@ -266,12 +271,14 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
         };
         reader.onerror = () => reject(new Error('FileReader failed.'));
       });
-    } catch (err: any) {
-      toast.error(`Failed to save: ${err?.message || 'Unknown error'}`);
+    } catch {
+      setSaveError('Something went wrong saving your CV. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
   };
+
 
   // ── Shared styles ──────────────────────────────────────────────────────────
   const inputCls = 'w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none text-sm transition';
@@ -772,7 +779,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                     {/* Removed Open PDF Button */}
                   </div>
 
-                  <BlobProvider document={<EuropassTemplate data={euroData} />}>
+                  <BlobProvider key={renderKey} document={<EuropassTemplate data={euroData} />}>
                     {({ blob, url, loading: blobLoading, error: blobError }) => {
                       if (blob) blobRef.current = blob;
                       if (url) urlRef.current = url;
@@ -792,10 +799,36 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                               {!blobLoading && blobError && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center z-10">
                                   <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
-                                  <p className="text-red-700 font-bold text-sm">Failed to render PDF</p>
-                                  <p className="text-red-500 text-xs mt-1">{blobError.message}</p>
+                                  <p className="text-red-700 font-bold text-sm">Something went wrong rendering the PDF</p>
+                                  <p className="text-red-500 text-xs mt-1 mb-4">Please try again to re-render your document.</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRenderKey(k => k + 1)}
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                                  >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                    <span>Try Again</span>
+                                  </button>
                                 </div>
                               )}
+                            </div>
+                          )}
+
+                          {/* Save error banner */}
+                          {saveError && (
+                            <div className="p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                                <span className="text-xs text-red-700 dark:text-red-300 font-medium">{saveError}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleSave(blob)}
+                                className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                                <span>Try Again</span>
+                              </button>
                             </div>
                           )}
 
@@ -815,12 +848,13 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                             )}
                           </button>
                           {blobError && (
-                            <p className="text-center text-xs text-red-500 mt-1">Cannot save — PDF failed to render. Please go back and check your entries.</p>
+                            <p className="text-center text-xs text-red-500 mt-1">PDF render encountered an issue. Click Try Again above or edit your details.</p>
                           )}
                         </>
                       );
                     }}
                   </BlobProvider>
+
                 </div>
               )}
             </div>

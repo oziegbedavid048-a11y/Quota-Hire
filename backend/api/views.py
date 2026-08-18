@@ -289,51 +289,48 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         from django.db import transaction
+        import threading
 
         # ── Step 1: Create the user in its own transaction ─────────────────────
-        # The email send must NEVER block or roll back the account creation.
-        # Even if Celery/Redis/SMTP is down, the user record must persist so
-        # they can request a verification resend later.
         with transaction.atomic():
             user = serializer.save()
 
-        # ── Step 2: Send the verification email OUTSIDE the transaction ────────
-        # Any exception here is caught and logged only — it never raises back
-        # to the caller, so the HTTP 201 response is always returned to the user.
-        try:
-            from django.conf import settings
-            from .email_templates import get_verification_email_html, send_courier_email
-            import datetime
-            import jwt
+        # ── Step 2: Send the verification email in a background thread ─────────
+        # Running in a background daemon thread ensures the HTTP 201 response returns
+        # immediately (<100ms) without waiting for external SMTP/ZeptoMail latency.
+        def _send_bg_email(user_obj):
+            try:
+                from django.conf import settings
+                from .email_templates import get_verification_email_html, send_courier_email
+                import datetime
+                import jwt
 
-            token = jwt.encode({
-                'email': user.email,
-                'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
-            }, settings.SECRET_KEY, algorithm='HS256')
+                token = jwt.encode({
+                    'email': user_obj.email,
+                    'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)
+                }, settings.SECRET_KEY, algorithm='HS256')
 
-            frontend_url = settings.FRONTEND_URL.strip()
-            verify_link = f"{frontend_url}/verify-email?token={token}"
-            display_name = user.get_full_name() or user.username
+                frontend_url = settings.FRONTEND_URL.strip()
+                verify_link = f"{frontend_url}/verify-email?token={token}"
+                display_name = user_obj.get_full_name() or user_obj.username
 
-            html_content = get_verification_email_html(user=display_name, redirect=verify_link)
-            text_content = (
-                f"Hi {display_name},\n\n"
-                f"Please verify your email for Quota Hire using this link:\n{verify_link}"
-            )
+                html_content = get_verification_email_html(user=display_name, redirect=verify_link)
+                text_content = (
+                    f"Hi {display_name},\n\n"
+                    f"Please verify your email for Quota Hire using this link:\n{verify_link}"
+                )
 
-            send_courier_email(
-                to_email=user.email,
-                subject="Verify your email for Quota Hire",
-                text_content=text_content,
-                html_content=html_content,
-            )
-        except Exception as e:
-            # Log the failure but DO NOT raise — the account was created successfully.
-            # The user will see a "check your email" screen and can request a resend.
-            logger.error(
-                "Verification email send failed for %s: %s",
-                user.email, e, exc_info=True,
-            )
+                send_courier_email(
+                    to_email=user_obj.email,
+                    subject="Verify your email for Quota Hire",
+                    text_content=text_content,
+                    html_content=html_content,
+                )
+            except Exception as e:
+                logger.error("Verification email send failed for %s: %s", user_obj.email, e, exc_info=True)
+
+        threading.Thread(target=_send_bg_email, args=(user,), daemon=True).start()
+
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -350,6 +347,8 @@ class GoogleLoginView(APIView):
     """
     permission_classes = []
     authentication_classes = []
+    throttle_classes = [RegisterThrottle]
+
 
     def post(self, request):
         token = request.data.get('token')
@@ -666,12 +665,25 @@ class ChangePasswordView(APIView):
         old_password = request.data.get('old_password')
         new_password = request.data.get('new_password')
 
+        if not old_password:
+            return Response({'error': 'Old password is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not new_password:
+            return Response({'error': 'New password is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
         if not user.check_password(old_password):
             return Response({'error': 'Incorrect old password.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_password(new_password, user)
+        except ValidationError as e:
+            return Response({'error': e.messages[0] if e.messages else 'Password does not meet requirements.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user.set_password(new_password)
         user.save()
         return Response({'message': 'Password updated successfully.'})
+
 
 
 class DeleteAccountView(APIView):
@@ -1001,40 +1013,50 @@ class SendVerificationEmailView(APIView):
     throttle_classes       = [AuthEmailThrottle]  # 5 emails/IP/hour
 
     def post(self, request):
-        email = request.data.get('email')
+        email = (request.data.get('email') or '').strip()
         name = request.data.get('name')
 
         if not email:
-            return Response({'error': 'email is required'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        import jwt, datetime
+        # ── Prevent spam relay: ensure this email is associated with a registered user
+        user = CustomUser.objects.filter(email=email).first()
+        if not user:
+            return Response({'error': 'No account found with this email address.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.email_verified:
+            return Response({'message': 'This account is already verified.'}, status=status.HTTP_200_OK)
+
+        import jwt, datetime, threading
         from django.conf import settings
         from .email_templates import get_verification_email_html, send_courier_email
 
         token = jwt.encode({
             'email': email,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(days=1)
+            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)
         }, settings.SECRET_KEY, algorithm='HS256')
 
         frontend_url = settings.FRONTEND_URL.strip()
         verify_link = f"{frontend_url}/verify-email?token={token}"
-        display_name = name or email.split('@')[0]
+        display_name = name or user.get_full_name() or email.split('@')[0]
 
-        try:
-            html_content = get_verification_email_html(user=display_name, redirect=verify_link)
-            text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
+        def _send_bg():
+            try:
+                html_content = get_verification_email_html(user=display_name, redirect=verify_link)
+                text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
 
-            send_courier_email(
-                to_email=email,
-                subject="Verify your email for Quota Hire",
-                text_content=text_content,
-                html_content=html_content
-            )
-        except Exception as e:
-            logger.error(f"Failed to send manual verification email to {email}: {e}")
-            return Response({'error': 'Failed to send verification email. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                send_courier_email(
+                    to_email=email,
+                    subject="Verify your email for Quota Hire",
+                    text_content=text_content,
+                    html_content=html_content
+                )
+            except Exception as e:
+                logger.error(f"Failed to send manual verification email to {email}: {e}")
 
-        return Response({'message': 'Verification email sent'}, status=status.HTTP_200_OK)
+        threading.Thread(target=_send_bg, daemon=True).start()
+        return Response({'message': 'Verification email sent.'}, status=status.HTTP_200_OK)
+
 
 class ForgotPasswordView(APIView):
     permission_classes     = []
@@ -1469,7 +1491,8 @@ class DashboardAnalyticsView(APIView):
 
         elif user.role == 'company':
             active_jobs = Job.objects.filter(company=user, status='approved')
-            all_apps = Application.objects.filter(job__company=user)
+            all_apps = Application.objects.filter(job__company=user).select_related('job', 'employee__employee_profile')
+
 
             now = timezone.now()
             applicant_velocity = []
@@ -1688,7 +1711,8 @@ class NotificationListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+
 
 
 class MarkNotificationReadView(APIView):
@@ -3289,22 +3313,13 @@ class CommunityMembersView(APIView):
 
         from django.db.models import Case, When, Value, IntegerField
 
-        employees = CustomUser.objects.filter(role=UserRole.EMPLOYEE).annotate(
+        employees = list(CustomUser.objects.filter(role=UserRole.EMPLOYEE).annotate(
             has_avatar=Case(
                 When(models.Q(avatar__isnull=False) & ~models.Q(avatar=''), then=Value(1)),
                 default=Value(0),
                 output_field=IntegerField(),
             )
-        ).order_by('-has_avatar', '-created_at')[:500]
-
-        if employees.count() < 10:
-            employees = CustomUser.objects.annotate(
-                has_avatar=Case(
-                    When(models.Q(avatar__isnull=False) & ~models.Q(avatar=''), then=Value(1)),
-                    default=Value(0),
-                    output_field=IntegerField(),
-                )
-            ).order_by('-has_avatar', '-created_at')[:500]
+        ).order_by('-has_avatar', '-created_at')[:500])
 
         data = []
         for u in employees:
@@ -3324,4 +3339,5 @@ class CommunityMembersView(APIView):
 
         safe_set(cache_key, data, ttl=300)
         return Response(data)
+
 

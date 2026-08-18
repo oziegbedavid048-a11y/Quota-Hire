@@ -63,8 +63,10 @@ export const EmployeeProfilePage = () => {
   const [formData, setFormData] = useState<Partial<EmployeeProfile>>({});
   const [passwordData, setPasswordData] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [saving, setSaving] = useState(false);
+  const [sectionError, setSectionError] = useState<string | null>(null);
   const [generatedCVs, setGeneratedCVs] = useState<any[]>([]);
   const [cvsLoading, setCvsLoading] = useState(false);
+  const [cvsError, setCvsError] = useState<string | null>(null);
 
   // Payment modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -80,6 +82,8 @@ export const EmployeeProfilePage = () => {
     setIsUploadingImage(true);
     try {
       await updateProfileImage(croppedFile);
+    } catch {
+      toast.error('Something went wrong uploading your photo. Please try again.');
     } finally {
       setIsUploadingImage(false);
     }
@@ -87,9 +91,10 @@ export const EmployeeProfilePage = () => {
 
   const fetchGeneratedCVs = () => {
     setCvsLoading(true);
+    setCvsError(null);
     apiFetch('/cv/my-cvs/')
       .then(res => setGeneratedCVs(Array.isArray(res) ? res : (res?.results && Array.isArray(res.results) ? res.results : [])))
-      .catch(() => {})
+      .catch(() => setCvsError('Something went wrong. Please try again.'))
       .finally(() => setCvsLoading(false));
   };
 
@@ -129,6 +134,7 @@ export const EmployeeProfilePage = () => {
 
   const handleSave = async () => {
     setSaving(true);
+    setSectionError(null);
     try {
       const payload = { ...formData };
       if (Array.isArray(payload.skills)) {
@@ -138,8 +144,8 @@ export const EmployeeProfilePage = () => {
       }
       await updateProfile(payload);
       closeSection();
-    } catch (error) {
-      // Error is handled in context
+    } catch {
+      setSectionError('Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -151,12 +157,13 @@ export const EmployeeProfilePage = () => {
       return;
     }
     setSaving(true);
+    setSectionError(null);
     try {
       await changePassword({ old_password: passwordData.old_password, new_password: passwordData.new_password });
       closeSection();
       setPasswordData({ old_password: '', new_password: '', confirm_password: '' });
-    } catch (error) {
-      // Error is handled in context
+    } catch {
+      setSectionError('Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -449,6 +456,17 @@ export const EmployeeProfilePage = () => {
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
               </div>
+            ) : cvsError ? (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-3">
+                <span className="text-sm text-red-700 font-medium">{cvsError}</span>
+                <button
+                  type="button"
+                  onClick={fetchGeneratedCVs}
+                  className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
+                >
+                  <RefreshCw className="w-3 h-3" /> Try Again
+                </button>
+              </div>
             ) : generatedCVs.length === 0 ? (
               <p className="text-sm text-neutral-500 text-center py-4">You haven't generated any tailored CVs yet. Apply to a job to create one!</p>
             ) : (
@@ -716,19 +734,36 @@ export const EmployeeProfilePage = () => {
                 {/* Section fields */}
                 {renderSectionContent()}
 
+
+
+
                 {/* Save button */}
                 {activeSection !== 'generated-cvs' && (
-                  <button
-                    onClick={isPasswordSection ? handleChangePassword : handleSave}
-                    disabled={saving}
-                    className="mt-5 w-full flex items-center justify-center gap-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-extrabold py-3 sm:py-3.5 rounded-2xl text-sm sm:text-base hover:opacity-90 transition-opacity disabled:opacity-50"
-                  >
-                    {saving
-                      ? <span className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      : <Save size={15} />
-                    }
-                    {saving ? 'Saving…' : isPasswordSection ? 'Update Password' : 'Save Changes'}
-                  </button>
+                  <>
+                    {sectionError && (
+                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-2">
+                        <span className="text-sm text-red-700 font-medium">{sectionError}</span>
+                        <button
+                          type="button"
+                          onClick={() => { setSectionError(null); isPasswordSection ? handleChangePassword() : handleSave(); }}
+                          className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Try Again
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      onClick={isPasswordSection ? handleChangePassword : handleSave}
+                      disabled={saving}
+                      className="mt-5 w-full flex items-center justify-center gap-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-extrabold py-3 sm:py-3.5 rounded-2xl text-sm sm:text-base hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {saving
+                        ? <span className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        : <Save size={15} />
+                      }
+                      {saving ? 'Saving…' : isPasswordSection ? 'Update Password' : 'Save Changes'}
+                    </button>
+                  </>
                 )}
               </div>
             </motion.div>

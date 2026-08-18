@@ -326,8 +326,10 @@ if not DEBUG:
     X_FRAME_OPTIONS = 'DENY'
 
 # ── Local Development SSL Overrides ──────────────────────────────────────────
-SECURE_SSL_REDIRECT = False
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
+if DEBUG:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
 
 

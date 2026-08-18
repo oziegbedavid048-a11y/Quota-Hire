@@ -4,8 +4,9 @@ import { BlobProvider } from '@react-pdf/renderer';
 import {
   X, ChevronRight, ChevronLeft, Loader2, FileText,
   Sparkles, CheckCircle, User, Briefcase,
-  GraduationCap, Star, AlertTriangle
+  GraduationCap, Star, AlertTriangle, RefreshCw
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
@@ -127,6 +128,11 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [renderKey, setRenderKey] = useState(0);
+
+
   const [form, setForm] = useState<FormState>({
     ...INITIAL_FORM,
     headline: (profile as any)?.title || '',
@@ -147,6 +153,8 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
     setSaved(false);
     setBackendSaved(false);
     setBackendSaving(false);
+    setSaveError(null);
+    setUpdateError(null);
     currentBlobRef.current = null;
     currentUrlRef.current = null;
     setForm({
@@ -156,6 +164,7 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
       extraSkills: (profile?.skills || []).join(', '),
     });
   }, [profile]);
+
 
   const handleSuggest = () => {
     if (!form.headline) {
@@ -222,6 +231,7 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
   // Save profile from CV data
   const handleUpdateProfile = async () => {
     setSaving(true);
+    setUpdateError(null);
     try {
       const extraSkillsList = form.extraSkills.split(',').map(s => s.trim()).filter(Boolean);
       const allSkills = [...new Set([...(profile.skills ?? []), ...extraSkillsList])];
@@ -235,8 +245,9 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
 
       setSaved(true);
       toast.success('Profile updated from your generated CV!');
-    } catch (e: any) {
-      toast.error('Failed to update profile.');
+    } catch {
+      setUpdateError('Something went wrong updating your profile. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -248,6 +259,7 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
       return;
     }
     setBackendSaving(true);
+    setSaveError(null);
     try {
       await new Promise<void>((resolve, reject) => {
         const reader = new FileReader();
@@ -277,12 +289,14 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
         };
         reader.onerror = () => reject(new Error('FileReader failed.'));
       });
-    } catch (err: any) {
-      toast.error(`Failed to save CV: ${err?.message || 'Unknown error'}`);
+    } catch {
+      setSaveError('Something went wrong saving your CV. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setBackendSaving(false);
     }
   };
+
 
   // Build CV data
   const cvData = buildCVDataFromForm(profile, form);
@@ -592,7 +606,7 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                       {/* Removed Open PDF Button */}
                     </div>
 
-                    <BlobProvider document={<SteelBlueBannerTemplate data={cvData} />}>
+                    <BlobProvider key={renderKey} document={<SteelBlueBannerTemplate data={cvData} />}>
                       {({ blob, url, loading: blobLoading, error: blobError }) => {
                         if (blob) currentBlobRef.current = blob;
                         if (url) currentUrlRef.current = url;
@@ -616,8 +630,16 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                                 {!blobLoading && blobError && (
                                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center z-10">
                                     <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
-                                    <p className="text-red-700 font-bold text-sm">Failed to render PDF</p>
-                                    <p className="text-red-500 text-xs mt-1">Please go back and check your entries.</p>
+                                    <p className="text-red-700 font-bold text-sm">Something went wrong rendering the PDF</p>
+                                    <p className="text-red-500 text-xs mt-1 mb-4">Please try again to re-render your document.</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => setRenderKey(k => k + 1)}
+                                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5" />
+                                      <span>Try Again</span>
+                                    </button>
                                   </div>
                                 )}
                               </div>
@@ -629,6 +651,18 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                               <p className="text-xs text-blue-600 mb-3">
                                 Save this CV so you can download it later from your profile's Generated Documents section.
                               </p>
+                              {saveError && (
+                                <div className="p-3 bg-red-100/80 border border-red-200 rounded-xl flex items-center justify-between gap-2 mb-3">
+                                  <span className="text-xs text-red-700 font-medium">{saveError}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveToDjango(blob)}
+                                    className="shrink-0 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
+                                  >
+                                    <RefreshCw className="w-3 h-3" /> Try Again
+                                  </button>
+                                </div>
+                              )}
                               {backendSaved ? (
                                 <div className="flex items-center gap-2 text-blue-700 font-bold text-sm">
                                   <CheckCircle className="w-5 h-5" /> CV saved to your profile!
@@ -654,6 +688,18 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                               <p className="text-xs text-emerald-600 mb-3">
                                 Click below to update your profile (title, education, skills) using the information from this resume.
                               </p>
+                              {updateError && (
+                                <div className="p-3 bg-red-100/80 border border-red-200 rounded-xl flex items-center justify-between gap-2 mb-3">
+                                  <span className="text-xs text-red-700 font-medium">{updateError}</span>
+                                  <button
+                                    type="button"
+                                    onClick={handleUpdateProfile}
+                                    className="shrink-0 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm"
+                                  >
+                                    <RefreshCw className="w-3 h-3" /> Try Again
+                                  </button>
+                                </div>
+                              )}
                               {saved ? (
                                 <div className="flex items-center gap-2 text-emerald-700 font-bold text-sm">
                                   <CheckCircle className="w-5 h-5" />
@@ -677,6 +723,7 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                         );
                       }}
                     </BlobProvider>
+
                   </div>
                 </div>
               )}
