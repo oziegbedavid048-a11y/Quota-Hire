@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Mail, Lock, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Loader2, AlertTriangle, Send, CheckCircle } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { ShaderAnimation } from '../../components/ui/ShaderAnimation';
 import { Logo } from '../../components/ui/Logo';
 import { useAppContext } from '../../context/AppContext';
+import { apiFetch } from '../../context/AppContext';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,6 +29,10 @@ export const Login = () => {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTime, setLockoutTime] = useState(0);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  // Tracks whether the last failure was due to an unverified email (so we show the resend button)
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const { login, loginWithGoogle, currentUser } = useAppContext();
   const navigate = useNavigate();
   const googleInitRef = useRef(false);
@@ -115,24 +120,50 @@ export const Login = () => {
   const onSubmit = async (data: LoginFormValues) => {
     if (lockoutTime > 0) return;
     setGlobalError('');
+    setUnverifiedEmail(null);
+    setResendSuccess(false);
     try {
       await login(data.email, data.password);
       setFailedAttempts(0);
     } catch (error: any) {
       console.error(error);
+      const msg: string = error.message || '';
+      // Detect the "not verified" error from CustomTokenObtainPairSerializer
+      if (msg.toLowerCase().includes('not verified')) {
+        setUnverifiedEmail(data.email);
+        setGlobalError('Your email address has not been verified. Please check your inbox (and spam folder) for the verification link.');
+        return; // Don\'t count this as a lockout-able failed attempt
+      }
       const newAttempts = failedAttempts + 1;
       setFailedAttempts(newAttempts);
       if (newAttempts >= 3) {
         setLockoutTime(30);
         setGlobalError('Too many failed attempts. Please wait 30 seconds.');
       } else {
-        const msg = error.message || '';
         if (msg === 'No account found please sign up' || msg === 'Password incorrect') {
           setGlobalError(msg);
         } else {
           setGlobalError('An unexpected error occurred. Please try again.');
         }
       }
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail || isResending) return;
+    setIsResending(true);
+    setResendSuccess(false);
+    try {
+      await apiFetch('/auth/send-verification/', {
+        method: 'POST',
+        body: JSON.stringify({ email: unverifiedEmail }),
+      });
+      setResendSuccess(true);
+      setGlobalError('');
+    } catch (err: any) {
+      setGlobalError(err.message || 'Failed to resend verification email. Please try again.');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -210,9 +241,38 @@ export const Login = () => {
                     exit={{ opacity: 0, height: 0, y: -10 }}
                     className="overflow-hidden"
                   >
-                    <div className="bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-xl p-4 text-sm text-red-600 dark:text-red-400 font-bold flex items-start gap-3 shadow-inner">
-                      <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-                      <p>{globalError}</p>
+                    <div className="bg-red-500/10 backdrop-blur-md border border-red-500/20 rounded-xl p-4 text-sm text-red-600 dark:text-red-400 font-bold shadow-inner">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                        <p>{globalError}</p>
+                      </div>
+                      {unverifiedEmail && !resendSuccess && (
+                        <button
+                          type="button"
+                          onClick={handleResendVerification}
+                          disabled={isResending}
+                          className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg text-xs font-bold transition-all duration-200"
+                        >
+                          {isResending ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
+                          ) : (
+                            <><Send className="w-3.5 h-3.5" /> Resend Verification Email</>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+                {resendSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0, y: -10 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -10 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-green-500/10 backdrop-blur-md border border-green-500/20 rounded-xl p-4 text-sm text-green-600 dark:text-green-400 font-bold flex items-center gap-3 shadow-inner">
+                      <CheckCircle className="w-5 h-5 shrink-0" />
+                      <p>Verification email sent! Please check your inbox and spam folder.</p>
                     </div>
                   </motion.div>
                 )}

@@ -20,9 +20,13 @@ export class ApiError extends Error {
   }
 }
 
-// 10-second timeout wrapper — prevents a sleeping Render backend from
-// hanging the page indefinitely with no visible feedback.
-const fetchWithTimeout = (url: string, options: RequestInit, timeoutMs = 10000): Promise<Response> => {
+// Auth endpoints need a longer timeout because Render Free tier can take 30–90s to
+// cold-boot after 15 min of inactivity. All other endpoints stay at 10s.
+const AUTH_ENDPOINTS = ['/auth/register/', '/auth/login/', '/auth/google/'];
+const AUTH_TIMEOUT_MS = 60000;  // 60 seconds for auth (covers Render cold-start)
+const DEFAULT_TIMEOUT_MS = 10000;  // 10 seconds for everything else
+
+const fetchWithTimeout = (url: string, options: RequestInit, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id));
@@ -66,10 +70,13 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
   let response;
   try {
-    response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`, { ...options, headers: buildHeaders(token) });
+    // Use a longer timeout for auth endpoints to handle Render Free cold starts.
+    const isAuthEndpoint = AUTH_ENDPOINTS.some(e => endpoint.startsWith(e));
+    const timeoutMs = isAuthEndpoint ? AUTH_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+    response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`, { ...options, headers: buildHeaders(token) }, timeoutMs);
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      throw new ApiError('The server took too long to respond. It may be starting up — please try again in a moment.', 0);
+      throw new ApiError('The server is taking longer than usual to respond — it may be starting up. Please wait a moment and try again.', 0);
     }
     throw new ApiError('We couldn\'t connect to the server. Please check your internet connection.', 0);
   }

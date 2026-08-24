@@ -1,14 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Mail, Lock, User, Building, Loader2, AlertTriangle, Phone, MapPin, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Building, Loader2, AlertTriangle, Phone, MapPin, RefreshCw, Send, CheckCircle } from 'lucide-react';
 
 import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { PasswordStrengthMeter } from '../../components/ui/PasswordStrengthMeter';
 import { ShaderAnimation } from '../../components/ui/ShaderAnimation';
 import { Logo } from '../../components/ui/Logo';
-import { useAppContext } from '../../context/AppContext';
+import { useAppContext, apiFetch } from '../../context/AppContext';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -71,8 +71,12 @@ export const Signup = () => {
 
   const [globalError, setGlobalError] = useState('');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const [step, setStep] = useState(1);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isSlowSubmit, setIsSlowSubmit] = useState(false);
   const { register: registerUser, loginWithGoogle, currentUser } = useAppContext();
   const navigate = useNavigate();
   const googleInitRef = useRef(false);
@@ -168,6 +172,9 @@ export const Signup = () => {
 
   const onSubmit = async (data: SignupFormValues) => {
     setGlobalError('');
+    setIsSlowSubmit(false);
+    // After 5 seconds of waiting, show a "server is starting up" hint on the button
+    const slowTimer = setTimeout(() => setIsSlowSubmit(true), 5000);
     try {
       const finalName = data.role === 'company'
         ? data.companyName
@@ -184,18 +191,27 @@ export const Signup = () => {
         country: data.country
       });
 
+      // Capture the email so the modal can offer a resend button
+      setRegisteredEmail(data.email);
       // Show verification modal
       setShowVerificationModal(true);
     } catch (error: any) {
       console.error(error);
       const msg = error?.message || '';
-      if (msg.toLowerCase().includes('already exists')) {
+      if (msg.toLowerCase().includes('starting up') || msg.toLowerCase().includes('too long') || msg.toLowerCase().includes('timed out')) {
+        setGlobalError('Our server is starting up — this can take up to 60 seconds on first load. Please wait a moment and try again.');
+      } else if (msg.toLowerCase().includes('already exists')) {
         setGlobalError('An account with this email already exists.');
       } else if (msg.toLowerCase().includes('password')) {
         setGlobalError(msg);
+      } else if (msg.toLowerCase().includes('connect')) {
+        setGlobalError('Could not reach the server. Please check your internet connection and try again.');
       } else {
         setGlobalError('Something went wrong. Please try again.');
       }
+    } finally {
+      clearTimeout(slowTimer);
+      setIsSlowSubmit(false);
     }
   };
 
@@ -459,7 +475,8 @@ export const Signup = () => {
                       >
                         {isSubmitting ? (
                           <span className="flex items-center justify-center gap-2">
-                            <Loader2 size={20} className="animate-spin" /> Creating account...
+                            <Loader2 size={20} className="animate-spin" />
+                            {isSlowSubmit ? 'Server starting up…' : 'Creating account...'}
                           </span>
                         ) : (
                           "Create Account"
@@ -552,11 +569,44 @@ export const Signup = () => {
                 <Mail size={40} />
               </div>
               <h2 className="text-2xl sm:text-3xl font-display font-bold text-neutral-900 dark:text-white mb-3">Check your email</h2>
-              <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 mb-8 leading-relaxed">
+              <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 mb-6 leading-relaxed">
                 We've sent a confirmation link to your email address. Please click the link to verify your account before logging in. 
                 <br /><br />
                 <span className="font-bold text-red-500 dark:text-red-400">Please check your spam folder if it is not in your inbox.</span>
               </p>
+
+              {/* Resend email button / success state */}
+              {resendSuccess ? (
+                <div className="flex items-center justify-center gap-2 mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400 text-sm font-bold">
+                  <CheckCircle size={16} />
+                  <span>Email resent! Check your inbox and spam folder.</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!registeredEmail || isResending) return;
+                    setIsResending(true);
+                    try {
+                      await apiFetch('/auth/send-verification/', {
+                        method: 'POST',
+                        body: JSON.stringify({ email: registeredEmail }),
+                      });
+                      setResendSuccess(true);
+                    } catch { /* silently ignore */ }
+                    finally { setIsResending(false); }
+                  }}
+                  disabled={isResending}
+                  className="mb-5 w-full flex items-center justify-center gap-2 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-60 text-neutral-700 dark:text-neutral-300 rounded-xl text-sm font-bold transition-all duration-200 border border-neutral-200 dark:border-neutral-700"
+                >
+                  {isResending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Didn't receive it? Resend Email</>
+                  )}
+                </button>
+              )}
+
               <Button
                 onClick={() => navigate('/login')}
                 className="w-full py-4 rounded-xl text-base font-bold text-white shadow-xl transition-all duration-300 bg-gradient-to-r from-accent-600 to-accent-500 hover:from-accent-500 hover:to-accent-400 hover:shadow-accent-500/30 hover:-translate-y-0.5"
