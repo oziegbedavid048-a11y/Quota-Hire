@@ -35,6 +35,29 @@
         }
       }(window.location))
     </script>
+    <!-- Facebook In-App Browser (FB_IAB) fix -->
+    <!-- FB_IAB has a bug where it truncates large <script type="module"> bundles,
+         causing "SyntaxError: Unexpected end of input". Redirect to system browser. -->
+    <script type="text/javascript">
+      (function() {
+        var ua = navigator.userAgent || '';
+        var isFBIAB = /FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua);
+        if (isFBIAB) {
+          var url = window.location.href;
+          // Android: intent scheme opens system browser
+          var isAndroid = /Android/i.test(ua);
+          if (isAndroid) {
+            window.location.replace(
+              'intent://' + url.replace(/^https?:\/\//, '') +
+              '#Intent;scheme=https;package=com.android.chrome;end'
+            );
+          } else {
+            // iOS: deep link to open in default browser
+            window.location.replace(url);
+          }
+        }
+      })();
+    </script>
     <script type="module" crossorigin src="/assets/index-DCnNDnw5.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-DfxM3yZW.css">
   </head>
