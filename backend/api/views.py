@@ -1844,25 +1844,21 @@ class ResumeUploadView(APIView):
         # Parse text into fields
         parsed = parse_resume_text(text)
 
-        # Save file to profile
+        # Save file to profile (binary in PostgreSQL only — no Cloudinary upload).
+        # Previously this also set profile.resume_file, which triggered an upload to
+        # Cloudinary's /image/upload endpoint. That endpoint rejects non-image files
+        # (PDF, DOC, DOCX), causing "BadRequest: Invalid image file". Since
+        # ResumeProxyView already serves the resume from resume_binary, there is no
+        # need to push the file to Cloudinary at all.
         profile, _ = EmployeeProfile.objects.get_or_create(user=request.user)
-        resume_file.seek(0)  # Reset after reading
+        resume_file.seek(0)  # Reset after text extraction
         profile.resume_binary = resume_file.read()
         profile.resume_filename = resume_file.name
-        resume_file.seek(0)
-        profile.resume_file = resume_file
-        profile.save(update_fields=['resume_file', 'resume_binary', 'resume_filename'])
-
-        resume_file_url = None
-        if profile.resume_file:
-            try:
-                resume_file_url = request.build_absolute_uri(profile.resume_file.url)
-            except Exception:
-                pass
+        profile.save(update_fields=['resume_binary', 'resume_filename'])
 
         return Response({
             'message': 'Resume parsed successfully.',
-            'resume_file_url': resume_file_url,
+            'resume_file_url': None,  # Served via /api/company/applications/<pk>/resume/
             'parsed': parsed,
         }, status=status.HTTP_200_OK)
 
