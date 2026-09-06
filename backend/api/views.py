@@ -666,19 +666,41 @@ def is_play_review_login(email: str, otp_code: str) -> bool:
 
 
 def _get_or_create_play_review_user():
-    """Fetch (or first-time create) the single configured review account."""
+    """Fetch (or first-time create) the single configured review account.
+
+    The lookup is case-insensitive on purpose. PLAY_REVIEW_EMAIL is
+    lowercased before comparison, but the account may already exist with
+    different capitalisation — it is usually created by hand in the admin
+    before the store submission. Postgres compares strings case-sensitively,
+    so an exact match would miss that existing account and quietly create a
+    second, empty one; the reviewer would then sign in to a blank profile
+    instead of the prepared demo account, or the insert would collide on the
+    unique username.
+    """
     configured_email = get_play_review_email()
-    user, created = CustomUser.objects.get_or_create(
+
+    user = CustomUser.objects.filter(email__iexact=configured_email).first()
+    if user is not None:
+        # Make sure the existing account can actually be used for review.
+        updates = []
+        if not user.email_verified:
+            user.email_verified = True
+            updates.append('email_verified')
+        if not user.is_active:
+            user.is_active = True
+            updates.append('is_active')
+        if updates:
+            user.save(update_fields=updates)
+        return user
+
+    user = CustomUser.objects.create(
         email=configured_email,
-        defaults={
-            'username': configured_email.replace('@', '_at_').replace('.', '_'),
-            'role': 'employee',
-            'setup_completed': True,
-            'email_verified': True,
-        },
+        username=configured_email.replace('@', '_at_').replace('.', '_'),
+        role='employee',
+        setup_completed=True,
+        email_verified=True,
     )
-    if created:
-        logger.info('Created Google Play review account %s', configured_email)
+    logger.info('Created Google Play review account %s', configured_email)
     return user
 
 

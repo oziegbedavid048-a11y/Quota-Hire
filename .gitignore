@@ -48,3 +48,11 @@ SECURITY_FIXES_DEPLOY.md
 # Build artifacts and stray captures at the repository root
 build_output.txt
 /IMG*.jpg
+
+# Security audit artefacts — keep local, do not publish to a public repo
+SECURITY_AUDIT.html
+SECURITY_FIXES_DEPLOY.md
+
+# Build artefacts
+build_output.txt
+build.zip

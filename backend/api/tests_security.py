@@ -2283,3 +2283,124 @@ class DashboardAnalyticsTests(ThrottleIsolatedTestCase):
             f'Company analytics issued {len(ctx.captured_queries)} queries — '
             f'it is still dereferencing relations per application.',
         )
+
+
+class PlayReviewExistingAccountTests(ThrottleIsolatedTestCase):
+    """
+    QH-03 follow-up — the review account is created by hand before the store
+    submission, so the bypass must attach to that existing account rather
+    than silently creating a second, empty one.
+    """
+
+    REVIEW_EMAIL = 'PlayReviewer@QuotaHire.org'   # note the capitals
+    REVIEW_CODE = '123456'                        # the code already given to Google
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.verify_url = reverse('login-otp-verify')
+        # The account as the owner actually created it: mixed case, with data.
+        self.existing = CustomUser.objects.create_user(
+            username='playreviewer_manual',
+            email=self.REVIEW_EMAIL,
+            password='some-password',
+            role=UserRole.EMPLOYEE,
+            first_name='Play',
+            last_name='Reviewer',
+        )
+
+    @override_settings(
+        PLAY_REVIEW_EMAIL='playreviewer@quotahire.org',   # lowercase in env
+        PLAY_REVIEW_OTP=REVIEW_CODE,
+        PLAY_REVIEW_EXPIRES=_future(),
+    )
+    def test_attaches_to_the_existing_account_despite_case(self):
+        before = CustomUser.objects.count()
+        resp = self.client.post(
+            self.verify_url,
+            {'email': 'playreviewer@quotahire.org', 'otp_code': self.REVIEW_CODE},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.assertEqual(
+            CustomUser.objects.count(), before,
+            'A duplicate review account was created instead of reusing the existing one.',
+        )
+        self.assertEqual(
+            resp.data['user']['id'], str(self.existing.pk),
+            'The reviewer was signed in to a different account than the prepared one.',
+        )
+
+    @override_settings(
+        PLAY_REVIEW_EMAIL='playreviewer@quotahire.org',
+        PLAY_REVIEW_OTP=REVIEW_CODE,
+        PLAY_REVIEW_EXPIRES=_future(),
+    )
+    def test_reviewer_email_is_case_insensitive_on_input(self):
+        """Google may type the address with different capitalisation."""
+        for typed in [
+            'playreviewer@quotahire.org',
+            'PlayReviewer@QuotaHire.org',
+            'PLAYREVIEWER@QUOTAHIRE.ORG',
+        ]:
+            with self.subTest(typed=typed):
+                cache.clear()
+                resp = self.client.post(
+                    self.verify_url,
+                    {'email': typed, 'otp_code': self.REVIEW_CODE},
+                    format='json',
+                )
+                self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+
+    @override_settings(
+        PLAY_REVIEW_EMAIL='playreviewer@quotahire.org',
+        PLAY_REVIEW_OTP=REVIEW_CODE,
+        PLAY_REVIEW_EXPIRES=_future(),
+    )
+    def test_unverified_existing_account_is_made_usable(self):
+        self.existing.email_verified = False
+        self.existing.is_active = False
+        self.existing.save()
+
+        resp = self.client.post(
+            self.verify_url,
+            {'email': 'playreviewer@quotahire.org', 'otp_code': self.REVIEW_CODE},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.existing.refresh_from_db()
+        self.assertTrue(self.existing.email_verified)
+        self.assertTrue(self.existing.is_active)
+
+    @override_settings(
+        PLAY_REVIEW_EMAIL='playreviewer@quotahire.org',
+        PLAY_REVIEW_OTP=REVIEW_CODE,
+        PLAY_REVIEW_EXPIRES=_future(),
+    )
+    def test_keeping_123456_still_blocks_the_old_prefix_attack(self):
+        """
+        The whole point: even with the original code retained, only ONE
+        address works. The old backdoor accepted any reviewer*/playstore*
+        address on any domain.
+        """
+        for attacker in [
+            'reviewer@attacker.com',
+            'playstore@attacker.com',
+            'playreviewer@attacker.com',       # same local part, wrong domain
+            'playreviewer2@quotahire.org',     # right domain, wrong address
+        ]:
+            with self.subTest(attacker=attacker):
+                cache.clear()
+                resp = self.client.post(
+                    self.verify_url,
+                    {'email': attacker, 'otp_code': '123456'},
+                    format='json',
+                )
+                self.assertEqual(
+                    resp.status_code, status.HTTP_400_BAD_REQUEST,
+                    f'{attacker} still got in with the retained code.',
+                )
+                self.assertFalse(
+                    CustomUser.objects.filter(email__iexact=attacker).exists(),
+                    f'{attacker} was minted as an account.',
+                )
