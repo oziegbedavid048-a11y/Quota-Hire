@@ -212,7 +212,13 @@ export const JobsList = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Link to={`/jobs/${job.id}`} className="block group">
+                <div
+                  className="block group cursor-pointer"
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                  role="link"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/jobs/${job.id}`)}
+                >
                   <div className="bg-white dark:bg-neutral-900 p-5 md:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm hover:shadow-md hover:border-accent-300 dark:hover:border-accent-700 transition-all duration-200">
                     
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
@@ -311,7 +317,7 @@ export const JobsList = () => {
                     </div>
                     
                   </div>
-                </Link>
+                </div>
               </motion.div>
             ))
           )}

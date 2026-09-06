@@ -1,3 +1,5 @@
+// Register PDF fonts first — fixes @react-pdf/renderer v4 'unitsPerEm' crash in browser
+import './lib/cv/pdfFonts';
 import { Buffer } from 'buffer';
 window.Buffer = window.Buffer || Buffer;
 

@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { Job, EmployeeProfile } from '../../types';
 import { PdfPreview } from './PdfPreview';
+import '../../lib/cv/pdfFonts';
 
 // CV Engine
 import { WizardAnswers, buildCVData, generateAIAssistedSuggestions } from '../../lib/cv/cvContentBuilder';
@@ -138,6 +139,8 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
   useEffect(() => {
     currentBlobRef.current = null;
     currentUrlRef.current = null;
+    // Force BlobProvider to re-render with the new template
+    setRenderKey(k => k + 1);
   }, [selectedTemplateId]);
 
   // ── Dynamic Template Logic ────────────────────────────────────────────────
@@ -565,7 +568,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                         </div>
 
                         {/* ── BlobProvider: single source of truth for PDF blob ── */}
-                        <BlobProvider key={renderKey} document={renderTemplate()}>
+                        <BlobProvider key={`${renderKey}-${selectedTemplateId}`} document={renderTemplate()}>
                           {({ blob, url, loading: blobLoading, error: blobError }) => {
                             // Safe ref update (refs don't trigger re-renders)
                             if (blob) currentBlobRef.current = blob;
@@ -595,8 +598,8 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                                         <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-50 p-6 text-center z-10">
                                           <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
                                           <p className="text-red-700 font-bold text-sm mb-1">Something went wrong rendering the PDF</p>
-                                          <p className="text-red-500 text-xs mb-4 max-w-xs">
-                                            Please try again or switch to a different template.
+                                          <p className="text-red-500 text-xs mb-4 max-w-xs break-words">
+                                            {typeof blobError === 'string' ? blobError : (blobError as any)?.message || 'Please try again or switch to a different template.'}
                                           </p>
                                           <button
                                             type="button"

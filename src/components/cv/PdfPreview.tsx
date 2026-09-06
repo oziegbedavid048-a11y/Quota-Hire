@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 
-// Initialize PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Use the CDN worker that matches the installed pdfjs-dist version.
+// This is the most reliable approach for blob: URL rendering in Vite.
+// The local ?url import can fail in some environments when the worker
+// tries to fetch a blob: URL from a different origin context.
+const PDFJS_VERSION = '6.1.200';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
 
 interface PdfPreviewProps {
   url: string;
@@ -27,8 +30,17 @@ export function PdfPreview({ url }: PdfPreviewProps) {
         setLoading(true);
         setError(null);
 
-        // Load the PDF
-        const loadingTask = pdfjsLib.getDocument({ url });
+        // Fetch the blob bytes directly on the main thread
+        // Passing 'data' (Uint8Array) directly to pdfjs bypasses worker URL fetching and CORS entirely
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Failed to fetch PDF blob: ${response.statusText}`);
+        const arrayBuffer = await response.arrayBuffer();
+        if (!isActive) return;
+
+        const loadingTask = pdfjsLib.getDocument({
+          data: new Uint8Array(arrayBuffer),
+          isEvalSupported: false,
+        });
         const pdf = await loadingTask.promise;
         
         if (!isActive) return;

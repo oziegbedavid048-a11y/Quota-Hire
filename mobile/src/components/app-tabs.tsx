@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent, Modal } from 'react-native';
-import * as LocalAuthentication from 'expo-local-authentication';
+// expo-local-authentication may not be available in Expo Go — guard with try/catch
+let LocalAuthentication: any = {
+  hasHardwareAsync: async () => false,
+  isEnrolledAsync: async () => false,
+  authenticateAsync: async () => ({ success: false }),
+  supportedAuthenticationTypesAsync: async () => [],
+  SecurityLevel: { NONE: 0, SECRET: 1, BIOMETRIC: 2 },
+  AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2, IRIS: 3 },
+};
+try {
+  LocalAuthentication = require('expo-local-authentication');
+} catch {
+  console.warn('[expo-local-authentication] Not available in Expo Go — biometrics disabled.');
+}
 import { registerForPushNotificationsAsync } from '@/services/notifications';
 import { Image } from 'expo-image';
 import { Tabs, useRouter, useSegments, useLocalSearchParams } from 'expo-router';
@@ -22,8 +35,9 @@ import { useNotificationsData } from '@/hooks/useNotificationsData';
 import { HapticPressable } from '@/components/haptic-pressable';
 import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { apiFetch } from '@/services/api';
+import { requestLogout } from '@/services/session';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -283,16 +297,7 @@ function FabMenuSheet({
   const handleSignOut = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     onClose();
-    await SecureStore.deleteItemAsync('access_token');
-    await SecureStore.deleteItemAsync('refresh_token');
-    await SecureStore.deleteItemAsync('user_name');
-    await SecureStore.deleteItemAsync('user_role');
-    await SecureStore.deleteItemAsync('user_avatar');
-    if (typeof (globalThis as any).logout === 'function') {
-      await (globalThis as any).logout();
-    } else {
-      router.replace('/' as any);
-    }
+    await requestLogout();
   };
 
   const initial = (userName || 'U').charAt(0).toUpperCase();
@@ -409,14 +414,20 @@ function FloatingPillNavBar({
 
   const { mode } = useLocalSearchParams<{ mode?: string }>();
 
+  const isCommunityActive = currentRoute === '/community';
+
   // ── Tab definitions ────────────────────────────────────────────────────────
   const tab1 = { label: 'Home',   route: '/',                   icon: 'home'       };
   const tab2 = isCompany
     ? { label: 'Profile',    route: '/profile',              icon: 'user'       }
-    : { label: 'Browse',     route: '/explore',              icon: 'compass'    };
+    : { label: 'Jobs',       route: '/explore',              icon: 'briefcase'  };
   const fabCfg = isCompany
     ? { label: 'Post Job',   route: '/explore?mode=post-job', icon: 'plus-circle'}
-    : { label: 'Community', route: '/community',            icon: 'users'};
+    : {
+        label: isCommunityActive ? 'Post' : 'Community',
+        route: '/community',
+        icon: isCommunityActive ? 'plus' : 'users',
+      };
   const tab4 = isCompany
     ? { label: 'Applicants', route: '/tracker',              icon: 'users'      }
     : { label: 'Tracker',    route: '/tracker',              icon: 'bar-chart-2'};
@@ -424,7 +435,7 @@ function FloatingPillNavBar({
 
   const isTab1Active = currentRoute === '/';
   const isTab2Active = isCompany ? currentRoute === '/profile' : currentRoute === '/explore';
-  const isFabActive  = isCompany ? currentRoute === '/explore' : currentRoute === '/community';
+  const isFabActive  = isCompany ? currentRoute === '/explore' : isCommunityActive;
   const isTab4Active = currentRoute === '/tracker';
   const isTab5Active = currentRoute === '/settings';
 
@@ -434,7 +445,7 @@ function FloatingPillNavBar({
 
   const navigateTo = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (currentRoute !== route) router.replace(route as any);
+    if (currentRoute !== route) router.navigate(route as any);
   };
 
   const handleFabPress = () => {
@@ -443,6 +454,10 @@ function FloatingPillNavBar({
       withTiming(0.88, { duration: 80 }),
       withSpring(1, { damping: 12, stiffness: 260 })
     );
+    if (!isCompany && isCommunityActive) {
+      DeviceEventEmitter.emit('open-create-post-modal');
+      return;
+    }
     navigateTo(fabCfg.route);
   };
 
@@ -454,24 +469,31 @@ function FloatingPillNavBar({
         alignSelf: 'center',
         width: NAV_WIDTH,
         height: NAV_BAR_H,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.09,
+        shadowRadius: 16,
         elevation: 10,
       }}
     >
-      {/* ── SVG Notched Bar Background ─────────────────────────────────────── */}
+      {/* ── SVG Notched Bar Liquid Glass Background ─────────────────────────── */}
       <Svg
         width={NAV_WIDTH}
         height={NAV_BAR_H}
         style={StyleSheet.absoluteFill}
       >
+        <Defs>
+          <SvgGradient id="liquidGlassGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#ffffff" stopOpacity="0.99" />
+            <Stop offset="50%" stopColor="#ffffff" stopOpacity="0.96" />
+            <Stop offset="100%" stopColor="#f8fafc" stopOpacity="0.93" />
+          </SvgGradient>
+        </Defs>
         <Path
           d={notchedD}
-          fill="rgba(255,255,255,0.98)"
-          stroke="rgba(226, 232, 240, 0.9)"
-          strokeWidth={1.5}
+          fill="url(#liquidGlassGrad)"
+          stroke="rgba(226, 232, 240, 0.85)"
+          strokeWidth={1.2}
         />
       </Svg>
 
@@ -614,7 +636,11 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
             await SecureStore.setItemAsync('biometrics_enabled', 'true');
           }
         } else {
-          await SecureStore.setItemAsync('biometrics_enabled', 'true');
+          // QH-12: this branch used to set the flag to 'true' on devices with
+          // no biometric hardware or nothing enrolled — the opposite of the
+          // truth, so Settings reported biometric login as active on a device
+          // that cannot perform it. Record it as off instead.
+          await SecureStore.setItemAsync('biometrics_enabled', 'false');
         }
       }
     } catch { /* ignore */ }
@@ -747,7 +773,7 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
         <Tabs
           screenOptions={{
             headerShown: false,
-            animation: 'fade',
+            animation: 'none',
             tabBarStyle: { display: 'none' },
           }}
         >

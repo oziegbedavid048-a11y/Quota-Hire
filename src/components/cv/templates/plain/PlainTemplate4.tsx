@@ -79,10 +79,10 @@ export const PlainTemplate4 = ({ data }: { data: CVData }) => (
         {data.targetRole && <Text style={s.hdRole}>{data.targetRole}</Text>}
         
         <View style={s.hdContact}>
-          {data.email && <Text style={s.hdCtxt}>✉ {data.email}</Text>}
-          {data.phone && <Text style={s.hdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.hdCtxt}>⚲ {data.location}</Text>}
-          {data.linkedinUrl && <Text style={s.hdCtxt}>in {data.linkedinUrl}</Text>}
+          {data.email && <Text style={s.hdCtxt}>Email: {data.email}</Text>}
+          {data.phone && <Text style={s.hdCtxt}>Tel: {data.phone}</Text>}
+          {data.location && <Text style={s.hdCtxt}>{data.location}</Text>}
+          {data.linkedinUrl && <Text style={s.hdCtxt}>LinkedIn: {data.linkedinUrl}</Text>}
         </View>
       </View>
 
@@ -117,7 +117,7 @@ export const PlainTemplate4 = ({ data }: { data: CVData }) => (
                       {exp.company && <Text style={s.jobCo}>{exp.company}</Text>}
                       {bullets.map((b, bi) => (
                         <View key={bi} style={s.bullet}>
-                          <Text style={s.bulletDot}>▪</Text>
+                          <Text style={s.bulletDot}>-</Text>
                           <Text style={s.bulletTxt}>{b}</Text>
                         </View>
                       ))}
@@ -174,7 +174,7 @@ export const PlainTemplate4 = ({ data }: { data: CVData }) => (
                 <Text style={s.sideTitle}>Languages</Text>
                 {data.languages.map((l, i) => (
                   <View key={i} style={s.itemDot}>
-                    <Text style={s.dotSymbol}>›</Text>
+                    <Text style={s.dotSymbol}>-</Text>
                     <Text style={s.dotTxt}>{l}</Text>
                   </View>
                 ))}
@@ -187,7 +187,7 @@ export const PlainTemplate4 = ({ data }: { data: CVData }) => (
                 <Text style={s.sideTitle}>Certifications</Text>
                 {data.certifications.map((cert, i) => (
                   <View key={i} style={s.itemDot}>
-                    <Text style={s.dotSymbol}>›</Text>
+                    <Text style={s.dotSymbol}>-</Text>
                     <Text style={s.dotTxt}>{cert}</Text>
                   </View>
                 ))}
@@ -200,7 +200,7 @@ export const PlainTemplate4 = ({ data }: { data: CVData }) => (
                 <Text style={s.sideTitle}>Strengths</Text>
                 {data.strengths.map((str, i) => (
                   <View key={i} style={s.itemDot}>
-                    <Text style={s.dotSymbol}>›</Text>
+                    <Text style={s.dotSymbol}>-</Text>
                     <Text style={s.dotTxt}>{str}</Text>
                   </View>
                 ))}

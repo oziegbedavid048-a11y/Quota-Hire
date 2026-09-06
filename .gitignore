@@ -35,3 +35,16 @@ db.sqlite3
 .env.local
 .env.*.local
 backend/.env
+
+# Security audit working documents — kept local.
+# This repository is public and these describe the application's
+# vulnerabilities in detail, including one finding (the Firebase API key
+# restriction) that is resolved in the Google Cloud console rather than in
+# code. Move them to a private repo or a password manager if you need to
+# share them.
+SECURITY_AUDIT.html
+SECURITY_FIXES_DEPLOY.md
+
+# Build artifacts and stray captures at the repository root
+build_output.txt
+/IMG*.jpg

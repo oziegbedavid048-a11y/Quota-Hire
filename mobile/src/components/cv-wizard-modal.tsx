@@ -23,6 +23,7 @@ import { WebView } from 'react-native-webview';
 
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
+import { sanitizeForHtml } from '@/utils/html';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: SCREEN_H } = Dimensions.get('window');
@@ -271,7 +272,7 @@ const compileEuropassHTML = (profile: any, data: any) => {
         ${data.workEntries.map((exp: any) => `
           <div class="entry-block">
             <div class="entry-dates">${exp.period}</div>
-            <div class="entry-title">${exp.role} – ${exp.company}</div>
+            <div class="entry-title">${exp.role} | ${exp.company}</div>
             <ul class="bullet-list">
               ${bulletsForDuties(exp.duties).map(b => `<li class="bullet-item">${b}</li>`).join('')}
             </ul>
@@ -284,7 +285,7 @@ const compileEuropassHTML = (profile: any, data: any) => {
         ${data.eduEntries.map((edu: any) => `
           <div class="entry-block">
             <div class="entry-dates">${edu.dates}</div>
-            <div class="entry-title">${edu.qualification} – ${edu.institution}</div>
+            <div class="entry-title">${edu.qualification} | ${edu.institution}</div>
             ${edu.fieldOfStudy ? `<ul class="bullet-list"><li class="bullet-item">${edu.fieldOfStudy}</li></ul>` : ''}
           </div>
         `).join('')}
@@ -679,7 +680,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [hobbies, setHobbies] = useState('');
 
   const getCompiledHTML = () => {
-    const data = isEuropass ? {
+    const rawData = isEuropass ? {
       firstName, lastName, dateOfBirth, nationality, address, phone, email, linkedinUrl, website, summary,
       workEntries, eduEntries, motherTongue, foreignLanguages, digitalSkills,
       communicationCompetencies, organisationalCompetencies, jobRelatedCompetencies, otherCompetencies, drivingLicence, certifications, hobbies
@@ -687,20 +688,30 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
       headline, education, skills, languages, certifications, strengths, workEntries, summary
     };
 
+    // SECURITY (QH-21): every template below builds HTML by direct string
+    // interpolation, and the result is handed to a WebView and to
+    // Print.printToFileAsync. Escaping here — at the single point where the
+    // data enters the templates — covers all six of them at once, including
+    // fields populated from a parsed resume rather than typed by the user.
+    // sanitizeForHtml walks nested objects and arrays, so workEntries and
+    // eduEntries are covered too.
+    const data = sanitizeForHtml(rawData) as any;
+    const safeProfile = sanitizeForHtml(profile) as any;
+
     switch (selectedTemplateId) {
       case 'europass':
-        return compileEuropassHTML(profile, data);
+        return compileEuropassHTML(safeProfile, data);
       case 'vivid':
-        return compileVividSidebarHTML(profile, data);
+        return compileVividSidebarHTML(safeProfile, data);
       case 'minimalist':
-        return compileMinimalistHTML(profile, data);
+        return compileMinimalistHTML(safeProfile, data);
       case 'darkgreen':
-        return compileDarkGreenHTML(profile, data);
+        return compileDarkGreenHTML(safeProfile, data);
       case 'crimson':
-        return compileCrimsonHTML(profile, data);
+        return compileCrimsonHTML(safeProfile, data);
       case 'steelblue':
       default:
-        return compileStandardHTML(profile, data);
+        return compileStandardHTML(safeProfile, data);
     }
   };
 
@@ -1039,59 +1050,71 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
           <Animated.View
-            entering={SlideInDown.springify()}
+            entering={SlideInDown.springify().damping(24).mass(0.8)}
             exiting={SlideOutDown}
             style={[
               s.sheet,
               {
                 backgroundColor: colors.cardBg,
-                paddingBottom: Math.max(insets.bottom, 16),
+                paddingBottom: Math.max(insets.bottom, 20),
               },
             ]}
           >
-          {/* Header */}
-          <View style={[s.header, { borderBottomColor: colors.border }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Feather name="zap" size={16} color={Palette.accent600} />
-              <Text style={[s.headerTitle, { color: colors.text }]}>
-                {isEuropass ? 'Europe CV Wizard' : 'Standard CV Wizard'}
-              </Text>
-            </View>
-            <Pressable
-              onPress={onClose}
-              hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-              style={{ padding: 4 }}
-            >
-              <Feather name="x" size={20} color={colors.textMuted} />
-            </Pressable>
-          </View>
+            {/* Seamless bottom background fill to cover safe area and prevent any gap */}
+            <View style={[s.bottomFill, { backgroundColor: colors.cardBg }]} />
 
-          {/* Progress Row */}
-          <View style={s.progressRow}>
-            {Array.from({ length: totalSteps }).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  s.progressPill,
-                  { backgroundColor: step > i ? Palette.accent500 : Palette.neutral200 },
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* Form Content */}
-          {loading && step === 1 && !profile ? (
-            <View style={s.centerContainer}>
-              <ActivityIndicator size="large" color={Palette.accent500} />
+            {/* Grab handle indicator */}
+            <View style={s.handleContainer}>
+              <View style={s.handle} />
             </View>
-          ) : (
-            <ScrollView
-              style={s.body}
-              contentContainerStyle={{ paddingBottom: 60 }}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              showsVerticalScrollIndicator={false}
-            >
+
+            {/* Header */}
+            <View style={[s.header, { borderBottomColor: colors.border }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Feather name="zap" size={16} color={Palette.accent600} />
+                <Text style={[s.headerTitle, { color: colors.text }]}>
+                  {isEuropass ? 'Europe CV Wizard' : 'Standard CV Wizard'}
+                </Text>
+              </View>
+              <Pressable
+                onPress={onClose}
+                hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                style={{ padding: 4 }}
+              >
+                <Feather name="x" size={20} color={colors.textMuted} />
+              </Pressable>
+            </View>
+
+            {/* Progress Row */}
+            <View style={s.progressRow}>
+              {Array.from({ length: totalSteps }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    s.progressPill,
+                    { backgroundColor: step > i ? Palette.accent500 : Palette.neutral200 },
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Form Content */}
+            {loading && step === 1 && !profile ? (
+              <View style={s.centerContainer}>
+                <ActivityIndicator size="large" color={Palette.accent500} />
+              </View>
+            ) : (
+              <ScrollView
+                style={s.body}
+                contentContainerStyle={{
+                  paddingHorizontal: 20,
+                  paddingTop: 14,
+                  paddingBottom: 20,
+                }}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+              >
               
               {/* ── STANDARD FLOW STEPS ── */}
               {!isEuropass && (
@@ -1856,10 +1879,17 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     <View style={[s.previewContainer, { borderColor: colors.border, backgroundColor: '#fff', height: 290 }]}>
                       <WebView
                         key={selectedTemplateId}
-                        originWhitelist={['*']}
+                        originWhitelist={['about:blank']}
                         source={{ html: getCompiledHTML() }}
                         style={{ flex: 1 }}
                         scalesPageToFit={true}
+                        // QH-21: the CV preview is static markup — it needs no
+                        // scripting and should not follow links or load remote
+                        // content, so the surface is closed down here too.
+                        javaScriptEnabled={false}
+                        allowFileAccess={false}
+                        allowFileAccessFromFileURLs={false}
+                        allowUniversalAccessFromFileURLs={false}
                       />
                       {/* Absolute overlay to intercept touches and prevent clicking/scrolling */}
                       <View style={StyleSheet.absoluteFill} onStartShouldSetResponder={() => true} />
@@ -1913,20 +1943,46 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'flex-end',
     margin: 0,
     padding: 0,
   },
   sheet: {
-    borderTopLeftRadius: BorderRadius.cardLg,
-    borderTopRightRadius: BorderRadius.cardLg,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
     maxHeight: SCREEN_H * 0.88,
     width: '100%',
-    paddingTop: 8,
+    maxWidth: 600,
+    alignSelf: 'center',
+    paddingTop: 4,
     marginBottom: 0,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 24,
+  },
+  bottomFill: {
+    position: 'absolute',
+    bottom: -300,
+    left: 0,
+    right: 0,
+    height: 300,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Palette.neutral300,
   },
   header: {
     flexDirection: 'row',
@@ -1956,7 +2012,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   body: {
-    padding: 20,
+    width: '100%',
   },
   stepContainer: {
     gap: 16,

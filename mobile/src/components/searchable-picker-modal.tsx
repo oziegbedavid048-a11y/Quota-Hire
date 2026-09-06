@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Modal,
   View,
   Text,
   TextInput,
@@ -9,11 +8,12 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import Animated, { FadeIn, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { Palette } from '../constants/theme';
 
 export interface PickerItem {
@@ -57,6 +57,16 @@ export const SearchablePickerModal: React.FC<SearchablePickerModalProps> = ({
     }
   }, [visible]);
 
+  // Handle hardware back button on Android
+  useEffect(() => {
+    if (!visible) return;
+    const backSub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => backSub.remove();
+  }, [visible, onClose]);
+
   const filteredItems = useMemo(() => {
     if (!search.trim()) return items;
     const q = search.toLowerCase().trim();
@@ -94,173 +104,197 @@ export const SearchablePickerModal: React.FC<SearchablePickerModalProps> = ({
     onClose();
   };
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
+    <Animated.View
+      entering={FadeIn.duration(200)}
+      exiting={FadeOut.duration(150)}
+      style={s.overlay}
     >
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={s.wrapper}
+        style={s.keyboardContainer}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={s.overlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Animated.View
+          entering={SlideInDown.springify().damping(24).mass(0.8)}
+          exiting={SlideOutDown}
+          style={[
+            s.sheet,
+            { paddingBottom: Math.max(insets.bottom, 20) }
+          ]}
+        >
+          {/* Seamless bottom background fill to cover safe area and prevent any gap */}
+          <View style={s.bottomFill} />
 
-          <Animated.View
-            entering={SlideInDown.springify().damping(20).mass(0.8)}
-            exiting={SlideOutDown}
-            style={[
-              s.sheet,
-              { paddingBottom: Math.max(insets.bottom, 16) }
-            ]}
-          >
-            {/* Grab handle indicator */}
-            <View style={s.handleContainer}>
-              <View style={s.handle} />
-            </View>
+          {/* Grab handle indicator */}
+          <View style={s.handleContainer}>
+            <View style={s.handle} />
+          </View>
 
-            {/* Header */}
-            <View style={s.header}>
-              <Text style={s.headerTitle}>{title}</Text>
-              <Pressable
-                onPress={onClose}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                style={s.closeBtn}
-              >
-                <Feather name="x" size={20} color={Palette.neutral500} />
+          {/* Header */}
+          <View style={s.header}>
+            <Text style={s.headerTitle}>{title}</Text>
+            <Pressable
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={s.closeBtn}
+            >
+              <Feather name="x" size={20} color={Palette.neutral500} />
+            </Pressable>
+          </View>
+
+          {/* Search Input Box */}
+          <View style={s.searchContainer}>
+            <Feather name="search" size={18} color={Palette.neutral400} style={s.searchIcon} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={placeholder}
+              placeholderTextColor={Palette.neutral400}
+              style={s.searchInput}
+              autoCorrect={false}
+              autoCapitalize="none"
+              clearButtonMode="while-editing"
+            />
+            {search.length > 0 && Platform.OS !== 'ios' && (
+              <Pressable onPress={() => setSearch("")} style={s.clearBtn}>
+                <Feather name="x-circle" size={16} color={Palette.neutral400} />
               </Pressable>
-            </View>
+            )}
+          </View>
 
-            {/* Search Input Box */}
-            <View style={s.searchContainer}>
-              <Feather name="search" size={18} color={Palette.neutral400} style={s.searchIcon} />
-              <TextInput
-                value={search}
-                onChangeText={setSearch}
-                placeholder={placeholder}
-                placeholderTextColor={Palette.neutral400}
-                style={s.searchInput}
-                autoCorrect={false}
-                autoCapitalize="none"
-                clearButtonMode="while-editing"
-              />
-              {search.length > 0 && Platform.OS !== 'ios' && (
-                <Pressable onPress={() => setSearch("")} style={s.clearBtn}>
-                  <Feather name="x-circle" size={16} color={Palette.neutral400} />
+          {/* Item List */}
+          <FlatList
+            data={filteredItems}
+            keyExtractor={(item, idx) => `${item.value}-${idx}`}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={s.listContent}
+            style={s.list}
+            renderItem={({ item }) => {
+              const isSelected = selectedValue?.toLowerCase() === item.value.toLowerCase() ||
+                                 selectedValue?.toLowerCase() === item.label.toLowerCase();
+              return (
+                <Pressable
+                  onPress={() => handleSelectItem(item)}
+                  style={({ pressed }) => [
+                    s.itemRow,
+                    isSelected && s.itemRowSelected,
+                    pressed && s.itemRowPressed,
+                  ]}
+                >
+                  <View style={s.itemMain}>
+                    {item.flag ? (
+                      <Text style={s.itemFlag}>{item.flag}</Text>
+                    ) : null}
+                    <View style={s.itemTexts}>
+                      <Text
+                        style={[s.itemLabel, isSelected && s.itemLabelSelected]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                      {item.subtitle ? (
+                        <Text style={s.itemSubtitle} numberOfLines={1}>
+                          {item.subtitle}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  <View style={s.itemTrailing}>
+                    {item.badge ? (
+                      <View style={[s.badge, isSelected && s.badgeSelected]}>
+                        <Text style={[s.badgeText, isSelected && s.badgeTextSelected]}>
+                          {item.badge}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {isSelected ? (
+                      <View style={s.checkCircle}>
+                        <Feather name="check" size={14} color="#ffffff" />
+                      </View>
+                    ) : null}
+                  </View>
                 </Pressable>
-              )}
-            </View>
-
-            {/* Item List */}
-            <FlatList
-              data={filteredItems}
-              keyExtractor={(item, idx) => `${item.value}-${idx}`}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={true}
-              contentContainerStyle={s.listContent}
-              style={s.list}
-              renderItem={({ item }) => {
-                const isSelected = selectedValue?.toLowerCase() === item.value.toLowerCase() ||
-                                   selectedValue?.toLowerCase() === item.label.toLowerCase();
-                return (
+              );
+            }}
+            ListEmptyComponent={
+              <View style={s.emptyState}>
+                <Feather name="alert-circle" size={28} color={Palette.neutral400} />
+                <Text style={s.emptyText}>{emptyMessage}</Text>
+                {allowCustom && search.trim().length > 0 ? (
                   <Pressable
-                    onPress={() => handleSelectItem(item)}
+                    onPress={handleSelectCustom}
                     style={({ pressed }) => [
-                      s.itemRow,
-                      isSelected && s.itemRowSelected,
-                      pressed && s.itemRowPressed,
+                      s.customBtn,
+                      pressed && { opacity: 0.8 },
                     ]}
                   >
-                    <View style={s.itemMain}>
-                      {item.flag ? (
-                        <Text style={s.itemFlag}>{item.flag}</Text>
-                      ) : null}
-                      <View style={s.itemTexts}>
-                        <Text
-                          style={[s.itemLabel, isSelected && s.itemLabelSelected]}
-                          numberOfLines={1}
-                        >
-                          {item.label}
-                        </Text>
-                        {item.subtitle ? (
-                          <Text style={s.itemSubtitle} numberOfLines={1}>
-                            {item.subtitle}
-                          </Text>
-                        ) : null}
-                      </View>
-                    </View>
-
-                    <View style={s.itemTrailing}>
-                      {item.badge ? (
-                        <View style={[s.badge, isSelected && s.badgeSelected]}>
-                          <Text style={[s.badgeText, isSelected && s.badgeTextSelected]}>
-                            {item.badge}
-                          </Text>
-                        </View>
-                      ) : null}
-                      {isSelected ? (
-                        <View style={s.checkCircle}>
-                          <Feather name="check" size={14} color="#ffffff" />
-                        </View>
-                      ) : null}
-                    </View>
+                    <Feather name="plus-circle" size={16} color={Palette.accent600} />
+                    <Text style={s.customBtnText}>
+                      Use &quot;{search.trim()}&quot;
+                    </Text>
                   </Pressable>
-                );
-              }}
-              ListEmptyComponent={
-                <View style={s.emptyState}>
-                  <Feather name="alert-circle" size={28} color={Palette.neutral400} />
-                  <Text style={s.emptyText}>{emptyMessage}</Text>
-                  {allowCustom && search.trim().length > 0 ? (
-                    <Pressable
-                      onPress={handleSelectCustom}
-                      style={({ pressed }) => [
-                        s.customBtn,
-                        pressed && { opacity: 0.8 },
-                      ]}
-                    >
-                      <Feather name="plus-circle" size={16} color={Palette.accent600} />
-                      <Text style={s.customBtnText}>
-                        Use &quot;{search.trim()}&quot;
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-              }
-            />
-          </Animated.View>
-        </View>
+                ) : null}
+              </View>
+            }
+          />
+        </Animated.View>
       </KeyboardAvoidingView>
-    </Modal>
+    </Animated.View>
   );
 };
 
 const s = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-  },
   overlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    zIndex: 99999,
+    elevation: 99999,
+    margin: 0,
+    padding: 0,
+  },
+  keyboardContainer: {
+    width: '100%',
     justifyContent: 'flex-end',
   },
   sheet: {
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '85%',
-    minHeight: '45%',
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    height: '80%',
+    maxHeight: '88%',
     width: '100%',
     maxWidth: 580,
     alignSelf: 'center',
+    marginBottom: 0,
+    position: 'relative',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 24,
+  },
+  bottomFill: {
+    position: 'absolute',
+    bottom: -200,
+    left: 0,
+    right: 0,
+    height: 200,
+    backgroundColor: '#ffffff',
   },
   handleContainer: {
     alignItems: 'center',

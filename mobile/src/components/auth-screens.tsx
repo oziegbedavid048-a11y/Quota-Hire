@@ -12,14 +12,27 @@ import {
   Alert,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import * as LocalAuthentication from "expo-local-authentication";
+// expo-local-authentication may not be available in Expo Go — guard with try/catch
+let LocalAuthentication: any = {
+  hasHardwareAsync: async () => false,
+  isEnrolledAsync: async () => false,
+  authenticateAsync: async () => ({ success: false }),
+  supportedAuthenticationTypesAsync: async () => [],
+  SecurityLevel: { NONE: 0, SECRET: 1, BIOMETRIC: 2 },
+  AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2, IRIS: 3 },
+};
+try {
+  LocalAuthentication = require("expo-local-authentication");
+} catch {
+  console.warn("[expo-local-authentication] Not available in Expo Go — biometrics disabled.");
+}
 const API_BASE = "https://quotahire-backend.onrender.com/api";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SearchablePickerModal, PickerItem } from "./searchable-picker-modal";
 import {
   getAllCountries,
   getCountryByName,
-  getCitiesForCountry,
+  getCityItemsForCountry,
   extractSubscriberNumber,
 } from "../constants/countries-data";
 let GoogleSignin: any = null;
@@ -565,12 +578,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
 
   const cityPickerItems: PickerItem[] = useMemo(() => {
     if (!sCountry) return [];
-    const cities = getCitiesForCountry(sCountry);
-    return cities.map(city => ({
-      label: city,
-      value: city,
-      subtitle: sCountry,
-    }));
+    return getCityItemsForCountry(sCountry);
   }, [sCountry]);
 
   const handleSelectCountry = (item: PickerItem) => {
@@ -596,7 +604,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     if (!sCountry) {
       Alert.alert(
         "Select Country First",
-        "Please choose your country before selecting a city.",
+        "Please choose your country before selecting a state.",
         [
           { text: "Select Country", onPress: () => setShowCountryPicker(true) },
           { text: "Cancel", style: "cancel" },
@@ -611,6 +619,49 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   const sliderX = useSharedValue(0);
   const [switcherWidth, setSwitcherWidth] = useState(0);
 
+  // ── Signup flow step (1: Details, 2: Security & Phone) ──
+  const [signupStep, setSignupStep] = useState<1 | 2>(1);
+
+  const isStep1Valid = useMemo(() => {
+    const hasEmail = sEmail.trim().length > 0;
+    const hasLocation = !!sCountry && !!sCity;
+    if (role === "employee") {
+      return sFirst.trim().length > 0 && sLast.trim().length > 0 && hasEmail && hasLocation;
+    } else {
+      return sCompany.trim().length > 0 && hasEmail && hasLocation;
+    }
+  }, [role, sFirst, sLast, sCompany, sEmail, sCountry, sCity]);
+
+  const handleStep1Continue = () => {
+    if (role === "employee" && (!sFirst.trim() || !sLast.trim())) {
+      setSError("First and last names are required.");
+      return;
+    }
+    if (role === "company" && !sCompany.trim()) {
+      setSError("Company name is required.");
+      return;
+    }
+    if (!sEmail.trim()) {
+      setSError("Email address is required.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(sEmail.trim())) {
+      setSError("Please enter a valid email address.");
+      return;
+    }
+    if (!sCountry) {
+      setSError("Please select your country.");
+      return;
+    }
+    if (!sCity) {
+      setSError("Please select your state.");
+      return;
+    }
+    setSError("");
+    setSignupStep(2);
+  };
+
   useEffect(() => {
     initGoogleSignIn();
   }, []);
@@ -619,6 +670,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     setLError("");
     setSError("");
     setLoginOtpError("");
+    setSignupStep(1);
     if (mode === "login") {
       setLoginOtpCode("");
     }
@@ -912,7 +964,7 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
 
   return (
     <View style={gs.root}>
-      {/* Body::before: linear-gradient(135deg, #fffbeb 0%, #f4fbf2 100%) */}
+      {/* Body: linear-gradient(135deg, #fffbeb 0%, #f4fbf2 100%) */}
       <LinearGradient
         colors={[BG_FROM, BG_TO]}
         style={StyleSheet.absoluteFill}
@@ -942,36 +994,32 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* ── Header ── */}
-            <View style={gs.header}>
-              {/* Logo */}
-              <View style={gs.logoWrap}>
-                <Image
-                  source={require("@/assets/images/expo-logo.webp")}
-                  style={gs.logo}
-                  contentFit="contain"
-                />
-              </View>
-              {/* Dynamic title */}
-              <Text style={gs.cardTitle}>
-                {mode === "login"
-                  ? "Sign In"
-                  : mode === "login-otp"
-                    ? "Enter Your Code"
-                    : "Create an Account"}
-              </Text>
-              {/* Dynamic subtitle */}
-              <Text style={gs.cardSub}>
-                {mode === "login"
-                  ? "Enter your email to receive a one-time login code."
-                  : mode === "login-otp"
-                    ? `We sent a 6-digit code to ${lEmail}. Enter it below to sign in.`
-                    : "Join the premier network for sales professionals."}
-              </Text>
-            </View>
-
             <View style={gs.cardShadow}>
               <View style={gs.glassCard}>
+                {/* ── Logo, Card Title & Subtitle (Inside White Card) ── */}
+                <View style={gs.cardHeader}>
+                  <View style={gs.logoWrap}>
+                    <Image
+                      source={require("@/assets/images/expo-logo.webp")}
+                      style={gs.logo}
+                      contentFit="contain"
+                    />
+                  </View>
+                  <Text style={gs.cardTitle}>
+                    {mode === "login"
+                      ? "Sign In"
+                      : mode === "login-otp"
+                        ? "Enter Your Code"
+                        : "Create an Account"}
+                  </Text>
+                  <Text style={gs.cardSub}>
+                    {mode === "login"
+                      ? "Enter your email to receive a one-time login code."
+                      : mode === "login-otp"
+                        ? "If an account is associated with this email, a 6-digit verification code has been sent. Enter it below to sign in."
+                        : "Join the premier network for sales professionals."}
+                  </Text>
+                </View>
 
                 {/* ════════════════════════════════════════════════
                     LOGIN — Step 1: Email entry
@@ -1025,7 +1073,25 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       </LinearGradient>
                     </Pressable>
 
+                    {/* ── OR divider ── */}
+                    <View style={gs.orRow}>
+                      <View style={gs.orLine} />
+                      <Text style={gs.orText}>or</Text>
+                      <View style={gs.orLine} />
+                    </View>
 
+                    {/* Continue with Google */}
+                    <Pressable
+                      onPress={handleGoogleSignIn}
+                      disabled={lSubmitting}
+                      style={({ pressed }) => [
+                        gs.googleBtn,
+                        { opacity: pressed || lSubmitting ? 0.75 : 1 },
+                      ]}
+                    >
+                      <GoogleG />
+                      <Text style={gs.googleBtnText}>Continue with Google</Text>
+                    </Pressable>
 
                     {/* Sign in with Fingerprint / FaceID */}
                     {hasBiometricSupport && (
@@ -1057,12 +1123,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                 ════════════════════════════════════════════════ */
                 ) : mode === "login-otp" ? (
                   <View>
-                    {/* Email confirm chip */}
-                    <View style={gs.emailChip}>
-                      <Feather name="mail" size={14} color={ACCENT_600} />
-                      <Text style={gs.emailChipText} numberOfLines={1}>{lEmail}</Text>
-                    </View>
-
                     {!!loginOtpError && (
                       <View style={gs.errorBanner}>
                         <Feather name="alert-triangle" size={16} color="#dc2626" />
@@ -1133,6 +1193,9 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
 
                 ) : (
 
+                  /* ════════════════════════════════════════════════
+                      SIGNUP — 2-Step Flow
+                  ════════════════════════════════════════════════ */
                   <View>
                     {!!sError && (
                       <View style={gs.errorBanner}>
@@ -1145,233 +1208,327 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       </View>
                     )}
 
-                    {/* Role Switcher — flex p-1 bg-white/50 rounded-2xl border border-white/50 */}
-                    <View
-                      style={gs.switcher}
-                      onLayout={(e) =>
-                        setSwitcherWidth(e.nativeEvent.layout.width)
-                      }
-                    >
-                      {/* absolute top-1 bottom-1 bg-white rounded-xl shadow-md — the sliding pill */}
-                      <Animated.View style={[gs.switcherPill, sliderStyle]} />
-                      <Pressable
-                        onPress={() => switchRole("employee")}
-                        style={gs.switcherTab}
-                      >
-                        <Feather
-                          name="user"
-                          size={15}
-                          color={role === "employee" ? ACCENT_600 : "#6b7280"}
-                        />
-                        <Text
-                          style={[
-                            gs.switcherLabel,
-                            {
-                              color:
-                                role === "employee" ? ACCENT_600 : "#6b7280",
-                            },
-                          ]}
+                    {signupStep === 1 ? (
+                      /* ── Signup Step 1: Personal & Location Details ── */
+                      <View>
+                        {/* Role Switcher */}
+                        <View
+                          style={gs.switcher}
+                          onLayout={(e) =>
+                            setSwitcherWidth(e.nativeEvent.layout.width)
+                          }
                         >
-                          Job Seeker
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => switchRole("company")}
-                        style={gs.switcherTab}
-                      >
-                        <Feather
-                          name="briefcase"
-                          size={15}
-                          color={role === "company" ? ACCENT_600 : "#6b7280"}
-                        />
-                        <Text
-                          style={[
-                            gs.switcherLabel,
-                            {
-                              color:
-                                role === "company" ? ACCENT_600 : "#6b7280",
-                            },
-                          ]}
-                        >
-                          I'm Hiring
-                        </Text>
-                      </Pressable>
-                    </View>
-
-                    <View style={gs.formGap}>
-                      {/* Stacked input fields for sales professionals */}
-                      {role === "company" ? (
-                        <GInput
-                          label="Company Name"
-                          icon="briefcase"
-                          value={sCompany}
-                          onChange={setSCompany}
-                          cap="words"
-                          fk="sc"
-                          focusSet={setSFocus}
-                          focusCur={sFocus}
-                        />
-                      ) : (
-                        <>
-                          <GInput
-                            label="First Name"
-                            icon="user"
-                            value={sFirst}
-                            onChange={setSFirst}
-                            cap="words"
-                            fk="sf"
-                            focusSet={setSFocus}
-                            focusCur={sFocus}
-                          />
-                          <GInput
-                            label="Last Name"
-                            icon="user"
-                            value={sLast}
-                            onChange={setSLast}
-                            cap="words"
-                            fk="sl"
-                            focusSet={setSFocus}
-                            focusCur={sFocus}
-                          />
-                        </>
-                      )}
-
-                      <GInput
-                        label="Email or Username"
-                        icon="mail"
-                        value={sEmail}
-                        onChange={setSEmail}
-                        kb="default"
-                        fk="se"
-                        focusSet={setSFocus}
-                        focusCur={sFocus}
-                      />
-
-                      <View style={gs.row}>
-                        <View style={gs.half}>
-                          <GSelect
-                            label="Country"
-                            icon="globe"
-                            value={sCountry}
-                            flag={selectedCountryData?.flag}
-                            badge={selectedCountryData?.dialCode}
-                            placeholder="Select Country"
-                            onPress={() => setShowCountryPicker(true)}
-                          />
-                        </View>
-                        <View style={gs.half}>
-                          <GSelect
-                            label="City"
-                            icon="map-pin"
-                            value={sCity}
-                            placeholder={sCountry ? "Select City" : "Select Country first"}
-                            onPress={handlePressCity}
-                          />
-                        </View>
-                      </View>
-
-                      <GInput
-                        label="Phone Number"
-                        icon="phone"
-                        value={sPhone}
-                        onChange={setSPhone}
-                        kb="phone-pad"
-                        ph={selectedCountryData ? `${selectedCountryData.dialCode} 000 000 0000` : "+1 (555) 000-0000"}
-                        fk="sp"
-                        focusSet={setSFocus}
-                        focusCur={sFocus}
-                      />
-
-                      <GInput
-                        label="Password"
-                        icon="lock"
-                        value={sPass}
-                        onChange={setSPass}
-                        secret
-                        showSecret={sShowPass}
-                        onToggleSecret={() => setSShowPass(!sShowPass)}
-                        fk="spw"
-                        focusSet={setSFocus}
-                        focusCur={sFocus}
-                      />
-
-                      <GInput
-                        label="Confirm Password"
-                        icon="lock"
-                        value={sPassConf}
-                        onChange={setSPassConf}
-                        secret
-                        showSecret={sShowPassConf}
-                        onToggleSecret={() => setSShowPassConf(!sShowPassConf)}
-                        fk="spc"
-                        focusSet={setSFocus}
-                        focusCur={sFocus}
-                      />
-
-                      {/* PasswordStrengthMeter */}
-                      {sPass.length > 0 && (
-                        <View style={gs.strengthWrap}>
-                          <View style={gs.strengthTrack}>
-                            <View
+                          <Animated.View style={[gs.switcherPill, sliderStyle]} />
+                          <Pressable
+                            onPress={() => switchRole("employee")}
+                            style={gs.switcherTab}
+                          >
+                            <Feather
+                              name="user"
+                              size={15}
+                              color={role === "employee" ? ACCENT_600 : "#6b7280"}
+                            />
+                            <Text
                               style={[
-                                gs.strengthFill,
+                                gs.switcherLabel,
                                 {
-                                  width:
-                                    `${(strength.score / 4) * 100}%` as any,
-                                  backgroundColor: strength.color,
+                                  color:
+                                    role === "employee" ? ACCENT_600 : "#6b7280",
                                 },
                               ]}
-                            />
-                          </View>
-                          <Text
-                            style={[
-                              gs.strengthLabel,
-                              { color: strength.color },
-                            ]}
+                            >
+                              Job Seeker
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => switchRole("company")}
+                            style={gs.switcherTab}
                           >
-                            {strength.label}
-                          </Text>
+                            <Feather
+                              name="briefcase"
+                              size={15}
+                              color={role === "company" ? ACCENT_600 : "#6b7280"}
+                            />
+                            <Text
+                              style={[
+                                gs.switcherLabel,
+                                {
+                                  color:
+                                    role === "company" ? ACCENT_600 : "#6b7280",
+                                },
+                              ]}
+                            >
+                              I'm Hiring
+                            </Text>
+                          </Pressable>
                         </View>
-                      )}
-                    </View>
 
-                    {/* Signup submit button */}
-                    <Pressable
-                      onPress={handleSignup}
-                      disabled={sSubmitting}
-                      style={({ pressed }) => ({
-                        opacity: pressed ? 0.88 : 1,
-                        marginTop: 20,
-                      })}
-                    >
-                      <LinearGradient
-                        colors={[ACCENT_600, ACCENT_500]}
-                        start={{ x: 0, y: 0.5 }}
-                        end={{ x: 1, y: 0.5 }}
-                        style={gs.submitBtn}
-                      >
-                        {sSubmitting ? (
-                          <View style={gs.btnRow}>
-                            <ActivityIndicator size="small" color="#fff" />
-                            <Text style={gs.btnText}>Creating account...</Text>
+                        <View style={gs.formGap}>
+                          {role === "company" ? (
+                            <GInput
+                              label="Company Name"
+                              icon="briefcase"
+                              value={sCompany}
+                              onChange={setSCompany}
+                              cap="words"
+                              fk="sc"
+                              focusSet={setSFocus}
+                              focusCur={sFocus}
+                            />
+                          ) : (
+                            <>
+                              <GInput
+                                label="First Name"
+                                icon="user"
+                                value={sFirst}
+                                onChange={setSFirst}
+                                cap="words"
+                                fk="sf"
+                                focusSet={setSFocus}
+                                focusCur={sFocus}
+                              />
+                              <GInput
+                                label="Last Name"
+                                icon="user"
+                                value={sLast}
+                                onChange={setSLast}
+                                cap="words"
+                                fk="sl"
+                                focusSet={setSFocus}
+                                focusCur={sFocus}
+                              />
+                            </>
+                          )}
+
+                          <GInput
+                            label="Email Address"
+                            icon="mail"
+                            value={sEmail}
+                            onChange={setSEmail}
+                            kb="email-address"
+                            fk="se"
+                            focusSet={setSFocus}
+                            focusCur={sFocus}
+                          />
+
+                          <View style={gs.row}>
+                            <View style={gs.half}>
+                              <GSelect
+                                label="Country"
+                                icon="globe"
+                                value={sCountry}
+                                flag={selectedCountryData?.flag}
+                                badge={selectedCountryData?.dialCode}
+                                placeholder="Select Country"
+                                onPress={() => setShowCountryPicker(true)}
+                              />
+                            </View>
+                            <View style={gs.half}>
+                              <GSelect
+                                label="State"
+                                icon="map-pin"
+                                value={sCity}
+                                placeholder={sCountry ? "Select State" : "Select Country first"}
+                                onPress={handlePressCity}
+                              />
+                            </View>
                           </View>
-                        ) : (
-                          <Text style={gs.btnText}>Create Secure Account</Text>
-                        )}
-                      </LinearGradient>
-                    </Pressable>
+                        </View>
 
+                        {/* Continue Button */}
+                        <Pressable
+                          onPress={handleStep1Continue}
+                          style={({ pressed }) => ({
+                            opacity: pressed ? 0.88 : 1,
+                            marginTop: 20,
+                          })}
+                        >
+                          <LinearGradient
+                            colors={[ACCENT_600, ACCENT_500]}
+                            start={{ x: 0, y: 0.5 }}
+                            end={{ x: 1, y: 0.5 }}
+                            style={gs.submitBtn}
+                          >
+                            <View style={gs.btnRow}>
+                              <Text style={gs.btnText}>Continue</Text>
+                              <Feather name="arrow-right" size={16} color="#fff" />
+                            </View>
+                          </LinearGradient>
+                        </Pressable>
 
+                        {/* ── OR divider ── */}
+                        <View style={gs.orRow}>
+                          <View style={gs.orLine} />
+                          <Text style={gs.orText}>or</Text>
+                          <View style={gs.orLine} />
+                        </View>
 
-                    <View style={gs.divider} />
-                    <View style={gs.switchRow}>
-                      <Text style={gs.switchText}>
-                        Already have an account?{" "}
-                      </Text>
-                      <Pressable onPress={() => setMode("login")}>
-                        <Text style={gs.switchLink}>Log in</Text>
-                      </Pressable>
-                    </View>
+                        {/* Sign up with Google */}
+                        <Pressable
+                          onPress={handleGoogleSignIn}
+                          disabled={sSubmitting}
+                          style={({ pressed }) => [
+                            gs.googleBtn,
+                            { opacity: pressed || sSubmitting ? 0.75 : 1 },
+                          ]}
+                        >
+                          <GoogleG />
+                          <Text style={gs.googleBtnText}>Sign up with Google</Text>
+                        </Pressable>
+
+                        <View style={gs.divider} />
+                        <View style={gs.switchRow}>
+                          <Text style={gs.switchText}>
+                            Already have an account?{" "}
+                          </Text>
+                          <Pressable onPress={() => setMode("login")}>
+                            <Text style={gs.switchLink}>Log in</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ) : (
+                      /* ── Signup Step 2: Phone & Password ── */
+                      <View>
+                        {/* Step Navigation Header */}
+                        <View style={gs.stepHeaderRow}>
+                          <Pressable
+                            onPress={() => {
+                              setSignupStep(1);
+                              setSError("");
+                            }}
+                            style={gs.backStepBtn}
+                          >
+                            <Feather name="arrow-left" size={15} color={ACCENT_600} />
+                            <Text style={gs.backStepText}>Back</Text>
+                          </Pressable>
+                          <View style={gs.stepBadge}>
+                            <Text style={gs.stepBadgeText}>Step 2 of 2</Text>
+                          </View>
+                        </View>
+
+                        <View style={gs.formGap}>
+                          <GInput
+                            label="Phone Number"
+                            icon="phone"
+                            value={sPhone}
+                            onChange={setSPhone}
+                            kb="phone-pad"
+                            ph={selectedCountryData ? `${selectedCountryData.dialCode} 000 000 0000` : "+1 (555) 000-0000"}
+                            fk="sp"
+                            focusSet={setSFocus}
+                            focusCur={sFocus}
+                          />
+
+                          <GInput
+                            label="Password"
+                            icon="lock"
+                            value={sPass}
+                            onChange={setSPass}
+                            secret
+                            showSecret={sShowPass}
+                            onToggleSecret={() => setSShowPass(!sShowPass)}
+                            fk="spw"
+                            focusSet={setSFocus}
+                            focusCur={sFocus}
+                          />
+
+                          <GInput
+                            label="Confirm Password"
+                            icon="lock"
+                            value={sPassConf}
+                            onChange={setSPassConf}
+                            secret
+                            showSecret={sShowPassConf}
+                            onToggleSecret={() => setSShowPassConf(!sShowPassConf)}
+                            fk="spc"
+                            focusSet={setSFocus}
+                            focusCur={sFocus}
+                          />
+
+                          {/* PasswordStrengthMeter */}
+                          {sPass.length > 0 && (
+                            <View style={gs.strengthWrap}>
+                              <View style={gs.strengthTrack}>
+                                <View
+                                  style={[
+                                    gs.strengthFill,
+                                    {
+                                      width:
+                                        `${(strength.score / 4) * 100}%` as any,
+                                      backgroundColor: strength.color,
+                                    },
+                                  ]}
+                                />
+                              </View>
+                              <Text
+                                style={[
+                                  gs.strengthLabel,
+                                  { color: strength.color },
+                                ]}
+                              >
+                                {strength.label}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+
+                        {/* Create Account submit button */}
+                        <Pressable
+                          onPress={handleSignup}
+                          disabled={sSubmitting}
+                          style={({ pressed }) => ({
+                            opacity: pressed ? 0.88 : 1,
+                            marginTop: 20,
+                          })}
+                        >
+                          <LinearGradient
+                            colors={[ACCENT_600, ACCENT_500]}
+                            start={{ x: 0, y: 0.5 }}
+                            end={{ x: 1, y: 0.5 }}
+                            style={gs.submitBtn}
+                          >
+                            {sSubmitting ? (
+                              <View style={gs.btnRow}>
+                                <ActivityIndicator size="small" color="#fff" />
+                                <Text style={gs.btnText}>Creating account...</Text>
+                              </View>
+                            ) : (
+                              <Text style={gs.btnText}>Create Account</Text>
+                            )}
+                          </LinearGradient>
+                        </Pressable>
+
+                        {/* ── OR divider ── */}
+                        <View style={gs.orRow}>
+                          <View style={gs.orLine} />
+                          <Text style={gs.orText}>or</Text>
+                          <View style={gs.orLine} />
+                        </View>
+
+                        {/* Sign up with Google */}
+                        <Pressable
+                          onPress={handleGoogleSignIn}
+                          disabled={sSubmitting}
+                          style={({ pressed }) => [
+                            gs.googleBtn,
+                            { opacity: pressed || sSubmitting ? 0.75 : 1 },
+                          ]}
+                        >
+                          <GoogleG />
+                          <Text style={gs.googleBtnText}>Sign up with Google</Text>
+                        </Pressable>
+
+                        <View style={gs.divider} />
+                        <View style={gs.switchRow}>
+                          <Text style={gs.switchText}>
+                            Already have an account?{" "}
+                          </Text>
+                          <Pressable onPress={() => setMode("login")}>
+                            <Text style={gs.switchLink}>Log in</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
@@ -1445,12 +1602,12 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
       <SearchablePickerModal
         visible={showCityPicker}
         onClose={() => setShowCityPicker(false)}
-        title={`Select City (${sCountry || ""})`}
-        placeholder="Search city..."
+        title={`Select State (${sCountry || ""})`}
+        placeholder="Search state or capital..."
         items={cityPickerItems}
         selectedValue={sCity}
         onSelect={handleSelectCity}
-        emptyMessage={`No standard cities listed for ${sCountry}`}
+        emptyMessage={`No states found for ${sCountry}`}
         allowCustom={true}
       />
     </View>
@@ -1492,40 +1649,73 @@ const gs = StyleSheet.create({
     paddingVertical: 40,
   },
 
-  // ── Header ──────────────────────────────────────────────────────────
-  header: { alignItems: "center", marginBottom: 24, zIndex: 10 },
+  // ── Card Header (Inside White Card)
+  cardHeader: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
   logoWrap: {
-    width: 64,
-    height: 64,
+    width: 60,
+    height: 60,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
-    // drop-shadow-md
+    marginBottom: 14,
+    // subtle drop-shadow
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  logo: { width: 64, height: 64 },
-
-  // text-2xl font-display font-bold tracking-tight
+  logo: { width: 60, height: 60 },
   cardTitle: {
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     letterSpacing: -0.5,
     color: TEXT_900,
     marginBottom: 6,
     textAlign: "center",
   },
-  // text-sm font-medium text-neutral-600
   cardSub: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
     color: TEXT_600,
     textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 16,
+    lineHeight: 19,
+    paddingHorizontal: 8,
+  },
+
+  // ── Step 2 Navigation
+  stepHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  backStepBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#f0fdf4",
+  },
+  backStepText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: ACCENT_600,
+  },
+  stepBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: "#f1f5f9",
+  },
+  stepBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: TEXT_600,
   },
 
   // ── Liquid Glass Card (two-layer approach)

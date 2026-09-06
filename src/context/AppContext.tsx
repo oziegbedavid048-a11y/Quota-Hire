@@ -728,10 +728,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const changePassword = async (data: any) => {
     try {
-      await apiFetch('/auth/change-password/', {
+      const pwRes = await apiFetch('/auth/change-password/', {
           method: 'POST',
           body: JSON.stringify(data)
       });
+      // Changing the password revokes every existing session server-side, so
+      // store the fresh pair the endpoint hands back — otherwise this browser
+      // would be signed out the next time its access token expires.
+      if (pwRes?.access) localStorage.setItem('access_token', pwRes.access);
+      if (pwRes?.refresh) localStorage.setItem('refresh_token', pwRes.refresh);
       toast.success('Password changed successfully');
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to change password'}. Please try again.`);

@@ -9,7 +9,6 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { formatDistanceToNow } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import * as SecureStore from 'expo-secure-store';
 
 import CompanyMyJobs from '@/components/company-my-jobs';
 import CompanyApplicants from '@/components/company-applicants';
@@ -19,6 +18,7 @@ import {
   Colors, Palette, Shadow, BorderRadius, TabBarHeight,
 } from '@/constants/theme';
 import { useEmployeeDashboardData, Application } from '@/hooks/useEmployeeDashboardData';
+import { useStoredRole } from '@/services/user-role';
 
 // Exactly matches web ApplicationTracker statusConfig
 const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
@@ -37,10 +37,7 @@ export default function TrackerScreen() {
   const isDark = false;
   const c = Colors[isDark ? 'dark' : 'light'];
   
-  const [role, setRole] = useState<string | null>(null);
-  useEffect(() => {
-    SecureStore.getItemAsync('user_role').then(r => setRole(r || 'employee'));
-  }, []);
+  const role = useStoredRole();
 
   const { applications, jobs, isLoading } = useEmployeeDashboardData();
 
@@ -84,9 +81,9 @@ export default function TrackerScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── HERO BANNER ── */}
-        <View style={[s.hero, { borderColor: c.border }]}>
+        <View style={[s.hero, { borderColor: c.borderMid }]}>
           <LinearGradient
-            colors={['rgba(21,117,10,0.08)', '#ffffff', 'rgba(245,158,11,0.08)']}
+            colors={['#FCEFCF', '#E1F6DD']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
@@ -106,7 +103,7 @@ export default function TrackerScreen() {
                 <Text style={{ color: Palette.accent600 }}>Tracker</Text>
               </Text>
               <Text style={[s.heroSub, { color: c.textSecondary }]}>
-                Track every step of your job search — from applied to offer.
+                Track every step of your job search, from applied to offer.
               </Text>
 
               {/* Stats mini-grid (matches web exactly: Total, Reviewing, Interviews, Offers) */}
@@ -175,7 +172,13 @@ export default function TrackerScreen() {
 
         {/* ── Application list (matches web card-soft exactly) ── */}
         <View style={[s.listCard, { backgroundColor: '#ffffff', borderColor: c.border }]}>
-          {filtered.length === 0 ? (
+          {isLoading && applications.length === 0 ? (
+            <View style={{ gap: 12, padding: 12 }}>
+              {[1, 2, 3, 4].map(k => (
+                <SkeletonApplicationCard key={k} />
+              ))}
+            </View>
+          ) : filtered.length === 0 ? (
             <View style={s.empty}>
               <View style={[s.emptyIconWrap, { backgroundColor: isDark ? Palette.neutral800 : Palette.neutral100 }]}>
                 <Feather name="inbox" size={24} color={c.textMuted} />

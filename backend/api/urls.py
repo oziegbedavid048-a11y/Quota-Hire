@@ -2,6 +2,8 @@
 Quota Hire — API URL Routing
 """
 
+import os
+
 from django.urls import path
 from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -12,13 +14,21 @@ from . import views
 # Use this URL with a free ping service (e.g. UptimeRobot, cron-job.org)
 # to keep the Render free-tier backend awake and prevent cold starts.
 # Ping target: https://quotahire-backend.onrender.com/api/ping/
+# SECURITY (QH-11): this used to run `git rev-parse` in a subprocess on every
+# request and return the raw exception text on failure. It is the endpoint an
+# uptime monitor hammers, so that was a process spawn per hit on a small box,
+# plus disclosure of the commit hash and filesystem paths. The commit is now
+# read once at import from the environment (Render exposes RENDER_GIT_COMMIT)
+# and nothing is shelled out per request.
+_BUILD_COMMIT = (
+    os.environ.get('RENDER_GIT_COMMIT')
+    or os.environ.get('GIT_COMMIT')
+    or 'unknown'
+)[:12]
+
+
 def ping(request):
-    import subprocess
-    try:
-        commit = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode().strip()
-    except Exception as e:
-        commit = f"unknown: {str(e)}"
-    return JsonResponse({"status": "ok", "commit": commit})
+    return JsonResponse({"status": "ok", "commit": _BUILD_COMMIT})
 
 urlpatterns = [
     path('ping/', ping, name='ping'),

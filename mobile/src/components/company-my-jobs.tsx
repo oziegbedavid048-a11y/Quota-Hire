@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 
 import { Colors, Palette, BorderRadius, FontSize, FontWeight, TabBarHeight } from '@/constants/theme';
 import { useCompanyDashboardData, CompanyJob } from '@/hooks/useCompanyDashboardData';
+import { SkeletonJobCard } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -93,9 +94,10 @@ export default function CompanyMyJobs() {
 
         {/* Roles List */}
         {isLoading && jobs.length === 0 ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={Palette.accent500} />
-            <Text style={[styles.loaderText, { color: colors.textSecondary }]}>Loading open roles...</Text>
+          <View style={{ gap: 12, paddingHorizontal: 16 }}>
+            {[1, 2, 3].map(k => (
+              <SkeletonJobCard key={k} />
+            ))}
           </View>
         ) : jobs.length === 0 ? (
           <View style={[styles.emptyContainer, { borderColor: colors.borderMid }]}>

@@ -140,8 +140,13 @@ export const Login = () => {
         setLockoutTime(30);
         setGlobalError('Too many failed attempts. Please wait 30 seconds.');
       } else {
-        if (msg === 'No account found please sign up' || msg === 'Password incorrect') {
+        // The backend deliberately returns one message for both "no such
+        // account" and "wrong password" so the form cannot be used to
+        // enumerate registered users. Show it as-is.
+        if (msg === 'Incorrect email or password.') {
           setGlobalError(msg);
+        } else if (msg.toLowerCase().includes('too many')) {
+          setGlobalError('Too many login attempts. Please wait a few minutes and try again.');
         } else {
           setGlobalError('An unexpected error occurred. Please try again.');
         }

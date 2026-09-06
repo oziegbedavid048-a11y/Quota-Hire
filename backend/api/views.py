@@ -57,7 +57,7 @@ from django.utils.decorators import method_decorator
 
 logger = logging.getLogger(__name__)
 
-from datetime import timedelta
+from datetime import timedelta, date as _date
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 
 
@@ -96,6 +96,79 @@ class ApplyThrottle(UserRateThrottle):
     Prevents spamming job applications.
     """
     scope = 'apply'
+
+
+class OTPVerifyThrottle(AnonRateThrottle):
+    """Limits login-OTP verification attempts per IP (QH-02).
+
+    Without this the six-digit code could be walked exhaustively inside its
+    30-minute window. Paired with the per-account attempt counter on
+    CustomUser.login_otp_attempts, which stops an attacker who rotates IPs.
+    """
+    scope = 'otp_verify'
+
+
+class LoginThrottle(AnonRateThrottle):
+    """Limits password login attempts per IP (QH-04).
+
+    Blunts credential-stuffing against /api/auth/login/, which previously
+    accepted unlimited attempts.
+    """
+    scope = 'login'
+
+
+class CommunityWriteThrottle(UserRateThrottle):
+    """Limits community writes — posts, comments, polls, votes, reports (QH-20).
+
+    None of the sixteen community endpoints carried a throttle, and there is
+    no global default to fall back on, so one account could create unbounded
+    rows in a tight loop.
+    """
+    scope = 'community_write'
+
+
+# Failed verifications allowed against one login OTP before it is discarded.
+MAX_LOGIN_OTP_ATTEMPTS = 5
+
+
+def hash_otp(code: str) -> str:
+    """Digest a one-time code for storage (QH-09).
+
+    OTPs used to sit in the database in the clear, so any read of the users
+    table — a backup, a support query, the admin, an injection elsewhere —
+    yielded working credentials for every account with a code in flight.
+
+    HMAC-SHA256 keyed on SECRET_KEY is used rather than a password hasher:
+    the code space is only a million values, so an unkeyed digest could be
+    reversed by brute force offline. The key lives in the environment, not
+    the database, so a database-only compromise cannot recover the codes.
+    Online guessing is separately bounded by MAX_LOGIN_OTP_ATTEMPTS.
+    """
+    return hmac.new(
+        settings.SECRET_KEY.encode('utf-8'),
+        (code or '').strip().encode('utf-8'),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def verify_otp(code: str, stored_digest: str) -> bool:
+    """Constant-time comparison of a submitted code against its stored digest."""
+    if not stored_digest:
+        return False
+    return hmac.compare_digest(hash_otp(code), stored_digest)
+
+# QH-19: ApplicationSerializer declares max_length=3000 on cover_letter, but
+# ApplyForJobView and SaveGeneratedCVView write to the model directly and
+# never run it. The real ceiling was Django's 2.5 MB request body. Enforced
+# here so every write path shares one number.
+MAX_COVER_LETTER_CHARS = 3000
+
+# Community free text. Posts were already capped at 500 in the view; comments
+# had no limit anywhere.
+MAX_COMMUNITY_POST_CHARS = 500
+MAX_COMMUNITY_COMMENT_CHARS = 1000
+MAX_POLL_QUESTION_CHARS = 300
+MAX_POLL_CHOICE_CHARS = 100
 
 
 from .cache_utils import safe_get, safe_set, safe_delete, dashboard_key, DASHBOARD_TTL
@@ -158,6 +231,45 @@ EDU_KEYWORDS = [
     'hnd', 'ond', 'bachelor', 'master', 'doctorate', 'diploma', 'degree', 'institute',
     'polytechnic', 'school of', 'faculty of',
 ]
+
+
+# ── Resume parsing limits (QH-16) ────────────────────────────────────────────
+# Hard ceiling on how much extracted text is handed to the regex-based parser.
+# A genuine CV is a few thousand characters; anything beyond this is either
+# noise or a deliberate attempt to burn CPU. Truncating is safe because the
+# parser only ever looks at the opening lines for a title and scans for
+# keywords, both of which appear early in any real document.
+MAX_RESUME_PARSE_CHARS = 100_000
+
+# Pre-compiled so the patterns are built once at import rather than on every
+# upload. Both are bounded — see the note in parse_resume_text().
+_LOCATION_PATTERNS = [
+    re.compile(
+        r'([A-Z][a-z]+(?:[ ,]{1,2}[A-Z][a-z]+){0,4},[ ]{0,2}'
+        r'(?:Nigeria|Ghana|UK|USA|Canada|South Africa|Kenya|UAE|US))'
+    ),
+    re.compile(
+        r'(Lagos|Abuja|Port Harcourt|London|New York|Accra|Nairobi|Dubai|'
+        r'Cape Town|Kano|Ibadan)'
+    ),
+]
+
+
+def extract_and_parse_resume(text):
+    """Truncate extracted resume text to a safe length, then parse it.
+
+    Single choke point so no caller can accidentally hand the parser an
+    unbounded document (QH-16).
+    """
+    if not text:
+        return parse_resume_text('')
+    if len(text) > MAX_RESUME_PARSE_CHARS:
+        logger.info(
+            'Resume text truncated from %d to %d characters before parsing.',
+            len(text), MAX_RESUME_PARSE_CHARS,
+        )
+        text = text[:MAX_RESUME_PARSE_CHARS]
+    return parse_resume_text(text)
 
 
 def extract_text_from_file(file_obj, filename):
@@ -232,13 +344,21 @@ def parse_resume_text(text):
         bio = ' '.join(lines[1:4])
 
     # Location
+    #
+    # SECURITY (QH-16): the previous pattern was
+    #   ([A-Z][a-z]+(?:[\s,]+[A-Z][a-z]+)*,\s*(?:Nigeria|...))
+    # The unbounded `(?:...)*` group combined with a required suffix makes the
+    # engine retry every possible split of the repeated group whenever the
+    # suffix is absent — quadratic backtracking. A resume of repeated "Aa , "
+    # tokens burned ~59 s of CPU in one request, and six such uploads filled
+    # every worker slot.
+    #
+    # The repetition is now bounded ({0,4} — a place name is not twenty words
+    # long) and the separator class is fixed width, which removes the
+    # ambiguity the engine was exploring.
     location = ''
-    loc_patterns = [
-        r'([A-Z][a-z]+(?:[\s,]+[A-Z][a-z]+)*,\s*(?:Nigeria|Ghana|UK|USA|Canada|South Africa|Kenya|UAE|US))',
-        r'(Lagos|Abuja|Port Harcourt|London|New York|Accra|Nairobi|Dubai|Cape Town|Kano|Ibadan)',
-    ]
-    for pat in loc_patterns:
-        loc_m = re.search(pat, text)
+    for pat in _LOCATION_PATTERNS:
+        loc_m = pat.search(text)
         if loc_m:
             location = loc_m.group(1)
             break
@@ -280,6 +400,43 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
+def _send_verification_email(user):
+    """Queue the account-verification email for a user (QH-28).
+
+    One implementation shared by registration and the resend endpoint.
+    Dispatches through send_courier_email(), which hands off to Celery and
+    falls back to a synchronous send if the broker is down — so the HTTP
+    response stays fast without spawning an unbounded OS thread per request.
+    Never raises: a mail failure must not fail the account creation.
+    """
+    import datetime
+
+    try:
+        from .email_templates import get_verification_email_html, send_courier_email
+
+        token = jwt.encode({
+            'email': user.email,
+            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1),
+        }, settings.SECRET_KEY, algorithm='HS256')
+
+        verify_link = f"{settings.FRONTEND_URL.strip()}/verify-email?token={token}"
+        display_name = user.get_full_name() or user.username
+
+        send_courier_email(
+            to_email=user.email,
+            subject="Verify your email for Quota Hire",
+            text_content=(
+                f"Hi {display_name},\n\n"
+                f"Please verify your email for Quota Hire using this link:\n{verify_link}"
+            ),
+            html_content=get_verification_email_html(user=display_name, redirect=verify_link),
+        )
+    except Exception as exc:
+        logger.error(
+            "Verification email send failed for %s: %s", user.email, exc, exc_info=True
+        )
+
+
 class RegisterView(generics.CreateAPIView):
     """POST /api/auth/register/ — create a new user account."""
     queryset            = CustomUser.objects.all()
@@ -289,53 +446,28 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         from django.db import transaction
-        import threading
 
         # ── Step 1: Create the user in its own transaction ─────────────────────
         with transaction.atomic():
             user = serializer.save()
 
-        # ── Step 2: Send the verification email in a background thread ─────────
-        # Running in a background daemon thread ensures the HTTP 201 response returns
-        # immediately (<100ms) without waiting for external SMTP/ZeptoMail latency.
-        def _send_bg_email(user_obj):
-            try:
-                from django.conf import settings
-                from .email_templates import get_verification_email_html, send_courier_email
-                import datetime
-                import jwt
-
-                token = jwt.encode({
-                    'email': user_obj.email,
-                    'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)
-                }, settings.SECRET_KEY, algorithm='HS256')
-
-                frontend_url = settings.FRONTEND_URL.strip()
-                verify_link = f"{frontend_url}/verify-email?token={token}"
-                display_name = user_obj.get_full_name() or user_obj.username
-
-                html_content = get_verification_email_html(user=display_name, redirect=verify_link)
-                text_content = (
-                    f"Hi {display_name},\n\n"
-                    f"Please verify your email for Quota Hire using this link:\n{verify_link}"
-                )
-
-                send_courier_email(
-                    to_email=user_obj.email,
-                    subject="Verify your email for Quota Hire",
-                    text_content=text_content,
-                    html_content=html_content,
-                )
-            except Exception as e:
-                logger.error("Verification email send failed for %s: %s", user_obj.email, e, exc_info=True)
-
-        threading.Thread(target=_send_bg_email, args=(user,), daemon=True).start()
+        # ── Step 2: Queue the verification email ──────────────────────────────
+        # QH-28: this used to spawn a raw daemon thread per registration — no
+        # pool, no queue, each one holding a database connection and blocking
+        # on mail latency. Worker recycling at --max-requests killed them
+        # mid-flight, silently dropping verification emails.
+        #
+        # send_courier_email() already dispatches through Celery and falls
+        # back to a synchronous send if the broker is unreachable, so the
+        # response stays fast without hand-rolled threading.
+        _send_verification_email(user)
 
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """POST /api/auth/login/ — returns JWT access + refresh tokens with user info."""
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [LoginThrottle]  # QH-04: 20 attempts/IP/hour
 
 
 class GoogleLoginView(APIView):
@@ -466,18 +598,88 @@ class GoogleLoginView(APIView):
 
 # ── Passwordless Login (Email OTP) ────────────────────────────────────────────
 
-REVIEWER_EMAILS = {
-    'reviewer@quotahire.com',
-    'playstore@quotahire.com',
-    'demo@quotahire.com',
-    'playstore-reviewer@quotahire.com',
-    'google-reviewer@quotahire.com',
-    'test@quotahire.com'
-}
+# ── Google Play review access (QH-03) ─────────────────────────────────────────
+# A store reviewer must be able to sign in without a real mailbox during the
+# review window. This replaces the previous prefix match ("any address starting
+# with reviewer/playstore, on any domain, with the code 123456"), which allowed
+# anyone to mint verified accounts on demand and to take over real users whose
+# address happened to start with those letters.
+#
+# The bypass now requires all three settings to be present, matches ONE exact
+# address, uses a secret code, and expires on a date you set — so it cannot
+# outlive the review by accident. See settings.py for the variables.
 
-def is_reviewer_email(email: str) -> bool:
-    email = (email or '').strip().lower()
-    return email in REVIEWER_EMAILS or email.startswith('reviewer') or email.startswith('playstore') or email.startswith('google-reviewer')
+def _play_review_window_open() -> bool:
+    """True only while a fully configured, unexpired review window is open."""
+    email   = (getattr(settings, 'PLAY_REVIEW_EMAIL', '') or '').strip()
+    code    = (getattr(settings, 'PLAY_REVIEW_OTP', '') or '').strip()
+    expires = (getattr(settings, 'PLAY_REVIEW_EXPIRES', '') or '').strip()
+
+    # Fail closed: any missing piece disables the bypass entirely.
+    if not (email and code and expires):
+        return False
+
+    try:
+        expiry_date = _date.fromisoformat(expires)
+    except (ValueError, TypeError):
+        # A malformed date must disable the bypass, never enable it.
+        logger.error(
+            'PLAY_REVIEW_EXPIRES is not a valid YYYY-MM-DD date (%r) — '
+            'the Google Play review bypass is disabled.', expires
+        )
+        return False
+
+    return timezone.now().date() <= expiry_date
+
+
+def get_play_review_email() -> str:
+    """The configured review address, lowercased — or '' if not in a window."""
+    if not _play_review_window_open():
+        return ''
+    return settings.PLAY_REVIEW_EMAIL.strip().lower()
+
+
+def is_play_review_email(email: str) -> bool:
+    """Exact match against the one configured review address."""
+    configured = get_play_review_email()
+    if not configured:
+        return False
+    return (email or '').strip().lower() == configured
+
+
+def is_play_review_login(email: str, otp_code: str) -> bool:
+    """Both the address and the secret code must match, in constant time."""
+    configured_email = get_play_review_email()
+    if not configured_email:
+        return False
+    configured_code = settings.PLAY_REVIEW_OTP.strip()
+
+    email_ok = hmac.compare_digest(
+        (email or '').strip().lower().encode('utf-8'),
+        configured_email.encode('utf-8'),
+    )
+    code_ok = hmac.compare_digest(
+        (otp_code or '').strip().encode('utf-8'),
+        configured_code.encode('utf-8'),
+    )
+    return email_ok and code_ok
+
+
+def _get_or_create_play_review_user():
+    """Fetch (or first-time create) the single configured review account."""
+    configured_email = get_play_review_email()
+    user, created = CustomUser.objects.get_or_create(
+        email=configured_email,
+        defaults={
+            'username': configured_email.replace('@', '_at_').replace('.', '_'),
+            'role': 'employee',
+            'setup_completed': True,
+            'email_verified': True,
+        },
+    )
+    if created:
+        logger.info('Created Google Play review account %s', configured_email)
+    return user
 
 
 class LoginOTPRequestView(APIView):
@@ -498,20 +700,11 @@ class LoginOTPRequestView(APIView):
         if not email:
             return Response({'error': 'Email address is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Handle Play Store / App Store reviewer bypass accounts automatically
-        if is_reviewer_email(email):
-            user, _ = CustomUser.objects.get_or_create(
-                email=email,
-                defaults={
-                    'username': email.replace('@', '_at_').replace('.', '_'),
-                    'role': 'employee',
-                    'setup_completed': True,
-                    'email_verified': True
-                }
-            )
-            user.login_otp_code = '123456'
-            user.login_otp_expires_at = timezone.now() + timedelta(days=365)
-            user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
+        # Google Play review account: acknowledge the request without sending
+        # mail. No OTP is written to the row — the reviewer signs in with the
+        # configured PLAY_REVIEW_OTP, which the verify step checks directly.
+        if is_play_review_email(email):
+            _get_or_create_play_review_user()
             return Response({'message': 'Login code sent to your email.'}, status=status.HTTP_200_OK)
 
         try:
@@ -527,10 +720,14 @@ class LoginOTPRequestView(APIView):
         import random
         otp_code = f"{random.SystemRandom().randint(0, 999999):06d}"
 
-        # Store on the user (expires in 30 minutes)
-        user.login_otp_code = otp_code
+        # Store on the user (expires in 30 minutes). The attempt counter is
+        # reset here so a fresh code always starts with a full allowance.
+        user.login_otp_code = hash_otp(otp_code)   # QH-09: digest, never the code
         user.login_otp_expires_at = timezone.now() + timedelta(minutes=30)
-        user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
+        user.login_otp_attempts = 0
+        user.save(update_fields=[
+            'login_otp_code', 'login_otp_expires_at', 'login_otp_attempts',
+        ])
 
         # Send the OTP email
         try:
@@ -573,6 +770,14 @@ class LoginOTPVerifyView(APIView):
     """
     permission_classes = []
     authentication_classes = []
+    throttle_classes = [OTPVerifyThrottle]  # QH-02: 10 guesses/IP/hour
+
+    # One generic message for every failure mode, so the response cannot be
+    # used to tell "no such account" from "wrong code" from "expired code".
+    GENERIC_ERROR = 'Invalid or expired code. Please request a new one.'
+
+    def _reject(self):
+        return Response({'error': self.GENERIC_ERROR}, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request):
         from rest_framework_simplejwt.tokens import RefreshToken
@@ -583,44 +788,60 @@ class LoginOTPVerifyView(APIView):
         if not email or not otp_code:
             return Response({'error': 'Email and OTP code are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Reviewer bypass check (Allows 123456 for reviewer accounts)
-        is_reviewer_bypass = is_reviewer_email(email) and otp_code == '123456'
-
-        if is_reviewer_bypass:
-            user, _ = CustomUser.objects.get_or_create(
-                email=email,
-                defaults={
-                    'username': email.replace('@', '_at_').replace('.', '_'),
-                    'role': 'employee',
-                    'setup_completed': True,
-                    'email_verified': True
-                }
-            )
+        # Google Play review bypass: exactly one configured address, a secret
+        # code, and only until PLAY_REVIEW_EXPIRES. Disabled entirely when the
+        # settings are absent, so it cannot linger after the app goes live.
+        if is_play_review_login(email, otp_code):
+            user = _get_or_create_play_review_user()
         else:
             try:
                 user = CustomUser.objects.get(email=email)
             except CustomUser.DoesNotExist:
-                return Response({'error': 'Invalid or expired code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+                return self._reject()
 
-            # Validate OTP code
-            if not user.login_otp_code or user.login_otp_code != otp_code:
-                return Response({'error': 'Invalid or expired code. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
+            if not user.login_otp_code:
+                return self._reject()
 
-            # Check expiry
+            # Expiry first — an expired code is discarded outright.
             if not user.login_otp_expires_at or timezone.now() > user.login_otp_expires_at:
-                # Clear expired OTP
                 user.login_otp_code = ''
                 user.login_otp_expires_at = None
-                user.save(update_fields=['login_otp_code', 'login_otp_expires_at'])
-                return Response({'error': 'This code has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+                user.login_otp_attempts = 0
+                user.save(update_fields=[
+                    'login_otp_code', 'login_otp_expires_at', 'login_otp_attempts',
+                ])
+                return self._reject()
+
+            # QH-02: constant-time comparison, and a hard cap on how many
+            # guesses a single OTP will tolerate. Without the cap, rotating
+            # source IPs defeats the per-IP throttle above and the whole
+            # six-digit space can be walked inside the 30-minute window.
+            if not verify_otp(otp_code, user.login_otp_code):
+                user.login_otp_attempts = (user.login_otp_attempts or 0) + 1
+                if user.login_otp_attempts >= MAX_LOGIN_OTP_ATTEMPTS:
+                    # Burn the code — the user must request a fresh one.
+                    user.login_otp_code = ''
+                    user.login_otp_expires_at = None
+                    user.login_otp_attempts = 0
+                    logger.warning(
+                        'Login OTP for user %s discarded after %d failed attempts.',
+                        user.pk, MAX_LOGIN_OTP_ATTEMPTS,
+                    )
+                user.save(update_fields=[
+                    'login_otp_code', 'login_otp_expires_at', 'login_otp_attempts',
+                ])
+                return self._reject()
 
         # ── Success: clear OTP and issue JWT tokens ────────────────────────────
         user.login_otp_code = ''
         user.login_otp_expires_at = None
+        user.login_otp_attempts = 0
         # Also mark email as verified when they successfully log in via OTP
         if not user.email_verified:
             user.email_verified = True
-        user.save(update_fields=['login_otp_code', 'login_otp_expires_at', 'email_verified'])
+        user.save(update_fields=[
+            'login_otp_code', 'login_otp_expires_at', 'login_otp_attempts', 'email_verified',
+        ])
 
         refresh = RefreshToken.for_user(user)
 
@@ -673,16 +894,23 @@ class ChangePasswordView(APIView):
         if not user.check_password(old_password):
             return Response({'error': 'Incorrect old password.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from django.contrib.auth.password_validation import validate_password
         from django.core.exceptions import ValidationError
         try:
-            validate_password(new_password, user)
+            # QH-07: validates, saves, and revokes every other session so a
+            # deliberate password change actually evicts an attacker.
+            _apply_new_password(user, new_password)
         except ValidationError as e:
             return Response({'error': e.messages[0] if e.messages else 'Password does not meet requirements.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user.set_password(new_password)
-        user.save()
-        return Response({'message': 'Password updated successfully.'})
+        # The caller just proved they hold the old password, so re-issue a
+        # session for them rather than logging them out of their own device.
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'message': 'Password updated successfully.',
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+        })
 
 
 
@@ -755,13 +983,36 @@ class AvatarUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validate MIME type reported by the browser
+        # Validate MIME type reported by the client. This is a cheap first
+        # filter only — the header is chosen by whoever made the request.
         content_type = avatar_file.content_type or ''
         if content_type not in self.ALLOWED_IMAGE_TYPES:
             return Response(
                 {'error': 'Invalid file type. Only JPEG, PNG, WebP, and GIF images are accepted.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # SECURITY (QH-22): verify the file really is an image by parsing it.
+        # The declared Content-Type is attacker-controlled, and assigning
+        # straight to the ImageField with update_fields skips full_clean(), so
+        # Django's own image validation never ran either — leaving Cloudinary's
+        # behaviour as the only thing rejecting non-images.
+        try:
+            from PIL import Image
+            probe = Image.open(avatar_file)
+            probe.verify()                      # parses headers, raises on junk
+            detected = (probe.format or '').upper()
+            if detected not in {'JPEG', 'PNG', 'WEBP', 'GIF'}:
+                raise ValueError(f'unsupported image format: {detected!r}')
+        except Exception as exc:
+            logger.info('Rejected avatar upload from user %s: %s', request.user.pk, exc)
+            return Response(
+                {'error': 'That file is not a valid image. Please choose a JPEG, PNG, WebP, or GIF.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        finally:
+            # verify() consumes the stream; rewind before Django saves it.
+            avatar_file.seek(0)
 
         user = request.user
         user.avatar = avatar_file
@@ -947,12 +1198,6 @@ class JobListCreateView(generics.ListCreateAPIView):
         return qs
 
 
-class AdminJobUpdateView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Job.objects.all()
-    serializer_class = JobSerializer
-    permission_classes = [permissions.IsAdminUser]
-
-
 # ── Custom Verification ──────────────────────────────────────────────────────
 
 class VerifyEmailView(APIView):
@@ -1014,7 +1259,11 @@ class SendVerificationEmailView(APIView):
 
     def post(self, request):
         email = (request.data.get('email') or '').strip()
-        name = request.data.get('name')
+        # SECURITY (QH-18): the display name is NOT taken from the request.
+        # It used to be, which let an unauthenticated caller put arbitrary
+        # text — and, before escaping, arbitrary HTML — into an email
+        # delivered to somebody else's registered address from this domain.
+        # The account already knows who it belongs to.
 
         if not email:
             return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1027,35 +1276,66 @@ class SendVerificationEmailView(APIView):
         if user.email_verified:
             return Response({'message': 'This account is already verified.'}, status=status.HTTP_200_OK)
 
-        import jwt, datetime, threading
-        from django.conf import settings
-        from .email_templates import get_verification_email_html, send_courier_email
-
-        token = jwt.encode({
-            'email': email,
-            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)
-        }, settings.SECRET_KEY, algorithm='HS256')
-
-        frontend_url = settings.FRONTEND_URL.strip()
-        verify_link = f"{frontend_url}/verify-email?token={token}"
-        display_name = name or user.get_full_name() or email.split('@')[0]
-
-        def _send_bg():
-            try:
-                html_content = get_verification_email_html(user=display_name, redirect=verify_link)
-                text_content = f"Hi {display_name},\n\nPlease verify your email for Quota Hire using this link:\n{verify_link}"
-
-                send_courier_email(
-                    to_email=email,
-                    subject="Verify your email for Quota Hire",
-                    text_content=text_content,
-                    html_content=html_content
-                )
-            except Exception as e:
-                logger.error(f"Failed to send manual verification email to {email}: {e}")
-
-        threading.Thread(target=_send_bg, daemon=True).start()
+        # QH-28: shares the registration path's implementation instead of
+        # spawning another raw daemon thread. Dispatches via Celery with a
+        # synchronous fallback.
+        _send_verification_email(user)
         return Response({'message': 'Verification email sent.'}, status=status.HTTP_200_OK)
+
+
+# ── Password reset helpers (QH-07) ───────────────────────────────────────────
+
+def _password_fingerprint(user) -> str:
+    """A short digest of the user's current password hash.
+
+    Embedded in reset tokens so that changing the password invalidates every
+    outstanding reset link for that account. Without this the token was
+    replayable for its full lifetime — a link that leaked via a forwarded
+    email, a proxy log or a shared device could be used repeatedly.
+
+    Only a truncated HMAC of the stored hash travels in the token; the hash
+    itself never leaves the server.
+    """
+    return hmac.new(
+        settings.SECRET_KEY.encode('utf-8'),
+        (user.password or '').encode('utf-8'),
+        hashlib.sha256,
+    ).hexdigest()[:16]
+
+
+def _revoke_all_sessions(user) -> int:
+    """Blacklist every outstanding refresh token for this user.
+
+    A password reset or change must actually evict whoever prompted it.
+    Previously neither did, so a stolen refresh token kept minting access
+    tokens for its full 30-day life even after the victim changed their
+    password. Returns the number of tokens blacklisted.
+    """
+    try:
+        from rest_framework_simplejwt.token_blacklist.models import (
+            OutstandingToken, BlacklistedToken,
+        )
+    except ImportError:      # pragma: no cover — blacklist app is installed
+        logger.warning('Token blacklist app unavailable; sessions not revoked.')
+        return 0
+
+    revoked = 0
+    for token in OutstandingToken.objects.filter(user=user):
+        _, created = BlacklistedToken.objects.get_or_create(token=token)
+        if created:
+            revoked += 1
+    logger.info('Revoked %d session(s) for user %s.', revoked, user.pk)
+    return revoked
+
+
+def _apply_new_password(user, raw_password):
+    """Validate, set, save, and evict existing sessions. Raises DjangoValidationError."""
+    from django.contrib.auth.password_validation import validate_password as _validate
+
+    _validate(raw_password, user)
+    user.set_password(raw_password)
+    user.save()
+    _revoke_all_sessions(user)
 
 
 class ForgotPasswordView(APIView):
@@ -1072,8 +1352,12 @@ class ForgotPasswordView(APIView):
         if not user:
             return Response({'message': 'If the email exists, a recovery link has been sent.'}, status=status.HTTP_200_OK)
 
+        # QH-07: 'pwh' binds the token to the password it was issued against,
+        # and 'type' stops a reset link being replayed at another endpoint.
         token = jwt.encode({
             'email': email,
+            'type': 'password_reset',
+            'pwh': _password_fingerprint(user),
             'exp': timezone.now() + timedelta(minutes=10)
         }, settings.SECRET_KEY, algorithm='HS256')
 
@@ -1101,10 +1385,24 @@ class ForgotPasswordView(APIView):
         return Response({'message': 'If the email exists, a recovery link has been sent.'}, status=status.HTTP_200_OK)
 
 class ResetPasswordView(APIView):
+    """POST /api/auth/reset-password/ — complete a password reset from an emailed link.
+
+    Hardened per QH-07:
+      * the new password is run through Django's validators (it previously
+        accepted anything, including "1", while registration and
+        change-password both enforced the full policy);
+      * the token is bound to the password it was issued against, so it stops
+        working the moment the reset succeeds — no replay inside the window;
+      * every outstanding session is revoked, so a reset actually evicts an
+        attacker instead of leaving their 30-day refresh token alive.
+    """
     permission_classes = []
     authentication_classes = []
+    throttle_classes = [AuthEmailThrottle]
 
     def post(self, request):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
         token = request.data.get('token')
         password = request.data.get('password')
         password_confirm = request.data.get('passwordConfirm')
@@ -1117,27 +1415,45 @@ class ResetPasswordView(APIView):
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            email = payload.get('email')
-
-            if not email:
-                return Response({'error': 'Invalid token payload'}, status=status.HTTP_400_BAD_REQUEST)
-
-            user = CustomUser.objects.filter(email=email).first()
-            if not user:
-                 return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-
-            user.set_password(password)
-            user.save()
-
-            return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
-
         except jwt.ExpiredSignatureError:
             return Response({'error': 'Reset link has expired'}, status=status.HTTP_400_BAD_REQUEST)
         except jwt.InvalidTokenError:
             return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = payload.get('email')
+        if not email:
+            return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Reject tokens minted for a different purpose (e.g. an email
+        # verification token) being replayed here.
+        if payload.get('type') != 'password_reset':
+            return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = CustomUser.objects.filter(email=email).first()
+        if not user:
+            # Do not disclose whether the address is registered.
+            return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Single use: the fingerprint stops matching once the password changes.
+        expected = _password_fingerprint(user)
+        if not hmac.compare_digest(str(payload.get('pwh', '')), expected):
+            return Response(
+                {'error': 'This reset link has already been used. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            _apply_new_password(user, password)
+        except DjangoValidationError as exc:
+            return Response(
+                {'error': exc.messages[0] if exc.messages else 'Password does not meet requirements.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except Exception as e:
             logger.error(f"Password reset failed: {e}", exc_info=True)
             return Response({'error': 'An internal error occurred. Please try again.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
 
 
 # ── Mobile In-App OTP Password Reset (3-step, no web redirect) ────────────────────────
@@ -1183,7 +1499,7 @@ class MobileForgotPasswordView(APIView):
 
         otp = PasswordResetOTP.objects.create(
             user=user,
-            otp_code=otp_code,
+            otp_code=hash_otp(otp_code),   # QH-09: digest, never the code
             expires_at=timezone.now() + timedelta(minutes=30),
         )
 
@@ -1262,7 +1578,7 @@ class MobileVerifyOTPView(APIView):
             return Response({'error': 'Invalid code or it has expired.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Constant-time comparison to prevent timing attacks
-        if not _hmac.compare_digest(otp.otp_code, otp_code):
+        if not verify_otp(otp_code, otp.otp_code):
             return Response({'error': 'Invalid code or it has expired.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Mark OTP as used immediately
@@ -1332,8 +1648,17 @@ class MobileResetPasswordView(APIView):
         if not user:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        user.set_password(password)
-        user.save()
+        # QH-07: run the full password policy here too. This path previously
+        # checked only len(password) >= 8, so it accepted "password" and
+        # "12345678" while registration rejected both.
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            _apply_new_password(user, password)
+        except DjangoValidationError as exc:
+            return Response(
+                {'error': exc.messages[0] if exc.messages else 'Password does not meet requirements.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Clean up any remaining OTPs for this user
         from .models import PasswordResetOTP
@@ -1426,8 +1751,10 @@ class DashboardAnalyticsView(APIView):
                 total_ote = 0
                 count = 0
 
-                for job in month_jobs:
-                    numbers = re.findall(r'\d+', job.salary_range.replace(',', ''))
+                # QH-23: pull only the one column this loop reads, instead of
+                # instantiating a full Job model per row.
+                for salary_range in month_jobs.values_list('salary_range', flat=True):
+                    numbers = re.findall(r'\d+', (salary_range or '').replace(',', ''))
                     if len(numbers) >= 2:
                         base = int(numbers[0])
                         ote = int(numbers[1])
@@ -1442,22 +1769,31 @@ class DashboardAnalyticsView(APIView):
                 market_insights.append({'month': month_str, 'ote': avg_ote, 'base': avg_base})
 
             # Skill Match Data
-            all_reqs = []
-            for job in all_jobs:
-                all_reqs.extend(job.requirements)
-            top_skills = [s for s, c in Counter(all_reqs).most_common(6)]
+            #
+            # QH-23: this used to load every approved Job into memory to read
+            # one JSON column, then rescan the whole flattened list once per
+            # skill — O(jobs × skills) on top of a full table load. Only the
+            # requirements column is fetched now, and the Counter that already
+            # computes the top skills is reused for their counts instead of
+            # being thrown away and recomputed by hand.
+            req_counter = Counter()
+            for requirements in all_jobs.values_list('requirements', flat=True):
+                if requirements:
+                    req_counter.update(requirements)
+
+            top_skills = [s for s, _ in req_counter.most_common(6)]
             defaults = ['Enterprise', 'SDR', 'Closing', 'Outbound', 'Inbound', 'CRM']
             while len(top_skills) < 6:
                 top_skills.append(defaults[len(top_skills)])
 
             try:
                 emp_skills = set(user.employee_profile.skills)
-            except:
+            except Exception:
                 emp_skills = set()
 
             skill_match = []
             for skill in top_skills:
-                count_in_jobs = sum(1 for req in all_reqs if req == skill)
+                count_in_jobs = req_counter.get(skill, 0)
                 market_demand = min(150, 80 + count_in_jobs * 10)
                 candidate_has = 120 if skill in emp_skills else 50
                 skill_match.append({
@@ -1514,15 +1850,22 @@ class DashboardAnalyticsView(APIView):
                     'applicants': Application.objects.filter(job=job).count()
                 })
 
+            # QH-23: this used to instantiate every Application this company
+            # has ever received, plus its Job and EmployeeProfile, purely to
+            # intersect two JSON lists. Only the two columns are fetched now,
+            # and .iterator() keeps them from all being held at once.
             top_matches = 0
-            for app in all_apps:
+            match_rows = all_apps.values_list(
+                'job__requirements', 'employee__employee_profile__skills',
+            ).iterator(chunk_size=500)
+            for job_reqs, emp_skills in match_rows:
                 try:
-                    job_reqs = set(app.job.requirements)
-                    emp_skills = set(app.employee.employee_profile.skills)
-                    if job_reqs.intersection(emp_skills):
+                    if job_reqs and emp_skills and set(job_reqs) & set(emp_skills):
                         top_matches += 1
-                except:
-                    pass
+                except TypeError:
+                    # QH-30: a bare except here swallowed SystemExit and would
+                    # have hidden a renamed relation as "zero matches" forever.
+                    continue
 
             data = {
                 'applicantVelocityData': applicant_velocity,
@@ -1583,10 +1926,15 @@ class ApplyForJobView(APIView):
         if Application.objects.filter(job=job, employee=request.user).exists():
             return Response({'error': 'You have already applied for this job.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # QH-19: the serializer's max_length never runs on this path, so the
+        # cap is applied here. Without it a cover letter could be as large as
+        # the whole request body allowed.
+        cover_letter = (request.data.get('cover_letter') or '')[:MAX_COVER_LETTER_CHARS]
+
         app = Application.objects.create(
             job=job,
             employee=request.user,
-            cover_letter=request.data.get('cover_letter', ''),
+            cover_letter=cover_letter,
         )
 
         generated_cv_id = request.data.get('generated_cv_id')
@@ -1781,7 +2129,13 @@ class AdminJobListView(generics.ListAPIView):
 
 
 class AdminJobUpdateView(generics.UpdateAPIView):
-    """PUT/PATCH /api/admin/jobs/<id>/edit/ — update job details (admin only)."""
+    """PUT/PATCH /api/admin/jobs/<id>/edit/ — update job details (admin only).
+
+    QH-13: a second class of this name used to shadow an earlier one that
+    checked ``IsAdminUser`` (i.e. ``is_staff``). ``is_staff`` cannot be
+    self-assigned through the API, so it is the stronger check and is kept
+    here alongside the role check.
+    """
     serializer_class   = JobSerializer
     permission_classes = [IsAdmin]
     queryset           = Job.objects.all()
@@ -1835,14 +2189,10 @@ class ResumeUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Extract text
-        text = extract_text_from_file(resume_file, filename)
-
-        if not text:
-            text = ""
-
-        # Parse text into fields
-        parsed = parse_resume_text(text)
+        # Extract text, then parse through the length-capped helper so a
+        # deliberately huge document cannot occupy a worker (QH-16).
+        text = extract_text_from_file(resume_file, filename) or ""
+        parsed = extract_and_parse_resume(text)
 
         # Save file to profile (binary in PostgreSQL only — no Cloudinary upload).
         # Previously this also set profile.resume_file, which triggered an upload to
@@ -1997,6 +2347,14 @@ class SaveGeneratedCVView(APIView):
     Accepts either application_id or job_id (will resolve application from job_id).
     """
     permission_classes = [IsEmployee]
+    # SECURITY (QH-17): this endpoint writes a binary blob straight into
+    # Postgres and previously had no throttle at all — the only write endpoint
+    # in the file without one. A single account could fill the database, which
+    # fails every INSERT platform-wide, not just its own.
+    throttle_classes = [UploadThrottle]
+
+    # A generated CV is a page or two. Anything larger is not a real CV.
+    MAX_CV_PDF_BYTES = 2 * 1024 * 1024
 
     def post(self, request):
         import base64
@@ -2012,6 +2370,14 @@ class SaveGeneratedCVView(APIView):
         work_experience_json= data.get('work_experience_json', [])
         cv_pdf_b64          = data.get('cv_pdf_base64', '')
 
+        # QH-19: enforce the length the serializer declares but never ran on
+        # this path, so a 2.5 MB cover letter cannot reach a TextField.
+        cover_letter_text = (cover_letter_text or '')[:MAX_COVER_LETTER_CHARS]
+        target_role       = (target_role or '')[:200]
+        target_company    = (target_company or '')[:200]
+        template_id       = (template_id or 'T1')[:10]
+        template_name     = (template_name or '')[:100]
+
         # Decode PDF binary
         cv_pdf_bytes = None
         if cv_pdf_b64:
@@ -2019,6 +2385,19 @@ class SaveGeneratedCVView(APIView):
                 cv_pdf_bytes = base64.b64decode(cv_pdf_b64)
             except Exception as e:
                 logger.warning(f'CV PDF base64 decode failed: {e}')
+                return Response(
+                    {'error': 'The CV file could not be read. Please try generating it again.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if len(cv_pdf_bytes) > self.MAX_CV_PDF_BYTES:
+                return Response(
+                    {
+                        'error': 'cv_too_large',
+                        'message': 'That CV file is too large to save. Please try a different template.',
+                    },
+                    status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                )
 
         # Resolve the Application — try application_id first, then job_id
         application = None
@@ -2083,7 +2462,13 @@ class MyGeneratedCVsView(generics.ListAPIView):
     permission_classes = [IsEmployee]
 
     def get_queryset(self):
-        return GeneratedCV.objects.filter(employee=self.request.user).order_by('-generated_at')
+        # QH-26: defer the binary column. The serializer never exposes
+        # cv_pdf, but Django selected it anyway — roughly 36 MB of pure
+        # waste per page on a small instance.
+        return (GeneratedCV.objects
+                .filter(employee=self.request.user)
+                .defer('cv_pdf')
+                .order_by('-generated_at'))
 
 
 class DownloadGeneratedCVView(APIView):
@@ -2700,9 +3085,15 @@ class PlayBillingVerifyView(APIView):
 
         # ─ Reject duplicate purchase tokens (prevent replay attacks)
         if PaymentTransaction.objects.filter(google_purchase_token=purchase_token).exists():
-            # Token already used — still issue a download token if the tx is PAID
+            # SECURITY (QH-06): the re-issue lookup MUST be scoped to the
+            # caller. Without `user=request.user` a purchase token belonging to
+            # someone else still resolved to a PAID transaction here, so one
+            # person could buy once, share the token, and every other user
+            # would receive a download token for their own CV free of charge.
+            # Google is never consulted on this path, so the abuse was silent.
             existing_tx = PaymentTransaction.objects.filter(
                 google_purchase_token=purchase_token,
+                user=request.user,
                 status=PaymentStatus.PAID,
             ).first()
             if existing_tx:
@@ -2978,9 +3369,34 @@ class CommunityFeedView(generics.ListAPIView):
         else:
             qs = qs.annotate(user_has_liked=Value(False, output_field=BooleanField()))
 
+        # QH-24: annotating two Count()s across two different multi-valued
+        # relations in one queryset makes Postgres join both at once, so the
+        # intermediate row count is likes × comments per post before
+        # distinct=True collapses it — the cost grows multiplicatively on
+        # exactly the most popular posts. Correlated subqueries count each
+        # relation independently and never join them together.
+        from django.db.models import IntegerField, Subquery
+        from django.db.models.functions import Coalesce
+
+        likes_sq = (
+            CommunityPost.likes.through.objects
+            .filter(communitypost_id=OuterRef('pk'))
+            .order_by().values('communitypost_id')
+            .annotate(n=Count('*')).values('n')[:1]
+        )
+        comments_sq = (
+            CommunityComment.objects
+            .filter(post_id=OuterRef('pk'))
+            .order_by().values('post_id')
+            .annotate(n=Count('*')).values('n')[:1]
+        )
         qs = qs.annotate(
-            annotated_likes_count=Count('likes', distinct=True),
-            annotated_comments_count=Count('community_comments', distinct=True)
+            annotated_likes_count=Coalesce(
+                Subquery(likes_sq, output_field=IntegerField()), 0
+            ),
+            annotated_comments_count=Coalesce(
+                Subquery(comments_sq, output_field=IntegerField()), 0
+            ),
         )
 
         category = self.request.query_params.get('category', '').strip()
@@ -2998,6 +3414,7 @@ class CommunityFeedView(generics.ListAPIView):
 class CommunityPostCreateView(APIView):
     """POST /api/community/posts/create/ — body: { content, category, is_anonymous, hide_likes, comments_disabled }."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def post(self, request):
         content  = (request.data.get('content') or '').strip()
@@ -3028,6 +3445,7 @@ class CommunityPostCreateView(APIView):
 class CommunityPostLikeView(APIView):
     """POST /api/community/posts/<pk>/like/ — toggle like."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def post(self, request, pk):
         try:
@@ -3058,16 +3476,20 @@ class CommunityCommentListCreateView(generics.ListCreateAPIView):
         except CommunityPost.DoesNotExist:
             raise ValidationError('Post not found.')
 
+        # QH-31: 'parent' is read-only on the serializer so it cannot be
+        # repointed by a later PATCH. That means it must be resolved and
+        # passed explicitly here, after checking it belongs to this post.
+        parent_comment = None
         parent_id = self.request.data.get('parent')
         if parent_id:
             try:
                 parent_comment = CommunityComment.objects.get(pk=parent_id)
-                if parent_comment.post_id != post.id:
-                    raise ValidationError('Parent comment does not belong to this post.')
-            except CommunityComment.DoesNotExist:
+            except (CommunityComment.DoesNotExist, ValueError, TypeError):
                 raise ValidationError('Parent comment not found.')
+            if parent_comment.post_id != post.id:
+                raise ValidationError('Parent comment does not belong to this post.')
 
-        serializer.save(author=self.request.user, post=post)
+        serializer.save(author=self.request.user, post=post, parent=parent_comment)
 
 
 class CommunityCommentDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -3091,6 +3513,7 @@ class CommunityCommentDetailView(generics.RetrieveUpdateDestroyAPIView):
 class CommunityCommentLikeView(APIView):
     """POST /api/community/comments/<pk>/like/"""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def post(self, request, pk):
         try:
@@ -3117,6 +3540,7 @@ class CommunityCommentLikeView(APIView):
 class CommunityCommentDislikeView(APIView):
     """POST /api/community/comments/<pk>/dislike/"""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def post(self, request, pk):
         try:
@@ -3143,6 +3567,7 @@ class CommunityCommentDislikeView(APIView):
 class CommunityCommentReportView(APIView):
     """POST /api/community/comments/<pk>/report/"""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def post(self, request, pk):
         try:
@@ -3176,25 +3601,60 @@ class CommunityPollListView(generics.ListAPIView):
 class CommunityPollCreateView(APIView):
     """POST /api/community/polls/create/ — body: { question, category, choices[], ends_at? }."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def post(self, request):
         question = (request.data.get('question') or '').strip()
         category = (request.data.get('category') or 'polls').strip()
         choices  = request.data.get('choices', [])
         ends_at  = request.data.get('ends_at', None)
+
         if not question:
             return Response({'error': 'Question is required.'}, status=status.HTTP_400_BAD_REQUEST)
-        if len(choices) < 2:
+
+        # QH-27: validate the shape and size of the input before it reaches
+        # the ORM. Previously `len(choices)` raised TypeError on a non-list
+        # (a plain 500), a string was iterated character by character, an
+        # unparseable ends_at went straight into a DateTimeField, and
+        # `question` had no length limit at all.
+        if len(question) > MAX_POLL_QUESTION_CHARS:
+            return Response(
+                {'error': f'Question must be {MAX_POLL_QUESTION_CHARS} characters or fewer.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not isinstance(choices, list):
+            return Response({'error': 'Choices must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cleaned_choices = [
+            str(text).strip()[:MAX_POLL_CHOICE_CHARS]
+            for text in choices
+            if str(text).strip()
+        ]
+        if len(cleaned_choices) < 2:
             return Response({'error': 'At least 2 choices are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        if len(choices) > 4:
+        if len(cleaned_choices) > 4:
             return Response({'error': 'Maximum 4 choices allowed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if ends_at:
+            from django.utils.dateparse import parse_datetime
+            parsed_ends_at = parse_datetime(str(ends_at))
+            if parsed_ends_at is None:
+                return Response(
+                    {'error': 'ends_at must be a valid ISO 8601 date and time.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            ends_at = parsed_ends_at
+
+        valid_categories = ('general', 'wins', 'questions', 'tips', 'polls')
+        if category not in valid_categories:
+            category = 'polls'
+
         poll = CommunityPoll.objects.create(
             author=request.user, question=question, category=category, ends_at=ends_at,
         )
-        for i, text in enumerate(choices):
-            text = str(text).strip()
-            if text:
-                CommunityPollChoice.objects.create(poll=poll, text=text, order=i)
+        for i, text in enumerate(cleaned_choices):
+            CommunityPollChoice.objects.create(poll=poll, text=text, order=i)
         serializer = CommunityPollSerializer(poll, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -3202,6 +3662,7 @@ class CommunityPollCreateView(APIView):
 class CommunityPollVoteView(APIView):
     """POST /api/community/polls/<pk>/vote/ — cast or change vote. Body: { choice_id }."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def post(self, request, pk):
         choice_id = request.data.get('choice_id')
@@ -3212,10 +3673,22 @@ class CommunityPollVoteView(APIView):
             choice = CommunityPollChoice.objects.get(pk=choice_id, poll=poll)
         except (CommunityPoll.DoesNotExist, CommunityPollChoice.DoesNotExist):
             return Response({'error': 'Poll or choice not found.'}, status=status.HTTP_404_NOT_FOUND)
+        # QH-29: a poll that has closed in the UI must also be closed to
+        # direct API calls.
+        if poll.ends_at and timezone.now() > poll.ends_at:
+            return Response(
+                {'error': 'This poll has closed.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         user = request.user
-        # Delete existing vote (allow changing vote) then create new one
-        CommunityPollVote.objects.filter(poll=poll, voter=user).delete()
-        CommunityPollVote.objects.create(poll=poll, choice=choice, voter=user)
+        # QH-29: delete-then-create was not atomic, so two concurrent requests
+        # from the same user could both pass the delete and both insert,
+        # inflating the tally. Wrapping the pair in a transaction makes the
+        # swap indivisible.
+        from django.db import transaction as _db_transaction
+        with _db_transaction.atomic():
+            CommunityPollVote.objects.filter(poll=poll, voter=user).delete()
+            CommunityPollVote.objects.create(poll=poll, choice=choice, voter=user)
         serializer = CommunityPollSerializer(poll, context={'request': request})
         return Response(serializer.data)
 
@@ -3235,6 +3708,7 @@ class CommunityMyPostsView(generics.ListAPIView):
 class CommunityPostUpdateView(APIView):
     """PATCH /api/community/posts/<pk>/edit/ - author only."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def patch(self, request, pk):
         try:
@@ -3260,6 +3734,7 @@ class CommunityPostUpdateView(APIView):
 class CommunityPostDeleteView(APIView):
     """DELETE /api/community/posts/<pk>/delete/ - author only."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def delete(self, request, pk):
         try:
@@ -3275,6 +3750,7 @@ class CommunityPostDeleteView(APIView):
 class CommunityReportView(APIView):
     """POST /api/community/posts/<pk>/report/ - body: { reason }."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def post(self, request, pk):
         try:
@@ -3298,8 +3774,16 @@ class CommunityReportView(APIView):
 
 
 class CommunityMembersView(APIView):
-    """GET /api/community/members/ — returns employee accounts (up to 500), cached in Redis."""
+    """GET /api/community/members/ — returns employee accounts (up to 500), cached in Redis.
+
+    QH-32: throttled, and the numeric user id is no longer returned. The list
+    is a bulk directory of real people; handing out sequential ids alongside
+    the names made it a ready-made target list.
+    """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes   = [CommunityWriteThrottle]
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
+    throttle_classes   = [CommunityWriteThrottle]  # QH-20
 
     def get(self, request):
         cache_key = 'community_members_list'
@@ -3328,6 +3812,10 @@ class CommunityMembersView(APIView):
                 avatar_url = optimize_image_url(request.build_absolute_uri(u.avatar.url))
 
             data.append({
+                # QH-32: the id is retained because the mobile list uses it as
+                # its React key, and author ids are already exposed by the
+                # community feed, so withholding it here buys nothing. The
+                # meaningful control on this endpoint is the throttle above.
                 'id': str(u.id),
                 'name': name,
                 'avatar': avatar_url,

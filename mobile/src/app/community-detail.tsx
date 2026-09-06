@@ -17,6 +17,7 @@ import { apiFetch } from '@/services/api';
 import * as SecureStore from 'expo-secure-store';
 import { HapticPressable } from '@/components/haptic-pressable';
 import { Colors, Palette, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
+import { SkeletonPostCard, SkeletonCommentItem } from '@/components/ui/skeleton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ActionSheetComment = CommunityComment & { _isAuthor: boolean };
@@ -567,7 +568,6 @@ export default function CommunityDetailScreen() {
   const topLevelCount = comments.filter(c => !c.parent).length;
 
   if (!post) {
-    // Post not in cache yet — render empty shell, content will arrive shortly
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -576,8 +576,13 @@ export default function CommunityDetailScreen() {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         />
-        <View style={[styles.centered, { paddingTop: 80 }]}>
-          <Feather name="message-square" size={32} color={Palette.neutral300} />
+        <View style={[styles.scrollContent, { paddingTop: insets.top + 16, paddingHorizontal: 16, gap: 14 }]}>
+          <SkeletonPostCard />
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', paddingVertical: 8 }}>
+            {[1, 2, 3].map(k => (
+              <SkeletonCommentItem key={k} />
+            ))}
+          </View>
         </View>
       </View>
     );

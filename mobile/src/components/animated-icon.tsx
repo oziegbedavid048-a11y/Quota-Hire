@@ -3,7 +3,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe, runOnJS } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+// react-native-worklets is NOT available in Expo Go — guard with try/catch
+let scheduleOnRN: any = (fn: any, ...args: any[]) => fn(...args);
+try {
+  const worklets = require('react-native-worklets');
+  scheduleOnRN = worklets.scheduleOnRN;
+} catch {
+  // Fallback: run on JS thread (safe for Expo Go)
+}
 import { LinearGradient } from 'expo-linear-gradient';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;

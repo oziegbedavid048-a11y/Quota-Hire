@@ -35,6 +35,8 @@ import Animated, {
   withSpring,
   withTiming,
   withSequence,
+  withRepeat,
+  Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -46,11 +48,24 @@ import {
   FontSize, FontWeight, Spacing, TabBarHeight,
 } from '@/constants/theme';
 import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
+import { HapticPressable } from '@/components/haptic-pressable';
+import { SkeletonLine, SkeletonBox } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const H_PAD = 16;
 const CHART_W = SCREEN_W - H_PAD * 2 - 32;
 const LINE_CHART_W = SCREEN_W - H_PAD * 2 - 48; // slightly narrower for line charts
+
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return 'Recently';
+  const date = new Date(dateStr);
+  const diffDays = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  return `${Math.floor(diffDays / 30)}mo ago`;
+};
 
 function Skeleton({ width, height, borderRadius, style }: { width?: any; height?: any; borderRadius?: number; style?: any }) {
   const opacity = useRef(new RNAnimated.Value(0.3)).current;
@@ -276,20 +291,27 @@ function StatCard({
   const scale  = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  const handlePress = useCallback(() => {
+  const handlePressIn = useCallback(() => {
     if (!onPress) return;
-    scale.value = withSequence(
-      withTiming(0.95, { duration: 80 }),
-      withSpring(1, { damping: 14 })
-    );
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
+    scale.value = withSpring(0.96, { damping: 20, stiffness: 350 });
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+  }, [onPress]);
+
+  const handlePressOut = useCallback(() => {
+    if (!onPress) return;
+    scale.value = withSpring(1, { damping: 18, stiffness: 300 });
   }, [onPress]);
 
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()} style={style}>
+    <View style={style}>
       <Animated.View style={animStyle}>
-        <Pressable onPress={handlePress}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+        >
           <LiquidGlassCard style={styles.statCard}>
             <View style={styles.statCardTop}>
               <View style={[styles.statIconWrap, { backgroundColor: iconBg }]}>
@@ -313,20 +335,20 @@ function StatCard({
           </LiquidGlassCard>
         </Pressable>
       </Animated.View>
-    </Animated.View>
+    </View>
   );
 }
 
 // ─── Section card (custom gradient translucent glass card) ───────────────────
-function SectionCard({ children, delay = 0, style }: {
+function SectionCard({ children, style }: {
   children: React.ReactNode; delay?: number; style?: any;
 }) {
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()} style={style}>
+    <View style={style}>
       <LiquidGlassCard style={styles.sectionCard}>
         {children}
       </LiquidGlassCard>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -763,8 +785,6 @@ function PipelineDonutSection({
                 )}
               </Pressable>
             )}
-            isAnimated
-            animationDuration={600}
           />
           <View style={styles.pieLegend}>
             {pieData.map(d => (
@@ -983,8 +1003,6 @@ function MarketSalarySection({
             yAxisTextStyle={{ color: colors.textMuted, fontSize: 9, fontWeight: '600' }}
             xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: '600' }}
             formatYLabel={(v) => `${Number(v).toFixed(0)}k`}
-            isAnimated
-            animationDuration={800}
             hideDataPoints={false}
             dataPointsRadius1={5}
             dataPointsRadius2={5}
@@ -1029,90 +1047,72 @@ const STATUS_CONFIG: Record<string, { label: string; dot: string; chip: string; 
   rejected:     { label: 'Not Selected',     dot: Palette.red400,      chip: Palette.red50,       chipText: Palette.red700     },
 };
 
+// ─── Animated Generate CV CTA with looping white shadow sheen ─────────────────
+function GenerateCVButton({ onPress }: { onPress: () => void }) {
+  const translateX = useSharedValue(-200);
+
+  useEffect(() => {
+    translateX.value = withRepeat(
+      withTiming(320, { duration: 2500, easing: Easing.bezier(0.4, 0, 0.2, 1) }),
+      -1,
+      false
+    );
+  }, []);
+
+  const animatedShimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }, { skewX: '-25deg' }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.ctaPrimary,
+        {
+          backgroundColor: Palette.accent500,
+          opacity: pressed ? 0.85 : 1,
+          overflow: 'hidden',
+          position: 'relative',
+        },
+      ]}
+    >
+      {/* Dull white shadow sheen passing continuously */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            width: 80,
+          },
+          animatedShimmerStyle,
+        ]}
+      >
+        <LinearGradient
+          colors={[
+            'rgba(255, 255, 255, 0)',
+            'rgba(255, 255, 255, 0.08)',
+            'rgba(255, 255, 255, 0.32)',
+            'rgba(255, 255, 255, 0.08)',
+            'rgba(255, 255, 255, 0)',
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={{ width: '100%', height: '100%' }}
+        />
+      </Animated.View>
+
+      <Feather name="file-text" size={15} color="#fff" />
+      <Text style={styles.ctaPrimaryText}>Generate CV</Text>
+    </Pressable>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function EmployeeDashboardScreen() {
   const colors = Colors.light;
   const router = useRouter();
-
-  const recommendedScrollRef = useRef<ScrollView>(null);
-  const scrollXRef = useRef(0);
-  const maxScrollXRef = useRef(0);
-  const scrollWidthRef = useRef(0);
-  const layoutWidthRef = useRef(0);
-  const isInteractingRef = useRef(false);
-  const hasBeenManuallyScrolledRef = useRef(false);
-  const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const startAutoScroll = useCallback(() => {
-    if (intervalIdRef.current) return;
-    intervalIdRef.current = setInterval(() => {
-      if (isInteractingRef.current) return;
-      if (maxScrollXRef.current <= 0) return;
-
-      scrollXRef.current += 0.5; // smooth slow scroll speed
-      if (scrollXRef.current >= maxScrollXRef.current) {
-        scrollXRef.current = 0;
-      }
-      recommendedScrollRef.current?.scrollTo({ x: scrollXRef.current, animated: false });
-    }, 20);
-  }, []);
-
-  const stopAutoScroll = useCallback(() => {
-    if (intervalIdRef.current) {
-      clearInterval(intervalIdRef.current);
-      intervalIdRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    startAutoScroll();
-    return () => stopAutoScroll();
-  }, [startAutoScroll, stopAutoScroll]);
-
-  const handleScroll = useCallback((event: any) => {
-    if (isInteractingRef.current) {
-      scrollXRef.current = event.nativeEvent.contentOffset.x;
-    }
-  }, []);
-
-  const handleScrollBeginDrag = useCallback(() => {
-    isInteractingRef.current = true;
-  }, []);
-
-  const handleScrollEndDrag = useCallback((event: any) => {
-    scrollXRef.current = event.nativeEvent.contentOffset.x;
-    setTimeout(() => {
-      isInteractingRef.current = false;
-    }, 4000);
-  }, []);
-
-  const handleMomentumScrollEnd = useCallback((event: any) => {
-    scrollXRef.current = event.nativeEvent.contentOffset.x;
-    setTimeout(() => {
-      isInteractingRef.current = false;
-    }, 4000);
-  }, []);
-
-  const handleTouchStart = useCallback(() => {
-    isInteractingRef.current = true;
-  }, []);
-
-  const handleTouchEnd = useCallback(() => {
-    setTimeout(() => {
-      isInteractingRef.current = false;
-    }, 4000);
-  }, []);
-
-  const handleContentSizeChange = useCallback((w: number) => {
-    scrollWidthRef.current = w;
-    maxScrollXRef.current = Math.max(0, w - layoutWidthRef.current);
-  }, []);
-
-  const handleLayout = useCallback((event: any) => {
-    const w = event.nativeEvent.layout.width;
-  layoutWidthRef.current = w;
-    maxScrollXRef.current = Math.max(0, scrollWidthRef.current - w);
-  }, []);
 
   const {
     user, jobs, applications, savedJobs, analytics,
@@ -1121,8 +1121,7 @@ export default function EmployeeDashboardScreen() {
   } = useEmployeeDashboardData();
 
   const firstName    = user.name.split(' ')[0];
-  const approvedJobs = jobs.filter(j => j.status === 'approved').slice(0, 4);
-  const infiniteApprovedJobs = Array.from({ length: 50 }, () => approvedJobs).flat();
+  const approvedJobs = jobs.filter(j => j.status === 'approved').slice(0, 8);
   const skillMatchData  = analytics?.skillMatchData || [];
 
   const pendingApps     = applications.filter(a => a.status === 'pending').length;
@@ -1222,7 +1221,7 @@ export default function EmployeeDashboardScreen() {
             Matches web: gradient from-accent-500/10 via-white to-warm-500/10
             3D image on top (mobile) | text + CTAs below
             ════════════════════════════════════════════════════════════════════ */}
-        <Animated.View entering={FadeInDown.delay(0).springify()} style={{ marginBottom: 16 }}>
+        <View style={{ marginBottom: 16 }}>
           <LinearGradient
             colors={[
               '#FCEFCF',
@@ -1241,24 +1240,18 @@ export default function EmployeeDashboardScreen() {
               transition={300}
             />
 
-            {/* Pills row (My Dashboard + Verified) */}
+            {/* Pills row (My Dashboard) */}
             <View style={styles.pillsRow}>
               <View style={[styles.badge, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderColor: colors.borderMid }]}>
-                <Feather name="activity" size={11} color={Palette.indigo500} />
+                <Feather name="activity" size={11} color={Palette.accent600} />
                 <Text style={[styles.badgeText, { color: colors.textSecondary }]}>My Dashboard</Text>
               </View>
-              {user.isVerified && (
-                <View style={[styles.badge, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderColor: colors.borderMid }]}>
-                  <Feather name="check-circle" size={11} color={Palette.blue500} />
-                  <Text style={[styles.badgeText, { color: colors.textSecondary }]}>Verified</Text>
-                </View>
-              )}
             </View>
 
             {/* Heading — "Ready to crush it, {name}!" */}
             <Text style={[styles.heroH1, { color: colors.text }]}>
               Ready to crush it,{' '}
-              <Text style={{ color: Palette.indigo500 }}>{firstName}!</Text>
+              <Text style={{ color: Palette.accent600 }}>{firstName}!</Text>
             </Text>
 
             {/* Sub-text — active apps + saved roles count */}
@@ -1274,38 +1267,17 @@ export default function EmployeeDashboardScreen() {
               {'. '}Keep pushing! Your next role is waiting.
             </Text>
 
-            {/* CTA Buttons — Browse Jobs + CV Generator */}
+            {/* CTA Button — Generate CV with micro-animated sheen */}
             <View style={styles.ctaRow}>
-              <Pressable
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push('/explore' as any);
-                }}
-                style={({ pressed }) => [
-                  styles.ctaPrimary,
-                  { backgroundColor: Palette.accent500, opacity: pressed ? 0.85 : 1 },
-                ]}
-              >
-                <Feather name="search" size={15} color="#fff" />
-                <Text style={styles.ctaPrimaryText}>Browse Jobs</Text>
-              </Pressable>
-
-              <Pressable
+              <GenerateCVButton
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   router.push('/cv' as any);
                 }}
-                style={({ pressed }) => [
-                  styles.ctaSecondary,
-                  { backgroundColor: '#ffffff', borderColor: colors.borderMid, opacity: pressed ? 0.85 : 1 },
-                ]}
-              >
-                <Feather name="star" size={15} color={Palette.warm500} />
-                <Text style={[styles.ctaSecondaryText, { color: colors.text }]}>CV Generator</Text>
-              </Pressable>
+              />
             </View>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
         {/* ════════════════════════════════════════════════════════════════════
             SECTION 2 — KPI STAT CARDS (vertical 2-column grid layout)
@@ -1325,7 +1297,7 @@ export default function EmployeeDashboardScreen() {
             value={savedJobs.length}
             iconName="bookmark" iconBg={Palette.warm50} iconColor={Palette.warm600}
             sub="Jobs bookmarked"
-            onPress={() => router.push('/explore' as any)} delay={120}
+            onPress={() => router.push('/saved-jobs' as any)} delay={120}
             style={styles.kpiGridItem}
           />
           <StatCard
@@ -1394,7 +1366,20 @@ export default function EmployeeDashboardScreen() {
             </Pressable>
           </View>
 
-          {applications.length === 0 ? (
+          {isFetching && applications.length === 0 ? (
+            <View style={{ gap: 10, marginTop: 4 }}>
+              {[1, 2, 3].map(k => (
+                <View key={k} style={[styles.appRow, { borderColor: colors.border, paddingVertical: 12 }]}>
+                  <Skeleton width={40} height={40} borderRadius={10} />
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <Skeleton width="60%" height={14} />
+                    <Skeleton width="40%" height={10} />
+                  </View>
+                  <Skeleton width={70} height={20} borderRadius={6} />
+                </View>
+              ))}
+            </View>
+          ) : applications.length === 0 ? (
             <View style={styles.emptyChart}>
               <View style={[styles.emptyIconWrap, { backgroundColor: Palette.accent50 }]}>
                 <Feather name="briefcase" size={28} color={Palette.accent400} />
@@ -1462,10 +1447,10 @@ export default function EmployeeDashboardScreen() {
         </SectionCard>
 
         {/* ════════════════════════════════════════════════════════════════════
-            SECTION 7 — RECOMMENDED ROLES (horizontal scroll cards)
-            Matches web: Top approved jobs matching your profile
+            SECTION 7 — RECOMMENDED ROLES (Vertical Stack of Detailed Cards)
+            Matches user requirement: 4 detailed long cards stacked vertically
             ════════════════════════════════════════════════════════════════════ */}
-        <Animated.View entering={FadeInDown.delay(600).springify()} style={{ marginBottom: 16 }}>
+        <View style={{ marginBottom: 16 }}>
           <View style={[styles.sectionHeader, { marginBottom: 12 }]}>
             <View>
               <Text style={[styles.chartTitle, { color: colors.text }]}>Recommended Roles</Text>
@@ -1476,31 +1461,27 @@ export default function EmployeeDashboardScreen() {
             </Pressable>
           </View>
 
-          {isFetching ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 12, paddingRight: 8, paddingVertical: 8 }}
-              style={{ marginVertical: -8 }}
-            >
+          {isFetching && jobs.length === 0 ? (
+            <View style={{ gap: 12 }}>
               {[1, 2, 3].map((i) => (
-                <View key={i} style={[styles.jobCard, { borderColor: '#e2e8f0', width: 230, height: 220, borderRadius: 16, padding: 14, borderWidth: 1, backgroundColor: '#ffffff', overflow: 'hidden' }]}>
-                  <View style={{ flex: 1, justifyContent: 'space-between' }}>
-                    <View style={styles.jobCardTop}>
-                      <Skeleton width={40} height={40} borderRadius={12} />
-                      <Skeleton width={32} height={32} borderRadius={10} />
+                <View key={i} style={[styles.recJobCard, { backgroundColor: '#ffffff', borderColor: colors.borderMid }, Shadow.card]}>
+                  <View style={styles.recCardTop}>
+                    <SkeletonBox width={46} height={46} borderRadius={12} />
+                    <View style={{ flex: 1, marginLeft: 12, gap: 6 }}>
+                      <SkeletonLine width="75%" height={16} />
+                      <SkeletonLine width="45%" height={12} />
                     </View>
-                    <View style={{ gap: 6 }}>
-                      <Skeleton width="80%" height={14} />
-                      <Skeleton width="55%" height={10} />
-                    </View>
-                    <View style={{ gap: 6 }}>
-                      <Skeleton width="100%" height={26} borderRadius={8} />
-                    </View>
+                    <SkeletonBox width={34} height={34} borderRadius={10} />
                   </View>
+                  <View style={styles.recTagsRow}>
+                    <SkeletonBox width={70} height={22} borderRadius={6} />
+                    <SkeletonBox width={60} height={22} borderRadius={6} />
+                    <SkeletonBox width={85} height={22} borderRadius={6} />
+                  </View>
+                  <SkeletonLine width="100%" height={14} style={{ marginVertical: 4 }} />
                 </View>
               ))}
-            </ScrollView>
+            </View>
           ) : approvedJobs.length === 0 ? (
             <View style={[styles.sectionCard, { backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' }]}>
               <View style={styles.emptyChart}>
@@ -1509,103 +1490,127 @@ export default function EmployeeDashboardScreen() {
               </View>
             </View>
           ) : (
-            <ScrollView
-              ref={recommendedScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 12, paddingRight: 8, paddingVertical: 8 }}
-              style={{ marginVertical: -8 }}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              onScrollBeginDrag={handleScrollBeginDrag}
-              onScrollEndDrag={handleScrollEndDrag}
-              onMomentumScrollEnd={handleMomentumScrollEnd}
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-              onContentSizeChange={handleContentSizeChange}
-              onLayout={handleLayout}
-            >
-              {infiniteApprovedJobs.map((job, idx) => {
+            <View style={{ gap: 12 }}>
+              {approvedJobs.slice(0, 4).map((job, idx) => {
                 const isSaved = savedJobs.includes(job.id);
                 return (
-                  <Pressable
-                    key={`${job.id}-${idx}`}
-                    onPress={() => router.push({ pathname: '/job-details', params: { id: job.id } } as any)}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
-                  >
-                    <LiquidGlassCard style={styles.jobCard}>
-                      <View style={{ flex: 1, justifyContent: 'space-between' }}>
-                        {/* Company logo / initial + heart */}
-                        <View style={styles.jobCardTop}>
-                          <View style={[styles.jobInitial, { backgroundColor: 'rgba(255, 255, 255, 0.45)', borderColor: '#e2e8f0', overflow: 'hidden' }]}>
-                            {job.companyLogoUrl ? (
-                              <Image source={{ uri: job.companyLogoUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                            ) : (
-                              <Text style={[styles.jobInitialText, { color: colors.textSecondary }]}>
-                                {(job.companyName || 'C').charAt(0)}
+                  <Animated.View key={job.id} entering={FadeInDown.delay(idx * 60).springify()}>
+                    <HapticPressable
+                      activeScale={0.98}
+                      onPress={() => router.push({ pathname: '/job-details', params: { id: job.id } } as any)}
+                      style={[
+                        styles.recJobCard,
+                        { backgroundColor: '#ffffff', borderColor: colors.borderMid },
+                        Shadow.card,
+                      ]}
+                    >
+                      {/* Top Row: Logo + Title + Company + Bookmark */}
+                      <View style={styles.recCardTop}>
+                        <View style={[styles.recLogo, { borderColor: colors.border }]}>
+                          {job.companyLogoUrl ? (
+                            <Image
+                              source={{ uri: job.companyLogoUrl }}
+                              style={styles.recLogoImg}
+                              contentFit="cover"
+                            />
+                          ) : (
+                            <LinearGradient
+                              colors={[Palette.neutral100, '#f8fafc']}
+                              style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}
+                            >
+                              <Text style={[styles.recLogoText, { color: colors.text }]}>
+                                {(job.companyName || 'C').charAt(0).toUpperCase()}
                               </Text>
-                            )}
-                          </View>
-                          <Pressable
-                            onPress={(e) => { handleSaveJob(job.id); }}
-                            style={[styles.heartBtn, { backgroundColor: isSaved ? Palette.warm100 : 'transparent' }]}
-                            hitSlop={8}
-                          >
-                            <Feather name="bookmark" size={16} color={isSaved ? Palette.warm600 : colors.textMuted} />
-                          </Pressable>
+                            </LinearGradient>
+                          )}
                         </View>
 
-                        {/* Middle Info Section */}
-                        <View style={{ flex: 1, justifyContent: 'center', marginVertical: 4 }}>
-                          {/* Job title */}
-                          <Text style={[styles.jobTitle, { color: colors.text }]} numberOfLines={1}>
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text style={[styles.recJobTitle, { color: colors.text }]} numberOfLines={1}>
                             {job.title}
                           </Text>
-
-                          {/* Company + verified */}
-                          <View style={styles.companyRow}>
-                            <Text style={[styles.jobCompany, { color: colors.textMuted }]} numberOfLines={1}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                            <Text style={[styles.recJobCompany, { color: colors.textMuted }]} numberOfLines={1}>
                               {job.companyName}
                             </Text>
                             {job.companyIsVerified && (
-                              <Feather name="check-circle" size={12} color={Palette.blue500} />
+                              <Feather name="check-circle" size={11} color={Palette.blue500} />
                             )}
                           </View>
                         </View>
 
-                        {/* Bottom Actions section */}
-                        <View>
-                          {/* Tags: location, salary */}
-                          <View style={styles.tagRow}>
-                            <View style={[styles.tag, { backgroundColor: Palette.neutral100 }]}>
-                              <Text style={[styles.tagText, { color: colors.textSecondary }]} numberOfLines={1}>{job.location}</Text>
-                            </View>
-                            {job.salaryRange ? (
-                              <View style={[styles.tag, { backgroundColor: Palette.emerald50 }]}>
-                                <Text style={[styles.tagText, { color: Palette.emerald600 }]} numberOfLines={1}>{job.salaryRange}</Text>
-                              </View>
-                            ) : null}
-                          </View>
-
-                          {/* Quick Apply button */}
-                          <Pressable
-                            onPress={() => router.push({ pathname: '/job-details', params: { id: job.id } } as any)}
-                            style={({ pressed }) => [
-                              styles.applyBtn,
-                              { backgroundColor: Palette.accent500, opacity: pressed ? 0.85 : 1 },
-                            ]}
-                          >
-                            <Text style={[styles.applyBtnText, { color: '#ffffff' }]}>Apply Now</Text>
-                          </Pressable>
-                        </View>
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation?.();
+                            handleSaveJob(job.id);
+                          }}
+                          style={[styles.recSaveBtn, { backgroundColor: isSaved ? Palette.warm50 : 'transparent' }]}
+                          hitSlop={8}
+                        >
+                          <Feather name="bookmark" size={16} color={isSaved ? Palette.warm600 : colors.textMuted} />
+                        </Pressable>
                       </View>
-                    </LiquidGlassCard>
-                  </Pressable>
+
+                      {/* Tags Row: location / work type / salary / OTE */}
+                      <View style={styles.recTagsRow}>
+                        <View style={[styles.recTag, { backgroundColor: Palette.neutral100 }]}>
+                          <Feather name="map-pin" size={10} color={colors.textMuted} />
+                          <Text style={[styles.recTagText, { color: colors.textSecondary }]}>{job.location}</Text>
+                        </View>
+                        <View style={[styles.recTag, { backgroundColor: Palette.neutral100 }]}>
+                          <Text style={[styles.recTagText, { color: colors.textSecondary }]}>{job.workType}</Text>
+                        </View>
+                        {job.salaryRange && (
+                          <View style={[styles.recTag, { backgroundColor: Palette.emerald50 }]}>
+                            <Text style={[styles.recTagText, { color: Palette.emerald600 }]}>
+                              {job.currency ? `${job.currency} ` : ''}{job.salaryRange}
+                            </Text>
+                          </View>
+                        )}
+                        {job.commissionRange && (
+                          <View style={[styles.recTag, { backgroundColor: Palette.warm50 }]}>
+                            <Text style={[styles.recTagText, { color: Palette.warm600 }]}>
+                              OTE {job.currency ? `${job.currency} ` : ''}{job.commissionRange}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Description Snippet */}
+                      {job.description ? (
+                        <Text style={[styles.recJobDesc, { color: colors.textSecondary }]} numberOfLines={2}>
+                          {job.description}
+                        </Text>
+                      ) : null}
+
+                      {/* Bottom Row: Posted date + View & Apply button */}
+                      <View style={styles.recCardBottom}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Feather name="clock" size={11} color={colors.textMuted} />
+                          <Text style={[styles.recPostedText, { color: colors.textMuted }]}>
+                            {formatDate(job.postedAt)}
+                          </Text>
+                        </View>
+
+                        <LinearGradient
+                          colors={[Palette.accent600, Palette.accent500]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.recViewBtnWrap}
+                        >
+                          <View style={styles.recViewBtn}>
+                            <Text style={styles.recViewBtnText}>View & Apply</Text>
+                            <Feather name="arrow-right" size={12} color="#ffffff" />
+                          </View>
+                        </LinearGradient>
+                      </View>
+                    </HapticPressable>
+                  </Animated.View>
                 );
               })}
-            </ScrollView>
+            </View>
           )}
-        </Animated.View>
+        </View>
 
       </ScrollView>
     </View>
@@ -1745,30 +1750,97 @@ const styles = StyleSheet.create({
   },
   profileBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
 
-  // ── Recommended job cards ─────────────────────────────────────────────────
-  jobCard: {
-    width: 230, height: 220, borderRadius: BorderRadius.card, padding: 14, borderWidth: 1,
-    borderColor: '#e2e8f0', backgroundColor: '#ffffff', overflow: 'hidden',
+  // ── Recommended job cards (Long Vertical Layout) ─────────────────────────
+  recJobCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+    overflow: 'hidden',
   },
-  jobCardTop: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    justifyContent: 'space-between', marginBottom: 10,
+  recCardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
-  jobInitial: {
-    width: 40, height: 40, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e2e8f0',
+  recLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+    flexShrink: 0,
+    backgroundColor: '#f8fafc',
   },
-  jobInitialText: { fontSize: FontSize.base, fontWeight: FontWeight.extrabold },
-  heartBtn: {
-    width: 32, height: 32, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
+  recLogoImg: {
+    width: '100%',
+    height: '100%',
   },
-  jobTitle:   { fontSize: FontSize.sm, fontWeight: FontWeight.bold, marginBottom: 2 },
-  companyRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 },
-  jobCompany: { fontSize: FontSize.xs },
-  tagRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag:        { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  tagText:    { fontSize: 10, fontWeight: FontWeight.semibold },
-  applyBtn:   { paddingVertical: 10, borderRadius: 10, alignItems: 'center' },
-  applyBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold },
+  recLogoText: {
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+  },
+  recJobTitle: {
+    fontSize: 15,
+    fontWeight: FontWeight.bold,
+    lineHeight: 20,
+  },
+  recJobCompany: {
+    fontSize: FontSize.xs,
+  },
+  recSaveBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  recTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+  },
+  recTagText: {
+    fontSize: 11,
+    fontWeight: FontWeight.semibold,
+  },
+  recJobDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  recCardBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  recPostedText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  recViewBtnWrap: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  recViewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  recViewBtnText: {
+    color: '#ffffff',
+    fontSize: 11.5,
+    fontWeight: FontWeight.bold,
+  },
 });

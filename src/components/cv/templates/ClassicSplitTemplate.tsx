@@ -67,9 +67,9 @@ export const ClassicSplitTemplate = ({ data }: { data: CVData }) => (
         <View style={s.sbContent}>
           {/* Contact */}
           <Text style={s.sbSec}>Contact</Text>
-          {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>✉</Text><Text style={s.sbText}>{data.email}</Text></View>}
-          {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>☎</Text><Text style={s.sbText}>{data.phone}</Text></View>}
-          {data.location && <View style={s.sbRow}><Text style={s.sbIcon}>⚲</Text><Text style={s.sbText}>{data.location}</Text></View>}
+          {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>Email:</Text><Text style={s.sbText}>{data.email}</Text></View>}
+          {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>Tel:</Text><Text style={s.sbText}>{data.phone}</Text></View>}
+          {data.location && <View style={s.sbRow}><Text style={s.sbIcon}></Text><Text style={s.sbText}>{data.location}</Text></View>}
           {data.linkedinUrl && <View style={s.sbRow}><Text style={s.sbIcon}>in</Text><Text style={s.sbText}>{data.linkedinUrl}</Text></View>}
 
           {/* Education */}

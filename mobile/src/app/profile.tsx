@@ -53,57 +53,16 @@ import {
   FontWeight,
   TabBarHeight,
 } from "@/constants/theme";
-import { useEmployeeDashboardData } from "@/hooks/useEmployeeDashboardData";
-import { apiFetch, API_BASE } from "@/services/api";
-import NativePaymentModal from "@/components/native-payment-modal";
-import CompanyProfile from "@/components/company-profile";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-function Skeleton({
-  width,
-  height,
-  borderRadius,
-  style,
-}: {
-  width?: any;
-  height?: any;
-  borderRadius?: number;
-  style?: any;
-}) {
-  const opacity = useRef(new RNAnimated.Value(0.3)).current;
-
-  useEffect(() => {
-    RNAnimated.loop(
-      RNAnimated.sequence([
-        RNAnimated.timing(opacity, {
-          toValue: 0.8,
-          duration: 850,
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(opacity, {
-          toValue: 0.3,
-          duration: 850,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, [opacity]);
-
-  return (
-    <RNAnimated.View
-      style={[
-        {
-          width: width ?? "100%",
-          height: height ?? 20,
-          backgroundColor: "#e2e8f0",
-          borderRadius: borderRadius ?? 8,
-          opacity: opacity,
-        },
-        style,
-      ]}
-    />
-  );
-}
+import { apiFetch, API_BASE, setAccessToken, setRefreshToken } from "@/services/api";
+import { useEmployeeDashboardData, UserProfile } from "@/hooks/useEmployeeDashboardData";
+import CompanyProfile from "@/components/company-profile";
+import { useIAPPrice } from "@/hooks/useIAPPrice";
+import {
+  SkeletonAvatar,
+  SkeletonLine,
+  SkeletonBox,
+} from "@/components/ui/skeleton";
 
 const PROFILE_SECTIONS = [
   {
@@ -150,7 +109,7 @@ const PROFILE_SECTIONS = [
   },
   {
     key: "generated-cvs",
-    label: "My Tailored CVs",
+    label: "Generated CVs",
     icon: "folder",
     iconBg: Palette.accent50,
     iconColor: Palette.accent500,
@@ -205,7 +164,7 @@ export default function ProfileScreen() {
     SecureStore.getItemAsync("user_role").then((r) => setRole(r || "employee"));
   }, []);
 
-  const { user, profileScore, profileItems, refreshData, isFetching } =
+  const { user, profileScore, profileItems, refreshData, isFetching, isLoading } =
     useEmployeeDashboardData();
   const firstName = user.name.split(" ")[0];
   const initial = user.name.charAt(0).toUpperCase();
@@ -232,9 +191,14 @@ export default function ProfileScreen() {
   // Tailored CVs list
   const [generatedCVs, setGeneratedCVs] = useState<any[]>([]);
   const [cvsLoading, setCvsLoading] = useState(false);
-  const [paymentVisible, setPaymentVisible] = useState(false);
-  const [selectedCV, setSelectedCV] = useState<any | null>(null);
   const [downloadingCVId, setDownloadingCVId] = useState<number | null>(null);
+
+  // IAP price hook — pass user's country so currency is detected reliably
+  // user.location is e.g. "Lagos, Nigeria" → extract last part as country
+  const userCountry = user?.location
+    ? user.location.split(',').pop()?.trim()
+    : undefined;
+  const { localizedPrice, requestCVPurchase, isPurchasing } = useIAPPrice(userCountry);
 
   // Resume parsing flow state
   const [parsedResume, setParsedResume] = useState<any | null>(null);
@@ -353,7 +317,7 @@ export default function ProfileScreen() {
         {
           key: "resume" as SectionKey,
           icon: "file-text" as const,
-          label: "Smart Resume Upload",
+          label: "Upload Resume",
           subtitle: user.resumeUrl
             ? "Resume uploaded"
             : "Upload CV to automatically fill your profile.",
@@ -426,11 +390,11 @@ export default function ProfileScreen() {
         {
           key: "generated-cvs" as SectionKey,
           icon: "folder" as const,
-          label: "My Tailored CVs",
+          label: "Generated CVs",
           subtitle:
             generatedCVs.length > 0
               ? `${generatedCVs.length} generated CVs`
-              : "No tailored CVs generated yet.",
+              : "No generated CVs yet.",
           iconBg: Palette.accent50,
           iconColor: Palette.accent500,
           filled: generatedCVs.length > 0,
@@ -583,74 +547,54 @@ export default function ProfileScreen() {
   };
 
   const handleDownloadCV = async (cv: any) => {
-    setSelectedCV(cv);
     const cvName = cv.target_role || cv.template_name || `CV #${cv.id}`;
     const cvNameForFile = cvName.replace(/[^a-zA-Z0-9]/g, "_");
 
     if (cv.is_paid) {
+      // CV already paid — fetch a fresh download token (no second charge)
       setDownloadingCVId(cv.id);
       try {
-        // Check if user already paid for this CV (via Google Play) → get a fresh download token
         const res = await apiFetch("/payments/already-paid/", {
           method: "POST",
           body: JSON.stringify({ cv_id: cv.id }),
         });
-
         if (res.already_paid && res.download_token) {
-          const API_BASE = "https://quotahire-backend.onrender.com/api";
           const fileUri = `${FileSystem.documentDirectory}${cvNameForFile}_${cv.id}.pdf`;
-
           const { uri } = await FileSystem.downloadAsync(
             `${API_BASE}/cv/${cv.id}/download/?token=${encodeURIComponent(res.download_token)}`,
             fileUri
           );
-
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-          // Generate cover letter PDF locally if cover letter text is stored
           let coverLetterUri = null;
           if (cv.cover_letter_text) {
-            try {
-              coverLetterUri = await generateCoverLetterPDF(cv, cvNameForFile);
-            } catch (err) {
-              console.error("Could not generate Cover Letter PDF:", err);
-            }
+            try { coverLetterUri = await generateCoverLetterPDF(cv, cvNameForFile); } catch {}
           }
 
           if (await Sharing.isAvailableAsync()) {
-            // Share CV first
             await Sharing.shareAsync(uri);
-            
-            // Share Cover Letter sequentially if generated
             if (coverLetterUri) {
-              Alert.alert(
-                "CV Shared Successfully",
-                "Now we will open the sharing options for your auto-generated Cover Letter.",
-                [
-                  {
-                    text: "Continue",
-                    onPress: async () => {
-                      try {
-                        await Sharing.shareAsync(coverLetterUri);
-                      } catch (err) {
-                        console.error("Failed to share Cover Letter:", err);
-                      }
-                    },
-                  },
-                ]
-              );
+              Alert.alert("CV Shared", "Opening sharing for your Cover Letter.", [
+                { text: "Continue", onPress: () => Sharing.shareAsync(coverLetterUri!) },
+              ]);
             }
           } else {
-            Alert.alert(
-              "Success",
-              coverLetterUri
-                ? "CV and Cover Letter downloaded successfully to your device."
-                : "CV saved to device local folder."
-            );
+            Alert.alert("Success", coverLetterUri ? "CV and Cover Letter saved." : "CV saved to device.");
           }
         } else {
-          setActiveSection(null);
-          setPaymentVisible(true);
+          // Payment not verified — open Google Play
+          await requestCVPurchase({
+            cvId: cv.id,
+            cvName,
+            coverLetterText: cv.cover_letter_text,
+            userName: user.name,
+            userEmail: user.email,
+            userPhone: user.phone,
+            userLocation: user.location,
+            targetCompany: cv.target_company,
+            targetRole: cv.target_role,
+            onSuccess: fetchCVs,
+          });
         }
       } catch (err) {
         Alert.alert("Error", "Unable to download CV. Please check your network.");
@@ -658,8 +602,19 @@ export default function ProfileScreen() {
         setDownloadingCVId(null);
       }
     } else {
-      setActiveSection(null);
-      setPaymentVisible(true);
+      // Not paid — go straight to Google Play purchase sheet
+      await requestCVPurchase({
+        cvId: cv.id,
+        cvName,
+        coverLetterText: cv.cover_letter_text,
+        userName: user.name,
+        userEmail: user.email,
+        userPhone: user.phone,
+        userLocation: user.location,
+        targetCompany: cv.target_company,
+        targetRole: cv.target_role,
+        onSuccess: fetchCVs,
+      });
     }
   };
 
@@ -679,6 +634,15 @@ export default function ProfileScreen() {
           country,
         }),
       });
+
+      const updatedData = {
+        name: fullName,
+        phone,
+        location: city ? `${city}${country ? `, ${country}` : ""}` : country || "",
+      };
+      DeviceEventEmitter.emit("USER_DATA_UPDATED", updatedData);
+      DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedData);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
@@ -705,6 +669,11 @@ export default function ProfileScreen() {
         method: "PATCH",
         body: JSON.stringify({ bio }),
       });
+
+      const updatedData = { bio };
+      DeviceEventEmitter.emit("USER_DATA_UPDATED", updatedData);
+      DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedData);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
@@ -735,6 +704,11 @@ export default function ProfileScreen() {
         method: "PATCH",
         body: JSON.stringify({ skills: skillsArray }),
       });
+
+      const updatedData = { skills: skillsArray };
+      DeviceEventEmitter.emit("USER_DATA_UPDATED", updatedData);
+      DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedData);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
@@ -757,10 +731,16 @@ export default function ProfileScreen() {
     setSaving(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
+      const yrs = parseInt(expYears) || 0;
       await apiFetch("/profile/employee/", {
         method: "PATCH",
-        body: JSON.stringify({ experience_years: parseInt(expYears) || 0 }),
+        body: JSON.stringify({ experience_years: yrs }),
       });
+
+      const updatedData = { experienceYears: yrs };
+      DeviceEventEmitter.emit("USER_DATA_UPDATED", updatedData);
+      DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedData);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
@@ -787,6 +767,11 @@ export default function ProfileScreen() {
         method: "PATCH",
         body: JSON.stringify({ education }),
       });
+
+      const updatedData = { education };
+      DeviceEventEmitter.emit("USER_DATA_UPDATED", updatedData);
+      DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedData);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       refreshData();
       setActiveSection(null);
@@ -844,6 +829,21 @@ export default function ProfileScreen() {
         }
       }
 
+      const updatedResumeData: Partial<UserProfile> = {};
+      if (parsedResume.title) updatedResumeData.title = parsedResume.title;
+      if (parsedResume.bio) updatedResumeData.bio = parsedResume.bio;
+      if (parsedResume.skills?.length) updatedResumeData.skills = parsedResume.skills;
+      if (parsedResume.education) updatedResumeData.education = parsedResume.education;
+      if (parsedResume.experience_years) updatedResumeData.experienceYears = parseInt(parsedResume.experience_years) || 0;
+      if (parsedResume.phone_number) updatedResumeData.phone = parsedResume.phone_number;
+      if (parsedResume.city || parsedResume.country) {
+        updatedResumeData.location = parsedResume.city
+          ? `${parsedResume.city}${parsedResume.country ? `, ${parsedResume.country}` : ""}`
+          : parsedResume.country || "";
+      }
+      DeviceEventEmitter.emit("USER_DATA_UPDATED", updatedResumeData);
+      DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedResumeData);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
         "Profile Updated!",
@@ -875,13 +875,18 @@ export default function ProfileScreen() {
     setSaving(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
-      await apiFetch("/auth/change-password/", {
+      const pwRes = await apiFetch("/auth/change-password/", {
         method: "POST",
         body: JSON.stringify({
           old_password: oldPassword,
           new_password: newPassword,
         }),
       });
+      // Changing the password revokes every existing session server-side, so
+      // store the fresh pair the endpoint hands back — otherwise this device
+      // would be signed out the next time its access token expires.
+      if (pwRes?.access) await setAccessToken(pwRes.access);
+      if (pwRes?.refresh) await setRefreshToken(pwRes.refresh);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert("Success", "Password changed successfully.");
       setActiveSection(null);
@@ -982,9 +987,15 @@ export default function ProfileScreen() {
     return <CompanyProfile />;
   }
 
-  if (isFetching) {
+  if (isLoading && !user.name) {
     return (
       <View style={s.safe}>
+        <LinearGradient
+          colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
         <ScrollView
           contentContainerStyle={[
             s.scroll,
@@ -1004,23 +1015,10 @@ export default function ProfileScreen() {
               },
             ]}
           >
-            <Skeleton width={82} height={82} borderRadius={41} />
-            <Skeleton
-              width={180}
-              height={20}
-              borderRadius={6}
-              style={{ marginTop: 8 }}
-            />
-            <Skeleton width={120} height={14} borderRadius={6} />
-            <View
-              style={{
-                width: "100%",
-                height: 8,
-                backgroundColor: "#e2e8f0",
-                borderRadius: 4,
-                marginTop: 12,
-              }}
-            />
+            <SkeletonAvatar size={82} />
+            <SkeletonLine width={180} height={20} style={{ marginTop: 8 }} />
+            <SkeletonLine width={120} height={14} />
+            <SkeletonBox width="100%" height={8} borderRadius={4} style={{ marginTop: 12 }} />
           </View>
 
           {/* List Item Skeletons */}
@@ -1044,12 +1042,12 @@ export default function ProfileScreen() {
                   },
                 ]}
               >
-                <Skeleton width={38} height={38} borderRadius={10} />
+                <SkeletonBox width={38} height={38} borderRadius={10} />
                 <View style={{ flex: 1, gap: 6 }}>
-                  <Skeleton width="60%" height={14} borderRadius={4} />
-                  <Skeleton width="40%" height={10} borderRadius={4} />
+                  <SkeletonLine width="60%" height={14} />
+                  <SkeletonLine width="40%" height={10} />
                 </View>
-                <Skeleton width={14} height={14} borderRadius={7} />
+                <SkeletonBox width={14} height={14} borderRadius={7} />
               </View>
             ))}
           </View>
@@ -1078,13 +1076,12 @@ export default function ProfileScreen() {
         >
           <LinearGradient
             colors={[
-              "rgba(21,117,10,0.08)",
-              "rgba(255,255,255,1)",
-              "rgba(245,158,11,0.06)",
+              '#FCEFCF',
+              '#E1F6DD',
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[s.heroCard, { borderColor: colors.border }]}
+            style={[s.heroCard, { borderColor: colors.borderMid }]}
           >
             {/* Avatar */}
             <View style={s.avatarWrap}>
@@ -1162,23 +1159,13 @@ export default function ProfileScreen() {
             <Text style={[s.heroName, { color: colors.text }]}>
               {user.name}
             </Text>
-            <View style={s.titleRow}>
-              {user.title && (
+            {user.title ? (
+              <View style={s.titleRow}>
                 <Text style={[s.heroTitle, { color: colors.textSecondary }]}>
                   {user.title}
                 </Text>
-              )}
-              {user.isVerified && (
-                <View style={s.verifiedBadge}>
-                  <Feather
-                    name="check-circle"
-                    size={12}
-                    color={Palette.blue500}
-                  />
-                  <Text style={s.verifiedText}>Verified</Text>
-                </View>
-              )}
-            </View>
+              </View>
+            ) : null}
           </LinearGradient>
         </Animated.View>
 
@@ -1644,7 +1631,7 @@ export default function ProfileScreen() {
                               color: colors.text,
                             }}
                           >
-                            Smart Resume Upload
+                            Upload Resume
                           </Text>
                           <Text
                             style={{
@@ -1655,8 +1642,8 @@ export default function ProfileScreen() {
                               lineHeight: 18,
                             }}
                           >
-                            Upload your CV and we'll automatically extract your
-                            profile details — title, skills, education and more.
+                            Upload your CV and we will automatically extract your
+                            profile details, including title, skills, and education.
                           </Text>
                         </View>
                         <Pressable
@@ -1859,7 +1846,7 @@ export default function ProfileScreen() {
                 style={[s.modalHeader, { borderBottomColor: colors.border }]}
               >
                 <Text style={[s.modalTitle, { color: colors.text }]}>
-                  My Tailored CVs
+                  Generated CVs
                 </Text>
                 <Pressable onPress={() => setActiveSection(null)}>
                   <Feather name="x" size={20} color={colors.textMuted} />
@@ -1886,7 +1873,7 @@ export default function ProfileScreen() {
                         textAlign: "center",
                       }}
                     >
-                      You haven't generated any tailored CVs yet. Go to CV
+                      You haven't generated any CVs yet. Go to CV
                       Builder tab to create one.
                     </Text>
                   </View>
@@ -1917,13 +1904,13 @@ export default function ProfileScreen() {
                         </View>
                         <Pressable
                           onPress={() => handleDownloadCV(cv)}
-                          disabled={downloadingCVId !== null}
+                          disabled={downloadingCVId !== null || isPurchasing}
                           style={[
                             s.cvDownloadBtn,
                             { backgroundColor: Palette.accent50 },
                           ]}
                         >
-                          {downloadingCVId === cv.id ? (
+                          {downloadingCVId === cv.id || isPurchasing ? (
                             <ActivityIndicator size="small" color={Palette.accent600} />
                           ) : (
                             <>
@@ -1939,7 +1926,7 @@ export default function ProfileScreen() {
                                   color: Palette.accent600,
                                 }}
                               >
-                                {cv.is_paid ? "Download" : "Download (€1.50)"}
+                                {cv.is_paid ? "Download" : `Download (${localizedPrice})`}
                               </Text>
                             </>
                           )}
@@ -1954,18 +1941,7 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── NATIVE PAYMENT MODAL ── */}
-      <NativePaymentModal
-        visible={paymentVisible}
-        onClose={() => setPaymentVisible(false)}
-        cvId={selectedCV ? selectedCV.id : null}
-        cvName={
-          selectedCV
-            ? selectedCV.target_role || selectedCV.template_name || "cv"
-            : "cv"
-        }
-        onSuccess={fetchCVs}
-      />
+
     </View>
   );
 }

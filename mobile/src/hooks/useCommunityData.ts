@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { DeviceEventEmitter } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import { apiFetch } from '../services/api';
+import { apiFetch, getAccessToken } from '../services/api';
+import { cacheGet, cacheSet, CacheKeys } from '../services/app-cache';
 
 export interface CommunityAuthor {
   id: number;
@@ -67,6 +67,10 @@ export interface CommunityMember {
   avatar?: string | null;
 }
 
+export function resetCommunityMemory() {
+  DeviceEventEmitter.emit('COMMUNITY_SESSION_CLEARED');
+}
+
 export function useCommunityData() {
   const [feed, setFeed] = useState<CommunityFeedItem[]>([]);
   const [members, setMembers] = useState<CommunityMember[]>([]);
@@ -100,7 +104,7 @@ export function useCommunityData() {
     setHasError(false);
 
     try {
-      const token = await SecureStore.getItemAsync('access_token');
+      const token = await getAccessToken();
       if (!token) return;
 
       // Fetch posts, polls, and members in parallel
@@ -112,15 +116,15 @@ export function useCommunityData() {
 
       if (Array.isArray(membersData) && membersData.length > 0) {
         setMembers(membersData);
-        SecureStore.setItemAsync('cached_community_members', JSON.stringify(membersData)).catch(() => {});
+        cacheSet(CacheKeys.communityMembers, membersData);
       }
 
       const rawPosts = Array.isArray(postsData) ? postsData : (postsData?.results || []);
       const nextPostsUrl = postsData?.next;
       const rawPolls = Array.isArray(pollsData) ? pollsData : (pollsData?.results || []);
 
-      const formattedPosts: CommunityPost[] = rawPosts.map((p: any) => ({
-        id: p.id.toString(),
+      const formattedPosts: CommunityPost[] = rawPosts.filter((p: any) => p?.id != null).map((p: any) => ({
+        id: String(p.id),
         type: 'post' as const,
         author: p.author,
         content: p.content,
@@ -139,8 +143,8 @@ export function useCommunityData() {
         ? rawPolls.filter((p: any) => p.category === category)
         : rawPolls;
 
-      const formattedPolls: CommunityPoll[] = filteredRawPolls.map((p: any) => ({
-        id: p.id.toString(),
+      const formattedPolls: CommunityPoll[] = filteredRawPolls.filter((p: any) => p?.id != null).map((p: any) => ({
+        id: String(p.id),
         type: 'poll' as const,
         author: p.author,
         question: p.question,
@@ -159,7 +163,7 @@ export function useCommunityData() {
       setFeed(prev => (isRefresh || pageNum === 1) ? combined : [...prev, ...combined]);
       // Cache the first page of the feed for instant restore on next open
       if (pageNum === 1) {
-        SecureStore.setItemAsync('cached_community_feed', JSON.stringify(combined)).catch(() => {});
+        cacheSet(CacheKeys.communityFeed, combined);
       }
       setHasMore(!!nextPostsUrl);
       if (pageNum > 1 && combined.length > 0) {
@@ -500,22 +504,21 @@ export function useCommunityData() {
   useEffect(() => {
     (async () => {
       try {
-        const cached = await SecureStore.getItemAsync('cached_community_feed');
+        const cached = await cacheGet<CommunityFeedItem[]>(CacheKeys.communityFeed);
         if (cached) {
-          setFeed(JSON.parse(cached));
+          setFeed(cached);
           setIsLoading(false);
         }
-        const cachedM = await SecureStore.getItemAsync('cached_community_members');
+        const cachedM = await cacheGet<CommunityMember[]>(CacheKeys.communityMembers);
         if (cachedM) {
-          setMembers(JSON.parse(cachedM));
+          setMembers(cachedM);
         }
       } catch (_e) {}
     })();
   }, []);
 
-  // Real-time synchronization of user avatar updates across community feed and member state
   useEffect(() => {
-    const sub = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (newAvatarUrl: string) => {
+    const subAvatar = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (newAvatarUrl: string) => {
       if (!newAvatarUrl) return;
       setFeed(prev =>
         prev.map(item => {
@@ -531,6 +534,38 @@ export function useCommunityData() {
           return item;
         })
       );
+    });
+
+    const subName = DeviceEventEmitter.addListener('USER_DATA_UPDATED', (partial: any) => {
+      if (partial?.name) {
+        setFeed(prev =>
+          prev.map(item => {
+            if ('is_author' in item && (item as any).is_author && (item as any).author) {
+              return {
+                ...item,
+                author: {
+                  ...(item as any).author,
+                  name: partial.name,
+                },
+              };
+            }
+            return item;
+          })
+        );
+      }
+    });
+
+    return () => {
+      subAvatar.remove();
+      subName.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('COMMUNITY_SESSION_CLEARED', () => {
+      setFeed([]);
+      setMembers([]);
+      setIsLoading(true);
     });
     return () => sub.remove();
   }, []);

@@ -81,9 +81,9 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
         <View style={s.divider} />
 
         <Text style={s.sbSec}>Contact</Text>
-        {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>✉</Text><Text style={s.sbText}>{data.email}</Text></View>}
-        {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>☎</Text><Text style={s.sbText}>{data.phone}</Text></View>}
-        {data.location && <View style={s.sbRow}><Text style={s.sbIcon}></Text><Text style={s.sbText}>{data.location}</Text></View>}
+        {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>@</Text><Text style={s.sbText}>{data.email}</Text></View>}
+        {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>T:</Text><Text style={s.sbText}>{data.phone}</Text></View>}
+        {data.location && <View style={s.sbRow}><Text style={s.sbIcon}>L:</Text><Text style={s.sbText}>{data.location}</Text></View>}
         {data.linkedinUrl && <View style={s.sbRow}><Text style={s.sbIcon}>in</Text><Text style={s.sbText}>{data.linkedinUrl}</Text></View>}
 
         <View style={s.divider} />
@@ -92,7 +92,7 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
           <>
             <Text style={s.sbSec}>Skills</Text>
             {data.skills.slice(0, 7).map((sk, i) => (
-              <Text key={i} style={s.sbSkill}>▸ {sk}</Text>
+              <Text key={i} style={s.sbSkill}>- {sk}</Text>
             ))}
           </>
         )}
@@ -101,7 +101,7 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
           <>
             <Text style={s.sbSec}>Achievement</Text>
             <View style={s.achBadge}>
-              <Text style={s.achLabel}>★ Top Achievement</Text>
+              <Text style={s.achLabel}>Top Achievement</Text>
               <Text style={s.achTxtSb}>{data.achievement.slice(0, 110)}...</Text>
             </View>
           </>
@@ -147,8 +147,8 @@ export const ModernTechTemplate = ({ data }: { data: CVData }) => (
         <Text style={s.bdName}>{data.name}</Text>
         
         <View style={s.bdContact}>
-          {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
-          {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
+          {data.email    && <Text style={s.bdCtxt}>Email: {data.email}</Text>}
+          {data.phone    && <Text style={s.bdCtxt}>Tel: {data.phone}</Text>}
           {data.location && <Text style={s.bdCtxt}>{data.location}</Text>}
         </View>
 

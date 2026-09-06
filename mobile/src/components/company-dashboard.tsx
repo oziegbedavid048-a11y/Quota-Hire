@@ -112,20 +112,27 @@ function StatCard({
   const scale  = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  const handlePress = useCallback(() => {
+  const handlePressIn = useCallback(() => {
     if (!onPress) return;
-    scale.value = withSequence(
-      withTiming(0.95, { duration: 80 }),
-      withSpring(1, { damping: 14 })
-    );
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
+    scale.value = withSpring(0.96, { damping: 20, stiffness: 350 });
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+  }, [onPress]);
+
+  const handlePressOut = useCallback(() => {
+    if (!onPress) return;
+    scale.value = withSpring(1, { damping: 18, stiffness: 300 });
   }, [onPress]);
 
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()} style={style}>
+    <View style={style}>
       <Animated.View style={animStyle}>
-        <Pressable onPress={handlePress}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+        >
           <LiquidGlassCard style={styles.statCard}>
             <View style={styles.statCardTop}>
               <View style={[styles.statIconWrap, { backgroundColor: iconBg }]}>
@@ -147,20 +154,20 @@ function StatCard({
           </LiquidGlassCard>
         </Pressable>
       </Animated.View>
-    </Animated.View>
+    </View>
   );
 }
 
 // ─── SectionCard ─────────────────────────────────────────────────────────────
-function SectionCard({ children, delay = 0, style }: {
+function SectionCard({ children, style }: {
   children: React.ReactNode; delay?: number; style?: any;
 }) {
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify()} style={style}>
+    <View style={style}>
       <LiquidGlassCard style={styles.sectionCard}>
         {children}
       </LiquidGlassCard>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -251,7 +258,7 @@ export default function CompanyDashboardScreen() {
             SECTION 1 — HERO BANNER
             Matches web: gradient + post_job_recruiter.png + CTA buttons
             ════════════════════════════════════════════════════════════════════ */}
-        <Animated.View entering={FadeInDown.delay(0).springify()} style={{ marginBottom: 16 }}>
+        <View style={{ marginBottom: 16 }}>
           <LinearGradient
             colors={[
               '#FCEFCF',
@@ -276,12 +283,6 @@ export default function CompanyDashboardScreen() {
                 <Feather name="activity" size={11} color={Palette.accent500} />
                 <Text style={[styles.badgeText, { color: colors.textSecondary }]}>Company Dashboard</Text>
               </View>
-              {company.isVerified && (
-                <View style={[styles.badge, { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderColor: colors.borderMid }]}>
-                  <Feather name="check-circle" size={11} color={Palette.blue500} />
-                  <Text style={[styles.badgeText, { color: colors.textSecondary }]}>Verified</Text>
-                </View>
-              )}
             </View>
 
             {/* Heading — "Welcome back, {name}!" */}
@@ -345,7 +346,7 @@ export default function CompanyDashboardScreen() {
               </Pressable>
             </View>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
         {/* ════════════════════════════════════════════════════════════════════
             SECTION 2 — KPI STAT CARDS (vertical 2-column grid layout)
@@ -422,8 +423,6 @@ export default function CompanyDashboardScreen() {
               rulesColor="rgba(0,0,0,0.06)"
               yAxisTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: '600' }}
               xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: '600' }}
-              isAnimated
-              animationDuration={800}
               hideDataPoints={false}
               dataPointsColor1={Palette.blue500}
               dataPointsRadius={4}
@@ -467,8 +466,6 @@ export default function CompanyDashboardScreen() {
                     </Text>
                   </View>
                 )}
-                isAnimated
-                animationDuration={600}
               />
               <View style={styles.pieLegend}>
                 {pieData.map(d => (
@@ -520,8 +517,6 @@ export default function CompanyDashboardScreen() {
               rulesColor="rgba(0,0,0,0.06)"
               yAxisTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: '600' }}
               xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 10, fontWeight: '600' }}
-              isAnimated
-              animationDuration={700}
             />
           ) : (
             <View style={styles.emptyChart}>

@@ -69,9 +69,9 @@ export const MinimalistWhiteTemplate = ({ data }: { data: CVData }) => (
         <View style={s.hdLine} />
         <Text style={s.hdRole}>{data.headline}</Text>
         <View style={s.hdContact}>
-          {data.email    && <Text style={s.hdCtxt}>✉ {data.email}</Text>}
-          {data.phone    && <Text style={s.hdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.hdCtxt}>⚲ {data.location}</Text>}
+          {data.email    && <Text style={s.hdCtxt}>Email: {data.email}</Text>}
+          {data.phone    && <Text style={s.hdCtxt}>Tel: {data.phone}</Text>}
+          {data.location && <Text style={s.hdCtxt}> {data.location}</Text>}
         </View>
       </View>
 
@@ -86,9 +86,9 @@ export const MinimalistWhiteTemplate = ({ data }: { data: CVData }) => (
 
           <Text style={s.secTitle}>Contact</Text>
           <View style={s.secLine} />
-          {data.email    && <Text style={s.contactTxt}>✉ {data.email}</Text>}
-          {data.phone    && <Text style={s.contactTxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.contactTxt}>⚲ {data.location}</Text>}
+          {data.email    && <Text style={s.contactTxt}>Email: {data.email}</Text>}
+          {data.phone    && <Text style={s.contactTxt}>Tel: {data.phone}</Text>}
+          {data.location && <Text style={s.contactTxt}> {data.location}</Text>}
           {data.linkedinUrl && <Text style={s.contactTxt}>in {data.linkedinUrl}</Text>}
 
           {data.skills.length > 0 && (

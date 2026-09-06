@@ -1,4 +1,4 @@
-// T4 – Navy Achievement (Oliver Smith style)
+﻿// T4 – Navy Achievement (Oliver Smith style)
 // Dark navy sidebar with star-icon achievements section, white body, blue accent
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
@@ -75,9 +75,9 @@ export const InverseGreenTemplate = ({ data }: { data: CVData }) => (
 
         <Text style={s.sbSec}>Contact</Text>
         <View style={s.sbDiv} />
-        {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>✉</Text><Text style={s.sbText}>{data.email}</Text></View>}
-        {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>☎</Text><Text style={s.sbText}>{data.phone}</Text></View>}
-        {data.location && <View style={s.sbRow}><Text style={s.sbIcon}>⚲</Text><Text style={s.sbText}>{data.location}</Text></View>}
+        {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>Email:</Text><Text style={s.sbText}>{data.email}</Text></View>}
+        {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>Tel:</Text><Text style={s.sbText}>{data.phone}</Text></View>}
+        {data.location && <View style={s.sbRow}><Text style={s.sbIcon}></Text><Text style={s.sbText}>{data.location}</Text></View>}
         {data.linkedinUrl && <View style={s.sbRow}><Text style={s.sbIcon}>in</Text><Text style={s.sbText}>{data.linkedinUrl}</Text></View>}
 
         {data.skills.length > 0 && (
@@ -85,7 +85,7 @@ export const InverseGreenTemplate = ({ data }: { data: CVData }) => (
             <Text style={s.sbSec}>Skills</Text>
             <View style={s.sbDiv} />
             {data.skills.slice(0, 7).map((sk, i) => (
-              <Text key={i} style={s.sbSkill}>▸ {sk}</Text>
+              <Text key={i} style={s.sbSkill}>- {sk}</Text>
             ))}
           </>
         )}
@@ -146,9 +146,9 @@ export const InverseGreenTemplate = ({ data }: { data: CVData }) => (
         <Text style={s.bdName}>{data.name}</Text>
         <Text style={s.bdRole}>{data.headline}</Text>
         <View style={s.bdContact}>
-          {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
-          {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+          {data.email    && <Text style={s.bdCtxt}>Email: {data.email}</Text>}
+          {data.phone    && <Text style={s.bdCtxt}>Tel: {data.phone}</Text>}
+          {data.location && <Text style={s.bdCtxt}> {data.location}</Text>}
         </View>
 
         {data.summary && (

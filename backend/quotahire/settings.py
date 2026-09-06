@@ -12,10 +12,27 @@ from posthog import Posthog
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-DEBUG = config('DEBUG', default=True, cast=bool)
-SECRET_KEY = config('SECRET_KEY', default='insecure-dev-key-change-in-production' if DEBUG else '')
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY must be set in production")
+# SECURITY (QH-10): DEBUG defaults to False. It previously defaulted to True,
+# so any environment that forgot the variable came up serving full tracebacks —
+# settings, SQL and environment included. A missing variable must degrade to
+# the safe state, not the exposed one. Set DEBUG=True explicitly for local work.
+DEBUG = config('DEBUG', default=False, cast=bool)
+
+# SECURITY (QH-10): no production fallback. The old default was the literal
+# string 'insecure-dev-key-change-in-production', which is published in this
+# repository — and this key signs JWTs, email-verification tokens, password
+# reset tokens, OTP digests and download HMACs. A deployment running the
+# default could have its admin sessions forged by anyone who read the source.
+# In DEBUG the throwaway value is fine; outside it, refuse to start.
+if DEBUG:
+    SECRET_KEY = config('SECRET_KEY', default='insecure-dev-key-change-in-production')
+else:
+    SECRET_KEY = config('SECRET_KEY', default='')
+    if not SECRET_KEY:
+        raise ValueError(
+            "SECRET_KEY must be set when DEBUG is False. Refusing to start with "
+            "a known default, which would allow session and token forgery."
+        )
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
@@ -225,9 +242,12 @@ REST_FRAMEWORK = {
         # Targeted throttles — only applied to specific views:
         'register': '10/hour',           # max 10 new accounts per IP per hour
         'auth_email': '5/hour',          # max 5 verification/reset emails per IP per hour
+        'otp_verify': '10/hour',         # max 10 login-OTP guesses per IP per hour (QH-02)
+        'login': '20/hour',              # max 20 password login attempts per IP per hour (QH-04)
         'upload': '20/hour',             # max 20 file uploads per user per hour
         'payment': '30/hour',            # max 30 payment requests per user per hour
         'apply': '10/hour',              # max 10 job applications per user per hour
+        'community_write': '120/hour',   # posts, comments, likes, votes per user (QH-20)
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -304,6 +324,27 @@ GOOGLE_PLAY_SERVICE_ACCOUNT_JSON = config('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON', de
 GOOGLE_PLAY_PACKAGE_NAME = config('GOOGLE_PLAY_PACKAGE_NAME', default='com.oziegbedavid.quotahire')
 # The in-app product ID created in Google Play Console — must match expo-iap PRODUCT_ID
 GOOGLE_PLAY_PRODUCT_ID = config('GOOGLE_PLAY_PRODUCT_ID', default='cv_download_150')
+
+
+# ── Google Play review access (QH-03) ─────────────────────────────────────────
+# A store reviewer needs to sign in without access to a real mailbox. Rather
+# than a hardcoded code matched against an email *prefix* (which let anyone
+# mint verified accounts), the bypass is a single explicitly named account,
+# with a secret code, that switches itself off on a date you choose.
+#
+# All three must be set for the bypass to work at all — leave any of them
+# blank and there is no bypass. Set them in the Render dashboard:
+#
+#   PLAY_REVIEW_EMAIL    the one address the reviewer signs in with
+#   PLAY_REVIEW_OTP      a long random code — NOT 123456
+#   PLAY_REVIEW_EXPIRES  YYYY-MM-DD, the last day the bypass works
+#
+# After PLAY_REVIEW_EXPIRES the code stops working on its own, so a forgotten
+# review account cannot become a permanent back door. Clear the variables
+# once the app is live.
+PLAY_REVIEW_EMAIL   = config('PLAY_REVIEW_EMAIL',   default='')
+PLAY_REVIEW_OTP     = config('PLAY_REVIEW_OTP',     default='')
+PLAY_REVIEW_EXPIRES = config('PLAY_REVIEW_EXPIRES', default='')
 
 
 # ── Production Security Headers ───────────────────────────────────────────────

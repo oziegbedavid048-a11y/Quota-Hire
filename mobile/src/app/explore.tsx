@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, Pressable, TextInput,
-  StyleSheet, FlatList, Dimensions, Modal, ActivityIndicator, Platform,
+  StyleSheet, FlatList, Dimensions, ActivityIndicator, Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +10,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 
 import CompanyPostJob from '@/components/company-post-job';
 import CompanyMyJobs from '@/components/company-my-jobs';
@@ -18,25 +17,21 @@ import { SkeletonJobCard } from '@/components/ui/skeleton';
 import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
+import { HapticPressable } from '@/components/haptic-pressable';
 import { useEmployeeDashboardData, Job } from '@/hooks/useEmployeeDashboardData';
 import { apiFetch } from '@/services/api';
+import { cacheGet, cacheSet, CacheKeys } from '@/services/app-cache';
+import { useStoredRole } from '@/services/user-role';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-const FILTERS = [
-  { label: 'All',       value: 'All'       },
-  { label: 'Remote',    value: 'Remote'    },
-  { label: 'Full-time', value: 'Full-time' },
-];
+export type SearchFilterMode = 'none' | 'code' | 'title' | 'location';
 
 export default function JobsScreen() {
   const colors = Colors.light;
   const router = useRouter();
   
-  const [role, setRole] = useState<string | null>(null);
-  useEffect(() => {
-    SecureStore.getItemAsync('user_role').then(r => setRole(r || 'employee'));
-  }, []);
+  const role = useStoredRole();
 
   const { savedJobs, toggleSavedJob } = useEmployeeDashboardData();
 
@@ -51,31 +46,39 @@ export default function JobsScreen() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchFilterMode>('none');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Debounce search input to avoid redundant requests
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-    }, 400);
+    }, 350);
     return () => clearTimeout(handler);
   }, [search]);
 
   // Reset page and fetch new list when filters change
   useEffect(() => {
     setPage(1);
-    fetchJobs(1, debouncedSearch, activeFilter, false);
-  }, [debouncedSearch, activeFilter]);
+    fetchJobs(1, debouncedSearch, activeFilter, false, searchMode);
+  }, [debouncedSearch, activeFilter, searchMode]);
 
-  const fetchJobs = async (pageNum: number, searchVal: string, filterVal: string, isAppend: boolean) => {
+  const fetchJobs = async (
+    pageNum: number,
+    searchVal: string,
+    filterVal: string,
+    isAppend: boolean,
+    currentMode: SearchFilterMode = searchMode
+  ) => {
     if (pageNum === 1 && !isRefreshing) {
       setIsLoading(true);
     }
     setIsFetchingLocal(true);
     try {
       let url = `/jobs/?page=${pageNum}`;
-      if (searchVal) {
-        url += `&search=${encodeURIComponent(searchVal)}`;
+      const cleanSearch = searchVal.trim().replace(/^#/, '');
+      if (cleanSearch) {
+        url += `&search=${encodeURIComponent(cleanSearch)}`;
       }
       if (filterVal === 'Remote') {
         url += `&remote=true`;
@@ -87,12 +90,12 @@ export default function JobsScreen() {
       const results = Array.isArray(res) ? res : (res?.results || []);
       const nextUrl = res?.next;
 
-      const formattedJobs = results.map((j: any) => ({
-        id: j.id.toString(),
+      const formattedJobs = results.filter((j: any) => j?.id != null).map((j: any) => ({
+        id: String(j.id),
         title: j.title,
         companyName: j.company_name,
         companyLogoUrl: j.company_logo_url,
-        companyIsVerified: true,
+        companyIsVerified: Boolean(j.company_is_verified ?? j.is_verified),
         location: j.location,
         workType: j.is_remote ? "Remote" : ("Hybrid" as const),
         salaryRange: j.salary_range,
@@ -105,12 +108,33 @@ export default function JobsScreen() {
       }));
 
       // Only show approved jobs
-      const approvedOnly = formattedJobs.filter((j: any) => j.status === 'approved');
+      let approvedOnly = formattedJobs.filter((j: any) => j.status === 'approved');
+
+      // Client-side targeted filtering when search mode is active
+      if (cleanSearch) {
+        const q = cleanSearch.toLowerCase();
+        if (currentMode === 'code') {
+          const matched = approvedOnly.filter((j: any) =>
+            j.id.toLowerCase().includes(q) || `#${j.id}`.toLowerCase().includes(q)
+          );
+          if (matched.length > 0) approvedOnly = matched;
+        } else if (currentMode === 'location') {
+          const matched = approvedOnly.filter((j: any) =>
+            (j.location || '').toLowerCase().includes(q)
+          );
+          if (matched.length > 0) approvedOnly = matched;
+        } else if (currentMode === 'title') {
+          const matched = approvedOnly.filter((j: any) =>
+            (j.title || '').toLowerCase().includes(q)
+          );
+          if (matched.length > 0) approvedOnly = matched;
+        }
+      }
 
       setJobs(prev => isAppend ? [...prev, ...approvedOnly] : approvedOnly);
       // Cache page 1 results for instant restore next open
       if (pageNum === 1 && !isAppend) {
-        SecureStore.setItemAsync('cached_explore_jobs', JSON.stringify(approvedOnly)).catch(() => {});
+        cacheSet(CacheKeys.exploreJobs, approvedOnly);
       }
       setHasMore(!!nextUrl);
     } catch (e) {
@@ -125,9 +149,9 @@ export default function JobsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const cached = await SecureStore.getItemAsync('cached_explore_jobs');
+        const cached = await cacheGet<Job[]>(CacheKeys.exploreJobs);
         if (cached) {
-          setJobs(JSON.parse(cached));
+          setJobs(cached);
           setIsLoading(false);
         }
       } catch (_e) {}
@@ -157,17 +181,17 @@ export default function JobsScreen() {
     const saved = savedJobs.includes(job.id);
     return (
       <Animated.View entering={FadeInDown.delay(index * 60).springify()}>
-        <Pressable
+        <HapticPressable
+          activeScale={0.98}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             router.push({
               pathname: '/job-details',
               params: { id: job.id },
             } as any);
           }}
-          style={({ pressed }) => [
+          style={[
             s.jobCard,
-            { backgroundColor: '#ffffff', borderColor: colors.borderMid, opacity: pressed ? 0.95 : 1 },
+            { backgroundColor: '#ffffff', borderColor: colors.borderMid },
           ]}
         >
           {/* Top row: logo + title + save heart */}
@@ -272,7 +296,7 @@ export default function JobsScreen() {
               </Pressable>
             </LinearGradient>
           </View>
-        </Pressable>
+        </HapticPressable>
       </Animated.View>
     );
   };
@@ -294,59 +318,6 @@ export default function JobsScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-
-      {/* Filter Selector Modal — lives outside FlatList so it overlays properly */}
-      <Modal
-        visible={filterModalVisible}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setFilterModalVisible(false)}
-      >
-        <Pressable style={s.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
-          <View style={[s.modalContent, { backgroundColor: colors.cardBg }]}>
-            <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.text }]}>Filter by Job Type</Text>
-              <Pressable onPress={() => setFilterModalVisible(false)} hitSlop={12}>
-                <Feather name="x" size={18} color={colors.textMuted} />
-              </Pressable>
-            </View>
-            <View style={s.modalDivider} />
-            {FILTERS.map((f) => {
-              const selected = activeFilter === f.value;
-              return (
-                <Pressable
-                  key={f.value}
-                  onPress={() => {
-                    setActiveFilter(f.value);
-                    setFilterModalVisible(false);
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  }}
-                  style={({ pressed }) => [
-                    s.modalOption,
-                    {
-                      backgroundColor: selected ? Palette.accent50 : pressed ? 'rgba(0,0,0,0.02)' : 'transparent',
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      s.modalOptionText,
-                      {
-                        color: selected ? Palette.accent600 : colors.text,
-                        fontWeight: selected ? '700' : '500',
-                      },
-                    ]}
-                  >
-                    {f.label}
-                  </Text>
-                  {selected && <Feather name="check" size={16} color={Palette.accent600} />}
-                </Pressable>
-              );
-            })}
-          </View>
-        </Pressable>
-      </Modal>
 
       {/* ── JOB LIST — always render FlatList; cache ensures instant data on re-open ── */}
       <FlatList
@@ -370,20 +341,23 @@ export default function JobsScreen() {
             <View>
               {/* ── Hero Banner ── */}
               <Animated.View entering={FadeInDown.springify()} style={[s.heroBanner, { borderColor: colors.borderMid, marginTop: 16, marginBottom: 4 }]}>
-                {/* Decorative blobs */}
-                <View style={[s.blob1, { backgroundColor: 'rgba(21,117,10,0.06)' }]} />
-                <View style={[s.blob2, { backgroundColor: 'rgba(114,221,21,0.05)' }]} />
+                <LinearGradient
+                  colors={['#FCEFCF', '#E1F6DD']}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
 
                 <View style={s.heroContent}>
                   {/* Text side */}
                   <View style={{ flex: 1 }}>
-                    <View style={[s.heroPill, { backgroundColor: 'rgba(255,255,255,0.6)', borderColor: colors.borderMid }]}>
-                      <Feather name="search" size={12} color={Palette.accent600} />
+                    <View style={[s.heroPill, { backgroundColor: 'rgba(255,255,255,0.7)', borderColor: colors.borderMid }]}>
+                      <Feather name="search" size={11} color={Palette.accent600} />
                       <Text style={[s.heroPillText, { color: colors.textSecondary }]}>Explore Careers</Text>
                     </View>
-                    <Text style={[s.heroTitle, { color: colors.text }]}>Discover Your{'\n'}Next Sales Role</Text>
+                    <Text style={[s.heroTitle, { color: colors.text }]}>Find Your Next Role</Text>
                     <Text style={[s.heroSub, { color: colors.textSecondary }]}>
-                      Find verified, high-commission opportunities with premium base salaries and OTE packages.
+                      Discover verified sales opportunities with high-commission base salaries and uncapped OTE packages.
                     </Text>
                   </View>
 
@@ -396,86 +370,284 @@ export default function JobsScreen() {
                 </View>
               </Animated.View>
 
-              {/* ── SEARCH BAR ── */}
-              <View style={[s.searchRowOutside, { paddingTop: 8 }]}>
-                <View style={[s.searchWrap, { backgroundColor: '#ffffff', borderColor: colors.borderMid }]}>
-                  <Feather name="search" size={15} color={colors.textMuted} style={{ marginLeft: 12 }} />
-                  <TextInput
-                    value={search}
-                    onChangeText={setSearch}
-                    placeholder="Search job title, company or location..."
-                    placeholderTextColor={colors.textMuted}
-                    style={[s.searchInput, { color: colors.text }]}
-                  />
-                  {search.length > 0 && (
-                    <Pressable onPress={() => setSearch('')} style={{ marginRight: 8 }}>
-                      <Feather name="x" size={15} color={colors.textMuted} />
-                    </Pressable>
-                  )}
-                  <Pressable
-                    style={[s.searchBtn, { backgroundColor: Palette.accent600 }]}
-                    onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-                  >
-                    <Feather name="search" size={14} color="#fff" />
-                  </Pressable>
-                </View>
-              </View>
-
               {/* ── FILTER CHIPS ── */}
               <View style={s.filterChipsRow}>
-                {FILTERS.map((f) => {
-                  const isActive = activeFilter === f.value;
-                  return (
+                {/* 1. All (Dropdown Toggle) */}
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setDropdownOpen(prev => !prev);
+                  }}
+                  style={[
+                    s.filterChip,
+                    activeFilter === 'All'
+                      ? { backgroundColor: Palette.accent600, borderColor: Palette.accent600 }
+                      : { backgroundColor: '#ffffff', borderColor: colors.borderMid },
+                  ]}
+                >
+                  <Text style={[
+                    s.filterChipText,
+                    { color: activeFilter === 'All' ? '#ffffff' : colors.textSecondary },
+                  ]}>
+                    {searchMode === 'code' ? 'Job Code' : searchMode === 'location' ? 'Location' : searchMode === 'title' ? 'Title' : 'All'}
+                  </Text>
+                  <Feather
+                    name={dropdownOpen ? "chevron-up" : "chevron-down"}
+                    size={13}
+                    color={activeFilter === 'All' ? 'rgba(255,255,255,0.85)' : colors.textMuted}
+                    style={{ marginLeft: 2 }}
+                  />
+                </Pressable>
+
+                {/* 2. Remote */}
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setActiveFilter('Remote');
+                    setSearchMode('none');
+                    setSearch('');
+                    setDropdownOpen(false);
+                  }}
+                  style={[
+                    s.filterChip,
+                    activeFilter === 'Remote'
+                      ? { backgroundColor: Palette.accent600, borderColor: Palette.accent600 }
+                      : { backgroundColor: '#ffffff', borderColor: colors.borderMid },
+                  ]}
+                >
+                  <Feather
+                    name="globe"
+                    size={12}
+                    color={activeFilter === 'Remote' ? '#fff' : colors.textMuted}
+                  />
+                  <Text style={[
+                    s.filterChipText,
+                    { color: activeFilter === 'Remote' ? '#ffffff' : colors.textSecondary },
+                  ]}>
+                    Remote
+                  </Text>
+                </Pressable>
+
+                {/* 3. Full-time */}
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setActiveFilter('Full-time');
+                    setSearchMode('none');
+                    setSearch('');
+                    setDropdownOpen(false);
+                  }}
+                  style={[
+                    s.filterChip,
+                    activeFilter === 'Full-time'
+                      ? { backgroundColor: Palette.accent600, borderColor: Palette.accent600 }
+                      : { backgroundColor: '#ffffff', borderColor: colors.borderMid },
+                  ]}
+                >
+                  <Feather
+                    name="clock"
+                    size={12}
+                    color={activeFilter === 'Full-time' ? '#fff' : colors.textMuted}
+                  />
+                  <Text style={[
+                    s.filterChipText,
+                    { color: activeFilter === 'Full-time' ? '#ffffff' : colors.textSecondary },
+                  ]}>
+                    Full-time
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* ── INLINE DROPDOWN MENU (Clean & Professional, No Modal) ── */}
+              {dropdownOpen && (
+                <Animated.View entering={FadeInDown.duration(150)} style={s.dropdownWrap}>
+                  <View style={[s.dropdownCard, { backgroundColor: '#ffffff', borderColor: colors.borderMid }]}>
+                    {/* Item 1: All Roles */}
                     <Pressable
-                      key={f.value}
                       onPress={() => {
-                        setActiveFilter(f.value);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSearchMode('none');
+                        setSearch('');
+                        setActiveFilter('All');
+                        setDropdownOpen(false);
                       }}
-                      style={[
-                        s.filterChip,
-                        isActive
-                          ? { backgroundColor: Palette.accent600, borderColor: Palette.accent600 }
-                          : { backgroundColor: '#ffffff', borderColor: colors.borderMid },
+                      style={({ pressed }) => [
+                        s.dropdownItem,
+                        { borderBottomColor: colors.border, backgroundColor: pressed ? Palette.neutral100 : '#ffffff' }
                       ]}
                     >
-                      {f.value === 'Remote' && (
-                        <Feather name="wifi" size={11} color={isActive ? '#fff' : colors.textMuted} />
-                      )}
-                      {f.value === 'Full-time' && (
-                        <Feather name="briefcase" size={11} color={isActive ? '#fff' : colors.textMuted} />
-                      )}
-                      {f.value === 'All' && (
-                        <Feather name="layers" size={11} color={isActive ? '#fff' : colors.textMuted} />
-                      )}
                       <Text style={[
-                        s.filterChipText,
-                        { color: isActive ? '#ffffff' : colors.textSecondary },
+                        s.dropdownItemText,
+                        {
+                          color: activeFilter === 'All' && searchMode === 'none' ? Palette.accent600 : colors.text,
+                          fontWeight: activeFilter === 'All' && searchMode === 'none' ? '700' : '500',
+                        }
                       ]}>
-                        {f.label}
+                        All Roles
                       </Text>
+                      {activeFilter === 'All' && searchMode === 'none' && (
+                        <Feather name="check" size={14} color={Palette.accent600} />
+                      )}
                     </Pressable>
-                  );
-                })}
-              </View>
+
+                    {/* Item 2: Search by Job Code */}
+                    <Pressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSearchMode('code');
+                        setActiveFilter('All');
+                        setDropdownOpen(false);
+                      }}
+                      style={({ pressed }) => [
+                        s.dropdownItem,
+                        { borderBottomColor: colors.border, backgroundColor: pressed ? Palette.neutral100 : '#ffffff' }
+                      ]}
+                    >
+                      <Text style={[
+                        s.dropdownItemText,
+                        {
+                          color: searchMode === 'code' ? Palette.accent600 : colors.text,
+                          fontWeight: searchMode === 'code' ? '700' : '500',
+                        }
+                      ]}>
+                        Search by Job Code
+                      </Text>
+                      {searchMode === 'code' && (
+                        <Feather name="check" size={14} color={Palette.accent600} />
+                      )}
+                    </Pressable>
+
+                    {/* Item 3: Search by Title */}
+                    <Pressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSearchMode('title');
+                        setActiveFilter('All');
+                        setDropdownOpen(false);
+                      }}
+                      style={({ pressed }) => [
+                        s.dropdownItem,
+                        { borderBottomColor: colors.border, backgroundColor: pressed ? Palette.neutral100 : '#ffffff' }
+                      ]}
+                    >
+                      <Text style={[
+                        s.dropdownItemText,
+                        {
+                          color: searchMode === 'title' ? Palette.accent600 : colors.text,
+                          fontWeight: searchMode === 'title' ? '700' : '500',
+                        }
+                      ]}>
+                        Search by Title
+                      </Text>
+                      {searchMode === 'title' && (
+                        <Feather name="check" size={14} color={Palette.accent600} />
+                      )}
+                    </Pressable>
+
+                    {/* Item 4: Search by Location */}
+                    <Pressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setSearchMode('location');
+                        setActiveFilter('All');
+                        setDropdownOpen(false);
+                      }}
+                      style={({ pressed }) => [
+                        s.dropdownItem,
+                        { borderBottomWidth: 0, backgroundColor: pressed ? Palette.neutral100 : '#ffffff' }
+                      ]}
+                    >
+                      <Text style={[
+                        s.dropdownItemText,
+                        {
+                          color: searchMode === 'location' ? Palette.accent600 : colors.text,
+                          fontWeight: searchMode === 'location' ? '700' : '500',
+                        }
+                      ]}>
+                        Search by Location
+                      </Text>
+                      {searchMode === 'location' && (
+                        <Feather name="check" size={14} color={Palette.accent600} />
+                      )}
+                    </Pressable>
+                  </View>
+                </Animated.View>
+              )}
+
+              {/* ── CONTEXTUAL SEARCH INPUT (appears on selecting search filter) ── */}
+              {searchMode !== 'none' && (
+                <Animated.View entering={FadeInDown.duration(200)} style={s.contextualSearchWrap}>
+                  <View style={[s.contextualSearchBox, { backgroundColor: '#ffffff', borderColor: Palette.accent300 }]}>
+                    <View style={[s.searchModeBadge, { backgroundColor: Palette.accent50 }]}>
+                      <Feather
+                        name={searchMode === 'code' ? 'hash' : searchMode === 'location' ? 'map-pin' : 'briefcase'}
+                        size={12}
+                        color={Palette.accent600}
+                      />
+                      <Text style={[s.searchModeBadgeText, { color: Palette.accent700 }]}>
+                        {searchMode === 'code' ? 'Job Code' : searchMode === 'location' ? 'Location' : 'Title'}
+                      </Text>
+                    </View>
+
+                    <TextInput
+                      value={search}
+                      onChangeText={setSearch}
+                      placeholder={
+                        searchMode === 'code'
+                          ? 'Enter job code (e.g. 104)...'
+                          : searchMode === 'location'
+                          ? 'Enter city or country...'
+                          : 'Enter job title (e.g. Sales Lead)...'
+                      }
+                      placeholderTextColor={colors.textMuted}
+                      style={[s.contextualSearchInput, { color: colors.text }]}
+                      autoFocus
+                      returnKeyType="search"
+                    />
+
+                    <Pressable
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        if (search.length > 0) {
+                          setSearch('');
+                        } else {
+                          setSearchMode('none');
+                        }
+                      }}
+                      style={s.contextualSearchCloseBtn}
+                      hitSlop={10}
+                    >
+                      <Feather name="x" size={15} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
+                </Animated.View>
+              )}
             </View>
           }
           ListEmptyComponent={
-            <View style={[s.empty, { paddingTop: 40 }]}>
-              <View style={[s.emptyIconWrap, { backgroundColor: Palette.neutral100 }]}>
-                <Feather name="search" size={28} color={colors.textMuted} />
+            isLoading ? (
+              <View style={{ gap: 12, paddingHorizontal: 16, paddingTop: 16 }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <SkeletonJobCard key={i} />
+                ))}
               </View>
-              <Text style={[s.emptyTitle, { color: colors.text }]}>No roles found</Text>
-              <Text style={[s.emptySub, { color: colors.textMuted }]}>
-                Try adjusting your search or filters
-              </Text>
-              <Pressable
-                onPress={() => { setSearch(''); setActiveFilter('All'); }}
-                style={[s.clearBtn, { backgroundColor: Palette.accent600 }]}
-              >
-                <Text style={s.clearBtnText}>Clear Filters</Text>
-              </Pressable>
-            </View>
+            ) : (
+              <View style={[s.empty, { paddingTop: 40 }]}>
+                <View style={[s.emptyIconWrap, { backgroundColor: Palette.neutral100 }]}>
+                  <Feather name="search" size={28} color={colors.textMuted} />
+                </View>
+                <Text style={[s.emptyTitle, { color: colors.text }]}>No roles found</Text>
+                <Text style={[s.emptySub, { color: colors.textMuted }]}>
+                  Try adjusting your search or filters
+                </Text>
+                <Pressable
+                  onPress={() => { setSearch(''); setActiveFilter('All'); setSearchMode('none'); }}
+                  style={[s.clearBtn, { backgroundColor: Palette.accent600 }]}
+                >
+                  <Text style={s.clearBtnText}>Clear Filters</Text>
+                </Pressable>
+              </View>
+            )
           }
         />
     </View>
@@ -520,44 +692,83 @@ const s = StyleSheet.create({
     gap: 12,
   },
   heroPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     alignSelf: 'flex-start',
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 99, borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 20,
+    borderWidth: 1,
     marginBottom: 8,
   },
   heroPillText: {
-    fontSize: 11, fontWeight: '700',
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   heroTitle: {
-    fontSize: 24, fontWeight: '900',
-    letterSpacing: -0.5,
-    lineHeight: 30,
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+    lineHeight: 28,
     marginBottom: 6,
   },
   heroSub: {
-    fontSize: 12, lineHeight: 17, marginBottom: 10,
+    fontSize: 12,
+    lineHeight: 17,
   },
   heroImage: {
-    width: 110, height: 110,
+    width: 92,
+    height: 92,
     flexShrink: 0,
   },
 
-  // Search bar outside banner
-  searchRowOutside: {
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4,
+  // Contextual Search input (appears on selecting search filter)
+  contextualSearchWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: 12, borderWidth: 1, height: 46, overflow: 'hidden',
+  contextualSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    height: 46,
+    paddingHorizontal: 8,
+    gap: 8,
+    shadowColor: Palette.accent600,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  searchInput: {
-    flex: 1, paddingHorizontal: 12, fontSize: 13, fontWeight: '500',
+  searchModeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  searchBtn: {
-    height: '100%', width: 44, alignItems: 'center', justifyContent: 'center',
+  searchModeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
-  searchBtnText: { color: '#fff', fontSize: 12, fontWeight: FontWeight.bold },
+  contextualSearchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    paddingVertical: 0,
+  },
+  contextualSearchCloseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Filter chips bar (inline pills)
   filterChipsRow: {
@@ -573,30 +784,33 @@ const s = StyleSheet.create({
     fontSize: 12, fontWeight: '700',
   },
 
-  // Modal styles for dropdown
-  modalBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
+  // Inline Dropdown Menu
+  dropdownWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 4,
+    zIndex: 99,
   },
-  modalContent: {
-    borderTopLeftRadius: BorderRadius.card, borderTopRightRadius: BorderRadius.card,
-    paddingHorizontal: 20, paddingBottom: 40, paddingTop: 16,
+  dropdownCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  modalHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 8,
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
   },
-  modalTitle: {
-    fontSize: 16, fontWeight: '800',
-  },
-  modalDivider: {
-    height: 1, backgroundColor: Palette.neutral100, marginVertical: 12,
-  },
-  modalOption: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 14, paddingHorizontal: 12, borderRadius: BorderRadius.md,
-  },
-  modalOptionText: {
-    fontSize: 14,
+  dropdownItemText: {
+    fontSize: 13.5,
   },
 
   // Result count

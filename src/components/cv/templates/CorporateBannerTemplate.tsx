@@ -82,13 +82,13 @@ export const CorporateBannerTemplate = ({ data }: { data: CVData }) => (
           {data.passportUrl && <Image source={{ uri: data.passportUrl }} style={s.avatar} />}
           <Text style={s.sbName}>{data.name}</Text>
           <Text style={s.sbRole}>{data.headline}</Text>
-          {data.location && <Text style={s.sbContact}>⚲ {data.location}</Text>}
+          {data.location && <Text style={s.sbContact}> {data.location}</Text>}
         </View>
 
         <Text style={s.sbSec}>Profile</Text>
         <View style={s.sbUnderline} />
-        {data.email  && <Text style={s.sbText}>✉ {data.email}</Text>}
-        {data.phone  && <Text style={s.sbText}>☎ {data.phone}</Text>}
+        {data.email  && <Text style={s.sbText}>Email: {data.email}</Text>}
+        {data.phone  && <Text style={s.sbText}>Tel: {data.phone}</Text>}
         {data.linkedinUrl && <Text style={s.sbText}>in {data.linkedinUrl}</Text>}
 
         <Text style={s.sbSec}>Skills</Text>
@@ -144,9 +144,9 @@ export const CorporateBannerTemplate = ({ data }: { data: CVData }) => (
         <Text style={s.bdName}>{data.name}</Text>
         <Text style={s.bdRole}>{data.headline}</Text>
         <View style={s.bdContact}>
-          {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
-          {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+          {data.email    && <Text style={s.bdCtxt}>Email: {data.email}</Text>}
+          {data.phone    && <Text style={s.bdCtxt}>Tel: {data.phone}</Text>}
+          {data.location && <Text style={s.bdCtxt}> {data.location}</Text>}
         </View>
 
         {data.summary && (

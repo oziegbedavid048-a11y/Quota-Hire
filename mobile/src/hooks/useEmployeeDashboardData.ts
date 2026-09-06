@@ -10,8 +10,9 @@
  */
 import { useState, useEffect, useCallback } from "react";
 import { DeviceEventEmitter } from "react-native";
-import * as SecureStore from "expo-secure-store";
-import { apiFetch } from "../services/api";
+import { apiFetch, getAccessToken } from "../services/api";
+import { cacheGet, cacheSet, CacheKeys } from "../services/app-cache";
+import { rememberUserRole } from "../services/user-role";
 
 export interface Job {
   id: string;
@@ -71,7 +72,6 @@ export function calculateProfileStrength(user: UserProfile): number {
     !!user.bio,
     !!(user.skills && user.skills.length > 0),
     !!user.education,
-    !!user.resumeUrl,
   ];
   const done = fields.filter(Boolean).length;
   return Math.round((done / fields.length) * 100);
@@ -84,7 +84,7 @@ export function getProfileItems(user: UserProfile) {
     { label: "Professional Summary", done: !!user.bio },
     { label: "Core Skills", done: !!(user.skills && user.skills.length > 0) },
     { label: "Education Background", done: !!user.education },
-    { label: "Resume / Portfolio", done: !!user.resumeUrl },
+    { label: "Resume / Portfolio", done: !!user.resumeUrl || (!!user.title && !!user.education && !!(user.skills && user.skills.length > 0)) },
   ];
 }
 
@@ -137,8 +137,8 @@ function normalizeUser(uData: any, empProfile?: any | null): UserProfile {
 }
 
 function normalizeJobs(rawJobs: any[]): Job[] {
-  return rawJobs.map((j: any) => ({
-    id: j.id.toString(),
+  return rawJobs.filter((j: any) => j?.id != null).map((j: any) => ({
+    id: String(j.id),
     title: j.title,
     companyName: j.company_name || j.companyName || j.company?.name || "Company",
     companyLogoUrl:
@@ -150,7 +150,7 @@ function normalizeJobs(rawJobs: any[]): Job[] {
       j.company?.avatar_url ||
       j.company?.logo_url ||
       undefined,
-    companyIsVerified: true,
+    companyIsVerified: Boolean(j.company_is_verified ?? j.company?.is_verified ?? j.is_verified),
     location: j.location,
     workType: j.is_remote ? "Remote" : ("Hybrid" as const),
     salaryRange: j.salary_range,
@@ -164,8 +164,8 @@ function normalizeJobs(rawJobs: any[]): Job[] {
 }
 
 function normalizeApps(rawApps: any[]): Application[] {
-  return rawApps.map((a: any) => ({
-    id: a.id.toString(),
+  return rawApps.filter((a: any) => a?.id != null).map((a: any) => ({
+    id: String(a.id),
     job: a.job?.toString() || "",
     job_title: a.job_title || "",
     company_name: a.company_name || "",
@@ -185,172 +185,269 @@ function normalizeAnalytics(analData: any | null, appCount: number): any {
   };
 }
 
+// ─── Module-Level In-Memory Cache (Instant 0ms Tab Switching) ─────────────────
+let inMemoryUser: UserProfile | null = null;
+let inMemoryJobs: Job[] = [];
+let inMemoryApps: Application[] = [];
+let inMemoryAnalytics: any | null = null;
+let inMemorySavedJobs: string[] = [];
+let inMemoryLastFetch = 0;
+let inMemoryFetchPromise: Promise<void> | null = null;
+let hasRestoredFromStorage = false;
+
+export function resetEmployeeDashboardMemory() {
+  inMemoryUser = null;
+  inMemoryJobs = [];
+  inMemoryApps = [];
+  inMemoryAnalytics = null;
+  inMemorySavedJobs = [];
+  inMemoryLastFetch = 0;
+  inMemoryFetchPromise = null;
+  hasRestoredFromStorage = false;
+}
+
+// Auto-restore cache from storage once at startup
+(async () => {
+  try {
+    const [cachedUser, cachedJobs, cachedApps, cachedAnalytics, cachedSavedJobs] = await Promise.all([
+      cacheGet<UserProfile>(CacheKeys.userProfile),
+      cacheGet<Job[]>(CacheKeys.jobs),
+      cacheGet<Application[]>(CacheKeys.applications),
+      cacheGet<any>(CacheKeys.analytics),
+      cacheGet<string[]>(CacheKeys.savedJobs),
+    ]);
+    if (cachedUser) inMemoryUser = cachedUser;
+    if (cachedJobs) inMemoryJobs = cachedJobs;
+    if (cachedApps) inMemoryApps = cachedApps;
+    if (cachedAnalytics) inMemoryAnalytics = cachedAnalytics;
+    if (cachedSavedJobs) inMemorySavedJobs = cachedSavedJobs;
+    hasRestoredFromStorage = true;
+  } catch (_e) {}
+})();
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 export function useEmployeeDashboardData() {
-  const [user, setUser] = useState<UserProfile>(EMPTY_USER);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [savedJobs, setSavedJobs] = useState<string[]>([]);
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [analytics, setAnalytics] = useState<any>({ ...EMPTY_ANALYTICS });
+  const [user, setUser] = useState<UserProfile>(inMemoryUser || EMPTY_USER);
+  const [applications, setApplications] = useState<Application[]>(inMemoryApps);
+  const [savedJobs, setSavedJobs] = useState<string[]>(inMemorySavedJobs);
+  const [jobs, setJobs] = useState<Job[]>(inMemoryJobs);
+  const [analytics, setAnalytics] = useState<any>(inMemoryAnalytics || { ...EMPTY_ANALYTICS });
 
-  // isLoading: true until Phase 1 (critical data) is done
-  const [isLoading, setIsLoading] = useState(true);
-  // isFetching: true until ALL data (both phases) is done
-  const [isFetching, setIsFetching] = useState(true);
+  // isLoading: false if we already have cached data in memory
+  const [isLoading, setIsLoading] = useState(!inMemoryUser);
+  const [isFetching, setIsFetching] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isNetworkError, setIsNetworkError] = useState(false);
 
-  const fetchLiveDashboard = useCallback(async () => {
+  const fetchLiveDashboard = useCallback(async (force = false) => {
+    // Throttle network fetches so switching back to the Home tab is instantaneous
+    const now = Date.now();
+    if (!force && inMemoryUser && now - inMemoryLastFetch < 30000) {
+      return;
+    }
+    if (inMemoryFetchPromise) {
+      return inMemoryFetchPromise;
+    }
+
     setIsFetching(true);
     setHasError(false);
     setIsNetworkError(false);
 
-    try {
-      const token = await SecureStore.getItemAsync("access_token");
-      if (!token) {
-        setIsFetching(false);
+    inMemoryFetchPromise = (async () => {
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          setIsFetching(false);
+          setIsLoading(false);
+          return;
+        }
+
+        // ── Phase 1: Critical data — render the dashboard NOW ─────────────────
+        const [uData, jobsData] = await Promise.all([
+          apiFetch("/auth/me/"),
+          apiFetch("/jobs/").catch(() => []),
+        ]);
+
+        const normalizedUser = normalizeUser(uData);
+        rememberUserRole(normalizedUser.role);
+        inMemoryUser = normalizedUser;
+        setUser(normalizedUser);
+        cacheSet(CacheKeys.userProfile, normalizedUser);
+
+        const rawJobs = Array.isArray(jobsData)
+          ? jobsData
+          : jobsData?.results || [];
+        const normalizedJobsList = normalizeJobs(rawJobs);
+        inMemoryJobs = normalizedJobsList;
+        setJobs(normalizedJobsList);
+        cacheSet(CacheKeys.jobs, normalizedJobsList);
         setIsLoading(false);
-        return;
+
+        // ── Phase 2: Secondary data — fills in the rest in the background ─────
+        const [empProfile, appsData, analData] = await Promise.all([
+          apiFetch("/profile/employee/").catch(() => null),
+          apiFetch("/applications/").catch(() => []),
+          apiFetch("/dashboard/analytics/").catch(() => null),
+        ]);
+
+        if (empProfile) {
+          const updatedUser: UserProfile = {
+            ...normalizedUser,
+            title: empProfile.title ?? "",
+            bio: empProfile.bio ?? "",
+            skills: empProfile.skills || [],
+            education: empProfile.education ?? "",
+            resumeUrl: empProfile.resume_url || empProfile.resume_file || "",
+            phone: empProfile.phone_number ?? "",
+            location: empProfile.city ? `${empProfile.city}${empProfile.country ? `, ${empProfile.country}` : ""}` : (normalizedUser.location || ""),
+            experienceYears: empProfile.experience_years ?? 0,
+          };
+          inMemoryUser = updatedUser;
+          setUser(updatedUser);
+          cacheSet(CacheKeys.userProfile, updatedUser);
+          DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedUser);
+        }
+
+        const rawApps = Array.isArray(appsData)
+          ? appsData
+          : appsData?.results || [];
+        const normalizedApps = normalizeApps(rawApps);
+        inMemoryApps = normalizedApps;
+        setApplications(normalizedApps);
+        cacheSet(CacheKeys.applications, normalizedApps);
+
+        const normalizedAnalytics = normalizeAnalytics(analData, normalizedApps.length);
+        inMemoryAnalytics = normalizedAnalytics;
+        setAnalytics(normalizedAnalytics);
+        cacheSet(CacheKeys.analytics, normalizedAnalytics);
+
+        if (uData.saved_jobs) {
+          const saved = uData.saved_jobs.map((j: any) => String(j.id || j));
+          inMemorySavedJobs = saved;
+          setSavedJobs(saved);
+          DeviceEventEmitter.emit("SAVED_JOBS_UPDATED", saved);
+          cacheSet(CacheKeys.savedJobs, saved);
+        }
+
+        inMemoryLastFetch = Date.now();
+      } catch (err: any) {
+        console.warn("[Employee Dashboard] fetch failed:", err?.message || err);
+        setIsLoading(false);
+
+        const msg = String(err?.message || err);
+        if (
+          err?.isNetworkError === true ||
+          msg.includes("internet") ||
+          msg.includes("Failed to fetch") ||
+          msg.includes("Network request failed")
+        ) {
+          setIsNetworkError(true);
+        } else {
+          setHasError(true);
+        }
+      } finally {
+        setIsFetching(false);
+        inMemoryFetchPromise = null;
       }
+    })();
 
-      // ── Phase 1: Critical data — render the dashboard NOW ─────────────────
-      const [uData, jobsData] = await Promise.all([
-        apiFetch("/auth/me/"),
-        apiFetch("/jobs/").catch(() => []),
-      ]);
+    return inMemoryFetchPromise;
+  }, []);
 
-      const normalizedUser = normalizeUser(uData);
-      setUser(normalizedUser);
-      SecureStore.setItemAsync("cached_user_profile", JSON.stringify(normalizedUser)).catch(() => {});
-
-      const rawJobs = Array.isArray(jobsData)
-        ? jobsData
-        : jobsData?.results || [];
-      const normalizedJobsList = normalizeJobs(rawJobs);
-      setJobs(normalizedJobsList);
-      SecureStore.setItemAsync("cached_jobs", JSON.stringify(normalizedJobsList)).catch(() => {});
-      setIsLoading(false); // ← Dashboard is now visible!
-
-      // ── Phase 2: Secondary data — fills in the rest in the background ─────
-      const [empProfile, appsData, analData] = await Promise.all([
-        apiFetch("/profile/employee/").catch(() => null),
-        apiFetch("/applications/").catch(() => []),
-        apiFetch("/dashboard/analytics/").catch(() => null),
-      ]);
-
-      // Merge employee profile details into user state
-      if (empProfile) {
-        const updatedUser: UserProfile = {
-          ...normalizedUser,
-          title: empProfile.title ?? "",
-          bio: empProfile.bio ?? "",
-          skills: empProfile.skills || [],
-          education: empProfile.education ?? "",
-          resumeUrl: empProfile.resume_url || empProfile.resume_file || "",
-          phone: empProfile.phone_number ?? "",
-          location: empProfile.city ? `${empProfile.city}${empProfile.country ? `, ${empProfile.country}` : ""}` : (normalizedUser.location || ""),
-          experienceYears: empProfile.experience_years ?? 0,
-        };
-        setUser(updatedUser);
-        SecureStore.setItemAsync("cached_user_profile", JSON.stringify(updatedUser)).catch(() => {});
-        DeviceEventEmitter.emit("USER_PROFILE_UPDATED", updatedUser);
-      }
-
-      const rawApps = Array.isArray(appsData)
-        ? appsData
-        : appsData?.results || [];
-      const normalizedApps = normalizeApps(rawApps);
-      setApplications(normalizedApps);
-      SecureStore.setItemAsync("cached_applications", JSON.stringify(normalizedApps)).catch(() => {});
-
-      const normalizedAnalytics = normalizeAnalytics(analData, normalizedApps.length);
-      setAnalytics(normalizedAnalytics);
-      SecureStore.setItemAsync("cached_analytics", JSON.stringify(normalizedAnalytics)).catch(() => {});
-
-      // Saved jobs from /auth/me/
-      if (uData.saved_jobs) {
-        setSavedJobs(uData.saved_jobs.map((j: any) => String(j.id || j)));
-      }
-    } catch (err: any) {
-      console.warn("[Employee Dashboard] fetch failed:", err?.message || err);
-      setIsLoading(false);
-
-      const msg = String(err?.message || err);
-      if (
-        err?.isNetworkError === true ||
-        msg.includes("internet") ||
-        msg.includes("connection") ||
-        msg.includes("Network") ||
-        msg.includes("network") ||
-        msg.includes("fetch") ||
-        msg.includes("ECONNREFUSED") ||
-        msg.includes("timeout") ||
-        msg.includes("abort") ||
-        err?.status === 0
-      ) {
-        setIsNetworkError(true);
-      } else {
-        setHasError(true);
-      }
-    } finally {
-      setIsFetching(false);
+  // Storage cache recovery fallback
+  useEffect(() => {
+    if (!hasRestoredFromStorage) {
+      (async () => {
+        try {
+          const [cachedUser, cachedJobs, cachedApps, cachedAnalytics, cachedSavedJobs] = await Promise.all([
+            cacheGet<UserProfile>(CacheKeys.userProfile),
+            cacheGet<Job[]>(CacheKeys.jobs),
+            cacheGet<Application[]>(CacheKeys.applications),
+            cacheGet<any>(CacheKeys.analytics),
+            cacheGet<string[]>(CacheKeys.savedJobs),
+          ]);
+          let hasCache = false;
+          if (cachedUser) { inMemoryUser = cachedUser; setUser(cachedUser); hasCache = true; }
+          if (cachedJobs) { inMemoryJobs = cachedJobs; setJobs(cachedJobs); hasCache = true; }
+          if (cachedApps) { inMemoryApps = cachedApps; setApplications(cachedApps); hasCache = true; }
+          if (cachedAnalytics) { inMemoryAnalytics = cachedAnalytics; setAnalytics(cachedAnalytics); hasCache = true; }
+          if (cachedSavedJobs) { inMemorySavedJobs = cachedSavedJobs; setSavedJobs(cachedSavedJobs); hasCache = true; }
+          if (hasCache) {
+            hasRestoredFromStorage = true;
+            setIsLoading(false);
+            setIsFetching(false);
+          }
+        } catch (_e) {}
+      })();
     }
   }, []);
 
-  // Fast-path: Instant zero-delay cache restore on mount
-  // All 4 data shapes are restored simultaneously — user sees full UI in 0ms
   useEffect(() => {
-    (async () => {
-      try {
-        const [cachedUser, cachedJobs, cachedApps, cachedAnalytics] = await Promise.all([
-          SecureStore.getItemAsync("cached_user_profile"),
-          SecureStore.getItemAsync("cached_jobs"),
-          SecureStore.getItemAsync("cached_applications"),
-          SecureStore.getItemAsync("cached_analytics"),
-        ]);
-        let hasCache = false;
-        if (cachedUser) { setUser(JSON.parse(cachedUser)); hasCache = true; }
-        if (cachedJobs) { setJobs(JSON.parse(cachedJobs)); hasCache = true; }
-        if (cachedApps) { setApplications(JSON.parse(cachedApps)); hasCache = true; }
-        if (cachedAnalytics) { setAnalytics(JSON.parse(cachedAnalytics)); hasCache = true; }
-        if (hasCache) {
-          setIsLoading(false);
-          setIsFetching(false);
-        }
-      } catch (_e) {}
-    })();
-  }, []);
-
-  useEffect(() => {
-    fetchLiveDashboard();
+    fetchLiveDashboard(false);
 
     const subAvatar = DeviceEventEmitter.addListener("USER_AVATAR_UPDATED", (newUrl: string) => {
+      inMemoryUser = inMemoryUser ? { ...inMemoryUser, avatarUrl: newUrl } : null;
+      if (inMemoryUser) {
+        cacheSet(CacheKeys.userProfile, inMemoryUser);
+      }
       setUser((prev) => ({ ...prev, avatarUrl: newUrl }));
     });
 
     const subData = DeviceEventEmitter.addListener("USER_DATA_UPDATED", (partialData: Partial<UserProfile>) => {
       if (partialData) {
+        inMemoryUser = inMemoryUser
+          ? { ...inMemoryUser, ...partialData }
+          : ({ ...EMPTY_USER, ...partialData } as UserProfile);
+        cacheSet(CacheKeys.userProfile, inMemoryUser);
+        inMemoryLastFetch = 0; // reset throttle so subsequent calls fetch immediately
         setUser((prev) => ({ ...prev, ...partialData }));
+      }
+    });
+
+    const subProfile = DeviceEventEmitter.addListener("USER_PROFILE_UPDATED", (updatedUser?: UserProfile | Partial<UserProfile>) => {
+      if (updatedUser) {
+        inMemoryUser = inMemoryUser
+          ? { ...inMemoryUser, ...updatedUser }
+          : ({ ...EMPTY_USER, ...updatedUser } as UserProfile);
+        cacheSet(CacheKeys.userProfile, inMemoryUser);
+        inMemoryLastFetch = 0;
+        setUser((prev) => ({ ...prev, ...updatedUser }));
+      } else {
+        inMemoryLastFetch = 0;
+        fetchLiveDashboard(true);
+      }
+    });
+
+    const subSaved = DeviceEventEmitter.addListener("SAVED_JOBS_UPDATED", (newSaved: string[]) => {
+      if (Array.isArray(newSaved)) {
+        inMemorySavedJobs = newSaved;
+        setSavedJobs(newSaved);
       }
     });
 
     return () => {
       subAvatar.remove();
       subData.remove();
+      subProfile.remove();
+      subSaved.remove();
     };
   }, [fetchLiveDashboard]);
 
   const toggleSavedJob = useCallback(async (jobId: string) => {
+    const sId = String(jobId);
+    const isCurrentlySaved = inMemorySavedJobs.includes(sId);
+    const next = isCurrentlySaved
+      ? inMemorySavedJobs.filter((id) => id !== sId)
+      : [...inMemorySavedJobs, sId];
+    inMemorySavedJobs = next;
+    setSavedJobs(next);
+    DeviceEventEmitter.emit("SAVED_JOBS_UPDATED", next);
+    cacheSet(CacheKeys.savedJobs, next);
+
     try {
-      setSavedJobs((prev) => {
-        const next = prev.includes(jobId)
-          ? prev.filter((id) => id !== jobId)
-          : [...prev, jobId];
-        return next;
-      });
-      await apiFetch(`/jobs/${jobId}/save/`, { method: "POST" });
-    } catch {
-      // Optimistic update — silently revert if needed on next refresh
+      await apiFetch(`/jobs/${sId}/save/`, { method: "POST" });
+    } catch (e) {
+      console.warn("[SavedJobs] toggle save API failed:", e);
     }
   }, []);
 
@@ -366,7 +463,7 @@ export function useEmployeeDashboardData() {
     profileScore,
     profileItems,
     toggleSavedJob,
-    refreshData: fetchLiveDashboard,
+    refreshData: () => fetchLiveDashboard(true),
     isLoading,
     isFetching,
     hasError,

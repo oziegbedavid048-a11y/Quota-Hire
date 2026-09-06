@@ -27,7 +27,7 @@ import { SearchablePickerModal, PickerItem } from './searchable-picker-modal';
 import {
   getAllCountries,
   getCountryByName,
-  getCitiesForCountry,
+  getCityItemsForCountry,
   extractSubscriberNumber,
 } from '@/constants/countries-data';
 
@@ -111,12 +111,7 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
 
   const cityPickerItems: PickerItem[] = React.useMemo(() => {
     if (!form.country) return [];
-    const cities = getCitiesForCountry(form.country);
-    return cities.map(city => ({
-      label: city,
-      value: city,
-      subtitle: form.country,
-    }));
+    return getCityItemsForCountry(form.country);
   }, [form.country]);
 
   const handleSelectCountry = (item: PickerItem) => {
@@ -139,7 +134,7 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
 
   const handlePressCity = () => {
     if (!form.country) {
-      Alert.alert('Select Country First', 'Please choose your country before selecting a city.', [
+      Alert.alert('Select Country First', 'Please choose your country before selecting a state.', [
         { text: 'Select Country', onPress: () => setShowCountryPicker(true) },
         { text: 'Cancel', style: 'cancel' },
       ]);
@@ -272,16 +267,24 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
           <Animated.View
-            entering={SlideInDown.springify()}
+            entering={SlideInDown.springify().damping(24).mass(0.8)}
             exiting={SlideOutDown}
             style={[
               s.sheet,
               {
                 backgroundColor: colors.cardBg,
-                paddingBottom: Math.max(insets.bottom, 16),
+                paddingBottom: Math.max(insets.bottom, 20),
               },
             ]}
           >
+            {/* Seamless bottom background fill to cover safe area and prevent any gap */}
+            <View style={[s.bottomFill, { backgroundColor: colors.cardBg }]} />
+
+            {/* Grab handle indicator */}
+            <View style={s.handleContainer}>
+              <View style={s.handle} />
+            </View>
+
             {/* Header */}
             <View style={[s.header, { borderBottomColor: colors.border }]}>
               <Text style={[s.headerTitle, { color: colors.text }]}>Apply to {job.companyName}</Text>
@@ -310,7 +313,11 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
             {/* Body Content with full scrollability & persisted taps */}
             <ScrollView
               style={s.body}
-              contentContainerStyle={{ paddingBottom: 32 }}
+              contentContainerStyle={{
+                paddingHorizontal: 20,
+                paddingTop: 16,
+                paddingBottom: 20,
+              }}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
               showsVerticalScrollIndicator={false}
@@ -345,13 +352,13 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
                       </Pressable>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.label, { color: colors.textSecondary }]}>City</Text>
+                      <Text style={[s.label, { color: colors.textSecondary }]}>State</Text>
                       <Pressable
                         onPress={handlePressCity}
                         style={[s.selectBox, { borderColor: colors.border }]}
                       >
                         <Text style={[s.selectBoxText, { color: form.city ? colors.text : colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">
-                          {form.city || (form.country ? 'Select City' : 'Pick Country first')}
+                          {form.city || (form.country ? 'Select State' : 'Pick Country first')}
                         </Text>
                         <Feather name="chevron-down" size={14} color={colors.textMuted} />
                       </Pressable>
@@ -561,12 +568,12 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
         <SearchablePickerModal
           visible={showCityPicker}
           onClose={() => setShowCityPicker(false)}
-          title={`Select City (${form.country || ""})`}
-          placeholder="Search city..."
+          title={`Select State (${form.country || ""})`}
+          placeholder="Search state or capital..."
           items={cityPickerItems}
           selectedValue={form.city}
           onSelect={handleSelectCity}
-          emptyMessage={`No standard cities found for ${form.country}`}
+          emptyMessage={`No states found for ${form.country}`}
           allowCustom={true}
         />
       </KeyboardAvoidingView>
@@ -587,16 +594,40 @@ const s = StyleSheet.create({
     padding: 0,
   },
   sheet: {
-    borderTopLeftRadius: BorderRadius.cardLg,
-    borderTopRightRadius: BorderRadius.cardLg,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
     maxHeight: SCREEN_H * 0.88,
     width: '100%',
     maxWidth: 600,
     alignSelf: 'center',
-    paddingTop: 8,
+    paddingTop: 4,
     marginBottom: 0,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 24,
+  },
+  bottomFill: {
+    position: 'absolute',
+    bottom: -300,
+    left: 0,
+    right: 0,
+    height: 300,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Palette.neutral300,
   },
   header: {
     flexDirection: 'row',
@@ -642,9 +673,7 @@ const s = StyleSheet.create({
     marginTop: 1,
   },
   body: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    flexGrow: 0,
+    width: '100%',
   },
   stepContainer: {
     gap: 14,

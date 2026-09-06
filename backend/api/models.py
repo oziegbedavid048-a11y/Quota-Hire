@@ -41,10 +41,21 @@ class CustomUser(AbstractUser):
     created_at       = models.DateTimeField(auto_now_add=True)
 
     # ── Passwordless Login OTP (mobile email-OTP login) ───────────────────────
-    login_otp_code      = models.CharField(max_length=6, blank=True, default='',
-                                           help_text="6-digit OTP for passwordless login")
+    # SECURITY (QH-09): stores an HMAC-SHA256 digest of the OTP, never the
+    # code itself. Widened from 6 to 64 characters to hold the hex digest.
+    login_otp_code      = models.CharField(max_length=64, blank=True, default='',
+                                           help_text="HMAC digest of the passwordless-login OTP")
     login_otp_expires_at = models.DateTimeField(null=True, blank=True,
                                                 help_text="When the login OTP expires (30 min window)")
+    # SECURITY (QH-02): counts consecutive failed verifications of the current
+    # login OTP. The code is discarded once this passes the allowed maximum, so
+    # a six-digit space cannot be walked even if the per-IP throttle is evaded
+    # by rotating source addresses. Reset to 0 whenever a new OTP is issued or
+    # a login succeeds.
+    login_otp_attempts = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Failed attempts against the current login OTP",
+    )
 
     # Use email as the primary login identifier
     email            = models.EmailField(unique=True)
@@ -795,7 +806,8 @@ class PasswordResetOTP(models.Model):
     user       = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, related_name='password_reset_otps'
     )
-    otp_code   = models.CharField(max_length=6)
+    # SECURITY (QH-09): HMAC-SHA256 digest of the OTP, not the code itself.
+    otp_code   = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_used    = models.BooleanField(default=False)

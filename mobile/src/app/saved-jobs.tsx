@@ -6,7 +6,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
-  TextInput, Dimensions, RefreshControl,
+  Dimensions, RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
@@ -21,6 +21,7 @@ import {
 } from '@/constants/theme';
 import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
 import { SkeletonJobCard, SkeletonLine } from '@/components/ui/skeleton';
+import { HapticPressable } from '@/components/haptic-pressable';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const H_PAD = 16;
@@ -36,6 +37,15 @@ const formatDate = (dateStr?: string) => {
   if (diffDays < 7) return `${diffDays}d ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+// ─── Format salary with correct currency ─────────────────────────────────────
+const formatRange = (range?: string, currency?: string) => {
+  if (!range) return null;
+  const cur = (currency || '').trim();
+  if (!cur) return range;
+  if (range.trimStart().startsWith(cur)) return range;
+  return `${cur} ${range}`;
 };
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
@@ -100,14 +110,14 @@ function SavedJobCard({
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).springify()}>
-      <Pressable
+      <HapticPressable
+        activeScale={0.98}
         onPress={onView}
-        style={({ pressed }) => [
+        style={[
           s.card,
           {
             backgroundColor: colors.cardBg,
             borderColor: colors.border,
-            opacity: pressed ? 0.96 : 1,
           },
           Shadow.card,
         ]}
@@ -169,9 +179,8 @@ function SavedJobCard({
             </View>
             {job.salaryRange && (
               <View style={[s.badge, { backgroundColor: Palette.emerald50, borderColor: Palette.emerald500 }]}>
-                <Feather name="dollar-sign" size={10} color={Palette.emerald600} />
                 <Text style={[s.badgeText, { color: Palette.emerald600 }]} numberOfLines={1}>
-                  {job.salaryRange}
+                  {formatRange(job.salaryRange, job.currency)}
                 </Text>
               </View>
             )}
@@ -207,7 +216,7 @@ function SavedJobCard({
             </Pressable>
           </View>
         </View>
-      </Pressable>
+      </HapticPressable>
     </Animated.View>
   );
 }
@@ -216,7 +225,6 @@ function SavedJobCard({
 export default function SavedJobsScreen() {
   const colors = Colors.light;
   const router = useRouter();
-  const [search, setSearch] = useState('');
 
   const {
     jobs, savedJobs, toggleSavedJob, isFetching, isLoading, refreshData,
@@ -224,15 +232,10 @@ export default function SavedJobsScreen() {
 
   const savedList = jobs.filter(j => savedJobs.includes(j.id));
 
-  const filteredList = savedList.filter(j => {
-    const q = search.toLowerCase();
-    return (
-      !q ||
-      j.title?.toLowerCase().includes(q) ||
-      j.companyName?.toLowerCase().includes(q) ||
-      j.location?.toLowerCase().includes(q)
-    );
-  });
+  // Only show skeleton on the very first load (isLoading).
+  // isFetching stays true during Phase 2 background calls — don't block
+  // the UI on that since jobs + savedJobs are already available after Phase 1.
+  const showSkeleton = isLoading;
 
   const handleUnsave = useCallback(async (jobId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -247,7 +250,6 @@ export default function SavedJobsScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }} />
 
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingBottom: TabBarHeight + 32 }]}
@@ -262,31 +264,34 @@ export default function SavedJobsScreen() {
         }
       >
         {/* ── Hero Banner ── */}
-        <Animated.View entering={FadeInUp.springify()} style={[s.heroBanner, { borderColor: colors.border }]}>
-          {/* Decorative blobs */}
-          <View style={[s.blob1]} />
-          <View style={[s.blob2]} />
+        <Animated.View entering={FadeInUp.springify()} style={[s.heroBanner, { borderColor: colors.borderMid }]}>
+          <LinearGradient
+            colors={['#FCEFCF', '#E1F6DD']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
 
           <View style={s.heroContent}>
             {/* Text side */}
             <View style={{ flex: 1 }}>
               <View style={[s.heroPill, { backgroundColor: 'rgba(255,255,255,0.6)', borderColor: colors.border }]}>
-                <Feather name="bookmark" size={12} color="#ef4444" />
-                <Text style={[s.heroPillText, { color: colors.textSecondary }]}>Bookmarked Roles</Text>
+                <Feather name="bookmark" size={12} color={Palette.warm600} />
+                <Text style={[s.heroPillText, { color: colors.textSecondary }]}>My Saved Roles</Text>
               </View>
-              <Text style={[s.heroTitle, { color: colors.text }]}>Saved{'\n'}Opportunities</Text>
+              <Text style={[s.heroTitle, { color: colors.text }]}>Your Job Shortlist</Text>
               <Text style={[s.heroSub, { color: colors.textSecondary }]}>
-                Keep track of roles you want to apply for. Great opportunities fill fast!
+                Roles you bookmarked, ready to apply whenever you are.
               </Text>
-              {(isLoading || isFetching) ? (
-                <View style={{ marginTop: 8 }}>
-                  <SkeletonLine width={160} height={24} style={{ borderRadius: 10 }} />
+              {showSkeleton ? (
+                <View style={{ marginTop: 6 }}>
+                  <SkeletonLine width={130} height={20} style={{ borderRadius: 8 }} />
                 </View>
               ) : savedList.length > 0 ? (
                 <View style={[s.countBadge, { backgroundColor: Palette.accent50, borderColor: Palette.accent200 }]}>
-                  <Feather name="trending-up" size={14} color={Palette.accent600} />
+                  <Feather name="bookmark" size={12} color={Palette.accent600} />
                   <Text style={[s.countText, { color: Palette.accent700 }]}>
-                    {savedList.length} saved {savedList.length === 1 ? 'role' : 'roles'} in pipeline
+                    {savedList.length} {savedList.length === 1 ? 'role' : 'roles'} saved
                   </Text>
                 </View>
               ) : null}
@@ -301,28 +306,11 @@ export default function SavedJobsScreen() {
           </View>
         </Animated.View>
 
-        {/* ── Search bar (displays instantly) ── */}
-        {(isLoading || isFetching || savedList.length > 0) && (
-          <Animated.View entering={FadeInDown.delay(100).springify()} style={s.searchWrap}>
-            <Feather name="search" size={15} color={colors.textMuted} style={s.searchIcon} />
-            <TextInput
-              style={[s.searchInput, { color: colors.text }]}
-              placeholder="Search by role, company or location..."
-              placeholderTextColor={colors.textMuted}
-              value={search}
-              onChangeText={setSearch}
-            />
-            {search.length > 0 && (
-              <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                <Feather name="x" size={15} color={colors.textMuted} />
-              </Pressable>
-            )}
-          </Animated.View>
-        )}
+
 
         {/* ── Content ── */}
-        {(isLoading || isFetching) ? (
-          // Skeleton loading — stays until ALL data (including savedJobs list) is ready
+        {showSkeleton ? (
+          // Skeleton loading — only on first mount, not during background refreshes
           <View style={{ gap: 12, paddingHorizontal: 16 }}>
             {[1, 2, 3].map(k => <SkeletonJobCard key={k} />)}
           </View>
@@ -330,19 +318,9 @@ export default function SavedJobsScreen() {
           <View style={[s.emptyCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
             <EmptyState onBrowse={() => router.push('/explore' as any)} />
           </View>
-        ) : filteredList.length === 0 && search ? (
-          <Animated.View entering={FadeInDown.springify()} style={[s.emptyCard, { backgroundColor: colors.cardBg, borderColor: colors.border, paddingVertical: 48 }]}>
-            <Feather name="search" size={36} color={colors.textMuted} />
-            <Text style={[s.emptyTitle, { color: colors.text, marginTop: 12 }]}>
-              No results for "{search}"
-            </Text>
-            <Pressable onPress={() => setSearch('')} style={{ marginTop: 8 }}>
-              <Text style={{ fontSize: 13, color: Palette.accent600, fontWeight: '700' }}>Clear search</Text>
-            </Pressable>
-          </Animated.View>
         ) : (
           <>
-            {filteredList.map((job, idx) => (
+            {savedList.map((job, idx) => (
               <SavedJobCard
                 key={job.id}
                 job={job}
@@ -376,7 +354,9 @@ const purple600  = '#9333ea';
 
 const s = StyleSheet.create({
   scroll: {
-    padding: H_PAD,
+    paddingHorizontal: H_PAD,
+    paddingTop: 18,
+    paddingBottom: 16,
     gap: 12,
   },
 
@@ -384,7 +364,9 @@ const s = StyleSheet.create({
   heroBanner: {
     borderRadius: 20,
     borderWidth: 1,
-    padding: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginTop: 4,
     marginBottom: 4,
     overflow: 'hidden',
     backgroundColor: '#fff',
@@ -418,13 +400,13 @@ const s = StyleSheet.create({
     fontSize: 11, fontWeight: '700',
   },
   heroTitle: {
-    fontSize: 24, fontWeight: '900',
+    fontSize: 21, fontWeight: '900',
     letterSpacing: -0.5,
-    lineHeight: 30,
-    marginBottom: 6,
+    lineHeight: 26,
+    marginBottom: 4,
   },
   heroSub: {
-    fontSize: 12, lineHeight: 17, marginBottom: 10,
+    fontSize: 11, lineHeight: 15, marginBottom: 8,
   },
   countBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -436,22 +418,11 @@ const s = StyleSheet.create({
     fontSize: 12, fontWeight: '700',
   },
   heroImage: {
-    width: 110, height: 110,
+    width: 100, height: 100,
     flexShrink: 0,
   },
 
-  // ── Search ──
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0',
-    paddingHorizontal: 12, paddingVertical: 10,
-    gap: 8, marginBottom: 4,
-  },
-  searchIcon: {},
-  searchInput: {
-    flex: 1, fontSize: 13,
-  },
+
 
   // ── Empty state ──
   emptyCard: {

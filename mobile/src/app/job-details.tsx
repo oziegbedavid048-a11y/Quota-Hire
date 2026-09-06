@@ -53,10 +53,11 @@ export default function JobDetailsScreen() {
 
   const handleApply = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (profileScore < 100) {
+    const hasBasicProfile = !!user.name && (!!user.title || (user.skills && user.skills.length > 0) || !!user.bio || !!user.education || profileScore >= 40);
+    if (!hasBasicProfile) {
       Alert.alert(
         'Incomplete Profile',
-        `Your profile is missing details (${profileScore}% complete). Please complete your profile and resume details before applying to jobs to ensure accurate employer matching.`,
+        `Your profile is missing details (${profileScore}% complete). Please complete your profile details before applying to jobs to ensure accurate employer matching.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Complete Profile Now', onPress: () => router.push('/profile' as any) }
@@ -280,7 +281,7 @@ export default function JobDetailsScreen() {
             )}
             {!job.salaryRange && !job.commissionRange && (
               <Text style={[s.compEmpty, { color: colors.textMuted }]}>
-                Competitive salary — details discussed during interview.
+                Competitive salary (details discussed during interview).
               </Text>
             )}
           </View>

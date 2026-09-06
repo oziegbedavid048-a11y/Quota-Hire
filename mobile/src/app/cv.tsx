@@ -1,25 +1,21 @@
 /**
  * Quota Hire — CV Generator Screen (Mobile)
- * EXACT visual clone of src/pages/employee/CVGeneratorPage.tsx
+ * Clean, well-arranged, and aligned Apple-grade design.
  *
- * - Hero: floating resume_3d illustration + AI badge + headline
- * - Two CV cards: Standard CV + Europe CV — clicking opens wizard
- * - Info strip: "Your CVs are saved automatically"
- *
- * Tapping "Start" opens a 100% native in-app CVWizardModal, running
- * entirely on device, generating clean PDF documents natively and saving them.
+ * - Hero Banner: Polished gradient banner with 3D illustration and title.
+ * - CV Cards: Structured cards with top icon header, feature pills, description, and CTA.
+ * - Info Strip: Clear guidance that generated CVs are automatically saved in My Profile.
  */
 
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, Pressable, StyleSheet,
+  View, Text, ScrollView, StyleSheet, Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import * as SecureStore from 'expo-secure-store';
 
 import CompanyApplicants from '@/components/company-applicants';
 import { HapticPressable } from '@/components/haptic-pressable';
@@ -27,40 +23,43 @@ import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
 import CVWizardModal from '@/components/cv-wizard-modal';
+import { useStoredRole } from '@/services/user-role';
+
+const { width: SCREEN_W } = Dimensions.get('window');
 
 const CV_CARDS = [
   {
-    id: 'standard',
-    title: 'Generate Standard CV',
-    description: "Professional multi-template CV. Answer a few questions about your experience, skills and goals — we'll generate a polished, downloadable PDF tailored to you.",
+    id: 'standard' as const,
+    title: 'Standard Professional CV',
+    subtitle: 'ATS-Friendly & Modern Layouts',
+    description: 'Answer a few guided questions about your experience, skills, and accomplishments to instantly generate a polished, ATS-optimized sales resume.',
+    features: ['Multi-Template', 'ATS Optimized', 'Instant PDF'],
     icon: 'file-text' as const,
-    gradFrom: '#116108',
-    gradTo:   '#72dd15',
-  },
-  {
-    id: 'europass',
-    title: 'Generate Europe CV',
-    badge: 'EU Style',
-    description: 'Create an official Europe-formatted CV, including CEFR language levels, digital skills, and your passport photo.',
-    icon: 'globe' as const,
     gradFrom: '#15750a',
     gradTo:   '#72dd15',
   },
-] as const;
+  {
+    id: 'europass' as const,
+    title: 'Europass European CV',
+    badge: 'EU Standard',
+    subtitle: 'Official European Commission Format',
+    description: 'Create an official Europe-formatted CV with CEFR language proficiencies, digital skills matrix, and optional passport photo.',
+    features: ['Europass Format', 'CEFR Languages', 'Photo Ready'],
+    icon: 'globe' as const,
+    gradFrom: '#116108',
+    gradTo:   '#48b30d',
+  },
+];
 
 export default function CVScreen() {
   const colors = Colors.light;
   
-  const [role, setRole] = useState<string | null>(null);
-  useEffect(() => {
-    SecureStore.getItemAsync('user_role').then(r => setRole(r || 'employee'));
-  }, []);
+  const role = useStoredRole();
 
   const [wizardVisible, setWizardVisible] = useState(false);
-  const [templateType, setTemplateType]   = useState<'standard' | 'europass'>('standard');
+  const [templateType, setTemplateType] = useState<'standard' | 'europass'>('standard');
 
   const openWizard = (type: 'standard' | 'europass') => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setTemplateType(type);
     setWizardVisible(true);
   };
@@ -71,6 +70,7 @@ export default function CVScreen() {
 
   return (
     <View style={s.root}>
+      {/* Background Gradient */}
       <LinearGradient
         colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
         style={StyleSheet.absoluteFill}
@@ -78,32 +78,33 @@ export default function CVScreen() {
         end={{ x: 1, y: 1 }}
       />
       <ScrollView
-        contentContainerStyle={[s.scroll, { paddingBottom: TabBarHeight + 32 }]}
+        contentContainerStyle={[s.scroll, { paddingBottom: TabBarHeight + 36 }]}
         showsVerticalScrollIndicator={false}
       >
-
-        {/* ── HERO BANNER (matches web: accent/white/warm gradient + 3D resume img + AI badge) ── */}
-        <Animated.View entering={FadeInDown.delay(0).springify()} style={[s.heroBanner, { borderColor: colors.border }]}>
+        {/* ── HERO BANNER ── */}
+        <Animated.View entering={FadeInDown.springify()} style={[s.heroBanner, { borderColor: colors.borderMid }]}>
           <LinearGradient
-            colors={['rgba(99,102,241,0.08)', 'rgba(255,255,255,0.97)', 'rgba(245,158,11,0.07)']}
+            colors={['#FCEFCF', '#E1F6DD']}
             style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           />
 
           <View style={s.heroContent}>
-            {/* Text side */}
-            <View style={{ flex: 1, zIndex: 1 }}>
-              <View style={[s.heroPill, { backgroundColor: 'rgba(255,255,255,0.6)', borderColor: colors.border }]}>
-                <Feather name="zap" size={12} color={Palette.accent600} />
-                <Text style={[s.heroPillText, { color: colors.textSecondary }]}>AI-Powered CV Generator</Text>
+            <View style={{ flex: 1 }}>
+              <View style={[s.heroPill, { backgroundColor: 'rgba(255,255,255,0.7)', borderColor: colors.borderMid }]}>
+                <Feather name="zap" size={11} color={Palette.accent600} />
+                <Text style={[s.heroPillText, { color: colors.textSecondary }]}>AI-Powered Builder</Text>
               </View>
-              <Text style={[s.heroTitle, { color: colors.text }]}>Build Your{'\n'}Perfect CV</Text>
+              <Text style={[s.heroTitle, { color: colors.text }]}>
+                Build Your{' '}
+                <Text style={{ color: Palette.accent600 }}>Perfect CV</Text>
+              </Text>
               <Text style={[s.heroSub, { color: colors.textSecondary }]}>
-                Choose a style below. Your generated CV will be saved automatically to your profile so you can download it anytime.
+                Select a format below. Your generated documents are automatically saved to your profile for easy downloading anytime.
               </Text>
             </View>
 
-            {/* 3D Illustration */}
             <Image
               source={require('@/assets/images/resume_3d.webp')}
               style={s.heroImage}
@@ -112,78 +113,87 @@ export default function CVScreen() {
           </View>
         </Animated.View>
 
-        {/* ── CV OPTION CARDS (matches web list layout with horizontal content) ── */}
-        <View style={{ gap: 14, marginBottom: 16 }}>
+        {/* ── CV OPTION CARDS ── */}
+        <View style={s.cardsContainer}>
           {CV_CARDS.map((card, i) => (
-            <Animated.View key={card.id} entering={FadeInDown.delay(i * 80 + 100).springify()}>
-              <HapticPressable
-                onPress={() => openWizard(card.id)}
-                style={({ pressed }) => [
-                  s.cvCard,
-                  {
-                    backgroundColor: '#ffffff',
-                    borderColor: colors.borderMid,
-                    opacity: pressed ? 0.95 : 1,
-                    transform: [{ scale: pressed ? 0.99 : 1 }],
-                  },
-                ]}
-              >
+            <Animated.View key={card.id} entering={FadeInDown.delay(i * 70 + 80).springify()}>
+              <View style={[s.cvCard, { backgroundColor: '#ffffff', borderColor: colors.borderMid }, Shadow.card]}>
+                {/* Top Header: Icon + Title + Badge */}
+                <View style={s.cvCardTop}>
+                  <LinearGradient
+                    colors={[card.gradFrom, card.gradTo]}
+                    style={s.cvCardIconWrap}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Feather name={card.icon} size={22} color="#ffffff" />
+                  </LinearGradient>
 
-                {/* Icon circle with gradient */}
-                <LinearGradient
-                  colors={[card.gradFrom, card.gradTo]}
-                  style={s.cvCardIcon}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                >
-                  <Feather name={card.icon} size={28} color="#fff" />
-                </LinearGradient>
-
-                {/* Text block */}
-                <View style={s.cvCardBody}>
-                  <View style={s.cvCardTitleRow}>
-                    <Text style={[s.cvCardTitle, { color: colors.text }]}>{card.title}</Text>
-                    {'badge' in card && card.badge && (
-                      <View style={[s.cvBadge, { backgroundColor: Palette.accent400 }]}>
-                        <Text style={[s.cvBadgeText, { color: Palette.accent900 }]}>{card.badge}</Text>
-                      </View>
-                    )}
+                  <View style={{ flex: 1 }}>
+                    <View style={s.titleBadgeRow}>
+                      <Text style={[s.cvCardTitle, { color: colors.text }]}>{card.title}</Text>
+                      {'badge' in card && card.badge && (
+                        <View style={[s.euBadge, { backgroundColor: Palette.accent50, borderColor: Palette.accent200 }]}>
+                          <Text style={[s.euBadgeText, { color: Palette.accent700 }]}>{card.badge}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[s.cvCardSubtitle, { color: colors.textMuted }]}>{card.subtitle}</Text>
                   </View>
-                  <Text style={[s.cvCardDesc, { color: colors.textSecondary }]}>
-                    {card.description}
-                  </Text>
                 </View>
 
-                {/* Start button — gradient (matches web) */}
-                <LinearGradient
-                  colors={[card.gradFrom, card.gradTo]}
-                  style={s.startBtnWrap}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                >
-                  <View style={s.startBtn}>
-                    <Text style={s.startBtnText}>Start</Text>
-                    <Feather name="arrow-right" size={14} color="#fff" />
-                  </View>
-                </LinearGradient>
-              </HapticPressable>
+                {/* Description */}
+                <Text style={[s.cvCardDesc, { color: colors.textSecondary }]}>
+                  {card.description}
+                </Text>
 
+                {/* Feature Tags */}
+                <View style={s.featuresRow}>
+                  {card.features.map((feat) => (
+                    <View key={feat} style={[s.featPill, { backgroundColor: Palette.neutral100 }]}>
+                      <Feather name="check" size={10} color={Palette.accent600} />
+                      <Text style={[s.featText, { color: colors.textSecondary }]}>{feat}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={[s.cardDivider, { backgroundColor: colors.border }]} />
+
+                {/* Bottom Action Button */}
+                <HapticPressable
+                  activeScale={0.97}
+                  onPress={() => openWizard(card.id)}
+                  style={s.startBtnContainer}
+                >
+                  <LinearGradient
+                    colors={[card.gradFrom, card.gradTo]}
+                    style={s.startBtnGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={s.startBtnText}>Start {card.id === 'europass' ? 'Europass' : 'Standard'} Builder</Text>
+                    <Feather name="arrow-right" size={15} color="#ffffff" />
+                  </LinearGradient>
+                </HapticPressable>
+              </View>
             </Animated.View>
           ))}
         </View>
 
-        {/* ── INFO STRIP (matches web: "CVs are saved automatically") ── */}
+        {/* ── INFO STRIP ── */}
         <Animated.View
-          entering={FadeInDown.delay(280).springify()}
-          style={[s.infoStrip, { backgroundColor: Palette.neutral50, borderColor: colors.border }]}
+          entering={FadeInDown.delay(220).springify()}
+          style={[s.infoStrip, { backgroundColor: '#ffffff', borderColor: colors.borderMid }, Shadow.card]}
         >
-          <View style={[s.infoIcon, { backgroundColor: Palette.accent50 }]}>
-            <Feather name="file-text" size={18} color={Palette.accent600} />
+          <View style={[s.infoIconWrap, { backgroundColor: Palette.accent50 }]}>
+            <Feather name="folder" size={20} color={Palette.accent600} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[s.infoTitle, { color: colors.text }]}>Your CVs are saved automatically</Text>
+            <Text style={[s.infoTitle, { color: colors.text }]}>Automatically Saved</Text>
             <Text style={[s.infoSub, { color: colors.textSecondary }]}>
-              Once generated, all your CVs appear under{' '}
+              All created documents appear in{' '}
               <Text style={{ fontWeight: FontWeight.bold, color: colors.text }}>
-                My Profile → Generated Documents
+                My Profile → Tailored CVs
               </Text>
               {' '}and can be downloaded as PDF at any time.
             </Text>
@@ -192,7 +202,7 @@ export default function CVScreen() {
 
       </ScrollView>
 
-      {/* ── CV WIZARD NATIVE MODAL ── */}
+      {/* ── NATIVE CV BUILDER WIZARD ── */}
       <CVWizardModal
         visible={wizardVisible}
         onClose={() => setWizardVisible(false)}
@@ -214,7 +224,6 @@ const s = StyleSheet.create({
     borderWidth: 1,
     padding: 20,
     overflow: 'hidden',
-    position: 'relative',
   },
   heroContent: {
     flexDirection: 'row',
@@ -222,59 +231,155 @@ const s = StyleSheet.create({
     gap: 12,
   },
   heroPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     alignSelf: 'flex-start',
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 99, borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 20,
+    borderWidth: 1,
     marginBottom: 8,
   },
   heroPillText: {
-    fontSize: 11, fontWeight: '700',
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   heroTitle: {
-    fontSize: 24, fontWeight: '900',
-    letterSpacing: -0.5,
-    lineHeight: 30,
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.4,
+    lineHeight: 28,
     marginBottom: 6,
   },
   heroSub: {
-    fontSize: 12, lineHeight: 17, marginBottom: 0,
+    fontSize: 12,
+    lineHeight: 17,
   },
   heroImage: {
-    width: 110, height: 110,
+    width: 92,
+    height: 92,
     flexShrink: 0,
   },
 
-  // CV Cards
+  // Cards Container
+  cardsContainer: {
+    gap: 14,
+  },
   cvCard: {
-    borderRadius: BorderRadius.card, borderWidth: 1, padding: 20, gap: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 18,
+    gap: 12,
   },
-  cvCardIcon: {
-    width: 64, height: 64, borderRadius: BorderRadius.lg,
-    alignItems: 'center', justifyContent: 'center',
+  cvCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  cvCardBody:     { gap: 6 },
-  cvCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  cvCardTitle:    { fontSize: FontSize.lg, fontWeight: FontWeight.extrabold },
-  cvCardDesc:     { fontSize: FontSize.sm, lineHeight: 19 },
-  cvBadge:        { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  cvBadgeText:    { fontSize: 10, fontWeight: FontWeight.extrabold, textTransform: 'uppercase', letterSpacing: 0.5 },
-  startBtnWrap:   { borderRadius: BorderRadius.md, overflow: 'hidden', alignSelf: 'flex-start' },
-  startBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 12, paddingHorizontal: 24,
+  cvCardIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  startBtnText: { color: '#fff', fontWeight: FontWeight.bold, fontSize: FontSize.sm },
+  titleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  cvCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  cvCardSubtitle: {
+    fontSize: 11.5,
+    marginTop: 2,
+  },
+  euBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  euBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  cvCardDesc: {
+    fontSize: 12.5,
+    lineHeight: 18.5,
+  },
+  featuresRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  featPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  featText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  cardDivider: {
+    height: 1,
+    marginVertical: 2,
+  },
+  startBtnContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  startBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+  },
+  startBtnText: {
+    color: '#ffffff',
+    fontSize: 13.5,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
 
-  // Info strip
+  // Info Strip
   infoStrip: {
-    flexDirection: 'row', gap: 14, padding: 18,
-    borderRadius: BorderRadius.card, borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
   },
-  infoIcon: {
-    width: 40, height: 40, borderRadius: BorderRadius.md,
-    alignItems: 'center', justifyContent: 'center',
+  infoIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  infoTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, marginBottom: 4 },
-  infoSub:   { fontSize: 12, lineHeight: 18 },
+  infoTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  infoSub: {
+    fontSize: 11.5,
+    lineHeight: 16.5,
+  },
 });

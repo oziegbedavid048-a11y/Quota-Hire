@@ -1,23 +1,23 @@
 import { DefaultTheme, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useState, useEffect, useRef } from "react";
-import { View } from "react-native";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { DeviceEventEmitter } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 import AppTabs from "@/components/app-tabs";
+import BiometricLock from "@/components/biometric-lock";
 import Onboarding from "@/components/onboarding";
 import VideoSplash from "@/components/video-splash";
 import AuthScreens from "@/components/auth-screens";
-import { Palette } from "@/constants/theme";
 import { useKeepAlive } from "@/hooks/useKeepAlive";
 import {
   getAccessToken,
-  getRefreshToken,
-  setAccessToken,
-  setRefreshToken,
-  clearTokens,
-  API_BASE,
+  tryRefresh,
+  SESSION_EXPIRED_EVENT,
 } from "@/services/api";
+import { cacheGet, cacheSet, CacheKeys } from "@/services/app-cache";
+import { rememberUserRole } from "@/services/user-role";
+import { clearLocalSession, registerSessionLogout } from "@/services/session";
 import { useRouter } from "expo-router";
 import {
   registerForPushNotificationsAsync,
@@ -32,81 +32,81 @@ SplashScreen.preventAutoHideAsync().catch((_err) => {
 export default function TabLayout() {
   const router = useRouter();
   const [splashFinished, setSplashFinished] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [bootstrapped, setBootstrapped] = useState(false);
 
-  // ── Stored user info for AppTabs ──────────────────────────────────────────
   const [userName, setUserName] = useState<string | undefined>();
   const [userRole, setUserRole] = useState<string | undefined>();
 
-  // ── Keep Render dyno warm while user is logged in ─────────────────────────
   useKeepAlive(isLoggedIn);
 
-  // ── Notification tap listener ref (cleaned up on unmount) ─────────────────
   const notifResponseListener = useRef<any>(null);
+  const loggingOutRef = useRef(false);
 
-  // ── On app start: validate stored token → auto-login or clear ────────────
+  const handleLogout = useCallback(async () => {
+    if (loggingOutRef.current) return;
+    loggingOutRef.current = true;
+    try {
+      await clearLocalSession();
+      setUserName(undefined);
+      setUserRole(undefined);
+      setIsLoggedIn(false);
+    } finally {
+      loggingOutRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    registerSessionLogout(handleLogout);
+  }, [handleLogout]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(SESSION_EXPIRED_EVENT, () => {
+      handleLogout();
+    });
+    return () => sub.remove();
+  }, [handleLogout]);
+
   useEffect(() => {
     (async () => {
       try {
-        const token = await getAccessToken();
-        const storedName = await SecureStore.getItemAsync("user_name");
-        const storedRole = await SecureStore.getItemAsync("user_role");
+        const [token, storedName, storedRole, onboardingDone] = await Promise.all([
+          getAccessToken(),
+          SecureStore.getItemAsync("user_name"),
+          SecureStore.getItemAsync("user_role"),
+          cacheGet<boolean | string>(CacheKeys.onboardingDone),
+        ]);
+
+        const seenOnboarding = onboardingDone === true || onboardingDone === "true";
 
         if (!token) {
+          setShowOnboarding(!seenOnboarding);
           return;
         }
 
-        // Show the dashboard instantly using cached identity
         if (storedName) setUserName(storedName);
-        if (storedRole) setUserRole(storedRole);
+        if (storedRole) {
+          rememberUserRole(storedRole);
+          setUserRole(storedRole);
+        }
         setIsLoggedIn(true);
         setShowOnboarding(false);
 
-        // ── Silently refresh token in background — never block UI ─────────
-        const refreshToken = await getRefreshToken();
-        if (refreshToken) {
-          try {
-            const res = await fetch(`${API_BASE}/auth/refresh/`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ refresh: refreshToken }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.access) {
-                await setAccessToken(data.access);
-                if (data.refresh) await setRefreshToken(data.refresh);
-              }
-            } else if (res.status === 401) {
-              // Token is truly expired — log user out silently
-              await clearTokens();
-              await SecureStore.deleteItemAsync("user_name");
-              await SecureStore.deleteItemAsync("user_role");
-              setIsLoggedIn(false);
-              return;
-            }
-          } catch {
-            // Network unavailable — proceed with existing token
-          }
-        }
+        await tryRefresh();
 
-        // ── Register push token for returning (auto-login) users ──────────
-        // Fire-and-forget — never block the UI
         registerForPushNotificationsAsync().catch((_e) => {
           console.debug("[Push] Auto-login registration skipped:", _e);
         });
       } catch {
         // SecureStore error — show auth as fallback
+      } finally {
+        setBootstrapped(true);
       }
     })();
   }, []);
 
-  // ── Notification tap handler ──────────────────────────────────────────────
-  // Runs once after the component mounts. Listens for the user tapping a
-  // push notification banner and navigates them to the correct screen.
   useEffect(() => {
-    // Listen for taps on notifications (app is open or in background)
     notifResponseListener.current =
       Notifications.addNotificationResponseReceivedListener((response: any) => {
         const data = response.notification.request.content.data as Record<
@@ -115,12 +115,11 @@ export default function TabLayout() {
         >;
         const path = getNavigationPathFromPush(data);
 
-        // Small delay to ensure the navigator is mounted before pushing
         setTimeout(() => {
           try {
             router.push(path as any);
           } catch {
-            // Navigator not ready yet — skip navigation gracefully
+            // Navigator not ready yet
           }
         }, 300);
       });
@@ -134,33 +133,24 @@ export default function TabLayout() {
 
   const handleLogin = (name?: string, role?: string) => {
     if (name) setUserName(name);
-    if (role) setUserRole(role);
+    if (role) {
+      rememberUserRole(role);
+      setUserRole(role);
+    }
     setIsLoggedIn(true);
+    cacheSet(CacheKeys.onboardingDone, true);
 
-    // ── Register push token right after login ─────────────────────────────
-    // Fire-and-forget — auth flow must not be blocked by push registration
     registerForPushNotificationsAsync().catch((_e) => {
       console.debug("[Push] Login registration skipped:", _e);
     });
   };
 
-  const handleLogout = async () => {
-    await clearTokens();
-    await SecureStore.deleteItemAsync("user_name");
-    await SecureStore.deleteItemAsync("user_role");
-    await SecureStore.deleteItemAsync("user_avatar");
-    await SecureStore.deleteItemAsync("cached_user_profile");
-    await SecureStore.deleteItemAsync("cached_jobs");
-    await SecureStore.deleteItemAsync("cached_applications");
-    await SecureStore.deleteItemAsync("cached_analytics");
-    await SecureStore.deleteItemAsync("cached_notifications");
-    setUserName(undefined);
-    setUserRole(undefined);
-    setIsLoggedIn(false);
+  const finishOnboarding = () => {
+    cacheSet(CacheKeys.onboardingDone, true);
+    setShowOnboarding(false);
   };
 
-  // Expose for dev testing
-  if (typeof globalThis !== "undefined") {
+  if (__DEV__) {
     (globalThis as any).resetOnboarding = () => {
       setSplashFinished(false);
       setShowOnboarding(true);
@@ -177,18 +167,23 @@ export default function TabLayout() {
     },
   };
 
+  const showSplash = !splashFinished || !bootstrapped;
+
   return (
     <ThemeProvider value={CustomTheme}>
-      {!splashFinished ? (
-        <VideoSplash
-          onFinish={() => setSplashFinished(true)}
-        />
+      {showSplash ? (
+        <VideoSplash onFinish={() => setSplashFinished(true)} />
       ) : showOnboarding ? (
-        <Onboarding onFinish={() => setShowOnboarding(false)} />
+        <Onboarding onFinish={finishOnboarding} />
       ) : !isLoggedIn ? (
         <AuthScreens onLogin={handleLogin as any} />
       ) : (
-        <AppTabs userRole={userRole} userName={userName} />
+        // QH-12: the biometric preference finally gates something. Only wraps
+        // the signed-in tree — the login screen must stay reachable so a user
+        // who cannot authenticate is never locked out of the app entirely.
+        <BiometricLock>
+          <AppTabs userRole={userRole} userName={userName} />
+        </BiometricLock>
       )}
     </ThemeProvider>
   );

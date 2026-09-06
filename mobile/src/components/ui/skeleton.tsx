@@ -170,6 +170,72 @@ export function SkeletonApplicationCard({ style }: { style?: ViewStyle }) {
   );
 }
 
+// ─── Skeleton applicant card (Company review view) ───────────────────────────
+export function SkeletonApplicantCard({ style }: { style?: ViewStyle }) {
+  return (
+    <View style={[sk.jobCard, style]}>
+      <View style={sk.row}>
+        <SkeletonAvatar size={42} />
+        <View style={{ flex: 1, marginLeft: 12, gap: 6 }}>
+          <SkeletonLine width="55%" height={15} />
+          <SkeletonLine width="35%" height={12} />
+        </View>
+        <SkeletonBox width={70} height={22} borderRadius={8} />
+      </View>
+      <View style={{ gap: 5, marginTop: 12 }}>
+        <SkeletonLine width="100%" height={12} />
+        <SkeletonLine width="75%" height={12} />
+      </View>
+      <View style={[sk.row, { gap: 6, marginTop: 10 }]}>
+        <SkeletonBox width={60} height={20} borderRadius={6} />
+        <SkeletonBox width={70} height={20} borderRadius={6} />
+      </View>
+      <View style={[sk.row, { gap: 10, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f1f5f9' }]}>
+        <SkeletonBox width={100} height={32} borderRadius={8} />
+        <SkeletonBox width={80} height={32} borderRadius={8} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Skeleton member avatar (Community members carousel) ────────────────────
+export function SkeletonMemberAvatar() {
+  return (
+    <View style={{ alignItems: 'center', width: 62, gap: 6 }}>
+      <SkeletonAvatar size={50} />
+      <SkeletonLine width={44} height={9} />
+    </View>
+  );
+}
+
+// ─── Skeleton comment item (Community post details) ─────────────────────────
+export function SkeletonCommentItem({ style }: { style?: ViewStyle }) {
+  return (
+    <View style={[{ flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 16, gap: 10 }, style]}>
+      <SkeletonAvatar size={34} />
+      <View style={{ flex: 1, gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <SkeletonLine width="40%" height={13} />
+          <SkeletonLine width="20%" height={10} />
+        </View>
+        <SkeletonLine width="95%" height={12} />
+        <SkeletonLine width="80%" height={12} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Skeleton profile header ────────────────────────────────────────────────
+export function SkeletonProfileHeader({ style }: { style?: ViewStyle }) {
+  return (
+    <View style={[{ alignItems: 'center', padding: 24, gap: 10 }, style]}>
+      <SkeletonAvatar size={84} />
+      <SkeletonLine width={160} height={20} style={{ marginTop: 8 }} />
+      <SkeletonLine width={110} height={14} />
+    </View>
+  );
+}
+
 // ─── Skeleton job details screen ─────────────────────────────────────────────
 export function SkeletonJobDetails({ style }: { style?: ViewStyle }) {
   return (

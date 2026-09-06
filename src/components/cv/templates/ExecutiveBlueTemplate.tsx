@@ -1,4 +1,4 @@
-// T2 – Executive Pro (Justin Marsh style)
+﻿// T2 – Executive Pro (Justin Marsh style)
 // Wide dark charcoal left sidebar with photo, bold name, white right body
 // Full sections: Contact, Skills, Languages, Interests | Summary, Experience, Education, Achievements, Certifications
 import React from 'react';
@@ -85,9 +85,9 @@ export const ExecutiveBlueTemplate = ({ data }: { data: CVData }) => (
 
         {/* Contact */}
         <Text style={s.sbSec}>Contact</Text>
-        {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>✉</Text><Text style={s.sbText}>{data.email}</Text></View>}
-        {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>☎</Text><Text style={s.sbText}>{data.phone}</Text></View>}
-        {data.location && <View style={s.sbRow}><Text style={s.sbIcon}>⚲</Text><Text style={s.sbText}>{data.location}</Text></View>}
+        {data.email    && <View style={s.sbRow}><Text style={s.sbIcon}>Email:</Text><Text style={s.sbText}>{data.email}</Text></View>}
+        {data.phone    && <View style={s.sbRow}><Text style={s.sbIcon}>Tel:</Text><Text style={s.sbText}>{data.phone}</Text></View>}
+        {data.location && <View style={s.sbRow}><Text style={s.sbIcon}></Text><Text style={s.sbText}>{data.location}</Text></View>}
         {data.linkedinUrl && <View style={s.sbRow}><Text style={s.sbIcon}>in</Text><Text style={s.sbText}>{data.linkedinUrl}</Text></View>}
 
         <View style={s.divider} />
@@ -97,7 +97,7 @@ export const ExecutiveBlueTemplate = ({ data }: { data: CVData }) => (
           <>
             <Text style={s.sbSec}>Core Skills</Text>
             {data.skills.slice(0, 8).map((sk, i) => (
-              <Text key={i} style={s.sbSkill}>▸ {sk}</Text>
+              <Text key={i} style={s.sbSkill}>- {sk}</Text>
             ))}
           </>
         )}
@@ -127,7 +127,7 @@ export const ExecutiveBlueTemplate = ({ data }: { data: CVData }) => (
           <>
             <Text style={s.sbSec}>Interests</Text>
             {data.interests.slice(0, 4).map((intr, i) => (
-              <Text key={i} style={s.sbInt}>★ {intr}</Text>
+              <Text key={i} style={s.sbInt}>* {intr}</Text>
             ))}
           </>
         )}
@@ -151,9 +151,9 @@ export const ExecutiveBlueTemplate = ({ data }: { data: CVData }) => (
           <Text style={s.bdRole}>{data.headline}</Text>
         </View>
         <View style={s.bdContact}>
-          {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
-          {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+          {data.email    && <Text style={s.bdCtxt}>Email: {data.email}</Text>}
+          {data.phone    && <Text style={s.bdCtxt}>Tel: {data.phone}</Text>}
+          {data.location && <Text style={s.bdCtxt}> {data.location}</Text>}
         </View>
 
         {/* Summary */}
@@ -197,7 +197,7 @@ export const ExecutiveBlueTemplate = ({ data }: { data: CVData }) => (
             <Text style={s.bdSec}>Key Achievement</Text>
             <View style={s.bdDiv} />
             <View style={s.achBullet}>
-              <Text style={s.achIcon}>★</Text>
+              <Text style={s.achIcon}>*</Text>
               <Text style={s.achTxt}>{data.achievement}</Text>
             </View>
           </>

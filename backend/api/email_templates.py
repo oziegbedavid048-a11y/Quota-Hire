@@ -7,6 +7,7 @@ Quota Hire - Professional Email Templates
 - Emails are delivered via ZeptoMail SMTP using Django's send_mail.
 """
 
+from django.utils.html import escape
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 import logging
@@ -125,6 +126,24 @@ def _h1(title, subtitle=""):
     return f"<h1>{title}</h1>{sub}"
 
 
+def _esc(value):
+    """HTML-escape a value destined for an email body (QH-18).
+
+    These templates build HTML with f-strings, and every field they
+    interpolate — display names, job titles, notification text — originates
+    from user input. Nothing was escaped, so an attacker could inject markup
+    into a message delivered from the platform's own verified domain, which
+    passes SPF and DKIM and therefore reads as entirely genuine.
+
+    Falsy values are returned unchanged so that callers relying on
+    `if job_title:` style checks keep working, and so None never renders as
+    the literal string "None".
+    """
+    if not value:
+        return value
+    return escape(str(value))
+
+
 def _p(text):
     return f"<p>{text}</p>"
 
@@ -171,6 +190,9 @@ def _signoff():
 # =============================================================================
 
 def get_verification_email_html(user, redirect):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    redirect = _esc(redirect)
     body = (
         _h1("Verify Your Email Address", "One step away from your Quota Hire account") +
         _p(f"Hi <strong>{user}</strong>,") +
@@ -180,7 +202,7 @@ def get_verification_email_html(user, redirect):
         ) +
         _p(
             "This verification link is valid for <strong>24 hours</strong>. "
-            "If you did not create a Quota Hire account, please ignore this email — no action is required."
+            "If you did not create a Quota Hire account, please ignore this email. No action is required."
         ) +
         _cta(redirect, "Verify My Email Address") +
         _lf(redirect) +
@@ -194,6 +216,9 @@ def get_verification_email_html(user, redirect):
 # =============================================================================
 
 def get_recovery_email_html(user, redirect):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    redirect = _esc(redirect)
     body = (
         _h1("Reset Your Password", "A password reset was requested for your account") +
         _p(f"Hi <strong>{user}</strong>,") +
@@ -214,6 +239,9 @@ def get_recovery_email_html(user, redirect):
 
 
 def get_mobile_otp_email_html(user, otp_code):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    otp_code = _esc(otp_code)
     """Generates the HTML email for mobile 6-digit OTP password reset."""
     body = (
         _h1("Password Reset Code", "Use this code in the Quota Hire app") +
@@ -239,6 +267,9 @@ def get_mobile_otp_email_html(user, otp_code):
 
 
 def get_login_otp_email_html(user, otp_code):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    otp_code = _esc(otp_code)
     """Generates the HTML email for passwordless email-OTP login on the mobile app."""
     body = (
         _h1("Your Login Code", "Use this code to sign in to the Quota Hire app") +
@@ -252,7 +283,7 @@ def get_login_otp_email_html(user, otp_code):
         '</div>' +
         _p(
             "This code is valid for <strong>30 minutes</strong> and can only be used once. "
-            "Do not share this code with anyone — Quota Hire staff will never ask for it."
+            "Do not share this code with anyone. Quota Hire staff will never ask for it."
         ) +
         _p(
             "If you did not try to sign in, please ignore this email. "
@@ -269,12 +300,14 @@ def get_login_otp_email_html(user, otp_code):
 # =============================================================================
 
 def get_welcome_email_html(user, is_company=False):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
     if is_company:
         body = (
             _h1("Welcome to Quota Hire!", "Your company account is now active") +
             _p(f"Hi <strong>{user}</strong>,") +
             _p(
-                "Congratulations — your email has been verified and your Quota Hire company account is fully activated. "
+                "Congratulations! Your email has been verified and your Quota Hire company account is fully activated. "
                 "You can now start attracting top talent by completing your company profile and posting your first job listing."
             ) +
             _p(
@@ -289,7 +322,7 @@ def get_welcome_email_html(user, is_company=False):
             _h1("Welcome to Quota Hire!", "Your account is fully activated") +
             _p(f"Hi <strong>{user}</strong>,") +
             _p(
-                "Congratulations — your email has been verified and your Quota Hire account is ready. "
+                "Congratulations! Your email has been verified and your Quota Hire account is ready. "
                 "We are excited to help you find your next great career opportunity from our growing list of verified employers."
             ) +
             _p(
@@ -307,6 +340,9 @@ def get_welcome_email_html(user, is_company=False):
 # =============================================================================
 
 def get_job_submitted_email_html(user, job_title):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    job_title = _esc(job_title)
     body = (
         _h1("Job Listing Submitted for Review") +
         _p(f"Hi <strong>{user}</strong>,") +
@@ -330,6 +366,10 @@ def get_job_submitted_email_html(user, job_title):
 # =============================================================================
 
 def get_job_approved_email_html(user, job_title, job_code):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    job_title = _esc(job_title)
+    job_code = _esc(job_code)
     frontend_url = getattr(settings, 'FRONTEND_URL', 'https://quotahire.org').strip()
     share_link = f"{frontend_url}/jobs?code={job_code}"
     body = (
@@ -358,6 +398,9 @@ def get_job_approved_email_html(user, job_title, job_code):
 # =============================================================================
 
 def get_job_rejected_email_html(user, job_title):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    job_title = _esc(job_title)
     body = (
         _h1("Your Job Listing Needs Revision") +
         _p(f"Hi <strong>{user}</strong>,") +
@@ -369,7 +412,7 @@ def get_job_rejected_email_html(user, job_title):
         _dbox("Listing Requiring Revision", job_title) +
         _p(
             "Common reasons include an incomplete job description, missing compensation details, or content that does not meet our guidelines. "
-            "Please log in to your dashboard, update the listing, and resubmit — our team will prioritise your re-review."
+            "Please log in to your dashboard, update the listing, and resubmit. Our team will prioritise your re-review."
         ) +
         _p(
             'If you need guidance on what to correct, contact us at '
@@ -386,6 +429,9 @@ def get_job_rejected_email_html(user, job_title):
 # =============================================================================
 
 def get_application_confirmed_email_html(user, job_title):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    job_title = _esc(job_title)
     body = (
         _h1("Application Submitted Successfully!") +
         _p(f"Hi <strong>{user}</strong>,") +
@@ -425,7 +471,7 @@ _STATUS_CONFIG = {
     },
     "Interview Invitation": {
         "badge": ("Interview Invited", "green"),
-        "subtitle": "Congratulations — you have been shortlisted for an interview",
+        "subtitle": "Congratulations! You have been shortlisted for an interview",
         "intro": (
             "We are delighted to inform you that you have been shortlisted and invited for an interview for this position. "
             "This is a significant achievement and reflects the hiring team's genuine interest in your profile and experience."
@@ -433,7 +479,7 @@ _STATUS_CONFIG = {
         "detail": (
             "A representative from the company will contact you to confirm the interview format, date, and time. "
             "Please monitor your email inbox and Quota Hire dashboard closely and respond promptly to any outreach from the employer. "
-            "We wish you every success — prepare well, be confident, and bring your best self."
+            "We wish you every success. Prepare well, be confident, and bring your best self."
         ),
         "cta": ("https://quotahire.org/dashboard", "View Interview Details"),
     },
@@ -453,15 +499,15 @@ _STATUS_CONFIG = {
     },
     "Application Accepted": {
         "badge": ("Accepted", "green"),
-        "subtitle": "Congratulations — your application has been successful!",
+        "subtitle": "Congratulations! Your application has been successful",
         "intro": (
             "We are absolutely thrilled to inform you that your application has been successful. "
-            "The hiring team has made their final decision and selected you as their preferred candidate for this position — congratulations!"
+            "The hiring team has made their final decision and selected you as their preferred candidate for this position. Congratulations!"
         ),
         "detail": (
             "A company representative will be contacting you very shortly to discuss the offer details, including your start date and contract terms. "
             "Please ensure you are available and responsive to their communication. "
-            "We wish you a successful and fulfilling career ahead — well done from the entire Quota Hire team."
+            "We wish you a successful and fulfilling career ahead. Well done from the entire Quota Hire team."
         ),
         "cta": ("https://quotahire.org/dashboard", "View Offer Details"),
     },
@@ -474,7 +520,7 @@ _STATUS_CONFIG = {
         ),
         "detail": (
             "Please be assured this outcome does not reflect on your overall skills, potential, or professional value. "
-            "We sincerely encourage you not to be discouraged — keep your profile updated and continue exploring other relevant "
+            "We sincerely encourage you not to be discouraged. Keep your profile updated and continue exploring other relevant "
             "opportunities on the platform. The right role for you is out there and we remain committed to helping you find it."
         ),
         "cta": ("https://quotahire.org", "Browse More Opportunities"),
@@ -483,6 +529,11 @@ _STATUS_CONFIG = {
 
 
 def get_notification_email_html(user, title, message, job_title=None, is_remote=False, employment_type=None):
+    # QH-18: escape every user-controlled value before it reaches the HTML.
+    user = _esc(user)
+    title = _esc(title)
+    message = _esc(message)
+    job_title = _esc(job_title)
     cfg = _STATUS_CONFIG.get(title, {})
 
     badge_html = ""
@@ -507,7 +558,7 @@ def get_notification_email_html(user, title, message, job_title=None, is_remote=
         intro = (
             f"We are delighted to inform you that you have been shortlisted and invited for an interview for the "
             f"<strong>{job_title}</strong> ({role_type}) position. "
-            f"This reflects the hiring team's genuine interest in your profile — congratulations on reaching this stage."
+            f"This reflects the hiring team's genuine interest in your profile. Congratulations on reaching this stage."
         )
     elif job_title and title == "Decision Pending":
         intro = (
@@ -518,7 +569,7 @@ def get_notification_email_html(user, title, message, job_title=None, is_remote=
     elif job_title and title == "Application Accepted":
         intro = (
             f"We are absolutely thrilled to inform you that your application for the <strong>{job_title}</strong> position "
-            f"has been successful. The hiring team has selected you as their preferred candidate — congratulations!"
+            f"has been successful. The hiring team has selected you as their preferred candidate. Congratulations!"
         )
     elif job_title and title == "Application Update":
         intro = (

@@ -3,15 +3,18 @@
  * Features:
  *   - Network detection via NetInfo before every request (instant error on no-internet)
  *   - 25-second timeout for auth requests, 15-second for everything else
- *   - Auto-refresh of expired JWT access token on 401
+ *   - Auto-refresh of expired JWT access token on 401 (single-flight)
  *   - Distinguishes network errors (no internet) from server errors
  *   - pingBackend() — lightweight keep-alive to prevent Render cold starts
  */
 
+import { DeviceEventEmitter } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import NetInfo from '@react-native-community/netinfo';
 
 export const API_BASE = 'https://quotahire-backend.onrender.com/api';
+
+export const SESSION_EXPIRED_EVENT = 'SESSION_EXPIRED';
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export const getAccessToken  = () => SecureStore.getItemAsync('access_token');
@@ -24,21 +27,15 @@ export const clearTokens     = async () => {
 };
 
 // ─── Network Connectivity Check ───────────────────────────────────────────────
-/**
- * Returns true if the device has internet access.
- * This is checked BEFORE every API call so we fail instantly
- * instead of waiting 15+ seconds for a fetch timeout.
- */
 export const isOnline = async (): Promise<boolean> => {
   try {
     const state = await NetInfo.fetch();
     return state.isConnected === true && state.isInternetReachable !== false;
   } catch {
-    return true; // Fail open — let the fetch attempt proceed if NetInfo errors
+    return true;
   }
 };
 
-// ─── API Error Class ──────────────────────────────────────────────────────────
 export class ApiError extends Error {
   status: number;
   isNetworkError: boolean;
@@ -50,39 +47,54 @@ export class ApiError extends Error {
   }
 }
 
-// ─── Silent token refresh ─────────────────────────────────────────────────────
-const tryRefresh = async (): Promise<string | null> => {
-  const refresh = await getRefreshToken();
-  if (!refresh) return null;
-  try {
-    const res = await fetch(`${API_BASE}/auth/refresh/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.access) {
-      await setAccessToken(data.access);
-      if (data.refresh) await setRefreshToken(data.refresh);
-      return data.access;
+let refreshInFlight: Promise<string | null> | null = null;
+
+/**
+ * Rotate the access token. Concurrent callers share one request so SimpleJWT
+ * blacklist-after-rotation cannot invalidate a second refresh.
+ */
+export const tryRefresh = async (): Promise<string | null> => {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const refresh = await getRefreshToken();
+    if (!refresh) return null;
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.access) {
+        await setAccessToken(data.access);
+        if (data.refresh) await setRefreshToken(data.refresh);
+        return data.access as string;
+      }
+    } catch {
+      // network — keep existing access token
     }
-  } catch {}
-  return null;
+    return null;
+  })();
+
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
 };
 
-// ─── Keep-Alive Ping ──────────────────────────────────────────────────────────
-/**
- * Silently pings the backend to prevent Render dyno from going idle.
- * Called every 10 minutes by the useKeepAlive hook while app is in foreground.
- * Uses a short 5s timeout — we don't care about the response, just keeping warm.
- */
+function emitSessionExpired() {
+  DeviceEventEmitter.emit(SESSION_EXPIRED_EVENT);
+}
+
 export const pingBackend = async (): Promise<void> => {
   const online = await isOnline();
-  if (!online) return; // Don't ping on no-internet
+  if (!online) return;
 
   const token = await getAccessToken();
-  if (!token) return; // Only ping if user is logged in
+  if (!token) return;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
@@ -91,27 +103,24 @@ export const pingBackend = async (): Promise<void> => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       signal: controller.signal,
     });
   } catch {
-    // Silently ignore — this is just a warm-up ping
+    // warm-up only
   } finally {
     clearTimeout(timeout);
   }
 };
 
-// ─── Main fetch wrapper ───────────────────────────────────────────────────────
 export const apiFetch = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
-  // ── Step 1: Check network BEFORE attempting the request ───────────────────
-  // This gives an instant error message instead of waiting 15+ seconds.
   const online = await isOnline();
   if (!online) {
     throw new ApiError(
       'No internet connection. Please check your WiFi or mobile data and try again.',
       0,
-      true // isNetworkError = true
+      true
     );
   }
 
@@ -124,8 +133,6 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}): Pro
     return h;
   };
 
-  // Auth endpoints get a longer timeout (25s) to handle Render cold starts.
-  // All other requests use 15s (down from 12s) for better reliability.
   const isAuthEndpoint = endpoint.startsWith('/auth/');
   const timeoutMs = isAuthEndpoint ? 25000 : 15000;
 
@@ -148,21 +155,18 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}): Pro
         false
       );
     }
-    // Any other fetch error (network dropped mid-request, DNS failure, etc.)
     throw new ApiError(
       'Could not reach the server. Please check your internet connection.',
       0,
-      true // isNetworkError = true
+      true
     );
   } finally {
     clearTimeout(timeout);
   }
 
-  // ── Auto-refresh on 401 ───────────────────────────────────────────────────
   if (response.status === 401) {
     const newToken = await tryRefresh();
     if (newToken) {
-      // Re-check network before retry
       const stillOnline = await isOnline();
       if (!stillOnline) {
         throw new ApiError('No internet connection. Please check your WiFi or mobile data.', 0, true);
@@ -181,9 +185,16 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}): Pro
           if (ct.includes('application/json')) return retried.json();
           return retried.text();
         }
-      } catch {
+        if (retried.status === 401) {
+          emitSessionExpired();
+          throw new ApiError('Session expired. Please log in again.', 401);
+        }
+      } catch (retryErr: any) {
         clearTimeout(timeout2);
+        if (retryErr instanceof ApiError) throw retryErr;
       }
+    } else {
+      emitSessionExpired();
     }
     throw new ApiError('Session expired. Please log in again.', 401);
   }

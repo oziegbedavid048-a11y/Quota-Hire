@@ -18,7 +18,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useCommunityData, CommunityFeedItem, CommunityPost, CommunityPoll } from '@/hooks/useCommunityData';
 import { HapticPressable } from '@/components/haptic-pressable';
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
-import { SkeletonPostCard } from '@/components/ui/skeleton';
+import { SkeletonPostCard, SkeletonMemberAvatar } from '@/components/ui/skeleton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ACTIVE_MEMBERS = [
@@ -670,23 +670,6 @@ export default function CommunityScreen() {
                   <Text style={styles.heroCoverSub}>
                     Connect, share insights & grow with top sales professionals
                   </Text>
-                  <TouchableOpacity
-                    onPress={() => setPostModalVisible(true)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      backgroundColor: Palette.accent600,
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      borderRadius: 20,
-                      marginTop: 10,
-                    }}
-                    activeOpacity={0.85}
-                  >
-                    <Feather name="edit-3" size={13} color="#fff" />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>Share a Post</Text>
-                  </TouchableOpacity>
                 </View>
               </View>
             </Animated.View>
@@ -701,31 +684,43 @@ export default function CommunityScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: 16, gap: 14 }}
               >
-                {membersList.map((m) => (
-                  <View key={m.id} style={{ alignItems: 'center', width: 62 }}>
-                    <View style={styles.activeAvatarWrap}>
-                      {m.avatar ? (
-                        <Image source={{ uri: m.avatar }} style={styles.activeAvatarImg} />
-                      ) : (
-                        <LinearGradient colors={[Palette.accent200, Palette.accent100]} style={[styles.activeAvatarImg, { justifyContent: 'center', alignItems: 'center' }]}>
-                          <Text style={{ fontWeight: '700', color: Palette.accent700, fontSize: 16 }}>
-                            {(m.name || 'U').charAt(0).toUpperCase()}
-                          </Text>
-                        </LinearGradient>
-                      )}
-                      <View style={styles.onlineStatusBadge} />
+                {isLoading && membersList.length === 0 ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <SkeletonMemberAvatar key={i} />
+                  ))
+                ) : (
+                  membersList.map((m) => (
+                    <View key={m.id} style={{ alignItems: 'center', width: 62 }}>
+                      <View style={styles.activeAvatarWrap}>
+                        {m.avatar ? (
+                          <Image source={{ uri: m.avatar }} style={styles.activeAvatarImg} />
+                        ) : (
+                          <LinearGradient colors={[Palette.accent200, Palette.accent100]} style={[styles.activeAvatarImg, { justifyContent: 'center', alignItems: 'center' }]}>
+                            <Text style={{ fontWeight: '700', color: Palette.accent700, fontSize: 16 }}>
+                              {(m.name || 'U').charAt(0).toUpperCase()}
+                            </Text>
+                          </LinearGradient>
+                        )}
+                        <View style={styles.onlineStatusBadge} />
+                      </View>
+                      <Text style={[styles.activeMemberName, { color: Palette.neutral900 }]} numberOfLines={1}>
+                        {m.name}
+                      </Text>
                     </View>
-                    <Text style={[styles.activeMemberName, { color: Palette.neutral900 }]} numberOfLines={1}>
-                      {m.name}
-                    </Text>
-                  </View>
-                ))}
+                  ))
+                )}
               </ScrollView>
             </View>
           </View>
         }
         ListEmptyComponent={
-          imagesReady ? (
+          isLoading && feed.length === 0 ? (
+            <View style={{ gap: 14, paddingHorizontal: 16, paddingTop: 8 }}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonPostCard key={i} />
+              ))}
+            </View>
+          ) : imagesReady ? (
             <View style={[styles.centered, { marginTop: 40 }]}>
               <Feather name="message-square" size={48} color={Palette.neutral300} />
               <Text style={styles.emptyTitle}>Nothing here yet</Text>
@@ -1586,10 +1581,10 @@ const styles = StyleSheet.create({
   },
   // ── Merged Top Header Cover ──
   heroCoverCardHeader: {
-    height: 195,
+    minHeight: 150,
     overflow: 'hidden',
     position: 'relative',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     elevation: 4,
   },
   coverTopBar: {

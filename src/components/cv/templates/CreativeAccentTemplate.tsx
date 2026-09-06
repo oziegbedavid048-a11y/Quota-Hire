@@ -1,4 +1,4 @@
-// T8 – Gold Sidebar (Harper Lewis / William Perez style)
+﻿// T8 – Gold Sidebar (Harper Lewis / William Perez style)
 // Dark golden-olive sidebar with skill level bars (out of 10), white clean right body
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
@@ -92,7 +92,7 @@ export const CreativeAccentTemplate = ({ data }: { data: CVData }) => (
         <Text style={s.sbSec}>Interests</Text>
         {data.interests?.slice(0, 4).map((intr, i) => (
           <View key={i} style={s.sbRow}>
-            <Text style={s.sbIcon}>★</Text>
+            <Text style={s.sbIcon}>*</Text>
             <Text style={s.sbText}>{intr}</Text>
           </View>
         ))}
@@ -127,9 +127,9 @@ export const CreativeAccentTemplate = ({ data }: { data: CVData }) => (
         <Text style={s.bdName}>{data.name}</Text>
         <Text style={s.bdRole}>{data.headline}</Text>
         <View style={s.bdContact}>
-          {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
-          {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
-          {data.location && <Text style={s.bdCtxt}>⚲ {data.location}</Text>}
+          {data.email    && <Text style={s.bdCtxt}>Email: {data.email}</Text>}
+          {data.phone    && <Text style={s.bdCtxt}>Tel: {data.phone}</Text>}
+          {data.location && <Text style={s.bdCtxt}> {data.location}</Text>}
           {data.linkedinUrl && <Text style={s.bdCtxt}>in {data.linkedinUrl}</Text>}
         </View>
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DeviceEventEmitter } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-import { apiFetch } from '../services/api';
+import { apiFetch, getAccessToken } from '../services/api';
+import { cacheGet, cacheSet, CacheKeys } from '../services/app-cache';
+import { rememberUserRole } from '../services/user-role';
 
 export interface CompanyJob {
   id: string;
@@ -32,6 +33,7 @@ export interface CompanyProfile {
   aboutCompany?: string;
   isVerified?: boolean;
   avatarUrl?: string;
+  logoUrl?: string;
   setupCompleted?: boolean;
 }
 
@@ -78,170 +80,237 @@ export function getCompanyProfileItems(company: CompanyProfile, activeJobsCount:
   ];
 }
 
+// ─── Module-Level In-Memory Cache (Instant 0ms Tab Switching) ─────────────────
+let inMemoryCompany: CompanyProfile | null = null;
+let inMemoryCompanyJobs: CompanyJob[] = [];
+let inMemoryCompanyApps: CompanyApplication[] = [];
+let inMemoryCompanyAnalytics: any | null = null;
+let inMemoryCompanyLastFetch = 0;
+let inMemoryCompanyFetchPromise: Promise<void> | null = null;
+let hasCompanyRestoredFromStorage = false;
+
+export function resetCompanyDashboardMemory() {
+  inMemoryCompany = null;
+  inMemoryCompanyJobs = [];
+  inMemoryCompanyApps = [];
+  inMemoryCompanyAnalytics = null;
+  inMemoryCompanyLastFetch = 0;
+  inMemoryCompanyFetchPromise = null;
+  hasCompanyRestoredFromStorage = false;
+}
+
+(async () => {
+  try {
+    const [cachedProfile, cachedJobs, cachedApps] = await Promise.all([
+      cacheGet<CompanyProfile>(CacheKeys.companyProfile),
+      cacheGet<CompanyJob[]>(CacheKeys.companyJobs),
+      cacheGet<CompanyApplication[]>(CacheKeys.companyApplications),
+    ]);
+    if (cachedProfile) inMemoryCompany = cachedProfile;
+    if (cachedJobs) inMemoryCompanyJobs = cachedJobs;
+    if (cachedApps) inMemoryCompanyApps = cachedApps;
+    hasCompanyRestoredFromStorage = true;
+  } catch (_e) {}
+})();
+
 // ─── Real Data Hook ──────────────────────────────────────────────────────────
 export function useCompanyDashboardData() {
-  const [company, setCompany]           = useState<CompanyProfile>(EMPTY_COMPANY);
-  const [jobs, setJobs]                 = useState<CompanyJob[]>([]);
-  const [applications, setApplications] = useState<CompanyApplication[]>([]);
-  const [analytics, setAnalytics]       = useState<any>({ ...EMPTY_ANALYTICS });
-  const [isLoading, setIsLoading]       = useState(true);
-  const [isFetching, setIsFetching]     = useState(true);
+  const [company, setCompany]           = useState<CompanyProfile>(inMemoryCompany || EMPTY_COMPANY);
+  const [jobs, setJobs]                 = useState<CompanyJob[]>(inMemoryCompanyJobs);
+  const [applications, setApplications] = useState<CompanyApplication[]>(inMemoryCompanyApps);
+  const [analytics, setAnalytics]       = useState<any>(inMemoryCompanyAnalytics || { ...EMPTY_ANALYTICS });
+  const [isLoading, setIsLoading]       = useState(!inMemoryCompany);
+  const [isFetching, setIsFetching]     = useState(false);
   const [hasError, setHasError]         = useState(false);
   const [isNetworkError, setIsNetworkError] = useState(false);
 
-  const fetchLiveCompanyData = useCallback(async () => {
+  const fetchLiveCompanyData = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && inMemoryCompany && now - inMemoryCompanyLastFetch < 30000) {
+      return;
+    }
+    if (inMemoryCompanyFetchPromise) {
+      return inMemoryCompanyFetchPromise;
+    }
+
     setIsFetching(true);
     setHasError(false);
     setIsNetworkError(false);
 
-    try {
-      const token = await SecureStore.getItemAsync('access_token');
-      if (!token) {
-        setIsFetching(false);
-        setIsLoading(false);
-        return;
-      }
+    inMemoryCompanyFetchPromise = (async () => {
+      try {
+        const token = await getAccessToken();
+        if (!token) {
+          setIsFetching(false);
+          setIsLoading(false);
+          return;
+        }
 
-      // ── Phase 1: Critical data (user identity + jobs) ─────────────────────
-      // Render these immediately — show the dashboard as fast as possible.
-      const [uData, jobsData] = await Promise.all([
-        apiFetch('/auth/me/'),
-        apiFetch('/company/jobs/').catch(() => []),
-      ]);
+        // ── Phase 1: Critical data (user identity + jobs) ─────────────────────
+        const [uData, jobsData] = await Promise.all([
+          apiFetch('/auth/me/'),
+          apiFetch('/company/jobs/').catch(() => []),
+        ]);
 
-      // Normalize Company Profile
-      const normalizedCompany: CompanyProfile = {
-        id: uData.id?.toString() || 'company',
-        name: uData.name || uData.first_name || uData.email || 'User',
-        email: uData.email || '',
-        role: uData.role || 'company',
-        companyName: uData.companyName || '',
-        industry: uData.industry || '',
-        aboutCompany: uData.aboutCompany || '',
-        isVerified: uData.is_verified || false,
-        avatarUrl: uData.avatarUrl || '',
-        setupCompleted: uData.setup_completed || false,
-      };
-      setCompany(normalizedCompany);
-      SecureStore.setItemAsync('cached_company_profile', JSON.stringify(normalizedCompany)).catch(() => {});
+        const normalizedCompany: CompanyProfile = {
+          id: uData.id != null ? String(uData.id) : 'company',
+          name: uData.name || uData.first_name || uData.email || 'User',
+          email: uData.email || '',
+          role: uData.role || 'company',
+          companyName: uData.companyName || '',
+          industry: uData.industry || '',
+          aboutCompany: uData.aboutCompany || '',
+          isVerified: uData.is_verified || false,
+          avatarUrl: uData.avatarUrl || '',
+          setupCompleted: uData.setup_completed || false,
+        };
+        rememberUserRole(normalizedCompany.role);
+        inMemoryCompany = normalizedCompany;
+        setCompany(normalizedCompany);
+        cacheSet(CacheKeys.companyProfile, normalizedCompany);
 
-      // Normalize Company Jobs
-      const rawJobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
-      const normalizedJobs = rawJobs.map((j: any) => ({
-        id: j.id.toString(),
-        title: j.title,
-        location: j.location,
-        workType: j.is_remote ? 'Remote' : ('Hybrid' as const),
-        status: j.status || 'pending',
-        postedAt: j.created_at || new Date().toISOString(),
-        applicantsCount: j.applicants_count || 0,
-      }));
-      setJobs(normalizedJobs);
-      SecureStore.setItemAsync('cached_company_jobs', JSON.stringify(normalizedJobs)).catch(() => {});
-      setIsLoading(false); // Dashboard visible NOW
-
-      // ── Phase 2: Secondary data (profile details, applications, analytics) ─
-      // These load in the background — dashboard is already rendering
-      const [compProfile, appsData, analData] = await Promise.all([
-        apiFetch('/profile/company/').catch(() => null),
-        apiFetch('/applications/').catch(() => []),
-        apiFetch('/dashboard/analytics/').catch(() => null),
-      ]);
-
-      // Merge company profile details into state
-      if (compProfile) {
-        setCompany(prev => ({
-          ...prev,
-          companyName: compProfile.company_name || prev.companyName || '',
-          industry: compProfile.industry || prev.industry || '',
-          aboutCompany: compProfile.about_company || prev.aboutCompany || '',
-          avatarUrl: compProfile.logo_url || prev.avatarUrl || '',
+        const rawJobs = Array.isArray(jobsData) ? jobsData : (jobsData?.results || []);
+        const normalizedJobs = rawJobs.filter((j: any) => j?.id != null).map((j: any) => ({
+          id: String(j.id),
+          title: j.title,
+          location: j.location,
+          workType: j.is_remote ? 'Remote' : ('Hybrid' as const),
+          status: j.status || 'pending',
+          postedAt: j.created_at || new Date().toISOString(),
+          applicantsCount: j.applicants_count || 0,
         }));
+        inMemoryCompanyJobs = normalizedJobs;
+        setJobs(normalizedJobs);
+        cacheSet(CacheKeys.companyJobs, normalizedJobs);
+        setIsLoading(false);
+
+        // ── Phase 2: Secondary data (profile details, applications, analytics) ─
+        const [compProfile, appsData, analData] = await Promise.all([
+          apiFetch('/profile/company/').catch(() => null),
+          apiFetch('/applications/').catch(() => []),
+          apiFetch('/dashboard/analytics/').catch(() => null),
+        ]);
+
+        if (compProfile) {
+          const updatedCompany: CompanyProfile = {
+            ...normalizedCompany,
+            companyName: compProfile.company_name || normalizedCompany.companyName || '',
+            industry: compProfile.industry || normalizedCompany.industry || '',
+            aboutCompany: compProfile.about_company || normalizedCompany.aboutCompany || '',
+            avatarUrl: compProfile.logo_url || normalizedCompany.avatarUrl || '',
+          };
+          inMemoryCompany = updatedCompany;
+          setCompany(updatedCompany);
+          cacheSet(CacheKeys.companyProfile, updatedCompany);
+        }
+
+        const rawApps = Array.isArray(appsData) ? appsData : (appsData?.results || []);
+        const normalizedApps = rawApps.filter((a: any) => a?.id != null).map((a: any) => ({
+          id: String(a.id),
+          candidateName: a.candidate_name || a.user?.name || 'Applicant',
+          candidateTitle: a.candidate_title || 'Sales Professional',
+          jobTitle: a.job_title || '',
+          status: a.status || 'pending',
+          appliedAt: a.created_at || a.applied_at || new Date().toISOString(),
+        }));
+        inMemoryCompanyApps = normalizedApps;
+        setApplications(normalizedApps);
+        cacheSet(CacheKeys.companyApplications, normalizedApps);
+
+        if (analData) {
+          const normalizedAnalytics = {
+            totalApplicantsCount: analData.totalApplicantsCount ?? normalizedApps.length,
+            topMatchesCount: analData.topMatchesCount || 0,
+            applicantVelocityData: analData.applicantVelocityData || [],
+            jobPerformanceData: analData.jobPerformanceData || [],
+          };
+          inMemoryCompanyAnalytics = normalizedAnalytics;
+          setAnalytics(normalizedAnalytics);
+        } else {
+          const defaultAnalytics = {
+            ...EMPTY_ANALYTICS,
+            totalApplicantsCount: normalizedApps.length,
+          };
+          inMemoryCompanyAnalytics = defaultAnalytics;
+          setAnalytics(defaultAnalytics);
+        }
+
+        inMemoryCompanyLastFetch = Date.now();
+      } catch (err: any) {
+        console.warn('[Company Dashboard] fetch failed:', err?.message || err);
+        setIsLoading(false);
+
+        const msg = String(err?.message || err);
+        if (
+          msg.includes('Network') ||
+          msg.includes('network') ||
+          msg.includes('internet') ||
+          msg.includes('connection') ||
+          msg.includes('fetch') ||
+          msg.includes('ECONNREFUSED') ||
+          msg.includes('timeout') ||
+          msg.includes('abort') ||
+          err?.status === 0
+        ) {
+          setIsNetworkError(true);
+        } else {
+          setHasError(true);
+        }
+      } finally {
+        setIsFetching(false);
+        inMemoryCompanyFetchPromise = null;
       }
+    })();
 
-      // Normalize Company Applications
-      const rawApps = Array.isArray(appsData) ? appsData : (appsData?.results || []);
-      const normalizedApps = rawApps.map((a: any) => ({
-        id: a.id.toString(),
-        candidateName: a.candidate_name || a.user?.name || 'Applicant',
-        candidateTitle: a.candidate_title || 'Sales Professional',
-        jobTitle: a.job_title || '',
-        status: a.status || 'pending',
-        appliedAt: a.created_at || a.applied_at || new Date().toISOString(),
-      }));
-      setApplications(normalizedApps);
-      SecureStore.setItemAsync('cached_company_applications', JSON.stringify(normalizedApps)).catch(() => {});
+    return inMemoryCompanyFetchPromise;
+  }, []);
 
-      // Normalize Analytics
-      if (analData) {
-        setAnalytics({
-          totalApplicantsCount: analData.totalApplicantsCount ?? normalizedApps.length,
-          topMatchesCount: analData.topMatchesCount || 0,
-          applicantVelocityData: analData.applicantVelocityData || [],
-          jobPerformanceData: analData.jobPerformanceData || [],
-        });
-      } else {
-        setAnalytics({
-          ...EMPTY_ANALYTICS,
-          totalApplicantsCount: normalizedApps.length,
-        });
-      }
-
-    } catch (err: any) {
-      console.warn('[Company Dashboard] fetch failed:', err?.message || err);
-      setIsLoading(false);
-
-      // Detect network vs server errors
-      const msg = String(err?.message || err);
-      if (
-        msg.includes('Network') ||
-        msg.includes('network') ||
-        msg.includes('internet') ||
-        msg.includes('connection') ||
-        msg.includes('fetch') ||
-        msg.includes('ECONNREFUSED') ||
-        msg.includes('timeout') ||
-        msg.includes('abort') ||
-        err?.status === 0
-      ) {
-        setIsNetworkError(true);
-      } else {
-        setHasError(true);
-      }
-    } finally {
-      setIsFetching(false);
+  // Storage recovery fallback
+  useEffect(() => {
+    if (!hasCompanyRestoredFromStorage) {
+      (async () => {
+        try {
+          const [cachedProfile, cachedJobs, cachedApps] = await Promise.all([
+            cacheGet<CompanyProfile>(CacheKeys.companyProfile),
+            cacheGet<CompanyJob[]>(CacheKeys.companyJobs),
+            cacheGet<CompanyApplication[]>(CacheKeys.companyApplications),
+          ]);
+          let hasCache = false;
+          if (cachedProfile) { inMemoryCompany = cachedProfile; setCompany(cachedProfile); hasCache = true; }
+          if (cachedJobs) { inMemoryCompanyJobs = cachedJobs; setJobs(cachedJobs); hasCache = true; }
+          if (cachedApps) { inMemoryCompanyApps = cachedApps; setApplications(cachedApps); hasCache = true; }
+          if (hasCache) {
+            hasCompanyRestoredFromStorage = true;
+            setIsLoading(false);
+            setIsFetching(false);
+          }
+        } catch (_e) {}
+      })();
     }
   }, []);
 
-  // Fast-path: Instant zero-delay cache restore on mount
-  // Company profile, jobs, and applications restored in parallel — 0ms render
   useEffect(() => {
-    (async () => {
-      try {
-        const [cachedProfile, cachedJobs, cachedApps] = await Promise.all([
-          SecureStore.getItemAsync('cached_company_profile'),
-          SecureStore.getItemAsync('cached_company_jobs'),
-          SecureStore.getItemAsync('cached_company_applications'),
-        ]);
-        let hasCache = false;
-        if (cachedProfile) { setCompany(JSON.parse(cachedProfile)); hasCache = true; }
-        if (cachedJobs) { setJobs(JSON.parse(cachedJobs)); hasCache = true; }
-        if (cachedApps) { setApplications(JSON.parse(cachedApps)); hasCache = true; }
-        if (hasCache) {
-          setIsLoading(false);
-          setIsFetching(false);
-        }
-      } catch (_e) {}
-    })();
-  }, []);
-
-  useEffect(() => {
-    fetchLiveCompanyData();
+    fetchLiveCompanyData(false);
 
     const sub = DeviceEventEmitter.addListener('USER_AVATAR_UPDATED', (newUrl: string) => {
+      inMemoryCompany = inMemoryCompany ? { ...inMemoryCompany, avatarUrl: newUrl, logoUrl: newUrl } : null;
       setCompany(prev => ({ ...prev, avatarUrl: newUrl, logoUrl: newUrl }));
     });
-    return () => sub.remove();
+    const subProfile = DeviceEventEmitter.addListener('USER_PROFILE_UPDATED', () => {
+      inMemoryCompanyLastFetch = 0;
+      fetchLiveCompanyData(true);
+    });
+    const subData = DeviceEventEmitter.addListener('USER_DATA_UPDATED', (partial: any) => {
+      if (partial) {
+        inMemoryCompany = inMemoryCompany ? { ...inMemoryCompany, ...partial } : null;
+        setCompany(prev => ({ ...prev, ...partial }));
+      }
+    });
+    return () => {
+      sub.remove();
+      subProfile.remove();
+      subData.remove();
+    };
   }, [fetchLiveCompanyData]);
 
   const activeJobs  = jobs.filter(j => j.status === 'approved');
@@ -258,7 +327,7 @@ export function useCompanyDashboardData() {
     analytics,
     profileScore,
     profileItems,
-    refreshData: fetchLiveCompanyData,
+    refreshData: () => fetchLiveCompanyData(true),
     isLoading,
     isFetching,
     hasError,

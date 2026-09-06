@@ -295,7 +295,7 @@ function NativePaymentModalInner({
       console.error('[IAP] PDF download failed:', downloadErr);
       // Use download_failed state so the user can retry without re-paying
       setErrorText(
-        'Payment was successful, but the PDF download failed. Tap "Retry Download" to try again — you will NOT be charged again.'
+        'Payment was successful, but the PDF download failed. Tap "Retry Download" to try again. You will not be charged again.'
       );
       setErrorCode('download_failed');
       setPayState('download_failed');
@@ -642,7 +642,7 @@ function NativePaymentModalInner({
               </View>
               <Text style={[s.successTitle, { color: colors.text }]}>Download Failed</Text>
               <Text style={[s.successSub, { color: colors.textMuted }]}>
-                Your payment was successful but the PDF could not be downloaded. Tap below to retry — you will NOT be charged again.
+                Your payment was successful but the PDF could not be downloaded. Tap below to retry. You will not be charged again.
               </Text>
               <View style={s.btnRow}>
                 <Pressable

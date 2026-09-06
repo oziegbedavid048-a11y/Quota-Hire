@@ -5,7 +5,7 @@
     "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "quotahire",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
@@ -19,6 +19,7 @@
     "android": {
       "package": "com.oziegbedavid.quotahire",
       "versionCode": 5,
+      "allowBackup": false,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#EDEEDE",
@@ -42,7 +43,6 @@
           "imageWidth": 76
         }
       ],
-      "expo-video",
       "expo-sharing",
       [
         "expo-notifications",

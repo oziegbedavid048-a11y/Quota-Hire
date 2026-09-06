@@ -28,6 +28,7 @@ def optimize_image_url(url):
 
 from .models import (
     CustomUser,
+    UserRole,
     EmployeeProfile,
     CompanyProfile,
     Job,
@@ -64,10 +65,24 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         if email and password:
             user = CustomUser.objects.filter(**{self.username_field: email}).first()
-            if not user:
-                raise AuthenticationFailed('No account found please sign up')
+
+            # SECURITY (QH-04): one message for "no such account" and "wrong
+            # password". Previously these were distinct ('No account found
+            # please sign up' vs 'Password incorrect'), which turned the login
+            # form into a free oracle for enumerating registered users.
+            if user is None:
+                # Run a hash anyway so a missing account cannot be detected by
+                # how quickly the request comes back — without this, the
+                # no-account path returns before any password hashing happens.
+                CustomUser().set_password(password)
+                raise AuthenticationFailed('Incorrect email or password.')
+
             if not user.check_password(password):
-                raise AuthenticationFailed('Password incorrect')
+                raise AuthenticationFailed('Incorrect email or password.')
+
+            # Only reachable once the password is already correct, so this
+            # message reveals nothing to someone who does not hold the
+            # credentials — and the resend-verification flow needs it.
             if not user.email_verified and not user.is_staff and not user.is_superuser:
                 raise AuthenticationFailed('The account with this email is not verified.')
 
@@ -166,7 +181,12 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model  = CustomUser
         fields = ('id', 'email', 'name', 'first_name', 'last_name', 'role', 'setup_completed', 'location', 'saved_jobs', 'created_at', 'employee_profile', 'company_profile', 'avatarUrl', 'is_verified')
-        read_only_fields = ('id', 'created_at', 'role')
+        # SECURITY (QH-05): email is the USERNAME_FIELD, so a writable email
+        # let anyone holding a stolen access token repoint the account at their
+        # own address — email_verified was not reset — and then use
+        # forgot-password to lock the real owner out permanently. Changing an
+        # email must go through a dedicated, re-authenticated, verified flow.
+        read_only_fields = ('id', 'created_at', 'role', 'email')
 
     def get_name(self, obj):
         return obj.get_full_name() or obj.username
@@ -198,6 +218,20 @@ class RegisterSerializer(serializers.ModelSerializer):
     phone_number = serializers.CharField(required=False, allow_blank=True, write_only=True)
     city      = serializers.CharField(required=False, allow_blank=True, write_only=True)
     country   = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
+    # SECURITY (QH-01): role must never be inferred from the model's choices.
+    # UserRole also declares admin, SUPERADMIN, FINANCE_ADMIN, HR_OPS and
+    # SALES_CAM — a plain ModelSerializer field would accept any of them from
+    # an unauthenticated caller, who could then self-assign administrator.
+    # Only the two roles a member of the public may legitimately choose are
+    # listed here; anything else is rejected with a 400.
+    role = serializers.ChoiceField(
+        choices=[
+            (UserRole.EMPLOYEE, 'Employee'),
+            (UserRole.COMPANY,  'Company'),
+        ],
+        default=UserRole.EMPLOYEE,
+    )
 
     class Meta:
         model  = CustomUser
@@ -347,7 +381,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
                 if request and not logo.startswith('http'):
                     return optimize_image_url(request.build_absolute_uri(logo))
                 return optimize_image_url(logo)
-        except:
+        except Exception:      # QH-30: never swallow SystemExit/KeyboardInterrupt
             pass
         return None
 
@@ -535,6 +569,10 @@ class CommunityAuthorSerializer(serializers.ModelSerializer):
 
 class CommunityCommentSerializer(serializers.ModelSerializer):
     author = CommunityAuthorSerializer(read_only=True)
+    # QH-19: comment bodies had no length limit anywhere, while posts were
+    # capped at 500 characters in the view. The model field is a TextField,
+    # so the effective ceiling was the whole request body.
+    content = serializers.CharField(max_length=1000, allow_blank=False, trim_whitespace=True)
     likes_count = serializers.SerializerMethodField()
     dislikes_count = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
@@ -552,26 +590,37 @@ class CommunityCommentSerializer(serializers.ModelSerializer):
         read_only_fields = (
             'id', 'author', 'created_at',
             'likes_count', 'dislikes_count', 'is_liked', 'is_disliked',
-            'is_author', 'parent_author_name'
+            # QH-31: 'parent' is validated against the post on create, but
+            # perform_update re-ran no such check, so a PATCH could repoint a
+            # reply at a comment in a different thread.
+            'is_author', 'parent_author_name', 'parent'
         )
 
+    def validate_content(self, value):
+        return sanitize_text(value)
+
+    # QH-24: the view already calls prefetch_related('likes', 'dislikes'), but
+    # `.count()` and `.filter().exists()` issue fresh queries and ignore that
+    # cache entirely — so twenty comments cost roughly eighty extra queries and
+    # the prefetch was pure overhead. Reading through .all() uses the prefetched
+    # rows instead.
     def get_likes_count(self, obj):
-        return obj.likes.count()
+        return len(obj.likes.all())
 
     def get_dislikes_count(self, obj):
-        return obj.dislikes.count()
+        return len(obj.dislikes.all())
 
     def get_is_liked(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        return obj.likes.filter(pk=request.user.pk).exists()
+        return any(u.pk == request.user.pk for u in obj.likes.all())
 
     def get_is_disliked(self, obj):
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return False
-        return obj.dislikes.filter(pk=request.user.pk).exists()
+        return any(u.pk == request.user.pk for u in obj.dislikes.all())
 
     def get_is_author(self, obj):
         request = self.context.get('request')

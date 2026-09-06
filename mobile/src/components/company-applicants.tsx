@@ -21,7 +21,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Palette, BorderRadius, FontSize, FontWeight, TabBarHeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
 import { useCompanyDashboardData } from '@/hooks/useCompanyDashboardData';
-import { SkeletonBox, SkeletonLine } from '@/components/ui/skeleton';
+import { SkeletonBox, SkeletonLine, SkeletonApplicantCard } from '@/components/ui/skeleton';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -361,6 +361,25 @@ export default function CompanyApplicants() {
                 </Pressable>
               </Animated.View>
             )}
+            ListEmptyComponent={
+              loading && applicants.length === 0 ? (
+                <View style={{ gap: 14 }}>
+                  {[1, 2, 3].map(k => (
+                    <SkeletonApplicantCard key={k} />
+                  ))}
+                </View>
+              ) : (
+                <View style={[styles.emptyContainer, { borderColor: colors.borderMid, marginHorizontal: 0 }]}>
+                  <View style={[styles.emptyIconWrap, { backgroundColor: Palette.neutral100 }]}>
+                    <Feather name="users" size={32} color={colors.textMuted} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>No applicants yet</Text>
+                  <Text style={[styles.emptySub, { color: colors.textMuted }]}>
+                    When candidates apply for this role, they will appear here.
+                  </Text>
+                </View>
+              )
+            }
           />
         </View>
       )}

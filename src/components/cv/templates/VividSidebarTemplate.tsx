@@ -71,8 +71,8 @@ export const VividSidebarTemplate = ({ data }: { data: CVData }) => (
           <Text style={s.bdName}>{data.name}</Text>
           
           <View style={s.bdContact}>
-            {data.phone    && <Text style={s.bdCtxt}>☎ {data.phone}</Text>}
-            {data.email    && <Text style={s.bdCtxt}>✉ {data.email}</Text>}
+            {data.phone    && <Text style={s.bdCtxt}>Tel: {data.phone}</Text>}
+            {data.email    && <Text style={s.bdCtxt}>Email: {data.email}</Text>}
             {data.location && <Text style={s.bdCtxt}>{data.location}</Text>}
           </View>
         </View>

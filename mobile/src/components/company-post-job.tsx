@@ -27,7 +27,7 @@ const jobTemplates: Record<string, { keywords: string[]; description: string; re
   'Sales Development Representative (SDR)': {
     keywords: ['sdr', 'sales development', 'business development rep', 'bdr'],
     description: "As an SDR, you will be the engine of our pipeline. Your primary responsibility is to identify, research, and engage outbound prospects through multi-channel outreach including cold calls, personalized emails, and LinkedIn. You will qualify inbound leads and schedule meetings for Account Executives, playing a critical role in our revenue growth.",
-    requirements: "0–2 years of sales or customer-facing experience\nExcellent verbal and written communication skills\nHigh energy, resilience, and coachability\nFamiliarity with CRM tools (Salesforce, HubSpot, or similar)\nAbility to manage high daily call and email volume"
+    requirements: "0-2 years of sales or customer-facing experience\nExcellent verbal and written communication skills\nHigh energy, resilience, and coachability\nFamiliarity with CRM tools (Salesforce, HubSpot, or similar)\nAbility to manage high daily call and email volume"
   },
   'Account Executive': {
     keywords: ['account executive', 'ae ', 'ae,', 'sales executive', 'closing rep', 'quota-carrying'],
