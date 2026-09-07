@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent, Modal } from 'react-native';
+import { View, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent, Modal } from 'react-native';
+import { Text } from '@/components/ui/text';
 // expo-local-authentication may not be available in Expo Go — guard with try/catch
 let LocalAuthentication: any = {
   hasHardwareAsync: async () => false,

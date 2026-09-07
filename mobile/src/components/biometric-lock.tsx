@@ -18,7 +18,8 @@
  * risk it mitigates.
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, AppStateStatus, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppState, AppStateStatus, Pressable, StyleSheet, View } from "react-native";
+import { Text } from "@/components/ui/text";
 import * as SecureStore from "expo-secure-store";
 
 let LocalAuthentication: any = null;

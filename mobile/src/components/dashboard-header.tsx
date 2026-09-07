@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
 import {
   View,
-  Text,
   Pressable,
   StyleSheet,
   useColorScheme,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -162,6 +162,13 @@ const styles = StyleSheet.create({
   },
   greetingBlock: {
     gap: 0,
+    // Must be able to shrink inside the row, or the greeting pushes the bell
+    // and avatar off screen once the OS text size grows. minWidth:0 is the
+    // part people miss: without it a flex child refuses to go below the
+    // intrinsic width of its text, so numberOfLines has no narrower box to
+    // truncate into and the row overflows instead.
+    flex: 1,
+    minWidth: 0,
   },
   greetingLine: {
     fontSize:   FontSize.xs,

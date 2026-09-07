@@ -1,9 +1,20 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, FlatList, TextInput, StyleSheet, KeyboardAvoidingView,
-  Platform, ActivityIndicator, Alert, Image, Modal,
-  Pressable, Keyboard, BackHandler, DeviceEventEmitter,
+  View,
+  FlatList,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  Keyboard,
+  BackHandler,
+  DeviceEventEmitter,
 } from 'react-native';
+import { Text, TextInput } from '@/components/ui/text';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';

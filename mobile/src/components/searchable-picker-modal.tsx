@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   Pressable,
   FlatList,
   StyleSheet,
@@ -10,6 +8,7 @@ import {
   KeyboardAvoidingView,
   BackHandler,
 } from 'react-native';
+import { Text, TextInput } from '@/components/ui/text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';

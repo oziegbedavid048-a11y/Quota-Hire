@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, Pressable, TextInput,
-  StyleSheet, useColorScheme,
+  View,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  useColorScheme,
 } from 'react-native';
+import { Text, TextInput } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';

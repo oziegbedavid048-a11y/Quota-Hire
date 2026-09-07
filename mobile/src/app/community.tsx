@@ -1,10 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
-  View, Text, FlatList, TextInput, StyleSheet, Modal,
-  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
-  Alert, TouchableOpacity, Pressable, Image, Switch, DeviceEventEmitter,
+  View,
+  FlatList,
+  StyleSheet,
+  Modal,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+  Pressable,
+  Image,
+  Switch,
+  DeviceEventEmitter,
 } from 'react-native';
+import { Text, TextInput } from '@/components/ui/text';
 import { Image as ExpoImage } from 'expo-image';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';

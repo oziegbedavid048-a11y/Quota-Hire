@@ -15,12 +15,10 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   StyleSheet,
   Alert,
-  TextInput,
   ActivityIndicator,
   Modal,
   Dimensions,
@@ -29,6 +27,7 @@ import {
   Animated as RNAnimated,
   DeviceEventEmitter,
 } from "react-native";
+import { Text, TextInput } from "@/components/ui/text";
 import { useRouter } from "expo-router";
 
 const { height: SCREEN_H } = Dimensions.get("window");

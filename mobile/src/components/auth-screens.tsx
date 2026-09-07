@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   StyleSheet,
   View,
-  Text,
-  TextInput,
   Pressable,
   ScrollView,
   KeyboardAvoidingView,
@@ -11,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { Text, TextInput } from "@/components/ui/text";
 import * as SecureStore from "expo-secure-store";
 // expo-local-authentication may not be available in Expo Go — guard with try/catch
 let LocalAuthentication: any = {

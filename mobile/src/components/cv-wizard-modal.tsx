@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
   Pressable,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   Dimensions,
   Platform,
   Alert,
   KeyboardAvoidingView,
 } from 'react-native';
+import { Text, TextInput } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';

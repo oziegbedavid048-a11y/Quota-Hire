@@ -16,7 +16,6 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -25,6 +24,7 @@ import {
   Platform,
   Animated as RNAnimated,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';

@@ -2,13 +2,13 @@ import React, { useState, useRef } from "react";
 import {
   ScrollView,
   StyleSheet,
-  Text,
   View,
   Pressable,
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
+import { Text } from "@/components/ui/text";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";

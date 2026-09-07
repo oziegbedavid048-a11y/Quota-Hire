@@ -1,7 +1,6 @@
 import React, { useCallback } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';

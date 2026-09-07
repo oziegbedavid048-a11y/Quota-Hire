@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, ScrollView, Pressable, StyleSheet,
-  Dimensions, ActivityIndicator, Alert, PanResponder, BackHandler,
+  View,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
+  PanResponder,
+  BackHandler,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';

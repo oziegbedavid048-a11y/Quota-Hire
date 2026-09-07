@@ -29,7 +29,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   Modal,
   Pressable,
@@ -38,6 +37,7 @@ import {
   Dimensions,
   Platform,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';

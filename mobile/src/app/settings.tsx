@@ -11,17 +11,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   StyleSheet,
   Alert,
-  TextInput,
   ActivityIndicator,
   Switch,
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import { Text, TextInput } from '@/components/ui/text';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';

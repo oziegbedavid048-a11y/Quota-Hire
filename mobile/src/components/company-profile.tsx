@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   StyleSheet,
   Alert,
-  TextInput,
   ActivityIndicator,
   Modal,
   Dimensions,
@@ -15,6 +13,7 @@ import {
   Animated as RNAnimated,
   DeviceEventEmitter,
 } from "react-native";
+import { Text, TextInput } from "@/components/ui/text";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";

@@ -5,9 +5,14 @@
  */
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, Pressable, StyleSheet,
-  Dimensions, RefreshControl,
+  View,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  Dimensions,
+  RefreshControl,
 } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';

@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
   StyleSheet,
   ActivityIndicator,
   Alert,
   Dimensions,
 } from 'react-native';
+import { Text, TextInput } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
