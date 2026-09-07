@@ -1037,7 +1037,6 @@ const modalStyles = StyleSheet.create({
   primaryBtn: {
     width: '100%',
     minHeight: 48,
-    paddingVertical: 8,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -1055,7 +1054,6 @@ const modalStyles = StyleSheet.create({
   secondaryBtn: {
     width: '100%',
     minHeight: 42,
-    paddingVertical: 8,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1082,7 +1080,6 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     minHeight: 64,
-    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1171,16 +1168,15 @@ const styles = StyleSheet.create({
   // ── Navbar tab styles ─────────────────────────────────────────────────────
   pillTabItem: {
     flex: 1,
-    // Each slot may shrink below its natural width. Without this a long label
-    // widens its slot, steals space from the others and pushes the row wider
-    // than the bar.
+    // flex: 1 already gives each of the five slots an equal share. minWidth: 0
+    // lets a slot go below the intrinsic width of its label so a long one
+    // cannot widen itself at its neighbours' expense; it costs nothing at the
+    // default size, where every label already fits.
     minWidth: 0,
-    flexShrink: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingVertical: 6,
-    paddingHorizontal: 2,
   },
   pillLabel: {
     fontSize: 10,
@@ -1279,7 +1275,6 @@ const styles = StyleSheet.create({
   sheetCloseBtn: {
     width: 32,
     minHeight: 32,
-    paddingVertical: 6,
     borderRadius: 16,
     backgroundColor: Palette.neutral100,
     alignItems: 'center',
@@ -1325,7 +1320,6 @@ const styles = StyleSheet.create({
     right: -2,
     minWidth: 16,
     minHeight: 16,
-    paddingVertical: 2,
     borderRadius: 8,
     backgroundColor: '#ef4444',
     alignItems: 'center',

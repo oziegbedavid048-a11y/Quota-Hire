@@ -1790,7 +1790,6 @@ const styles = StyleSheet.create({
   recSaveBtn: {
     width: 32,
     minHeight: 32,
-    paddingVertical: 6,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',

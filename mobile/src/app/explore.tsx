@@ -743,7 +743,6 @@ const s = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     minHeight: 46,
-    paddingVertical: 8,
     paddingHorizontal: 8,
     gap: 8,
     shadowColor: Palette.accent600,
@@ -773,7 +772,6 @@ const s = StyleSheet.create({
   contextualSearchCloseBtn: {
     width: 28,
     minHeight: 28,
-    paddingVertical: 6,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',

@@ -1189,7 +1189,6 @@ const styles = StyleSheet.create({
   anonBadge: {
     width: 20,
     minHeight: 20,
-    paddingVertical: 2,
     borderRadius: 10,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
@@ -1249,7 +1248,6 @@ const styles = StyleSheet.create({
   pollChoicesContainer: { gap: 8, marginBottom: 12 },
   pollChoiceRow: {
     minHeight: 46,
-    paddingVertical: 8,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1292,7 +1290,6 @@ const styles = StyleSheet.create({
   mainFab: {
     width: 60,
     minHeight: 60,
-    paddingVertical: 8,
     borderRadius: 30,
     backgroundColor: Palette.accent600,
     justifyContent: 'center',
@@ -1382,7 +1379,6 @@ const styles = StyleSheet.create({
   },
   reportSubmitBtn: {
     minHeight: 52,
-    paddingVertical: 8,
     borderRadius: BorderRadius.button,
     backgroundColor: Palette.red500,
     justifyContent: 'center',
@@ -1526,7 +1522,6 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     minHeight: 48,
-    paddingVertical: 8,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -1550,7 +1545,6 @@ const styles = StyleSheet.create({
   },
   submitBtn: {
     minHeight: 52,
-    paddingVertical: 8,
     borderRadius: BorderRadius.button,
     backgroundColor: Palette.accent500,
     justifyContent: 'center',
@@ -1600,7 +1594,6 @@ const styles = StyleSheet.create({
   // ── Merged Top Header Cover ──
   heroCoverCardHeader: {
     minHeight: 150,
-    paddingVertical: 8,
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',

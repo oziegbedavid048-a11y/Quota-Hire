@@ -2139,7 +2139,6 @@ const s = StyleSheet.create({
   },
   input: {
     minHeight: 42,
-    paddingVertical: 8,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: 12,
@@ -2156,7 +2155,6 @@ const s = StyleSheet.create({
   },
   saveBtn: {
     minHeight: 44,
-    paddingVertical: 8,
     borderRadius: BorderRadius.button,
     alignItems: "center",
     justifyContent: "center",

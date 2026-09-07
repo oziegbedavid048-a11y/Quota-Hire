@@ -2082,7 +2082,6 @@ const s = StyleSheet.create({
   },
   input: {
     minHeight: 40,
-    paddingVertical: 6,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: 12,
@@ -2118,7 +2117,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     minHeight: 40,
-    paddingVertical: 6,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: BorderRadius.md,
@@ -2148,7 +2146,6 @@ const s = StyleSheet.create({
   prevBtn: {
     flex: 1,
     minHeight: 44,
-    paddingVertical: 8,
     borderWidth: 1,
     borderRadius: BorderRadius.button,
     alignItems: 'center',
@@ -2161,7 +2158,6 @@ const s = StyleSheet.create({
   nextBtn: {
     flex: 2,
     minHeight: 44,
-    paddingVertical: 8,
     borderRadius: BorderRadius.button,
     alignItems: 'center',
     justifyContent: 'center',

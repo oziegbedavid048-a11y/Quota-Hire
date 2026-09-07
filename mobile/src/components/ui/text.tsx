@@ -89,9 +89,15 @@ export const Text = forwardRef<RNText, TextProps>(
       // narrower box to truncate into. Allowing text to shrink is what lets it
       // wrap or ellipsize instead of overflowing.
       //
+      // Applied only once the text is actually enlarged. At the default or a
+      // smaller size the layout must render exactly as it did before any of
+      // this scaling work existed — flexShrink changes how a row distributes
+      // space, so leaving it on permanently altered alignment and spacing for
+      // everyone, not just users who had raised their text size.
+      //
       // Listed before `style` so any call site that sets its own flexShrink,
       // width or flex still wins.
-      style={[{ flexShrink: 1 }, style]}
+      style={[effectiveScale > 1.05 ? { flexShrink: 1 } : null, style]}
       {...rest}
     />
     );

@@ -662,7 +662,6 @@ const s = StyleSheet.create({
   companyBadge: {
     width: 38,
     minHeight: 38,
-    paddingVertical: 6,
     borderRadius: BorderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -713,7 +712,6 @@ const s = StyleSheet.create({
   },
   input: {
     minHeight: 40,
-    paddingVertical: 6,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: 12,
@@ -721,7 +719,6 @@ const s = StyleSheet.create({
   },
   selectBox: {
     minHeight: 40,
-    paddingVertical: 6,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: 12,
@@ -735,7 +732,6 @@ const s = StyleSheet.create({
   },
   actionBtn: {
     minHeight: 44,
-    paddingVertical: 8,
     borderRadius: BorderRadius.button,
     alignItems: 'center',
     justifyContent: 'center',
@@ -796,7 +792,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     minHeight: 40,
-    paddingVertical: 6,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderRadius: BorderRadius.md,

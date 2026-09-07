@@ -4,6 +4,7 @@ import {
   Pressable,
   StyleSheet,
   useColorScheme,
+  useWindowDimensions,
 } from 'react-native';
 import { Text, MAX_FONT_SCALE_COMPACT } from '@/components/ui/text';
 import { Image } from 'expo-image';
@@ -40,6 +41,12 @@ export default function DashboardHeader({
   const isDark    = scheme === 'dark';
   const firstName = userName.split(' ')[0];
   const greeting  = useMemo(getGreeting, []);
+  // Only constrain the greeting block once text is actually enlarged. At the
+  // default size it must size to its content exactly as it always did —
+  // giving it flex: 1 permanently changed how the header row shared its
+  // width for every user, not just those with a raised text size.
+  const { fontScale } = useWindowDimensions();
+  const isEnlarged = (fontScale || 1) > 1.05;
   const initial   = firstName.charAt(0).toUpperCase();
 
   return (
@@ -59,7 +66,7 @@ export default function DashboardHeader({
       {/* LEFT: Logo + Greeting */}
       <View style={styles.left}>
         <Logo size={36} />
-        <View style={styles.greetingBlock}>
+        <View style={[styles.greetingBlock, isEnlarged && styles.greetingBlockEnlarged]}>
           <Text style={[styles.greetingLine, { color: colors.textSecondary }]}>
             {greeting}
           </Text>
@@ -162,11 +169,13 @@ const styles = StyleSheet.create({
   },
   greetingBlock: {
     gap: 0,
-    // Must be able to shrink inside the row, or the greeting pushes the bell
-    // and avatar off screen once the OS text size grows. minWidth:0 is the
-    // part people miss: without it a flex child refuses to go below the
-    // intrinsic width of its text, so numberOfLines has no narrower box to
-    // truncate into and the row overflows instead.
+  },
+  // Applied only at enlarged text sizes. Without it the greeting pushes the
+  // bell and avatar off screen as the text grows; minWidth:0 is the part
+  // people miss, because a flex child otherwise refuses to go below the
+  // intrinsic width of its text and numberOfLines has no narrower box to
+  // truncate into.
+  greetingBlockEnlarged: {
     flex: 1,
     minWidth: 0,
   },
@@ -202,7 +211,6 @@ const styles = StyleSheet.create({
     borderRadius:   99,
     minWidth:       16,
     minHeight: 16,
-    paddingVertical: 2,
     alignItems:     'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
