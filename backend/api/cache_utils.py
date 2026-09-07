@@ -163,3 +163,31 @@ def invalidate_jobs_cache(job_pk=None):
         keys.append(job_detail_key(job_pk))
     safe_delete_many(keys)
     logger.info("Cache: jobs invalidated (job_pk=%s, %d key(s) cleared)", job_pk, len(keys))
+
+
+def invalidate_dashboards(*user_role_pairs):
+    """
+    Clear cached analytics for each (user_pk, role) pair given.
+
+    The dashboard cache has a 60-second TTL, which is fine for passive
+    viewing but wrong immediately after a mutation: a user who applies for
+    a job, or a company whose applicant count just changed, would keep
+    seeing stale figures for up to a minute even after the client refetches.
+
+    Call this from every view that changes something a dashboard counts.
+    Pairs with a falsy pk or role are skipped, so callers can pass an
+    optional relation without guarding first.
+
+    Example:
+        invalidate_dashboards(
+            (request.user.pk, request.user.role),
+            (job.company_id, 'company'),
+        )
+    """
+    keys = [
+        dashboard_key(pk, role)
+        for pk, role in user_role_pairs
+        if pk and role
+    ]
+    if keys:
+        safe_delete_many(keys)

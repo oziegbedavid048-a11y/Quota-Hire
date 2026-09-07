@@ -2404,3 +2404,119 @@ class PlayReviewExistingAccountTests(ThrottleIsolatedTestCase):
                     CustomUser.objects.filter(email__iexact=attacker).exists(),
                     f'{attacker} was minted as an account.',
                 )
+
+
+class DashboardCacheInvalidationTests(ThrottleIsolatedTestCase):
+    """
+    Real-time correctness — the dashboard cache must not outlive the data.
+
+    DashboardAnalyticsView caches per (user, role) for DASHBOARD_TTL seconds.
+    Before this fix no mutation cleared it, so a user who applied for a job
+    saw their old application count for up to a minute even if the client
+    refetched immediately. These tests assert the cache is dropped by the
+    mutation itself.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.employee = CustomUser.objects.create_user(
+            username='rt_emp', email='rt_emp@example.com', password='Str0ngPass!23',
+            role=UserRole.EMPLOYEE, email_verified=True,
+        )
+        self.company = CustomUser.objects.create_user(
+            username='rt_co', email='rt_co@example.com', password='Str0ngPass!23',
+            role=UserRole.COMPANY, email_verified=True,
+        )
+        from .models import Job
+        self.job = Job.objects.create(
+            company=self.company, title='Realtime AE', description='d',
+            requirements=[], status='approved',
+        )
+
+    def _auth(self, user):
+        self.client.force_authenticate(user=user)
+
+    def _warm_dashboard(self, user):
+        """Populate the cache the way a real dashboard visit would."""
+        from .cache_utils import dashboard_key, safe_get
+        self._auth(user)
+        resp = self.client.get(reverse('dashboard-analytics'))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.assertIsNotNone(
+            safe_get(dashboard_key(user.pk, user.role)),
+            'dashboard cache was not populated, so this test proves nothing',
+        )
+        return dashboard_key(user.pk, user.role)
+
+    def test_applying_clears_both_dashboards(self):
+        from .cache_utils import safe_get
+        emp_key = self._warm_dashboard(self.employee)
+        co_key = self._warm_dashboard(self.company)
+
+        self._auth(self.employee)
+        resp = self.client.post(
+            reverse('job-apply', args=[self.job.pk]), {}, format='json'
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+
+        self.assertIsNone(
+            safe_get(emp_key),
+            'Applicant dashboard still cached — their tracker would show stale data.',
+        )
+        self.assertIsNone(
+            safe_get(co_key),
+            'Company dashboard still cached — applicant count would be stale.',
+        )
+
+    def test_status_change_clears_both_dashboards(self):
+        from .models import Application
+        from .cache_utils import safe_get
+        app = Application.objects.create(job=self.job, employee=self.employee)
+
+        emp_key = self._warm_dashboard(self.employee)
+        co_key = self._warm_dashboard(self.company)
+
+        self._auth(self.company)
+        resp = self.client.put(
+            reverse('application-status', args=[app.pk]),
+            {'status': 'accepted'}, format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+
+        self.assertIsNone(safe_get(emp_key), 'Employee dashboard stale after decision.')
+        self.assertIsNone(safe_get(co_key), 'Company dashboard stale after decision.')
+
+    def test_saving_a_job_clears_the_employee_dashboard(self):
+        from .cache_utils import safe_get
+        emp_key = self._warm_dashboard(self.employee)
+
+        self._auth(self.employee)
+        resp = self.client.post(reverse('job-save', args=[self.job.pk]), {}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.assertIsNone(safe_get(emp_key), 'Saved-jobs change left the dashboard cached.')
+
+    def test_shortlisting_clears_both_dashboards(self):
+        from .models import Application
+        from .cache_utils import safe_get
+        app = Application.objects.create(job=self.job, employee=self.employee)
+
+        emp_key = self._warm_dashboard(self.employee)
+        co_key = self._warm_dashboard(self.company)
+
+        self._auth(self.company)
+        resp = self.client.post(
+            reverse('company-shortlist-applicant', args=[app.pk]), {}, format='json'
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+
+        self.assertIsNone(safe_get(co_key), 'Company dashboard stale after shortlisting.')
+        self.assertIsNone(safe_get(emp_key), 'Employee dashboard stale after shortlisting.')
+
+    def test_invalidate_dashboards_skips_incomplete_pairs(self):
+        """A missing relation must not raise or clear unrelated keys."""
+        from .cache_utils import invalidate_dashboards, dashboard_key, safe_set, safe_get
+        key = dashboard_key(self.employee.pk, 'employee')
+        safe_set(key, {'x': 1}, ttl=60)
+        invalidate_dashboards((None, 'company'), (self.company.pk, None))
+        self.assertIsNotNone(safe_get(key), 'Unrelated dashboard key was cleared.')

@@ -1915,15 +1915,19 @@ class SavedJobToggleView(APIView):
         user = request.user
         entry = SavedJob.objects.filter(user=user, job=job).first()
 
+        from .cache_utils import invalidate_dashboards
+
         if entry:
             # Unsave: remove from both M2M and SavedJob
             entry.delete()
             user.saved_jobs.remove(job)
+            invalidate_dashboards((user.pk, user.role))
             return Response({'saved': False, 'job_id': job.id})
         else:
             # Save: create SavedJob entry and add to M2M
             new_entry = SavedJob.objects.create(user=user, job=job)
             user.saved_jobs.add(job)
+            invalidate_dashboards((user.pk, user.role))
             return Response({
                 'saved': True,
                 'job_id': job.id,
@@ -1989,6 +1993,16 @@ class ApplyForJobView(APIView):
             )
         except Exception as _notify_exc:
             logger.warning('Could not notify company of new application: %s', _notify_exc)
+
+        # The applicant's own tracker and the company's applicant counts are
+        # both derived from cached analytics. Without this the new application
+        # stays invisible on both dashboards for up to DASHBOARD_TTL seconds,
+        # even if the client refetches immediately.
+        from .cache_utils import invalidate_dashboards
+        invalidate_dashboards(
+            (request.user.pk, request.user.role),
+            (job.company_id, 'company'),
+        )
 
         return Response(ApplicationSerializer(app).data, status=status.HTTP_201_CREATED)
 
@@ -2068,6 +2082,13 @@ class ApplicationStatusUpdateView(APIView):
                 f'Your application for "{app.job.title}" has been {new_status}. '
                 + ('The company will contact you shortly.' if new_status == 'accepted' else '')
             ),
+        )
+
+        # Status moved, so both sides' counts changed.
+        from .cache_utils import invalidate_dashboards
+        invalidate_dashboards(
+            (app.employee_id, 'employee'),
+            (request.user.pk, 'company'),
         )
 
         return Response(ApplicationSerializer(app).data)
@@ -2268,6 +2289,12 @@ class ShortlistApplicantView(APIView):
 
         from .models import ShortlistedApplicant
         shortlist = ShortlistedApplicant.objects.create(application=app)
+
+        from .cache_utils import invalidate_dashboards
+        invalidate_dashboards(
+            (request.user.pk, 'company'),
+            (app.employee_id, 'employee'),
+        )
 
         return Response({
             'message': 'Applicant successfully shortlisted.',

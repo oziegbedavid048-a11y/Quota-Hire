@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import { AppState, DeviceEventEmitter } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { SERVER_STATE_CHANGED } from './useNotificationsData';
 import { apiFetch, getAccessToken } from '../services/api';
 import { cacheGet, cacheSet, CacheKeys } from '../services/app-cache';
 import { rememberUserRole } from '../services/user-role';
@@ -317,6 +319,44 @@ export function useCompanyDashboardData() {
   const pendingJobs = jobs.filter(j => j.status === 'pending');
   const profileScore = calculateCompanyProfileStrength(company, activeJobs.length);
   const profileItems = getCompanyProfileItems(company, activeJobs.length);
+
+
+
+  // ── Real-time: react to changes made by other people ──────────────────────
+  // The notification poller runs every 15s regardless. When it sees a
+  // notification id it has never seen, something changed server-side that
+  // this device did not cause — a decision on an application, a new
+  // applicant, a job approval — so refetch rather than wait for the user
+  // to pull down.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(SERVER_STATE_CHANGED, () => {
+      fetchLiveCompanyData(true);
+    });
+    return () => sub.remove();
+  }, [fetchLiveCompanyData]);
+
+  // ── Real-time: refresh when the screen is focused or the app resumes ───────
+  // Tab screens stay mounted, so navigating back to one does not remount the
+  // hook and nothing refetches. Before this, a change made elsewhere (or by
+  // another user) only appeared after a manual pull-to-refresh.
+  //
+  // fetchLiveDashboard is called unforced, so its 30s throttle still applies:
+  // switching tabs rapidly stays instant and costs no requests, while a
+  // genuinely stale screen updates itself.
+  useFocusEffect(
+    useCallback(() => {
+      fetchLiveCompanyData(false);
+    }, [fetchLiveCompanyData])
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        fetchLiveCompanyData(false);
+      }
+    });
+    return () => sub.remove();
+  }, [fetchLiveCompanyData]);
 
   return {
     company,

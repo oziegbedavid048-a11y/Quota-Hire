@@ -12,6 +12,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Alert,
+  DeviceEventEmitter,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
+import { APPLICATIONS_UPDATED } from '@/hooks/useEmployeeDashboardData';
 import { Job } from '@/hooks/useEmployeeDashboardData';
 import CVWizardModal from '@/components/cv-wizard-modal';
 import { SearchablePickerModal, PickerItem } from './searchable-picker-modal';
@@ -220,13 +222,18 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
       });
 
       // 2. Submit the job application
-      await apiFetch(`/jobs/${job?.id}/apply/`, {
+      const createdApplication = await apiFetch(`/jobs/${job?.id}/apply/`, {
         method: 'POST',
         body: JSON.stringify({
           cover_letter: '',
           generated_cv_id: selectedCvId || undefined,
         }),
       });
+
+      // Tell every mounted screen the application list changed. Without this
+      // the Tracker tab — already mounted, holding its own copy of the list —
+      // kept showing the old data until the user pulled to refresh.
+      DeviceEventEmitter.emit(APPLICATIONS_UPDATED, createdApplication);
 
       setStep('success');
       onSuccess();

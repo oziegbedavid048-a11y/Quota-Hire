@@ -1,5 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { AppState, DeviceEventEmitter } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { SERVER_STATE_CHANGED } from './useNotificationsData';
 import { apiFetch, getAccessToken } from '../services/api';
 import { cacheGet, cacheSet, CacheKeys } from '../services/app-cache';
 
@@ -93,7 +95,14 @@ export function useCommunityData() {
   }, []);
 
   // Fetch feed (Posts & Polls)
+  // The category filter lives in the screen, not this hook, so an automatic
+  // refresh has no way to know which tab the user is on. Remembering the last
+  // one requested keeps a background refresh on the same filter instead of
+  // snapping the user back to the default feed.
+  const lastCategoryRef = useRef('');
+
   const fetchFeed = useCallback(async (category = '', isRefresh = false, pageNum = 1) => {
+    lastCategoryRef.current = category;
     if (isRefresh || pageNum === 1) {
       setPage(1);
       if (isRefresh) setIsRefreshing(true);
@@ -569,6 +578,29 @@ export function useCommunityData() {
     });
     return () => sub.remove();
   }, []);
+
+  // ── Real-time: refresh the feed on focus, on resume, and on server change ──
+  // The Community tab stays mounted, so returning to it kept showing whatever
+  // was fetched the first time — other people's posts, likes and comments
+  // never appeared without a manual pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      fetchFeed(lastCategoryRef.current, true, 1);
+    }, [fetchFeed])
+  );
+
+  useEffect(() => {
+    const appSub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') fetchFeed(lastCategoryRef.current, true, 1);
+    });
+    const serverSub = DeviceEventEmitter.addListener(SERVER_STATE_CHANGED, () => {
+      fetchFeed(lastCategoryRef.current, true, 1);
+    });
+    return () => {
+      appSub.remove();
+      serverSub.remove();
+    };
+  }, [fetchFeed]);
 
   return {
     feed,

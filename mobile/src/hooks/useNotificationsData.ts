@@ -32,6 +32,14 @@ export function resetNotificationsMemory() {
   isFetchingPromise = null;
 }
 
+/**
+ * Emitted when the notification poll sees an id it has not seen before,
+ * which means something changed on the server that this client did not do.
+ * Dashboard hooks listen for it and refetch, giving near-real-time updates
+ * for other people's actions without every screen running its own poll.
+ */
+export const SERVER_STATE_CHANGED = 'SERVER_STATE_CHANGED';
+
 async function doFetchNotifications(force = false): Promise<void> {
   const now = Date.now();
   if (!force && now - lastFetchTimestamp < THROTTLE_WINDOW_MS) {
@@ -58,6 +66,14 @@ async function doFetchNotifications(force = false): Promise<void> {
 
       lastFetchTimestamp = Date.now();
 
+      // A notification the client has never seen means the server state
+      // changed because of something that happened elsewhere — a company
+      // accepted an application, a job was approved, someone applied to
+      // your posting. Detected by id so that merely marking one as read
+      // does not count as an arrival.
+      const knownIds = new Set(globalNotifications.map(n => n.id));
+      const hasNewArrivals = normalized.some(n => !knownIds.has(n.id));
+
       // Only notify & write storage if data has actually changed
       const hasChanged =
         normalized.length !== globalNotifications.length ||
@@ -65,6 +81,8 @@ async function doFetchNotifications(force = false): Promise<void> {
           const prev = globalNotifications[idx];
           return !prev || prev.id !== n.id || prev.read !== n.read;
         });
+
+      const wasFirstLoad = !hasLoadedFromCache;
 
       if (hasChanged || !hasLoadedFromCache) {
         globalNotifications = normalized;
@@ -76,6 +94,14 @@ async function doFetchNotifications(force = false): Promise<void> {
           } catch (_e) {}
         });
         DeviceEventEmitter.emit('NOTIFICATIONS_UPDATED', normalized);
+      }
+
+      // Piggyback on the 15s notification poll that already runs, instead of
+      // adding a second timer: tell the dashboards to refetch so screens
+      // reflect other people's actions without their own polling loop.
+      // Skipped on first load because every screen fetches on mount anyway.
+      if (hasNewArrivals && !wasFirstLoad) {
+        DeviceEventEmitter.emit(SERVER_STATE_CHANGED);
       }
     } catch (_err) {
       // Silently catch network drops — preserve existing state without DB strain

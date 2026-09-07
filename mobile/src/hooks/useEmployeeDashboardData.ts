@@ -9,7 +9,9 @@
  * the loading state and an error/retry banner covers fetch failures.
  */
 import { useState, useEffect, useCallback } from "react";
-import { DeviceEventEmitter } from "react-native";
+import { AppState, DeviceEventEmitter } from "react-native";
+import { useFocusEffect } from 'expo-router';
+import { SERVER_STATE_CHANGED } from './useNotificationsData';
 import { apiFetch, getAccessToken } from "../services/api";
 import { cacheGet, cacheSet, CacheKeys } from "../services/app-cache";
 import { rememberUserRole } from "../services/user-role";
@@ -186,6 +188,21 @@ function normalizeAnalytics(analData: any | null, appCount: number): any {
 }
 
 // ─── Module-Level In-Memory Cache (Instant 0ms Tab Switching) ─────────────────
+/**
+ * Emitted whenever the signed-in employee's application list changes —
+ * currently when they apply for a job. Any mounted screen showing
+ * applications listens for this.
+ *
+ * Screens are separate mounted instances of this hook, each with its own
+ * useState seeded from module memory at mount time. Writing to module
+ * memory alone does NOT re-render an already-mounted screen, which is why
+ * applying from Job Details left the Tracker tab showing stale data until
+ * a manual refresh. The event is what closes that gap.
+ *
+ * Payload: the newly created Application, or undefined to just refetch.
+ */
+export const APPLICATIONS_UPDATED = "APPLICATIONS_UPDATED";
+
 let inMemoryUser: UserProfile | null = null;
 let inMemoryJobs: Job[] = [];
 let inMemoryApps: Application[] = [];
@@ -425,12 +442,80 @@ export function useEmployeeDashboardData() {
       }
     });
 
+    const subApps = DeviceEventEmitter.addListener(
+      APPLICATIONS_UPDATED,
+      (newApp?: any) => {
+        // Show it immediately when the caller hands us the created record,
+        // so the Tracker updates on the same frame the modal closes rather
+        // than after a network round trip.
+        if (newApp && newApp.id != null) {
+          const [normalized] = normalizeApps([newApp]);
+          if (normalized && !inMemoryApps.some((a) => a.id === normalized.id)) {
+            const next = [normalized, ...inMemoryApps];
+            inMemoryApps = next;
+            setApplications(next);
+            cacheSet(CacheKeys.applications, next);
+            // Keep the headline count consistent with the list.
+            if (inMemoryAnalytics) {
+              inMemoryAnalytics = { ...inMemoryAnalytics, activeApps: next.length };
+              setAnalytics(inMemoryAnalytics);
+              cacheSet(CacheKeys.analytics, inMemoryAnalytics);
+            }
+          }
+        }
+        // Then reconcile with the server. Clearing the throttle stamp is
+        // required — fetchLiveDashboard ignores calls made within 30s of
+        // the last one unless forced.
+        inMemoryLastFetch = 0;
+        fetchLiveDashboard(true);
+      }
+    );
+
     return () => {
       subAvatar.remove();
       subData.remove();
       subProfile.remove();
       subSaved.remove();
+      subApps.remove();
     };
+  }, [fetchLiveDashboard]);
+
+
+
+  // ── Real-time: react to changes made by other people ──────────────────────
+  // The notification poller runs every 15s regardless. When it sees a
+  // notification id it has never seen, something changed server-side that
+  // this device did not cause — a decision on an application, a new
+  // applicant, a job approval — so refetch rather than wait for the user
+  // to pull down.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(SERVER_STATE_CHANGED, () => {
+      fetchLiveDashboard(true);
+    });
+    return () => sub.remove();
+  }, [fetchLiveDashboard]);
+
+  // ── Real-time: refresh when the screen is focused or the app resumes ───────
+  // Tab screens stay mounted, so navigating back to one does not remount the
+  // hook and nothing refetches. Before this, a change made elsewhere (or by
+  // another user) only appeared after a manual pull-to-refresh.
+  //
+  // fetchLiveDashboard is called unforced, so its 30s throttle still applies:
+  // switching tabs rapidly stays instant and costs no requests, while a
+  // genuinely stale screen updates itself.
+  useFocusEffect(
+    useCallback(() => {
+      fetchLiveDashboard(false);
+    }, [fetchLiveDashboard])
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        fetchLiveDashboard(false);
+      }
+    });
+    return () => sub.remove();
   }, [fetchLiveDashboard]);
 
   const toggleSavedJob = useCallback(async (jobId: string) => {
