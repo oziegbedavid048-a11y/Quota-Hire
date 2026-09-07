@@ -339,7 +339,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: Palette.neutral200,
-    height: 46,
+    minHeight: 46,
+    paddingVertical: 8,
   },
   searchIcon: {
     marginRight: 8,

@@ -827,7 +827,8 @@ const s = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 46,
+    minHeight: 46,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -856,7 +857,8 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   actionBtn: {
-    height: 46,
+    minHeight: 46,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -908,7 +910,8 @@ const s = StyleSheet.create({
 
   // ── Danger Zone ──
   deleteTriggerBtn: {
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FECACA',
@@ -944,7 +947,8 @@ const s = StyleSheet.create({
     lineHeight: 16,
   },
   confirmInput: {
-    height: 42,
+    minHeight: 42,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: '#FCA5A5',
@@ -960,7 +964,8 @@ const s = StyleSheet.create({
   },
   confirmCancelBtn: {
     flex: 1,
-    height: 38,
+    minHeight: 38,
+    paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: Palette.neutral200,
@@ -975,7 +980,8 @@ const s = StyleSheet.create({
   },
   confirmDeleteBtn: {
     flex: 1,
-    height: 38,
+    minHeight: 38,
+    paddingVertical: 6,
     borderRadius: 10,
     backgroundColor: Palette.red600,
     alignItems: 'center',

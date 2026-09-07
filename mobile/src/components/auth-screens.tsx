@@ -401,7 +401,8 @@ const otpStyles = StyleSheet.create({
   },
   box: {
     flex: 1,
-    height: 54,
+    minHeight: 54,
+    paddingVertical: 8,
     maxWidth: 48,
     borderRadius: 12,
     backgroundColor: "rgba(255, 255, 255, 0.45)",
@@ -1749,7 +1750,8 @@ const gs = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    height: 50,
+    minHeight: 50,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: "#dadce0", // Google's exact border colour
@@ -1772,7 +1774,8 @@ const gs = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    height: 50,
+    minHeight: 50,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: ACCENT_600,
@@ -1889,7 +1892,8 @@ const gs = StyleSheet.create({
   // ── Submit Button ─────────────────────────────────────────────────
   // w-full py-4 rounded-xl text-base font-bold text-white shadow-xl
   submitBtn: {
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 8,
     borderRadius: 12, // rounded-xl = 12px
     alignItems: "center",
     justifyContent: "center",
@@ -1942,7 +1946,7 @@ const gs = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     padding: 4,
-    height: 50,
+    minHeight: 50,
     position: "relative",
     overflow: "hidden",
     marginBottom: 20,

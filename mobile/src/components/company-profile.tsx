@@ -681,7 +681,8 @@ const styles = StyleSheet.create({
   },
   modalClose: {
     width: 32,
-    height: 32,
+    minHeight: 32,
+    paddingVertical: 6,
     borderRadius: 16,
     backgroundColor: Palette.neutral50,
     alignItems: "center",
@@ -696,7 +697,8 @@ const styles = StyleSheet.create({
     color: Palette.neutral600,
   },
   input: {
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -705,7 +707,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   textarea: {
-    height: 100,
+    minHeight: 100,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -716,7 +718,8 @@ const styles = StyleSheet.create({
   },
 
   saveBtn: {
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 8,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",

@@ -350,7 +350,8 @@ const s = StyleSheet.create({
 
   // Header Nav Bar
   header: {
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -512,7 +513,8 @@ const s = StyleSheet.create({
   },
   checkWrap: {
     width: 20,
-    height: 20,
+    minHeight: 20,
+    paddingVertical: 2,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -537,7 +539,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 16,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
   },
@@ -555,7 +558,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
   },
   applyActionText: {
     color: '#fff',
@@ -568,7 +572,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     backgroundColor: Palette.emerald50,
     borderRadius: BorderRadius.md,
     borderWidth: 1.5,

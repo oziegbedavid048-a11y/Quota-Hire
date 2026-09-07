@@ -1176,7 +1176,8 @@ const styles = StyleSheet.create({
   },
   anonBadge: {
     width: 20,
-    height: 20,
+    minHeight: 20,
+    paddingVertical: 2,
     borderRadius: 10,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
@@ -1235,7 +1236,8 @@ const styles = StyleSheet.create({
   },
   pollChoicesContainer: { gap: 8, marginBottom: 12 },
   pollChoiceRow: {
-    height: 46,
+    minHeight: 46,
+    paddingVertical: 8,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1277,7 +1279,8 @@ const styles = StyleSheet.create({
   },
   mainFab: {
     width: 60,
-    height: 60,
+    minHeight: 60,
+    paddingVertical: 8,
     borderRadius: 30,
     backgroundColor: Palette.accent600,
     justifyContent: 'center',
@@ -1366,7 +1369,8 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.semibold,
   },
   reportSubmitBtn: {
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 8,
     borderRadius: BorderRadius.button,
     backgroundColor: Palette.red500,
     justifyContent: 'center',
@@ -1491,7 +1495,7 @@ const styles = StyleSheet.create({
   },
   modalChipTextActive: { color: '#fff' },
   modalTextarea: {
-    height: 100,
+    minHeight: 100,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -1509,7 +1513,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalInput: {
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 8,
     borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: '#CBD5E1',
@@ -1532,7 +1537,8 @@ const styles = StyleSheet.create({
     color: Palette.accent500,
   },
   submitBtn: {
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 8,
     borderRadius: BorderRadius.button,
     backgroundColor: Palette.accent500,
     justifyContent: 'center',
@@ -1582,6 +1588,7 @@ const styles = StyleSheet.create({
   // ── Merged Top Header Cover ──
   heroCoverCardHeader: {
     minHeight: 150,
+    paddingVertical: 8,
     overflow: 'hidden',
     position: 'relative',
     justifyContent: 'center',

@@ -2139,14 +2139,15 @@ const s = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
   input: {
-    height: 42,
+    minHeight: 42,
+    paddingVertical: 8,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: 12,
     fontSize: 13,
   },
   textArea: {
-    height: 100,
+    minHeight: 100,
     borderWidth: 1,
     borderRadius: BorderRadius.md,
     paddingHorizontal: 12,
@@ -2155,7 +2156,8 @@ const s = StyleSheet.create({
     textAlignVertical: "top",
   },
   saveBtn: {
-    height: 44,
+    minHeight: 44,
+    paddingVertical: 8,
     borderRadius: BorderRadius.button,
     alignItems: "center",
     justifyContent: "center",
