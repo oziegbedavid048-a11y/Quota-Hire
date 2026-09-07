@@ -423,9 +423,8 @@ export default function CompanyPostJob() {
                     pressed && { opacity: 0.7 },
                   ]}
                 >
-                  <Feather name="zap" size={12} color={Palette.accent700} />
                   <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Palette.accent700 }}>
-                    AI Autofill
+                    Autofill
                   </Text>
                 </Pressable>
               </View>

@@ -756,7 +756,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
     }
   }, [step, totalSteps, job, profile, headline, skills, digitalSkills, workEntries, coverLetter]);
 
-  // AI Suggest for Standard template
+  // Auto-fill from the saved profile, for the Standard template
   const handleAISuggest = () => {
     if (isAiSuggesting) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -871,7 +871,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
         setHobbies('Open-source contributing, Playing chess, Photography, Running');
       }
 
-      Alert.alert('AI Suggestions Applied!', 'We pre-filled tailored work history, education, skills, and strengths. Feel free to customize them.');
+      Alert.alert('Details filled in', 'We filled in work history, education, skills and strengths from your profile. Edit anything you want to change.');
     }, 700);
   };
 
@@ -1121,13 +1121,13 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                   {step === 1 && (
                     <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
                       <View style={s.titleRow}>
-                        <Text style={[s.sectionTitle, { color: colors.text }]}>Target Role & AI Helper</Text>
+                        <Text style={[s.sectionTitle, { color: colors.text }]}>Target Role</Text>
                         <Pressable
                           disabled={isAiSuggesting}
                           onPress={handleAISuggest}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           style={({ pressed }) => [
-                            s.aiBtn,
+                            s.autofillBtn,
                             { backgroundColor: Palette.accent50 },
                             pressed && { opacity: 0.7 },
                           ]}
@@ -1135,12 +1135,12 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           {isAiSuggesting ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                               <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
                             </View>
                           ) : (
                             <>
                               <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
                             </>
                           )}
                         </Pressable>
@@ -1298,7 +1298,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           onPress={handleAISuggest}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           style={({ pressed }) => [
-                            s.aiBtn,
+                            s.autofillBtn,
                             { backgroundColor: Palette.accent50 },
                             pressed && { opacity: 0.7 },
                           ]}
@@ -1306,12 +1306,12 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           {isAiSuggesting ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                               <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
                             </View>
                           ) : (
                             <>
                               <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
                             </>
                           )}
                         </Pressable>
@@ -1431,7 +1431,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           onPress={handleAISuggest}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           style={({ pressed }) => [
-                            s.aiBtn,
+                            s.autofillBtn,
                             { backgroundColor: Palette.accent50 },
                             pressed && { opacity: 0.7 },
                           ]}
@@ -1439,12 +1439,12 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           {isAiSuggesting ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                               <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
                             </View>
                           ) : (
                             <>
                               <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
                             </>
                           )}
                         </Pressable>
@@ -1519,7 +1519,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           onPress={handleAISuggest}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           style={({ pressed }) => [
-                            s.aiBtn,
+                            s.autofillBtn,
                             { backgroundColor: Palette.accent50 },
                             pressed && { opacity: 0.7 },
                           ]}
@@ -1527,12 +1527,12 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           {isAiSuggesting ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                               <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
                             </View>
                           ) : (
                             <>
                               <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
                             </>
                           )}
                         </Pressable>
@@ -1606,7 +1606,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           onPress={handleAISuggest}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           style={({ pressed }) => [
-                            s.aiBtn,
+                            s.autofillBtn,
                             { backgroundColor: Palette.accent50 },
                             pressed && { opacity: 0.7 },
                           ]}
@@ -1614,12 +1614,12 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           {isAiSuggesting ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                               <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
                             </View>
                           ) : (
                             <>
                               <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
                             </>
                           )}
                         </Pressable>
@@ -1707,7 +1707,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           onPress={handleAISuggest}
                           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                           style={({ pressed }) => [
-                            s.aiBtn,
+                            s.autofillBtn,
                             { backgroundColor: Palette.accent50 },
                             pressed && { opacity: 0.7 },
                           ]}
@@ -1715,12 +1715,12 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           {isAiSuggesting ? (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                               <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>Generating...</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
                             </View>
                           ) : (
                             <>
                               <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.aiBtnText, { color: Palette.accent700 }]}>AI Suggest</Text>
+                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
                             </>
                           )}
                         </Pressable>
@@ -2058,7 +2058,7 @@ const s = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 8,
   },
-  aiBtn: {
+  autofillBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -2066,7 +2066,7 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
-  aiBtnText: {
+  autofillBtnText: {
     fontSize: 11,
     fontWeight: '800',
   },

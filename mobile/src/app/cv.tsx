@@ -96,10 +96,6 @@ export default function CVScreen() {
 
           <View style={s.heroContent}>
             <View style={{ flex: 1 }}>
-              <View style={[s.heroPill, { backgroundColor: 'rgba(255,255,255,0.7)', borderColor: colors.borderMid }]}>
-                <Feather name="zap" size={11} color={Palette.accent600} />
-                <Text style={[s.heroPillText, { color: colors.textSecondary }]}>AI-Powered Builder</Text>
-              </View>
               <Text style={[s.heroTitle, { color: colors.text }]}>
                 Build Your{' '}
                 <Text style={{ color: Palette.accent600 }}>Perfect CV</Text>
@@ -169,15 +165,10 @@ export default function CVScreen() {
                   onPress={() => openWizard(card.id)}
                   style={s.startBtnContainer}
                 >
-                  <LinearGradient
-                    colors={[card.gradFrom, card.gradTo]}
-                    style={s.startBtnGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
+                  <View style={s.startBtnSolid}>
                     <Text style={s.startBtnText}>Start {card.id === 'europass' ? 'Europass' : 'Standard'} Builder</Text>
                     <Feather name="arrow-right" size={15} color="#ffffff" />
-                  </LinearGradient>
+                  </View>
                 </HapticPressable>
               </View>
             </Animated.View>
@@ -233,22 +224,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  heroPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 9,
-    paddingVertical: 3.5,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  heroPillText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    letterSpacing: 0.2,
   },
   heroTitle: {
     fontSize: 22,
@@ -345,7 +320,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  startBtnGradient: {
+  startBtnSolid: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -353,6 +328,8 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 12,
+    // Flat brand green, no gradient.
+    backgroundColor: Palette.accent600,
   },
   startBtnText: {
     color: '#ffffff',

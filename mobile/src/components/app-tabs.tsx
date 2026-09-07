@@ -276,7 +276,7 @@ function FabMenuSheet({
 
   // Quick Action menu items for Candidate / Employee
   const EMPLOYEE_ACTIONS = [
-    { name: 'CV Generator', route: '/cv',          icon: 'file-text', color: Palette.accent600, bg: Palette.accent50, badge: 'AI' },
+    { name: 'CV Generator', route: '/cv',          icon: 'file-text', color: Palette.accent600, bg: Palette.accent50 },
     { name: 'Saved Jobs',   route: '/saved-jobs',  icon: 'bookmark',  color: '#d97706', bg: '#fef3c7' },
     { name: 'Notifications',route: '/notifications',icon: 'bell',      color: '#f59e0b', bg: '#fef3c7', count: unreadCount },
     { name: 'Settings',     route: '/settings',    icon: 'settings',  color: '#64748b', bg: '#f1f5f9' },
@@ -371,16 +371,9 @@ function FabMenuSheet({
                   ) : null}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={[styles.sheetItemText, isActive && { color: Palette.accent700, fontWeight: '800' }]}>
-                      {item.name}
-                    </Text>
-                    {Boolean(item.badge) && (
-                      <View style={styles.aiBadge}>
-                        <Text style={styles.aiBadgeText}>{item.badge}</Text>
-                      </View>
-                    )}
-                  </View>
+                  <Text style={[styles.sheetItemText, isActive && { color: Palette.accent700, fontWeight: '800' }]}>
+                    {item.name}
+                  </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color={Palette.neutral400} />
               </HapticPressable>
@@ -417,6 +410,11 @@ function FloatingPillNavBar({
   const router = useRouter();
   // Re-reads when the user changes the OS text size while the app is open.
   const { fontScale: navFontScale } = useWindowDimensions();
+  // Labels shrink to fit only when the text is actually enlarged. Leaving
+  // adjustsFontSizeToFit on permanently made the longest label ("Community")
+  // render smaller than its neighbours at the default size, because it is the
+  // only one that needs to shrink to fit its slot.
+  const navIsEnlarged = (navFontScale || 1) > 1.05;
   const insets = useSafeAreaInsets();
   const isCompany = userRole === 'company';
 
@@ -544,7 +542,7 @@ function FloatingPillNavBar({
             // "Community" is the longest and was the one clipping.
             maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
             numberOfLines={1}
-            adjustsFontSizeToFit
+            adjustsFontSizeToFit={navIsEnlarged}
             minimumFontScale={0.75}
           >
             {tab1.label}
@@ -569,7 +567,7 @@ function FloatingPillNavBar({
             // "Community" is the longest and was the one clipping.
             maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
             numberOfLines={1}
-            adjustsFontSizeToFit
+            adjustsFontSizeToFit={navIsEnlarged}
             minimumFontScale={0.75}
           >
             {tab2.label}
@@ -600,14 +598,14 @@ function FloatingPillNavBar({
               scale only enough to keep clear of the circle — the FAB itself is
               a fixed 52px, so letting this grow in proportion would waste the
               height the label needs. */}
-          <View style={{ height: Math.round(20 * Math.min(navFontScale || 1, 1.1)) }} />
+          <View style={{ height: Math.round(24 * Math.min(navFontScale || 1, 1.1)) }} />
           <Text
             style={[styles.pillLabel, isFabActive && styles.pillLabelActive]}
             // This is the longest label in the bar ("Community") and the one
             // that was being cut.
             maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
             numberOfLines={1}
-            adjustsFontSizeToFit
+            adjustsFontSizeToFit={navIsEnlarged}
             minimumFontScale={0.75}
           >
             {fabCfg.label}
@@ -632,7 +630,7 @@ function FloatingPillNavBar({
             // "Community" is the longest and was the one clipping.
             maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
             numberOfLines={1}
-            adjustsFontSizeToFit
+            adjustsFontSizeToFit={navIsEnlarged}
             minimumFontScale={0.75}
           >
             {tab4.label}
@@ -657,7 +655,7 @@ function FloatingPillNavBar({
             // "Community" is the longest and was the one clipping.
             maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
             numberOfLines={1}
-            adjustsFontSizeToFit
+            adjustsFontSizeToFit={navIsEnlarged}
             minimumFontScale={0.75}
           >
             {tab5.label}
@@ -1330,17 +1328,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     color: '#ffffff',
-  },
-  aiBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(21, 117, 10, 0.12)',
-  },
-  aiBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Palette.accent700,
   },
 
   // Sheet Sign Out
