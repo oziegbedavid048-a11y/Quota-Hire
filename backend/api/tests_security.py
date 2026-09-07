@@ -2520,3 +2520,183 @@ class DashboardCacheInvalidationTests(ThrottleIsolatedTestCase):
         safe_set(key, {'x': 1}, ttl=60)
         invalidate_dashboards((None, 'company'), (self.company.pk, None))
         self.assertIsNotNone(safe_get(key), 'Unrelated dashboard key was cleared.')
+
+
+class JobApprovalWorkflowTests(ThrottleIsolatedTestCase):
+    """
+    A posted job must stay invisible to job seekers until an admin approves it.
+
+    Covers the whole path: what a company may set when posting, what each
+    listing endpoint returns, what can be acted on while pending, and what
+    changes once the status moves.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.company = CustomUser.objects.create_user(
+            username='appr_co', email='appr_co@example.com', password='Str0ngPass!23',
+            role=UserRole.COMPANY, email_verified=True,
+        )
+        self.employee = CustomUser.objects.create_user(
+            username='appr_emp', email='appr_emp@example.com', password='Str0ngPass!23',
+            role=UserRole.EMPLOYEE, email_verified=True,
+        )
+        self.admin = CustomUser.objects.create_user(
+            username='appr_admin', email='appr_admin@example.com', password='Str0ngPass!23',
+            role='admin', email_verified=True,
+        )
+        # Registration creates this alongside the account; CompanyJobsView
+        # returns nothing without it.
+        from .models import CompanyProfile
+        CompanyProfile.objects.create(user=self.company, company_name='Appr Co')
+
+    def _post_job(self, **overrides):
+        self.client.force_authenticate(user=self.company)
+        payload = {
+            'title': 'Enterprise Account Executive',
+            'description': 'Sell things.',
+            'requirements': ['3 years B2B'],
+            'location': 'Lagos',
+        }
+        payload.update(overrides)
+        return self.client.post(reverse('job-list-create'), payload, format='json')
+
+    @staticmethod
+    def _ids(response):
+        data = response.data
+        rows = data.get('results', data) if hasattr(data, 'get') else data
+        return [row['id'] for row in rows]
+
+    # -- posting --------------------------------------------------------------
+
+    def test_new_job_starts_pending(self):
+        from .models import Job
+        resp = self._post_job()
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(Job.objects.get(pk=resp.data['id']).status, 'pending')
+
+    def test_company_cannot_self_approve_at_creation(self):
+        """status is read-only; sending it must not bypass review."""
+        from .models import Job
+        resp = self._post_job(status='approved')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(
+            Job.objects.get(pk=resp.data['id']).status, 'pending',
+            'A company approved its own job by sending status in the payload.',
+        )
+
+    # -- visibility while pending ---------------------------------------------
+
+    def test_pending_job_is_absent_from_the_public_list(self):
+        job_id = self._post_job().data['id']
+        self.client.force_authenticate(user=self.employee)
+        listing = self.client.get(reverse('job-list-create'))
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        self.assertNotIn(
+            job_id, self._ids(listing),
+            'A pending job was listed to job seekers.',
+        )
+
+    def test_pending_job_detail_is_not_retrievable(self):
+        job_id = self._post_job().data['id']
+        self.client.force_authenticate(user=self.employee)
+        resp = self.client.get(reverse('job-detail', args=[job_id]))
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_pending_job_cannot_be_applied_to(self):
+        job_id = self._post_job().data['id']
+        self.client.force_authenticate(user=self.employee)
+        resp = self.client.post(reverse('job-apply', args=[job_id]), {}, format='json')
+        self.assertEqual(
+            resp.status_code, status.HTTP_404_NOT_FOUND,
+            'An unapproved job accepted an application.',
+        )
+
+    def test_pending_job_cannot_be_saved(self):
+        job_id = self._post_job().data['id']
+        self.client.force_authenticate(user=self.employee)
+        resp = self.client.post(reverse('job-save', args=[job_id]), {}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_company_still_sees_its_own_pending_job(self):
+        """The poster must be able to track what is awaiting review."""
+        job_id = self._post_job().data['id']
+        self.client.force_authenticate(user=self.company)
+        resp = self.client.get(reverse('company-jobs'))
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn(job_id, self._ids(resp))
+
+    # -- the approval itself --------------------------------------------------
+
+    def test_only_an_admin_can_change_status(self):
+        job_id = self._post_job().data['id']
+        url = reverse('job-status-update', args=[job_id])
+        for actor in (self.company, self.employee):
+            with self.subTest(actor=actor.role):
+                self.client.force_authenticate(user=actor)
+                resp = self.client.put(url, {'status': 'approved'}, format='json')
+                self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_approval_makes_the_job_visible(self):
+        from .models import Job
+        job_id = self._post_job().data['id']
+
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.put(
+            reverse('job-status-update', args=[job_id]),
+            {'status': 'approved'}, format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.assertEqual(Job.objects.get(pk=job_id).status, 'approved')
+
+        self.client.force_authenticate(user=self.employee)
+        listing = self.client.get(reverse('job-list-create'))
+        self.assertIn(job_id, self._ids(listing), 'Job stayed hidden after approval.')
+        detail = self.client.get(reverse('job-detail', args=[job_id]))
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+
+    def test_rejected_job_stays_hidden(self):
+        job_id = self._post_job().data['id']
+        self.client.force_authenticate(user=self.admin)
+        self.client.put(
+            reverse('job-status-update', args=[job_id]),
+            {'status': 'rejected'}, format='json',
+        )
+        self.client.force_authenticate(user=self.employee)
+        self.assertNotIn(job_id, self._ids(self.client.get(reverse('job-list-create'))))
+
+    def test_django_admin_bulk_action_approves(self):
+        """The action an administrator actually clicks on the admin page."""
+        from django.contrib.admin.sites import AdminSite
+        from .admin import JobAdmin
+        from .models import Job
+
+        job_id = self._post_job().data['id']
+        job_admin = JobAdmin(Job, AdminSite())
+        job_admin.message_user = lambda *a, **k: None   # needs a request otherwise
+        job_admin.approve_jobs(None, Job.objects.filter(pk=job_id))
+
+        self.assertEqual(Job.objects.get(pk=job_id).status, 'approved')
+
+    def test_approval_clears_the_public_job_list_cache(self):
+        """Otherwise an approved job waits out the cache TTL before appearing."""
+        from .cache_utils import jobs_list_key, safe_get
+
+        self.client.force_authenticate(user=self.employee)
+        self.client.get(reverse('job-list-create'))          # warm the cache
+        self.assertIsNotNone(
+            safe_get(jobs_list_key('')),
+            'cache was not warmed, so this test proves nothing',
+        )
+
+        job_id = self._post_job().data['id']
+        self.client.force_authenticate(user=self.admin)
+        self.client.put(
+            reverse('job-status-update', args=[job_id]),
+            {'status': 'approved'}, format='json',
+        )
+        self.assertIsNone(
+            safe_get(jobs_list_key('')),
+            'Public job list still cached after an approval.',
+        )
