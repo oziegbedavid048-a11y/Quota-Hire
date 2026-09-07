@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { Text, TextInput } from '@/components/ui/text';
+import { SuggestField } from '@/components/ui/suggest-field';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -633,7 +634,6 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [isAiSuggesting, setIsAiSuggesting] = useState(false);
   const [isStepping, setIsStepping] = useState(false);
   const [profile, setProfile] = useState<any>(null);
 
@@ -756,124 +756,6 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
     }
   }, [step, totalSteps, job, profile, headline, skills, digitalSkills, workEntries, coverLetter]);
 
-  // Auto-fill from the saved profile, for the Standard template
-  const handleAISuggest = () => {
-    if (isAiSuggesting) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsAiSuggesting(true);
-
-    let targetRole = headline.trim();
-    if (!targetRole && job?.title) {
-      targetRole = job.title;
-      setHeadline(job.title);
-    } else if (!targetRole) {
-      targetRole = 'Account Executive';
-      setHeadline('Account Executive');
-    }
-
-    setTimeout(() => {
-      setIsAiSuggesting(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      const roleLower = targetRole.toLowerCase();
-      if (roleLower.includes('engineer') || roleLower.includes('developer') || roleLower.includes('tech') || roleLower.includes('software')) {
-        setWorkEntries([
-          {
-            role: targetRole,
-            company: 'TechFlow Systems',
-            period: '2022 - Present',
-            duties: 'Architected and deployed scalable cloud microservices reducing latency by 35%.\nCollaborated with cross-functional product teams using Agile/Scrum methodologies.\nMaintained 99.9% uptime across production Kubernetes clusters.',
-          },
-          {
-            role: 'Software Engineer',
-            company: 'Global Software Lab',
-            period: '2020 - 2022',
-            duties: 'Developed responsive frontend modules and robust RESTful APIs in TypeScript & Python.\nRefactored legacy codebases improving test coverage from 60% to 92%.\nMentored junior developers and participated in architectural code reviews.',
-          },
-        ]);
-        setStrengths('System Architecture, Cloud Infrastructure, Agile Delivery, Performance Optimization');
-        setCertifications('AWS Certified Solutions Architect, CKA (Certified Kubernetes Admin)');
-        setLanguages('English (Fluent), Spanish (Conversational)');
-        if (!skills) setSkills('TypeScript, Python, React, Node.js, Docker, AWS, PostgreSQL, CI/CD');
-        if (!education) setEducation('B.Sc. Computer Science - University of Technology');
-      } else if (roleLower.includes('product') || roleLower.includes('manager') || roleLower.includes('project')) {
-        setWorkEntries([
-          {
-            role: targetRole,
-            company: 'Apex Innovations',
-            period: '2022 - Present',
-            duties: 'Led end-to-end product discovery and delivery for flagship mobile & web products.\nIncreased user retention by 28% through data-driven feature prioritization and UX research.\nManaged sprint planning, roadmap execution, and stakeholder communication.',
-          },
-          {
-            role: 'Associate Product Manager',
-            company: 'Nova Digital Group',
-            period: '2020 - 2022',
-            duties: 'Conducted user interviews, analyzed cohort retention metrics, and defined MVP requirements.\nCollaborated closely with engineering, design, and GTM teams to launch 4 major feature releases.',
-          },
-        ]);
-        setStrengths('Product Strategy, User Research, Roadmapping, Data Analytics, Cross-functional Leadership');
-        setCertifications('Certified Scrum Product Owner (CSPO), Pragmatic Institute Certified');
-        setLanguages('English (Native), French (Professional)');
-        if (!skills) setSkills('Product Roadmapping, SQL, Figma, JIRA, User Testing, Metrics Analysis');
-        if (!education) setEducation('B.A. Business & Information Systems');
-      } else {
-        setWorkEntries([
-          {
-            role: targetRole,
-            company: 'Acme SaaS Corp',
-            period: '2023 - Present',
-            duties: 'Led B2B outbound prospecting using MEDDIC qualification framework.\nManaged key enterprise accounts and exceeded quarterly pipeline quotas by 120%.\nCollaborated with product marketing to align campaigns and improve customer acquisition.',
-          },
-          {
-            role: 'Sales Executive',
-            company: 'Global Tech Solution',
-            period: '2021 - 2023',
-            duties: 'Owned full sales cycle from initial contact to close.\nDelivered technical product demos and addressed customer pain points.\nConsistently ranked top 10% among account executives in EMEA regional team.',
-          },
-        ]);
-        setStrengths('MEDDIC, Consultative Selling, Pipeline Management, Value Negotiation, Enterprise Closing');
-        setCertifications('Salesforce Certified AE, Sandler Sales Mastery');
-        setLanguages('English (Native), Spanish (Conversational)');
-        if (!skills) setSkills('Salesforce, Outbound Prospecting, MEDDIC, Contract Negotiation, CRM Management');
-        if (!education) setEducation('B.Sc. Business Administration & Marketing');
-      }
-
-      if (isEuropass) {
-        if (!firstName.trim()) setFirstName(profile?.first_name || 'Alex');
-        if (!lastName.trim()) setLastName(profile?.last_name || 'Morgan');
-        if (!email.trim()) setEmail(profile?.email || 'alex.morgan@example.com');
-        if (!phone.trim()) setPhone(profile?.phone_number || '+44 7700 900077');
-        if (!address.trim()) setAddress(profile?.location || 'London, United Kingdom');
-        if (!nationality.trim()) setNationality('British');
-        if (!dateOfBirth.trim()) setDateOfBirth('12/05/1992');
-        setSummary(`Dedicated and results-oriented ${targetRole} with proven expertise in driving measurable outcomes, cross-functional collaboration, and technical excellence.`);
-        setDigitalSkills('Microsoft 365, Google Workspace, JIRA, Slack, CRM, Cloud Collaboration, Git');
-        setMotherTongue('English');
-        setForeignLanguages([
-          { language: 'French', listening: 'B2', reading: 'B2', spokenInteraction: 'B1', spokenProduction: 'B1', writing: 'B2' }
-        ]);
-        setEduEntries([
-          {
-            dates: '2015 - 2019',
-            qualification: roleLower.includes('engineer') || roleLower.includes('tech') || roleLower.includes('software') || roleLower.includes('developer')
-              ? 'B.Sc. Computer Science & Software Engineering'
-              : 'B.Sc. Business Management & International Trade',
-            institution: 'University of London',
-            location: 'London, United Kingdom',
-            fieldOfStudy: 'First Class Honours',
-          }
-        ]);
-        setCommunicationCompetencies('Excellent communication skills gained through leading team meetings, presenting technical solutions to non-technical stakeholders, and mentoring junior colleagues.');
-        setOrganisationalCompetencies('Strong leadership and agile project management skills. Successfully coordinated cross-functional sprints of up to 10 team members.');
-        setJobRelatedCompetencies('Deep understanding of modern workflows, problem solving, and architecture. Proficient in delivering high-impact business solutions.');
-        setOtherCompetencies('Adaptable, high-ownership mindset with strong focus on delivering customer and business value.');
-        setDrivingLicence('Category B');
-        setHobbies('Open-source contributing, Playing chess, Photography, Running');
-      }
-
-      Alert.alert('Details filled in', 'We filled in work history, education, skills and strengths from your profile. Edit anything you want to change.');
-    }, 700);
-  };
 
   // Work entries helper
   const addWorkEntry = () => setWorkEntries([...workEntries, { role: '', company: '', period: '', duties: '' }]);
@@ -1120,64 +1002,40 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                 <>
                   {step === 1 && (
                     <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
-                      <View style={s.titleRow}>
-                        <Text style={[s.sectionTitle, { color: colors.text }]}>Target Role</Text>
-                        <Pressable
-                          disabled={isAiSuggesting}
-                          onPress={handleAISuggest}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          style={({ pressed }) => [
-                            s.autofillBtn,
-                            { backgroundColor: Palette.accent50 },
-                            pressed && { opacity: 0.7 },
-                          ]}
-                        >
-                          {isAiSuggesting ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
-                            </View>
-                          ) : (
-                            <>
-                              <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
-                            </>
-                          )}
-                        </Pressable>
-                      </View>
+                      <Text style={[s.sectionTitle, { color: colors.text }]}>Target Role</Text>
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Target Headline / Job Title</Text>
-                        <TextInput
-                          value={headline}
-                          onChangeText={setHeadline}
-                          placeholder="e.g. Mid-Market Account Executive"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Target Headline / Job Title"
+                        value={headline}
+                        onChangeText={setHeadline}
+                        field="headline"
+                        role={headline || job?.title}
+                        placeholder="e.g. Mid-Market Account Executive"
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Languages (comma separated)</Text>
-                        <TextInput
-                          value={languages}
-                          onChangeText={setLanguages}
-                          placeholder="English (Native), French (Basic)"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Languages (comma separated)"
+                        value={languages}
+                        onChangeText={setLanguages}
+                        field="languages"
+                        role={headline || job?.title}
+                        placeholder="English (Native), French (Basic)"
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Strengths (comma separated)</Text>
-                        <TextInput
-                          value={strengths}
-                          onChangeText={setStrengths}
-                          placeholder="MEDDIC, Account Closing, Pipeline Management"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Strengths (comma separated)"
+                        value={strengths}
+                        onChangeText={setStrengths}
+                        field="strengths"
+                        role={headline || job?.title}
+                        placeholder="MEDDIC, Account Closing, Pipeline Management"
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
                     </Animated.View>
                   )}
 
@@ -1226,13 +1084,16 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           </View>
 
                           <View style={s.inputRow}>
-                            <TextInput
+                            <SuggestField
+                              label="Responsibilities / Achievements"
                               value={entry.duties}
                               onChangeText={t => updateWorkEntry(index, 'duties', t)}
+                              field="duties"
+                              role={entry.role || headline || job?.title}
                               placeholder="Responsibilities / Achievements"
-                              placeholderTextColor={colors.textMuted}
                               multiline
-                              style={[s.textArea, { borderColor: colors.border, color: colors.text }]}
+                              colors={colors}
+                              inputStyle={s.textArea}
                             />
                           </View>
                         </View>
@@ -1249,38 +1110,38 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
                       <Text style={[s.sectionTitle, { color: colors.text }]}>Education & Skills</Text>
                       
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Education</Text>
-                        <TextInput
-                          value={education}
-                          onChangeText={setEducation}
-                          placeholder="University, Degree and Major"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Education"
+                        value={education}
+                        onChangeText={setEducation}
+                        field="education"
+                        role={headline || job?.title}
+                        placeholder="University, Degree and Major"
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Skills (comma separated)</Text>
-                        <TextInput
-                          value={skills}
-                          onChangeText={setSkills}
-                          placeholder="e.g. Salesforce, outbound cold calling, CRM"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Skills (comma separated)"
+                        value={skills}
+                        onChangeText={setSkills}
+                        field="skills"
+                        role={headline || job?.title}
+                        placeholder="e.g. Salesforce, outbound cold calling, CRM"
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Certifications (comma separated)</Text>
-                        <TextInput
-                          value={certifications}
-                          onChangeText={setCertifications}
-                          placeholder="e.g. HubSpot Sales, AWS Practitioner"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Certifications (comma separated)"
+                        value={certifications}
+                        onChangeText={setCertifications}
+                        field="certifications"
+                        role={headline || job?.title}
+                        placeholder="e.g. HubSpot Sales, AWS Practitioner"
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
                     </Animated.View>
                   )}
                 </>
@@ -1291,31 +1152,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                 <>
                   {step === 1 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <View style={s.titleRow}>
-                        <Text style={[s.sectionTitle, { color: colors.text }]}>Personal Details</Text>
-                        <Pressable
-                          disabled={isAiSuggesting}
-                          onPress={handleAISuggest}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          style={({ pressed }) => [
-                            s.autofillBtn,
-                            { backgroundColor: Palette.accent50 },
-                            pressed && { opacity: 0.7 },
-                          ]}
-                        >
-                          {isAiSuggesting ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
-                            </View>
-                          ) : (
-                            <>
-                              <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
-                            </>
-                          )}
-                        </Pressable>
-                      </View>
+                      <Text style={[s.sectionTitle, { color: colors.text }]}>Personal Details</Text>
                       
                       <View style={s.row}>
                         <View style={{ flex: 1, marginRight: 10 }}>
@@ -1340,16 +1177,16 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                         </View>
                       </View>
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Desired Job Title / Position</Text>
-                        <TextInput
-                          value={headline}
-                          onChangeText={setHeadline}
-                          placeholder="e.g. Senior Software Engineer"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Desired Job Title / Position"
+                        value={headline}
+                        onChangeText={setHeadline}
+                        field="headline"
+                        role={headline || job?.title}
+                        placeholder="e.g. Senior Software Engineer"
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
                       <View style={s.row}>
                         <View style={{ flex: 1, marginRight: 10 }}>
@@ -1408,47 +1245,23 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                         />
                       </View>
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Professional Summary / About Me</Text>
-                        <TextInput
-                          value={summary}
-                          onChangeText={setSummary}
-                          placeholder="Write a brief professional intro..."
-                          placeholderTextColor={colors.textMuted}
-                          multiline
-                          style={[s.textArea, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Professional Summary / About Me"
+                        value={summary}
+                        onChangeText={setSummary}
+                        field="summary"
+                        role={headline || job?.title}
+                        placeholder="Write a brief professional intro..."
+                        multiline
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
                     </Animated.View>
                   )}
 
                   {step === 2 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <View style={s.titleRow}>
-                        <Text style={[s.sectionTitle, { color: colors.text }]}>Work Experience</Text>
-                        <Pressable
-                          disabled={isAiSuggesting}
-                          onPress={handleAISuggest}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          style={({ pressed }) => [
-                            s.autofillBtn,
-                            { backgroundColor: Palette.accent50 },
-                            pressed && { opacity: 0.7 },
-                          ]}
-                        >
-                          {isAiSuggesting ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
-                            </View>
-                          ) : (
-                            <>
-                              <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
-                            </>
-                          )}
-                        </Pressable>
-                      </View>
+                      <Text style={[s.sectionTitle, { color: colors.text }]}>Work Experience</Text>
                       {workEntries.map((entry, index) => (
                         <View key={index} style={[s.entryCard, { borderColor: colors.border }]}>
                           <View style={s.entryCardHeader}>
@@ -1491,13 +1304,16 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           </View>
 
                           <View style={s.inputRow}>
-                            <TextInput
+                            <SuggestField
+                              label="Responsibilities / Duties / Projects"
                               value={entry.duties}
                               onChangeText={t => updateWorkEntry(index, 'duties', t)}
+                              field="duties"
+                              role={entry.role || headline || job?.title}
                               placeholder="Responsibilities / Duties / Projects"
-                              placeholderTextColor={colors.textMuted}
                               multiline
-                              style={[s.textArea, { borderColor: colors.border, color: colors.text }]}
+                              colors={colors}
+                              inputStyle={s.textArea}
                             />
                           </View>
                         </View>
@@ -1512,31 +1328,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
                   {step === 3 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <View style={s.titleRow}>
-                        <Text style={[s.sectionTitle, { color: colors.text }]}>Education & Training</Text>
-                        <Pressable
-                          disabled={isAiSuggesting}
-                          onPress={handleAISuggest}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          style={({ pressed }) => [
-                            s.autofillBtn,
-                            { backgroundColor: Palette.accent50 },
-                            pressed && { opacity: 0.7 },
-                          ]}
-                        >
-                          {isAiSuggesting ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
-                            </View>
-                          ) : (
-                            <>
-                              <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
-                            </>
-                          )}
-                        </Pressable>
-                      </View>
+                      <Text style={[s.sectionTitle, { color: colors.text }]}>Education & Training</Text>
                       {eduEntries.map((entry, index) => (
                         <View key={index} style={[s.entryCard, { borderColor: colors.border }]}>
                           <View style={s.entryCardHeader}>
@@ -1599,31 +1391,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
                   {step === 4 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <View style={s.titleRow}>
-                        <Text style={[s.sectionTitle, { color: colors.text }]}>Languages & Digital Skills</Text>
-                        <Pressable
-                          disabled={isAiSuggesting}
-                          onPress={handleAISuggest}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          style={({ pressed }) => [
-                            s.autofillBtn,
-                            { backgroundColor: Palette.accent50 },
-                            pressed && { opacity: 0.7 },
-                          ]}
-                        >
-                          {isAiSuggesting ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
-                            </View>
-                          ) : (
-                            <>
-                              <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
-                            </>
-                          )}
-                        </Pressable>
-                      </View>
+                      <Text style={[s.sectionTitle, { color: colors.text }]}>Languages & Digital Skills</Text>
                       
                       <View style={s.inputRow}>
                         <Text style={[s.label, { color: colors.textSecondary }]}>Mother Tongue *</Text>
@@ -1685,116 +1453,92 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                         <Text style={[s.addBtnText, { color: colors.text }]}>Add Language</Text>
                       </Pressable>
 
-                      <View style={[s.inputRow, { marginTop: 10 }]}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Digital Skills (comma separated)</Text>
-                        <TextInput
-                          value={digitalSkills}
-                          onChangeText={setDigitalSkills}
-                          placeholder="e.g. TypeScript, React, Python, Office"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Digital Skills (comma separated)"
+                        value={digitalSkills}
+                        onChangeText={setDigitalSkills}
+                        field="digitalSkills"
+                        role={headline || job?.title}
+                        placeholder="e.g. TypeScript, React, Python, Office"
+                        colors={colors}
+                        containerStyle={{ ...s.inputRow, marginTop: 10 }}
+                      />
                     </Animated.View>
                   )}
 
                   {step === 5 && (
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
-                      <View style={s.titleRow}>
-                        <Text style={[s.sectionTitle, { color: colors.text }]}>Competencies & Additional Details</Text>
-                        <Pressable
-                          disabled={isAiSuggesting}
-                          onPress={handleAISuggest}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          style={({ pressed }) => [
-                            s.autofillBtn,
-                            { backgroundColor: Palette.accent50 },
-                            pressed && { opacity: 0.7 },
-                          ]}
-                        >
-                          {isAiSuggesting ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <ActivityIndicator size="small" color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Filling in...</Text>
-                            </View>
-                          ) : (
-                            <>
-                              <Feather name="zap" size={12} color={Palette.accent700} />
-                              <Text style={[s.autofillBtnText, { color: Palette.accent700 }]}>Auto-fill</Text>
-                            </>
-                          )}
-                        </Pressable>
-                      </View>
+                      <Text style={[s.sectionTitle, { color: colors.text }]}>Competencies & Additional Details</Text>
                       
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Communication Skills</Text>
-                        <TextInput
-                          value={communicationCompetencies}
-                          onChangeText={setCommunicationCompetencies}
-                          placeholder="Explain communication achievements..."
-                          placeholderTextColor={colors.textMuted}
-                          multiline
-                          style={[s.textArea, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Communication Skills"
+                        value={communicationCompetencies}
+                        onChangeText={setCommunicationCompetencies}
+                        field="competencies"
+                        role={headline || job?.title}
+                        placeholder="Explain communication achievements..."
+                        multiline
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Organisational Skills</Text>
-                        <TextInput
-                          value={organisationalCompetencies}
-                          onChangeText={setOrganisationalCompetencies}
-                          placeholder="Explain leadership, agile, sprints management..."
-                          placeholderTextColor={colors.textMuted}
-                          multiline
-                          style={[s.textArea, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Organisational Skills"
+                        value={organisationalCompetencies}
+                        onChangeText={setOrganisationalCompetencies}
+                        field="competencies"
+                        role={headline || job?.title}
+                        placeholder="Explain leadership, agile, sprints management..."
+                        multiline
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Job-Related Skills</Text>
-                        <TextInput
-                          value={jobRelatedCompetencies}
-                          onChangeText={setJobRelatedCompetencies}
-                          placeholder="Other domain skills..."
-                          placeholderTextColor={colors.textMuted}
-                          multiline
-                          style={[s.textArea, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Job-Related Skills"
+                        value={jobRelatedCompetencies}
+                        onChangeText={setJobRelatedCompetencies}
+                        field="competencies"
+                        role={headline || job?.title}
+                        placeholder="Other domain skills..."
+                        multiline
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Other Competencies</Text>
-                        <TextInput
-                          value={otherCompetencies}
-                          onChangeText={setOtherCompetencies}
-                          placeholder="Any other specific competencies or skills..."
-                          placeholderTextColor={colors.textMuted}
-                          multiline
-                          style={[s.textArea, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Other Competencies"
+                        value={otherCompetencies}
+                        onChangeText={setOtherCompetencies}
+                        field="competencies"
+                        role={headline || job?.title}
+                        placeholder="Any other specific competencies or skills..."
+                        multiline
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Other Skills / Hobbies</Text>
-                        <TextInput
-                          value={hobbies}
-                          onChangeText={setHobbies}
-                          placeholder="hobbies, sports, creative projects..."
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Other Skills / Hobbies"
+                        value={hobbies}
+                        onChangeText={setHobbies}
+                        field="hobbies"
+                        role={headline || job?.title}
+                        placeholder="hobbies, sports, creative projects..."
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
-                      <View style={s.inputRow}>
-                        <Text style={[s.label, { color: colors.textSecondary }]}>Certifications (comma separated)</Text>
-                        <TextInput
-                          value={certifications}
-                          onChangeText={setCertifications}
-                          placeholder="e.g. PRINCE2, ITIL Foundation, Safe Agile"
-                          placeholderTextColor={colors.textMuted}
-                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
-                        />
-                      </View>
+                      <SuggestField
+                        label="Certifications (comma separated)"
+                        value={certifications}
+                        onChangeText={setCertifications}
+                        field="certifications"
+                        role={headline || job?.title}
+                        placeholder="e.g. PRINCE2, ITIL Foundation, Safe Agile"
+                        colors={colors}
+                        containerStyle={s.inputRow}
+                      />
 
                       <View style={s.inputRow}>
                         <Text style={[s.label, { color: colors.textSecondary }]}>Driving Licence</Text>
@@ -2043,12 +1787,6 @@ const s = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.extrabold,
@@ -2057,18 +1795,6 @@ const s = StyleSheet.create({
     fontSize: FontSize.xs,
     lineHeight: 18,
     marginBottom: 8,
-  },
-  autofillBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  autofillBtnText: {
-    fontSize: 11,
-    fontWeight: '800',
   },
   inputRow: {
     gap: 6,
