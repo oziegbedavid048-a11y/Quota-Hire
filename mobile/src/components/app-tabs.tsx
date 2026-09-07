@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent, Modal } from 'react-native';
-import { Text } from '@/components/ui/text';
+import { Text, MAX_FONT_SCALE_COMPACT } from '@/components/ui/text';
 // expo-local-authentication may not be available in Expo Go — guard with try/catch
 let LocalAuthentication: any = {
   hasHardwareAsync: async () => false,
@@ -164,7 +164,7 @@ function FloatingHeader({
             <Feather name="bell" size={19} color={Palette.neutral700} />
             {unreadCount > 0 && (
               <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
+                <Text style={styles.notificationBadgeText} maxFontSizeMultiplier={MAX_FONT_SCALE_COMPACT}>
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </Text>
               </View>
@@ -361,7 +361,7 @@ function FabMenuSheet({
                   <Feather name={item.icon as any} size={20} color={item.color} />
                   {item.count && item.count > 0 ? (
                     <View style={styles.sheetGridBadge}>
-                      <Text style={styles.sheetGridBadgeText}>{item.count > 9 ? '9+' : item.count}</Text>
+                      <Text style={styles.sheetGridBadgeText} maxFontSizeMultiplier={MAX_FONT_SCALE_COMPACT}>{item.count > 9 ? '9+' : item.count}</Text>
                     </View>
                   ) : null}
                 </View>

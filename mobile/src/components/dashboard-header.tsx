@@ -5,7 +5,7 @@ import {
   StyleSheet,
   useColorScheme,
 } from 'react-native';
-import { Text } from '@/components/ui/text';
+import { Text, MAX_FONT_SCALE_COMPACT } from '@/components/ui/text';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -84,7 +84,7 @@ export default function DashboardHeader({
           <Feather name="bell" size={19} color={colors.text} />
           {unreadCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>
+              <Text style={styles.badgeText} maxFontSizeMultiplier={MAX_FONT_SCALE_COMPACT}>
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Text>
             </View>

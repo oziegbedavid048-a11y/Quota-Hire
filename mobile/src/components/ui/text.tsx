@@ -25,6 +25,7 @@ import { forwardRef } from 'react';
 import {
   Text as RNText,
   TextInput as RNTextInput,
+  useWindowDimensions,
   type TextProps,
   type TextInputProps,
 } from 'react-native';
@@ -56,13 +57,38 @@ export type Text = RNText;
 export type TextInput = RNTextInput;
 
 export const Text = forwardRef<RNText, TextProps>(
-  ({ maxFontSizeMultiplier, ...rest }, ref) => (
+  ({ maxFontSizeMultiplier, style, numberOfLines, ...rest }, ref) => {
+    // numberOfLines is written for the default text size. At a larger size the
+    // same words need more lines, so a hard numberOfLines={1} silently drops
+    // content — the label looks truncated to nothing rather than merely
+    // smaller. Granting proportionally more lines keeps the text readable;
+    // containers were converted to minHeight so they can grow to fit.
+    const { fontScale } = useWindowDimensions();
+    const effectiveScale = Math.min(fontScale || 1, MAX_FONT_SCALE);
+    const lines =
+      numberOfLines && numberOfLines > 0 && effectiveScale > 1.05
+        ? Math.ceil(numberOfLines * effectiveScale)
+        : numberOfLines;
+
+    return (
     <RNText
       ref={ref}
+      numberOfLines={lines}
       maxFontSizeMultiplier={maxFontSizeMultiplier ?? MAX_FONT_SCALE}
+      // React Native defaults flexShrink to 0, unlike the web's 1. Inside a
+      // flexDirection: 'row' that means a label physically cannot give up any
+      // width: as the OS text size grows it pushes its siblings out of the row
+      // and off screen, and numberOfLines cannot help because there is no
+      // narrower box to truncate into. Allowing text to shrink is what lets it
+      // wrap or ellipsize instead of overflowing.
+      //
+      // Listed before `style` so any call site that sets its own flexShrink,
+      // width or flex still wins.
+      style={[{ flexShrink: 1 }, style]}
       {...rest}
     />
-  ),
+    );
+  },
 );
 Text.displayName = 'Text';
 
