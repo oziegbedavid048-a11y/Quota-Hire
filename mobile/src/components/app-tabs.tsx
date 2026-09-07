@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent, Modal } from 'react-native';
+import { View, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent, Modal, useWindowDimensions } from 'react-native';
 import { Text, MAX_FONT_SCALE_COMPACT } from '@/components/ui/text';
 // expo-local-authentication may not be available in Expo Go — guard with try/catch
 let LocalAuthentication: any = {
@@ -43,7 +43,12 @@ import { requestLogout } from '@/services/session';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // ── Navbar geometry constants ─────────────────────────────────────────────────
-const NAV_BAR_H   = 60;          // height of the main navbar
+const NAV_BAR_H   = 60;          // height of the main navbar at the default text size
+// Nav labels are capped tighter than body copy: five slots share one row, so a
+// label has roughly a fifth of the bar to live in and cannot be allowed to run.
+const NAV_LABEL_SCALE_CAP = 1.2;
+// Ceiling on how far the bar itself grows, so it never eats the screen.
+const NAV_BAR_SCALE_CAP = 1.25;
 const FAB_SIZE    = 52;          // diameter of the central FAB circle
 const NOTCH_R     = 36;          // notch half-width
 const NOTCH_DEPTH = 24;          // notch curve depth
@@ -410,6 +415,8 @@ function FloatingPillNavBar({
   onOpenMore: () => void;
 }) {
   const router = useRouter();
+  // Re-reads when the user changes the OS text size while the app is open.
+  const { fontScale: navFontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isCompany = userRole === 'company';
 
@@ -462,14 +469,25 @@ function FloatingPillNavBar({
     navigateTo(fabCfg.route);
   };
 
-  const notchedD = getNotchedPathD(NAV_WIDTH, NAV_BAR_H, CORNER_R, NOTCH_R, NOTCH_DEPTH);
+  // The bar was a fixed 60px, so at a larger OS text size the labels grew but
+  // their container could not: "Community" wrapped and the second line was
+  // clipped by the bar's own edge. Height now tracks the text scale, and the
+  // notch path is regenerated from it so the SVG background matches instead of
+  // being stretched.
+  // Clamped at 1 on the low side: a smaller text setting must not shrink the
+  // bar below its designed 60px, which is already less than the 52px FAB that
+  // sits in its notch. The bar only ever grows.
+  const navBarH = Math.round(
+    NAV_BAR_H * Math.min(Math.max(navFontScale || 1, 1), NAV_BAR_SCALE_CAP)
+  );
+  const notchedD = getNotchedPathD(NAV_WIDTH, navBarH, CORNER_R, NOTCH_R, NOTCH_DEPTH);
 
   return (
     <View
       style={{
         alignSelf: 'center',
         width: NAV_WIDTH,
-        height: NAV_BAR_H,
+        height: navBarH,
         shadowColor: '#0f172a',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.09,
@@ -480,7 +498,7 @@ function FloatingPillNavBar({
       {/* ── SVG Notched Bar Liquid Glass Background ─────────────────────────── */}
       <Svg
         width={NAV_WIDTH}
-        height={NAV_BAR_H}
+        height={navBarH}
         style={StyleSheet.absoluteFill}
       >
         <Defs>
@@ -518,7 +536,17 @@ function FloatingPillNavBar({
             size={20}
             color={isTab1Active ? Palette.accent600 : Palette.neutral400}
           />
-          <Text style={[styles.pillLabel, isTab1Active && styles.pillLabelActive]}>
+          <Text
+            style={[styles.pillLabel, isTab1Active && styles.pillLabelActive]}
+            // Five slots share one row, so a label has about a fifth of
+            // the bar. Capped tighter than body copy, kept to a single
+            // line, and allowed to shrink slightly rather than be cut —
+            // "Community" is the longest and was the one clipping.
+            maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
             {tab1.label}
           </Text>
         </HapticPressable>
@@ -533,7 +561,17 @@ function FloatingPillNavBar({
             size={20}
             color={isTab2Active ? Palette.accent600 : Palette.neutral400}
           />
-          <Text style={[styles.pillLabel, isTab2Active && styles.pillLabelActive]}>
+          <Text
+            style={[styles.pillLabel, isTab2Active && styles.pillLabelActive]}
+            // Five slots share one row, so a label has about a fifth of
+            // the bar. Capped tighter than body copy, kept to a single
+            // line, and allowed to shrink slightly rather than be cut —
+            // "Community" is the longest and was the one clipping.
+            maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
             {tab2.label}
           </Text>
         </HapticPressable>
@@ -558,8 +596,20 @@ function FloatingPillNavBar({
               </LinearGradient>
             </HapticPressable>
           </View>
-          <View style={{ height: 20 }} />
-          <Text style={[styles.pillLabel, isFabActive && styles.pillLabelActive]}>
+          {/* Reserves the space the floating FAB overlaps. It tracks the text
+              scale only enough to keep clear of the circle — the FAB itself is
+              a fixed 52px, so letting this grow in proportion would waste the
+              height the label needs. */}
+          <View style={{ height: Math.round(20 * Math.min(navFontScale || 1, 1.1)) }} />
+          <Text
+            style={[styles.pillLabel, isFabActive && styles.pillLabelActive]}
+            // This is the longest label in the bar ("Community") and the one
+            // that was being cut.
+            maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
             {fabCfg.label}
           </Text>
         </View>
@@ -574,7 +624,17 @@ function FloatingPillNavBar({
             size={20}
             color={isTab4Active ? Palette.accent600 : Palette.neutral400}
           />
-          <Text style={[styles.pillLabel, isTab4Active && styles.pillLabelActive]}>
+          <Text
+            style={[styles.pillLabel, isTab4Active && styles.pillLabelActive]}
+            // Five slots share one row, so a label has about a fifth of
+            // the bar. Capped tighter than body copy, kept to a single
+            // line, and allowed to shrink slightly rather than be cut —
+            // "Community" is the longest and was the one clipping.
+            maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
             {tab4.label}
           </Text>
         </HapticPressable>
@@ -589,7 +649,17 @@ function FloatingPillNavBar({
             size={20}
             color={isTab5Active ? Palette.accent600 : Palette.neutral400}
           />
-          <Text style={[styles.pillLabel, isTab5Active && styles.pillLabelActive]}>
+          <Text
+            style={[styles.pillLabel, isTab5Active && styles.pillLabelActive]}
+            // Five slots share one row, so a label has about a fifth of
+            // the bar. Capped tighter than body copy, kept to a single
+            // line, and allowed to shrink slightly rather than be cut —
+            // "Community" is the longest and was the one clipping.
+            maxFontSizeMultiplier={NAV_LABEL_SCALE_CAP}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
             {tab5.label}
           </Text>
         </HapticPressable>
@@ -1101,10 +1171,16 @@ const styles = StyleSheet.create({
   // ── Navbar tab styles ─────────────────────────────────────────────────────
   pillTabItem: {
     flex: 1,
+    // Each slot may shrink below its natural width. Without this a long label
+    // widens its slot, steals space from the others and pushes the row wider
+    // than the bar.
+    minWidth: 0,
+    flexShrink: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingVertical: 6,
+    paddingHorizontal: 2,
   },
   pillLabel: {
     fontSize: 10,

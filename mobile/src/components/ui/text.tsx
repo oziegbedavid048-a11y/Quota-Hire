@@ -65,8 +65,15 @@ export const Text = forwardRef<RNText, TextProps>(
     // containers were converted to minHeight so they can grow to fit.
     const { fontScale } = useWindowDimensions();
     const effectiveScale = Math.min(fontScale || 1, MAX_FONT_SCALE);
+    // adjustsFontSizeToFit means the caller wants the text squeezed into
+    // exactly the lines it asked for — a nav label that must stay on one
+    // line, for instance. Granting extra lines there would defeat it, so
+    // the line count is left alone whenever that prop is present.
     const lines =
-      numberOfLines && numberOfLines > 0 && effectiveScale > 1.05
+      numberOfLines &&
+      numberOfLines > 0 &&
+      effectiveScale > 1.05 &&
+      !(rest as { adjustsFontSizeToFit?: boolean }).adjustsFontSizeToFit
         ? Math.ceil(numberOfLines * effectiveScale)
         : numberOfLines;
 
