@@ -464,6 +464,16 @@ function FloatingPillNavBar({
       DeviceEventEmitter.emit('open-create-post-modal');
       return;
     }
+    // Community has not shipped yet, so the tab announces itself instead of
+    // opening the feed. Guarded on !isCompany because a company's centre
+    // button is Post Job, which is live and must keep working.
+    //
+    // The modal lives in AppTabs, the parent, so this goes over the event bus
+    // rather than a prop — the same route the create-post branch above uses.
+    if (!isCompany) {
+      DeviceEventEmitter.emit('open-community-coming-soon');
+      return;
+    }
     navigateTo(fabCfg.route);
   };
 
@@ -672,7 +682,18 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const [isProfileIncomplete, setIsProfileIncomplete] = useState<boolean>(false);
   const [showBiometricsModal, setShowBiometricsModal] = useState(false);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [showPushModal, setShowPushModal] = useState(false);
+
+  // The Community tab lives in FloatingPillNavBar, a child, and announces the
+  // tap on the event bus. Subscribe here, where the modal is rendered.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(
+      'open-community-coming-soon',
+      () => setShowComingSoonModal(true),
+    );
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -905,6 +926,40 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
       />
 
       {/* ── First-Time Biometrics Setup Modal ── */}
+      {/* ── Community "Coming Soon" Notice ── */}
+      <Modal
+        visible={showComingSoonModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowComingSoonModal(false)}
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <View style={[modalStyles.iconBadge, { backgroundColor: 'rgba(21, 117, 10, 0.12)' }]}>
+              <Feather name="users" size={32} color={Palette.accent600} />
+            </View>
+
+            <Text style={modalStyles.title}>Community is coming soon</Text>
+            <Text style={modalStyles.subtitle}>
+              We are building a space for sales professionals to share wins, ask
+              questions and learn from each other. We will let you know the moment
+              it opens.
+            </Text>
+
+            <View style={modalStyles.buttonColumn}>
+              <HapticPressable
+                onPress={() => setShowComingSoonModal(false)}
+                style={[modalStyles.primaryBtn, { backgroundColor: Palette.accent600 }]}
+              >
+                <View style={modalStyles.gradientBtn}>
+                  <Text style={modalStyles.primaryBtnText}>Got it</Text>
+                </View>
+              </HapticPressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal
         visible={showBiometricsModal}
         transparent={true}
