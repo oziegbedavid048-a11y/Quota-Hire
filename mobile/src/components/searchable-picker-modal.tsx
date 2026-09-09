@@ -114,7 +114,7 @@ export const SearchablePickerModal: React.FC<SearchablePickerModalProps> = ({
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={s.keyboardContainer}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >

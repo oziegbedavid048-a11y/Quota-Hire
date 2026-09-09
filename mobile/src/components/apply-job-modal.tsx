@@ -265,7 +265,7 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={s.keyboardWrapper}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >

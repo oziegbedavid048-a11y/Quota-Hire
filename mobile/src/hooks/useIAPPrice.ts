@@ -173,6 +173,9 @@ export function useIAPPrice(userCountry?: string): UseIAPPriceResult {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const purchaseCallbackRef = useRef<PurchaseOptions | null>(null);
   const productLoadedRef = useRef(false);
+  // Mirrors priceReady for use inside async callbacks, which would otherwise
+  // close over a stale value and overwrite a real Play price with the estimate.
+  const priceReadyRef = useRef(false);
 
   // ── Google Play hook ───────────────────────────────────────────────────────
   const iap = (useIAP as any)({
@@ -254,31 +257,30 @@ export function useIAPPrice(userCountry?: string): UseIAPPriceResult {
       String((product as any).price ?? '');
     if (raw) {
       setLocalizedPrice(String(raw));
+      priceReadyRef.current = true;
       setPriceReady(true);
     }
   }, [products, priceReady]);
 
-  // ── Priority 2: Country-based fallback (Expo Go, or after 7s timeout) ─────
+  // ── Priority 2: Country-based price, shown straight away ──────────────────
+  // This used to run immediately only in Expo Go; a real Android build instead
+  // waited on a 7-second timer. That is why the country currency appeared under
+  // Expo Go but not in the installed app — for the first 7 seconds the button
+  // read "Download (Loading…)", and if Play Billing never answered (which is
+  // exactly what happens while billing is not configured for the build) that
+  // was the entire experience.
+  //
+  // Now every platform resolves the country price on mount, so there is never a
+  // "Loading…" gap. Google Play stays authoritative: if it answers, the effect
+  // above overwrites this with the real charged price, and the ref guard stops
+  // a late-returning estimate from clobbering it.
   useEffect(() => {
     let cancelled = false;
-
-    // Run immediately for Expo Go / non-Android
-    if (isExpoGo || !isAndroid) {
-      resolvePrice(userCountry).then(price => {
-        if (!cancelled) { setLocalizedPrice(price); setPriceReady(true); }
-      });
-      return () => { cancelled = true; };
-    }
-
-    // Safety timeout: if Google Play hasn't responded in 7 seconds, show estimate
-    const timer = setTimeout(async () => {
-      if (!priceReady && !cancelled) {
-        const price = await resolvePrice(userCountry);
-        if (!cancelled) { setLocalizedPrice(price); setPriceReady(true); }
-      }
-    }, 7000);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [userCountry, priceReady]);
+    resolvePrice(userCountry).then(price => {
+      if (!cancelled && !priceReadyRef.current) setLocalizedPrice(price);
+    });
+    return () => { cancelled = true; };
+  }, [userCountry]);
 
   // ── Trigger Google Play purchase ────────────────────────────────────────────
   const requestCVPurchase = useCallback(async (options: PurchaseOptions) => {
