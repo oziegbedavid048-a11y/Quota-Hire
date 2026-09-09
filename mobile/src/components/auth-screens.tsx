@@ -34,33 +34,6 @@ import {
   getCityItemsForCountry,
   extractSubscriberNumber,
 } from "../constants/countries-data";
-let GoogleSignin: any = null;
-let statusCodes: any = {};
-let isGoogleSigninSupported = false;
-
-function initGoogleSignIn() {
-  if (isGoogleSigninSupported && GoogleSignin?.configure) {
-    try {
-      GoogleSignin.configure({
-        webClientId: "741329909708-cljluh4tepm3rpadt16lqdhqohhs5sd7.apps.googleusercontent.com",
-        offlineAccess: true,
-      });
-    } catch (e) {
-      console.warn("[Google Sign-In] Configure error:", e);
-    }
-  }
-}
-
-try {
-  const GoogleSignInModule = require("@react-native-google-signin/google-signin");
-  GoogleSignin = GoogleSignInModule.GoogleSignin;
-  statusCodes = GoogleSignInModule.statusCodes;
-  isGoogleSigninSupported = true;
-} catch (e) {
-  console.warn(
-    "[Google Sign-In] Native module not found. Google Sign-In is disabled (this is normal in Expo Go)."
-  );
-}
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
@@ -486,7 +459,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   const [hasBiometricSupport, setHasBiometricSupport] = useState(false);
 
   useEffect(() => {
-    initGoogleSignIn();
     async function checkBiometrics() {
       try {
         if (LocalAuthentication && typeof LocalAuthentication.hasHardwareAsync === 'function') {
@@ -662,10 +634,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
   };
 
   useEffect(() => {
-    initGoogleSignIn();
-  }, []);
-
-  useEffect(() => {
     setLError("");
     setSError("");
     setLoginOtpError("");
@@ -690,93 +658,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
       transform: [{ translateX: offset }],
     };
   });
-
-  const handleGoogleSignIn = async () => {
-    if (!isGoogleSigninSupported) {
-      Alert.alert(
-        "Google Sign-In Unavailable",
-        "Google Sign-In is not supported inside the Expo Go sandbox because it requires custom native binaries. Please run a Development Build (using npx expo run:android) or install the standalone APK to test Google Sign-In. For testing in Expo Go, please use the email and password form."
-      );
-      return;
-    }
-
-    try {
-      initGoogleSignIn();
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      
-      if (userInfo.type !== "success") {
-        throw { code: statusCodes.SIGN_IN_CANCELLED };
-      }
-
-      const idToken = userInfo.data.idToken;
-
-      if (!idToken) {
-        throw new Error("No ID Token received from Google");
-      }
-
-      if (mode === "login") {
-        setLSubmitting(true);
-        setLError("");
-      } else {
-        setSSubmitting(true);
-        setSError("");
-      }
-
-      const res = await fetch(`${API_BASE}/auth/google/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: idToken,
-          role: role,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || data?.detail || "Google authentication failed.");
-      }
-
-      if (data.access)
-        await SecureStore.setItemAsync("access_token", data.access);
-      if (data.refresh)
-        await SecureStore.setItemAsync("refresh_token", data.refresh);
-
-      const uName = data.user?.full_name || data.user?.name || data.user?.email || "";
-      const uRole = data.user?.role || "employee";
-      await SecureStore.setItemAsync("user_name", uName);
-      await SecureStore.setItemAsync("user_role", uRole);
-
-      if (mode === "login") {
-        setLSubmitting(false);
-      } else {
-        setSSubmitting(false);
-      }
-
-      onLogin(uName, uRole);
-    } catch (error: any) {
-      console.error(error);
-      let errorMsg = "Google Sign-In failed. Please try again.";
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        errorMsg = "Google Sign-In was cancelled.";
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        errorMsg = "Google Sign-In is already in progress.";
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        errorMsg = "Google Play Services are not available on this device.";
-      } else if (error.message) {
-        errorMsg = error.message;
-      }
-
-      if (mode === "login") {
-        setLError(errorMsg);
-        setLSubmitting(false);
-      } else {
-        setSError(errorMsg);
-        setSSubmitting(false);
-      }
-    }
-  };
 
   // ── Step 1: Request login OTP ─────────────────────────────────────────────
   const handleRequestLoginOTP = async () => {
@@ -1072,26 +953,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                       </LinearGradient>
                     </Pressable>
 
-                    {/* ── OR divider ── */}
-                    <View style={gs.orRow}>
-                      <View style={gs.orLine} />
-                      <Text style={gs.orText}>or</Text>
-                      <View style={gs.orLine} />
-                    </View>
-
-                    {/* Continue with Google */}
-                    <Pressable
-                      onPress={handleGoogleSignIn}
-                      disabled={lSubmitting}
-                      style={({ pressed }) => [
-                        gs.googleBtn,
-                        { opacity: pressed || lSubmitting ? 0.75 : 1 },
-                      ]}
-                    >
-                      <GoogleG />
-                      <Text style={gs.googleBtnText}>Continue with Google</Text>
-                    </Pressable>
-
                     {/* Sign in with Fingerprint / FaceID */}
                     {hasBiometricSupport && (
                       <Pressable
@@ -1355,26 +1216,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                           </LinearGradient>
                         </Pressable>
 
-                        {/* ── OR divider ── */}
-                        <View style={gs.orRow}>
-                          <View style={gs.orLine} />
-                          <Text style={gs.orText}>or</Text>
-                          <View style={gs.orLine} />
-                        </View>
-
-                        {/* Sign up with Google */}
-                        <Pressable
-                          onPress={handleGoogleSignIn}
-                          disabled={sSubmitting}
-                          style={({ pressed }) => [
-                            gs.googleBtn,
-                            { opacity: pressed || sSubmitting ? 0.75 : 1 },
-                          ]}
-                        >
-                          <GoogleG />
-                          <Text style={gs.googleBtnText}>Sign up with Google</Text>
-                        </Pressable>
-
                         <View style={gs.divider} />
                         <View style={gs.switchRow}>
                           <Text style={gs.switchText}>
@@ -1497,26 +1338,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
                           </LinearGradient>
                         </Pressable>
 
-                        {/* ── OR divider ── */}
-                        <View style={gs.orRow}>
-                          <View style={gs.orLine} />
-                          <Text style={gs.orText}>or</Text>
-                          <View style={gs.orLine} />
-                        </View>
-
-                        {/* Sign up with Google */}
-                        <Pressable
-                          onPress={handleGoogleSignIn}
-                          disabled={sSubmitting}
-                          style={({ pressed }) => [
-                            gs.googleBtn,
-                            { opacity: pressed || sSubmitting ? 0.75 : 1 },
-                          ]}
-                        >
-                          <GoogleG />
-                          <Text style={gs.googleBtnText}>Sign up with Google</Text>
-                        </Pressable>
-
                         <View style={gs.divider} />
                         <View style={gs.switchRow}>
                           <Text style={gs.switchText}>
@@ -1612,17 +1433,6 @@ export default function AuthScreens({ onLogin }: AuthScreensProps) {
     </View>
   );
 }
-
-// ─── Google G Logo — real official multicolour logo ──────────────────────────
-
-const GoogleG = () => (
-  <Image
-    source={require("../../assets/images/google-logo.png")}
-    style={{ width: 18, height: 18 }}
-    contentFit="contain"
-  />
-);
-
 // ─── Styles — precise mobile translation of the web CSS ────────────────────
 const gs = StyleSheet.create({
   root: { flex: 1 },
@@ -1742,29 +1552,6 @@ const gs = StyleSheet.create({
     paddingVertical: 28,
   },
 
-  // ── Google Button
-  googleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    minHeight: 50,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#dadce0", // Google's exact border colour
-    backgroundColor: "#ffffff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-  },
-  googleBtnText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#3c4043", // Google's text colour
-    letterSpacing: 0.1,
-  },
-
   // ── Biometric Button ───────────────────────────────────────────────────
   bioBtn: {
     flexDirection: "row",
@@ -1783,17 +1570,6 @@ const gs = StyleSheet.create({
     color: ACCENT_600,
     letterSpacing: 0.1,
   },
-
-  // ── OR divider
-  orRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 16,
-    marginBottom: 14,
-  },
-  orLine: { flex: 1, height: 1, backgroundColor: "#e2e8f0" },
-  orText: { fontSize: 13, fontWeight: "500", color: "#94a3b8" },
 
   // ── GlassInput ──────────────────────────────────────────────────────
   // relative (with bottom spacing between inputs: space-y-6 = 24px)
