@@ -12,7 +12,6 @@ import {
   Alert,
   TouchableOpacity,
   Pressable,
-  Image,
   Switch,
   DeviceEventEmitter,
 } from 'react-native';
@@ -459,9 +458,10 @@ export default function CommunityScreen() {
     const init = (author?.name || 'A').charAt(0).toUpperCase();
     if (author?.avatar_url) {
       return (
-        <Image
+        <ExpoImage
           source={{ uri: author.avatar_url }}
           style={styles.avatar}
+        contentFit="cover"
         />
       );
     }
@@ -705,7 +705,7 @@ export default function CommunityScreen() {
                     <View key={m.id} style={{ alignItems: 'center', width: 62 }}>
                       <View style={styles.activeAvatarWrap}>
                         {m.avatar ? (
-                          <Image source={{ uri: m.avatar }} style={styles.activeAvatarImg} />
+                          <ExpoImage source={{ uri: m.avatar }} style={styles.activeAvatarImg} contentFit="cover" />
                         ) : (
                           <LinearGradient colors={[Palette.accent200, Palette.accent100]} style={[styles.activeAvatarImg, { justifyContent: 'center', alignItems: 'center' }]}>
                             <Text style={{ fontWeight: '700', color: Palette.accent700, fontSize: 16 }}>

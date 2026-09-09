@@ -3,7 +3,7 @@
     "name": "Quota Hire",
     "slug": "quota-hire",
     "version": "1.0.6",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "quotahire",
     "userInterfaceStyle": "automatic",
@@ -34,7 +34,9 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-iap"],
+      [
+        "expo-iap"
+      ],
       [
         "expo-splash-screen",
         {
@@ -70,7 +72,8 @@
             "enableProguardInReleaseBuilds": true
           }
         }
-      ]
+      ],
+      "expo-screen-orientation"
     ],
     "experiments": {
       "typedRoutes": true,

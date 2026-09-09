@@ -24,10 +24,19 @@ import {
   getNavigationPathFromPush,
   Notifications,
 } from "@/services/notifications";
+import * as ScreenOrientation from "expo-screen-orientation";
 
 SplashScreen.preventAutoHideAsync().catch((_err) => {
   console.debug("[SplashScreen] preventAutoHideAsync skipped:", _err);
 });
+
+// The Android manifest no longer pins the orientation (Play flags that for
+// large-screen devices on Android 16+). Lock to portrait at runtime instead:
+// phones stay portrait exactly as before, while foldables and tablets on
+// Android 16 are free to rotate, which is the behaviour Google wants.
+ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(
+  (_err) => console.debug("[ScreenOrientation] portrait lock skipped:", _err),
+);
 
 export default function TabLayout() {
   const router = useRouter();
