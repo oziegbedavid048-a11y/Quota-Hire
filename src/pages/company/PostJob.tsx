@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Wand2, Briefcase, MapPin, CheckCircle2, FileText, Check, Shield } from 'lucide-react';
+import { ArrowLeft, Briefcase, MapPin, CheckCircle2, FileText, Check, Shield } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { GlassInput } from '../../components/ui/GlassInput';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
@@ -9,101 +9,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { worldCurrencies } from '../../utils/currencies';
 import { CompanyProfile } from '../../types';
 
-const jobTemplates: Record<string, { keywords: string[]; description: string; requirements: string }> = {
-  'Sales Development Representative (SDR)': {
-    keywords: ['sdr', 'sales development', 'business development rep', 'bdr'],
-    description: "As an SDR, you will be the engine of our pipeline. Your primary responsibility is to identify, research, and engage outbound prospects through multi-channel outreach including cold calls, personalized emails, and LinkedIn. You will qualify inbound leads and schedule meetings for Account Executives, playing a critical role in our revenue growth.",
-    requirements: "0–2 years of sales or customer-facing experience\nExcellent verbal and written communication skills\nHigh energy, resilience, and coachability\nFamiliarity with CRM tools (Salesforce, HubSpot, or similar)\nAbility to manage high daily call and email volume"
-  },
-  'Account Executive': {
-    keywords: ['account executive', 'ae ', 'ae,', 'sales executive', 'closing rep', 'quota-carrying'],
-    description: "We are seeking a driven Account Executive to manage the full sales cycle from prospecting to close. You will work closely with SDRs to qualify leads, conduct deep-dive discovery calls, run product demonstrations, and negotiate contracts to drive revenue growth in your territory.",
-    requirements: "3+ years of B2B SaaS sales experience\nProven track record of closing five and six-figure deals\nExperience with MEDDIC, BANT, or Challenger methodology\nStrong presentation and negotiation skills\nProficiency with Salesforce and sales engagement tools"
-  },
-  'Sales Manager': {
-    keywords: ['sales manager', 'head of sales', 'sales lead', 'revenue manager'],
-    description: "The Sales Manager will lead, coach, and inspire a team of high-performing Account Executives to exceed revenue targets. You will be responsible for pipeline management, forecasting accuracy, and developing strategies to penetrate new markets.",
-    requirements: "5+ years of sales experience, 2+ in a leadership role\nProven ability to hire, train, and develop top sales talent\nDeep understanding of enterprise sales cycles\nStrong analytical skills and data-driven decision making\nExperience with CRM forecasting and pipeline management"
-  },
-  'Sales Associate': {
-    keywords: ['sales associate', 'junior sales', 'entry level sales', 'sales rep', 'inside sales'],
-    description: "As a Sales Associate, you will be the first point of contact for our potential customers. You will be responsible for identifying new business opportunities, engaging with prospects, and demonstrating the value of our products. This role requires high energy, resilience, and a passion for building relationships.",
-    requirements: "1+ years of sales experience (B2B preferred)\nExcellent verbal and written communication skills\nGoal-oriented mindset with a track record of meeting quotas\nProficiency with CRM software (Salesforce, HubSpot)"
-  },
-  'Enterprise Account Executive': {
-    keywords: ['enterprise account', 'enterprise ae', 'enterprise sales', 'strategic account'],
-    description: "As an Enterprise Account Executive, you will own complex, high-value sales cycles targeting Fortune 500 and mid-market companies. You will build executive-level relationships, navigate multiple stakeholders, and close transformational deals that shape our company's growth trajectory.",
-    requirements: "5+ years of enterprise B2B sales experience\nTrack record of closing $250K+ ARR deals\nExperience selling to C-suite and VP-level buyers\nProficiency with complex deal structuring and procurement\nKnowledge of MEDDIC, Command of the Message, or similar enterprise methodology"
-  },
-  'VP of Sales': {
-    keywords: ['vp of sales', 'vice president sales', 'vp sales', 'head of revenue'],
-    description: "The VP of Sales will define and execute our go-to-market strategy, build and scale a world-class sales organization, and partner with executive leadership to achieve aggressive growth targets. You will be responsible for revenue planning, team structure, and overall sales culture.",
-    requirements: "8+ years of progressive B2B sales experience\n4+ years leading and scaling sales teams\nProven track record of exceeding $10M+ ARR targets\nExperience building sales processes from the ground up\nStrong executive presence and board-level communication skills"
-  },
-  'Customer Success Manager': {
-    keywords: ['customer success', 'csm', 'client success', 'account manager'],
-    description: "As a Customer Success Manager, you will be the primary post-sale relationship owner for a portfolio of strategic accounts. Your goal is to drive product adoption, ensure customer health, identify expansion opportunities, and reduce churn by delivering measurable business value.",
-    requirements: "2+ years in Customer Success, Account Management, or related field\nStrong consultative communication skills\nAbility to understand and articulate complex product value\nExperience with CS platforms (Gainsight, ChurnZero, or Totango)\nData-driven approach to health scoring and QBRs"
-  },
-  'Sales Operations Manager': {
-    keywords: ['sales operations', 'sales ops', 'revenue operations', 'rev ops', 'revops'],
-    description: "The Sales Operations Manager will partner with sales leadership to optimize process, tooling, and data to accelerate revenue. You will own our CRM architecture, sales analytics, quota planning, and forecasting processes to ensure the team operates at peak efficiency.",
-    requirements: "3+ years in Sales Operations or Revenue Operations\nDeep Salesforce CRM expertise (Admin certification preferred)\nStrong SQL and data visualization skills (Tableau, Looker)\nExperience with territory design and quota modelling\nAbility to translate data insights into actionable recommendations"
-  },
-  'Marketing Manager': {
-    keywords: ['marketing manager', 'head of marketing', 'digital marketing', 'growth marketing', 'demand generation'],
-    description: "The Marketing Manager will own and execute our integrated marketing strategy across digital, content, and events channels. You will generate qualified pipeline for the sales team, build brand awareness, and measure campaign performance to continuously optimize our go-to-market approach.",
-    requirements: "4+ years of B2B marketing experience\nProven ability to drive MQL/SQL pipeline\nExperience with HubSpot, Marketo, or equivalent marketing automation\nStrong copywriting and content strategy skills\nData-driven approach with experience in A/B testing and analytics"
-  },
-  'Business Development Manager': {
-    keywords: ['business development', 'bd manager', 'partnerships', 'strategic partnerships', 'channel sales'],
-    description: "As a Business Development Manager, you will identify, negotiate, and close strategic partnerships that expand our market reach and revenue streams. You will cultivate relationships with potential partners, resellers, and channel sales organizations to create mutually beneficial growth opportunities.",
-    requirements: "4+ years of business development or partnerships experience\nStrong network in the relevant industry vertical\nExperience structuring and closing complex partnership agreements\nExcellent negotiation and relationship management skills\nAbility to work cross-functionally with product, legal, and finance"
-  },
-  'Territory Sales Representative': {
-    keywords: ['territory sales', 'field sales', 'regional sales', 'outside sales', 'field rep'],
-    description: "As a Territory Sales Representative, you will own your region and grow revenue by building strong relationships with new and existing customers through in-person meetings, product demonstrations, and events. This is a field-based role requiring regular travel within your assigned territory.",
-    requirements: "2+ years of outside or field sales experience\nStrong hunter mentality with ability to manage a geographic territory\nAbility to travel up to 50% of the time\nExcellent in-person presentation and closing skills\nProficiency in CRM and mobile sales tools"
-  },
-  'Recruitment Consultant': {
-    keywords: ['recruitment', 'recruiter', 'talent acquisition', 'headhunter', 'staffing'],
-    description: "As a Recruitment Consultant, you will manage the full recruitment lifecycle — from sourcing and screening candidates to presenting opportunities and managing client relationships. You will build a deep talent network and consistently deliver top-quality hires that exceed client expectations.",
-    requirements: "2+ years of recruitment or talent acquisition experience\nStrong sourcing skills across LinkedIn, job boards, and direct outreach\nExcellent candidate and client relationship management\nAbility to manage multiple requisitions simultaneously\nKnowledge of employment law and best practices"
-  },
-  'Product Manager': {
-    keywords: ['product manager', 'pm ', 'product lead', 'product owner', 'head of product'],
-    description: "As a Product Manager, you will define and champion the product vision, roadmap, and strategy. Working closely with engineering, design, sales, and customers, you will prioritize features, write clear requirements, and ship products that users love and that drive business growth.",
-    requirements: "3+ years of product management experience in a SaaS environment\nStrong ability to translate customer feedback into product requirements\nExperience with agile development methodologies\nData-driven decision making with strong analytical skills\nExcellent stakeholder communication and roadmap management"
-  },
-  'Software Engineer': {
-    keywords: ['software engineer', 'developer', 'frontend', 'backend', 'full stack', 'fullstack', 'react', 'node', 'python dev', 'java dev'],
-    description: "We are looking for a talented Software Engineer to join our growing engineering team. You will design, build, and maintain scalable software solutions, collaborate with product and design to ship high-quality features, and contribute to our engineering culture of excellence.",
-    requirements: "2+ years of professional software development experience\nProficiency in relevant programming languages and frameworks\nStrong understanding of software design principles and patterns\nExperience with version control (Git), CI/CD pipelines\nExcellent problem-solving and communication skills"
-  },
-  'Data Analyst': {
-    keywords: ['data analyst', 'business analyst', 'data scientist', 'analytics', 'bi analyst', 'data engineer'],
-    description: "As a Data Analyst, you will transform raw data into actionable insights that drive strategic decision-making. You will build dashboards, analyze performance trends, and partner closely with leadership and revenue teams to identify growth opportunities.",
-    requirements: "2+ years of data analysis experience\nProficiency in SQL and at least one analytics tool (Tableau, Looker, Power BI)\nExperience with Python or R for statistical analysis (a plus)\nStrong ability to present complex data in a clear and compelling way\nMeticulous attention to data quality and accuracy"
-  },
-  'Operations Manager': {
-    keywords: ['operations manager', 'head of operations', 'ops manager', 'chief of staff', 'coo'],
-    description: "The Operations Manager will streamline our internal processes, manage cross-functional projects, and ensure the business runs smoothly and efficiently. You will partner with every team to remove friction, implement scalable systems, and drive operational excellence.",
-    requirements: "4+ years of operations or project management experience\nStrong process improvement and systems-thinking skills\nExperience managing cross-functional projects and stakeholders\nProficiency with project management tools (Asana, Monday, Notion)\nExcellent organizational and leadership skills"
-  },
-};
-
-// Fuzzy keyword matcher — returns the best template key for a typed title
-const findMatchingTemplate = (title: string): string | null => {
-  if (!title || title.trim().length < 3) return null;
-  const lower = title.toLowerCase();
-  for (const [templateName, data] of Object.entries(jobTemplates)) {
-    const allKeywords = [templateName.toLowerCase(), ...data.keywords];
-    if (allKeywords.some(kw => lower.includes(kw) || kw.includes(lower))) {
-      return templateName;
-    }
-  }
-  return null;
-};
 
 const PACKAGES = [
   {
@@ -191,24 +96,7 @@ export const PostJob = () => {
     package: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [suggestedTemplate, setSuggestedTemplate] = useState<string | null>(null);
   const navigate = useNavigate();
-
-  // Check for templates when title changes
-  useEffect(() => {
-    const match = findMatchingTemplate(formData.title);
-    setSuggestedTemplate(match || null);
-  }, [formData.title]);
-
-  const applyTemplate = () => {
-    if (suggestedTemplate) {
-      setFormData(prev => ({
-        ...prev,
-        description: jobTemplates[suggestedTemplate].description,
-        requirements: jobTemplates[suggestedTemplate].requirements
-      }));
-    }
-  };
 
   const selectedCurrencyObj = worldCurrencies.find(c => c.code === formData.currency) || worldCurrencies[0];
   const CurrencyIcon = <span className="font-bold text-lg leading-none">{selectedCurrencyObj.symbol}</span>;
@@ -474,40 +362,7 @@ export const PostJob = () => {
                       className="input-soft"
                     />
 
-                    {/* Template Suggestion Banner */}
-                    <AnimatePresence>
-                      {suggestedTemplate && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -8 }}
-                          transition={{ duration: 0.25 }}
-                          className="mt-2 flex flex-col sm:flex-row sm:items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3.5"
-                        >
-                          <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <Wand2 size={15} className="text-amber-600 dark:text-amber-400" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-extrabold text-amber-800 dark:text-amber-300 leading-tight">
-                                Template available: <span className="italic">{suggestedTemplate}</span>
-                              </p>
-                              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
-                                Auto-fill the description &amp; requirements with a professional template — you can edit it afterwards.
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={applyTemplate}
-                            className="flex-shrink-0 self-start sm:self-center flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-sm whitespace-nowrap"
-                          >
-                            <Wand2 size={13} />
-                            Use Template
-                          </button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

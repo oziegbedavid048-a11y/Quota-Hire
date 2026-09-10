@@ -12,7 +12,7 @@ import { PdfPreview } from './PdfPreview';
 import '../../lib/cv/pdfFonts';
 
 // CV Engine
-import { WizardAnswers, buildCVData, generateAIAssistedSuggestions } from '../../lib/cv/cvContentBuilder';
+import { WizardAnswers, buildCVData } from '../../lib/cv/cvContentBuilder';
 import { selectTemplate } from '../../lib/cv/cvTemplateSelector';
 import { TemplateId } from '../../lib/cv/types';
 
@@ -174,21 +174,6 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
       return { ...prev, workEntries: newEntries };
     });
 
-  const handleSuggest = () => {
-    if (!answers.headline) {
-      toast.error('Please enter a Target Headline first.');
-      return;
-    }
-    const effectiveProfile = profile || (currentUser as EmployeeProfile);
-    const suggestions = generateAIAssistedSuggestions(answers.headline, effectiveProfile);
-    setAnswers(prev => ({
-      ...prev,
-      achievement: suggestions.achievement || prev.achievement,
-      extraSkills: suggestions.extraSkills || prev.extraSkills,
-      workEntries: suggestions.workEntries || prev.workEntries,
-    }));
-    toast.success('Suggestions applied! Feel free to edit them.');
-  };
 
   const handlePassportUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -360,19 +345,9 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                   {step === 1 && (
                     <div className="p-5 sm:p-6 space-y-5">
                       <div className="space-y-1.5">
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="block text-sm font-semibold text-gray-700">
+                        <label className="block text-sm font-semibold text-gray-700">
                             Target Headline
                           </label>
-                          <button
-                            type="button"
-                            onClick={handleSuggest}
-                            className="text-xs flex items-center gap-1 text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded transition"
-                          >
-                            <Sparkles className="w-3 h-3" />
-                            Autofill Suggestions
-                          </button>
-                        </div>
                         <input
                           value={answers.headline}
                           onChange={e => setAnswers(p => ({ ...p, headline: e.target.value }))}

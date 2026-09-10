@@ -12,7 +12,6 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { Text, TextInput } from '@/components/ui/text';
-import { SuggestField } from '@/components/ui/suggest-field';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -1004,38 +1003,38 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
                       <Text style={[s.sectionTitle, { color: colors.text }]}>Target Role</Text>
 
-                      <SuggestField
-                        label="Target Headline / Job Title"
-                        value={headline}
-                        onChangeText={setHeadline}
-                        field="headline"
-                        role={headline || job?.title}
-                        placeholder="e.g. Mid-Market Account Executive"
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Target Headline / Job Title</Text>
+                        <TextInput
+                          value={headline}
+                          onChangeText={setHeadline}
+                          placeholder="e.g. Mid-Market Account Executive"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Languages (comma separated)"
-                        value={languages}
-                        onChangeText={setLanguages}
-                        field="languages"
-                        role={headline || job?.title}
-                        placeholder="English (Native), French (Basic)"
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Languages (comma separated)</Text>
+                        <TextInput
+                          value={languages}
+                          onChangeText={setLanguages}
+                          placeholder="English (Native), French (Basic)"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Strengths (comma separated)"
-                        value={strengths}
-                        onChangeText={setStrengths}
-                        field="strengths"
-                        role={headline || job?.title}
-                        placeholder="MEDDIC, Account Closing, Pipeline Management"
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Strengths (comma separated)</Text>
+                        <TextInput
+                          value={strengths}
+                          onChangeText={setStrengths}
+                          placeholder="MEDDIC, Account Closing, Pipeline Management"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
                     </Animated.View>
                   )}
 
@@ -1084,16 +1083,14 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           </View>
 
                           <View style={s.inputRow}>
-                            <SuggestField
-                              label="Responsibilities / Achievements"
+                            <Text style={[s.label, { color: colors.textSecondary }]}>Responsibilities / Achievements</Text>
+                            <TextInput
                               value={entry.duties}
                               onChangeText={t => updateWorkEntry(index, 'duties', t)}
-                              field="duties"
-                              role={entry.role || headline || job?.title}
                               placeholder="Responsibilities / Achievements"
+                              placeholderTextColor={colors.textMuted}
                               multiline
-                              colors={colors}
-                              inputStyle={s.textArea}
+                              style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
                             />
                           </View>
                         </View>
@@ -1110,38 +1107,38 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     <Animated.View entering={FadeIn} exiting={FadeOut} style={s.stepContainer}>
                       <Text style={[s.sectionTitle, { color: colors.text }]}>Education & Skills</Text>
                       
-                      <SuggestField
-                        label="Education"
-                        value={education}
-                        onChangeText={setEducation}
-                        field="education"
-                        role={headline || job?.title}
-                        placeholder="University, Degree and Major"
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Education</Text>
+                        <TextInput
+                          value={education}
+                          onChangeText={setEducation}
+                          placeholder="University, Degree and Major"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Skills (comma separated)"
-                        value={skills}
-                        onChangeText={setSkills}
-                        field="skills"
-                        role={headline || job?.title}
-                        placeholder="e.g. Salesforce, outbound cold calling, CRM"
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Skills (comma separated)</Text>
+                        <TextInput
+                          value={skills}
+                          onChangeText={setSkills}
+                          placeholder="e.g. Salesforce, outbound cold calling, CRM"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Certifications (comma separated)"
-                        value={certifications}
-                        onChangeText={setCertifications}
-                        field="certifications"
-                        role={headline || job?.title}
-                        placeholder="e.g. HubSpot Sales, AWS Practitioner"
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Certifications (comma separated)</Text>
+                        <TextInput
+                          value={certifications}
+                          onChangeText={setCertifications}
+                          placeholder="e.g. HubSpot Sales, AWS Practitioner"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
                     </Animated.View>
                   )}
                 </>
@@ -1177,16 +1174,16 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                         </View>
                       </View>
 
-                      <SuggestField
-                        label="Desired Job Title / Position"
-                        value={headline}
-                        onChangeText={setHeadline}
-                        field="headline"
-                        role={headline || job?.title}
-                        placeholder="e.g. Senior Software Engineer"
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Desired Job Title / Position</Text>
+                        <TextInput
+                          value={headline}
+                          onChangeText={setHeadline}
+                          placeholder="e.g. Senior Software Engineer"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
 
                       <View style={s.row}>
                         <View style={{ flex: 1, marginRight: 10 }}>
@@ -1245,17 +1242,17 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                         />
                       </View>
 
-                      <SuggestField
-                        label="Professional Summary / About Me"
-                        value={summary}
-                        onChangeText={setSummary}
-                        field="summary"
-                        role={headline || job?.title}
-                        placeholder="Write a brief professional intro..."
-                        multiline
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Professional Summary / About Me</Text>
+                        <TextInput
+                          value={summary}
+                          onChangeText={setSummary}
+                          placeholder="Write a brief professional intro..."
+                          placeholderTextColor={colors.textMuted}
+                          multiline
+                          style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
+                        />
+                      </View>
                     </Animated.View>
                   )}
 
@@ -1304,16 +1301,14 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           </View>
 
                           <View style={s.inputRow}>
-                            <SuggestField
-                              label="Responsibilities / Duties / Projects"
+                            <Text style={[s.label, { color: colors.textSecondary }]}>Responsibilities / Duties / Projects</Text>
+                            <TextInput
                               value={entry.duties}
                               onChangeText={t => updateWorkEntry(index, 'duties', t)}
-                              field="duties"
-                              role={entry.role || headline || job?.title}
                               placeholder="Responsibilities / Duties / Projects"
+                              placeholderTextColor={colors.textMuted}
                               multiline
-                              colors={colors}
-                              inputStyle={s.textArea}
+                              style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
                             />
                           </View>
                         </View>
@@ -1453,16 +1448,16 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                         <Text style={[s.addBtnText, { color: colors.text }]}>Add Language</Text>
                       </Pressable>
 
-                      <SuggestField
-                        label="Digital Skills (comma separated)"
-                        value={digitalSkills}
-                        onChangeText={setDigitalSkills}
-                        field="digitalSkills"
-                        role={headline || job?.title}
-                        placeholder="e.g. TypeScript, React, Python, Office"
-                        colors={colors}
-                        containerStyle={{ ...s.inputRow, marginTop: 10 }}
-                      />
+                      <View style={{ ...s.inputRow, marginTop: 10 }}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Digital Skills (comma separated)</Text>
+                        <TextInput
+                          value={digitalSkills}
+                          onChangeText={setDigitalSkills}
+                          placeholder="e.g. TypeScript, React, Python, Office"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
                     </Animated.View>
                   )}
 
@@ -1470,75 +1465,75 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
                       <Text style={[s.sectionTitle, { color: colors.text }]}>Competencies & Additional Details</Text>
                       
-                      <SuggestField
-                        label="Communication Skills"
-                        value={communicationCompetencies}
-                        onChangeText={setCommunicationCompetencies}
-                        field="competencies"
-                        role={headline || job?.title}
-                        placeholder="Explain communication achievements..."
-                        multiline
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Communication Skills</Text>
+                        <TextInput
+                          value={communicationCompetencies}
+                          onChangeText={setCommunicationCompetencies}
+                          placeholder="Explain communication achievements..."
+                          placeholderTextColor={colors.textMuted}
+                          multiline
+                          style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Organisational Skills"
-                        value={organisationalCompetencies}
-                        onChangeText={setOrganisationalCompetencies}
-                        field="competencies"
-                        role={headline || job?.title}
-                        placeholder="Explain leadership, agile, sprints management..."
-                        multiline
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Organisational Skills</Text>
+                        <TextInput
+                          value={organisationalCompetencies}
+                          onChangeText={setOrganisationalCompetencies}
+                          placeholder="Explain leadership, agile, sprints management..."
+                          placeholderTextColor={colors.textMuted}
+                          multiline
+                          style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Job-Related Skills"
-                        value={jobRelatedCompetencies}
-                        onChangeText={setJobRelatedCompetencies}
-                        field="competencies"
-                        role={headline || job?.title}
-                        placeholder="Other domain skills..."
-                        multiline
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Job-Related Skills</Text>
+                        <TextInput
+                          value={jobRelatedCompetencies}
+                          onChangeText={setJobRelatedCompetencies}
+                          placeholder="Other domain skills..."
+                          placeholderTextColor={colors.textMuted}
+                          multiline
+                          style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Other Competencies"
-                        value={otherCompetencies}
-                        onChangeText={setOtherCompetencies}
-                        field="competencies"
-                        role={headline || job?.title}
-                        placeholder="Any other specific competencies or skills..."
-                        multiline
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Other Competencies</Text>
+                        <TextInput
+                          value={otherCompetencies}
+                          onChangeText={setOtherCompetencies}
+                          placeholder="Any other specific competencies or skills..."
+                          placeholderTextColor={colors.textMuted}
+                          multiline
+                          style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Other Skills / Hobbies"
-                        value={hobbies}
-                        onChangeText={setHobbies}
-                        field="hobbies"
-                        role={headline || job?.title}
-                        placeholder="hobbies, sports, creative projects..."
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Other Skills / Hobbies</Text>
+                        <TextInput
+                          value={hobbies}
+                          onChangeText={setHobbies}
+                          placeholder="hobbies, sports, creative projects..."
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
 
-                      <SuggestField
-                        label="Certifications (comma separated)"
-                        value={certifications}
-                        onChangeText={setCertifications}
-                        field="certifications"
-                        role={headline || job?.title}
-                        placeholder="e.g. PRINCE2, ITIL Foundation, Safe Agile"
-                        colors={colors}
-                        containerStyle={s.inputRow}
-                      />
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Certifications (comma separated)</Text>
+                        <TextInput
+                          value={certifications}
+                          onChangeText={setCertifications}
+                          placeholder="e.g. PRINCE2, ITIL Foundation, Safe Agile"
+                          placeholderTextColor={colors.textMuted}
+                          style={[s.input, { borderColor: colors.border, color: colors.text }]}
+                        />
+                      </View>
 
                       <View style={s.inputRow}>
                         <Text style={[s.label, { color: colors.textSecondary }]}>Driving Licence</Text>

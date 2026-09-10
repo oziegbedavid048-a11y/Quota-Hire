@@ -12,7 +12,6 @@ import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
 import { SteelBlueBannerTemplate } from './templates/SteelBlueBannerTemplate';
 import { CVData } from '../../lib/cv/types';
-import { generateAIAssistedSuggestions } from '../../lib/cv/cvContentBuilder';
 import { PdfPreview } from './PdfPreview';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -166,22 +165,6 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
   }, [profile]);
 
 
-  const handleSuggest = () => {
-    if (!form.headline) {
-      toast.error('Please enter a Target Headline first.');
-      return;
-    }
-    const effectiveProfile = profile || (currentUser as EmployeeProfile);
-    const suggestions = generateAIAssistedSuggestions(form.headline, effectiveProfile);
-    
-    setForm(prev => ({
-      ...prev,
-      achievement: suggestions.achievement || prev.achievement,
-      extraSkills: suggestions.extraSkills || prev.extraSkills,
-      workEntries: suggestions.workEntries && suggestions.workEntries.length > 0 ? suggestions.workEntries : prev.workEntries,
-    }));
-    toast.success('Suggestions applied! Feel free to edit them.');
-  };
 
   // Navigate steps
   const handleNext = () => {
@@ -305,29 +288,6 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
   const inputCls = 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none text-sm transition';
   const labelCls = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5';
 
-  const SuggestionChips = ({ options, fieldKey, isAppend = false }: { options: string[], fieldKey: keyof FormState, isAppend?: boolean }) => (
-    <div className="flex flex-wrap gap-2 mt-2">
-      {options.map(opt => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => {
-            setForm(p => {
-              const current = p[fieldKey] as string;
-              let newVal = opt;
-              if (isAppend) {
-                newVal = current ? `${current}, ${opt}` : opt;
-              }
-              return { ...p, [fieldKey]: newVal };
-            });
-          }}
-          className="text-[10px] font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100 hover:bg-blue-100 transition active:scale-95"
-        >
-          + {opt}
-        </button>
-      ))}
-    </div>
-  );
 
   return (
     <AnimatePresence onExitComplete={handleOpen}>
@@ -398,19 +358,9 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
               {!generating && step === 1 && (
                 <div className="p-5 sm:p-6 space-y-5">
                   <div className="space-y-1.5">
-                    <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        Target Headline / Job Title <span className="text-red-400">*</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handleSuggest}
-                        className="text-[11px] font-bold flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md transition"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        Autofill Suggestions
-                      </button>
-                    </div>
+                    <label className={labelCls}>
+                      Target Headline / Job Title <span className="text-red-400">*</span>
+                    </label>
                     <input
                       value={form.headline}
                       onChange={e => setForm(p => ({ ...p, headline: e.target.value }))}
@@ -418,10 +368,6 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                       className={inputCls}
                     />
                     <p className="text-[11px] text-gray-400">This becomes the title on your resume and drives the summary generation.</p>
-                    <SuggestionChips
-                      fieldKey="headline"
-                      options={['Account Executive', 'Sales Development Rep', 'Customer Success Manager', 'Operations Analyst']}
-                    />
                   </div>
 
                   <div className="space-y-1.5">
@@ -452,11 +398,6 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                       onChange={e => setForm(p => ({ ...p, strengths: e.target.value }))}
                       placeholder="e.g. Leadership, Adaptability, Attention to Detail"
                       className={inputCls}
-                    />
-                    <SuggestionChips
-                      fieldKey="strengths"
-                      isAppend={true}
-                      options={['Leadership', 'Negotiation', 'Problem Solving', 'Client Retention', 'Strategic Planning']}
                     />
                   </div>
                 </div>
@@ -557,11 +498,6 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                       className={inputCls}
                     />
                     <p className="text-[11px] text-gray-400">These are pre-filled from your existing profile skills. Edit as needed.</p>
-                    <SuggestionChips
-                      fieldKey="extraSkills"
-                      isAppend={true}
-                      options={['Salesforce', 'HubSpot', 'B2B Sales', 'Cold Calling', 'Account Management', 'Agile']}
-                    />
                   </div>
 
                   <div className="space-y-1.5">
@@ -571,11 +507,6 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                       onChange={e => setForm(p => ({ ...p, certifications: e.target.value }))}
                       placeholder="e.g. PMP – 2023, HubSpot Sales Certification – 2022"
                       className={inputCls}
-                    />
-                    <SuggestionChips
-                      fieldKey="certifications"
-                      isAppend={true}
-                      options={['HubSpot Inbound Sales', 'Salesforce Certified Admin', 'Google Project Management', 'PMP']}
                     />
                   </div>
 
