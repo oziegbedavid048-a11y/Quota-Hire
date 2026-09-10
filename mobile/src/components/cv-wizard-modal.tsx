@@ -10,7 +10,9 @@ import {
   Platform,
   Alert,
   KeyboardAvoidingView,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Text, TextInput } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -178,6 +180,8 @@ const compileStandardHTML = (profile: any, data: any) => {
 };
 
 // ─── Europass template HTML compiler ──────────────────────────────────────────
+const EUROPASS_LOGO_BASE64 = 'data:image/png;base64,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';
+
 const compileEuropassHTML = (profile: any, data: any) => {
   const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || profile?.name || 'Applicant';
   const email = data.email || profile?.email || '';
@@ -187,10 +191,29 @@ const compileEuropassHTML = (profile: any, data: any) => {
   const nationality = data.nationality || '';
   const linkedin = data.linkedinUrl || profile?.employee_profile?.linkedin_url || profile?.linkedinUrl || '';
   const website = data.website || '';
-  
-  const bulletsForDuties = (duties: string) => {
-    return duties.split(/[.\n]+/).map(s => s.trim()).filter(s => s.length > 3);
+  const photo = data.passportImage || profile?.avatar_url || profile?.avatarUrl || '';
+  const initial = (data.firstName || fullName || 'U').charAt(0).toUpperCase();
+
+  const dutiesToBullets = (raw: string): string[] => {
+    if (!raw) return [];
+    return raw.split(/[\n]+/).map((s: string) => s.trim().replace(/^[-*•]\s*/, '')).filter((s: string) => s.length > 2);
   };
+
+  const toPipeSeparated = (raw: string): string => {
+    if (!raw) return '';
+    return raw.split(/[,\n]+/).map((str: string) => str.trim()).filter(Boolean).join(' | ');
+  };
+
+  const mergeSkills = (...parts: (string | undefined)[]): string => {
+    return parts.filter(Boolean).map((p) => toPipeSeparated(p!)).filter(Boolean).join(' | ');
+  };
+
+  const communicationLine = mergeSkills(
+    data.communicationCompetencies,
+    data.organisationalCompetencies,
+    data.jobRelatedCompetencies,
+    data.otherCompetencies
+  );
 
   return `
     <!DOCTYPE html>
@@ -198,44 +221,214 @@ const compileEuropassHTML = (profile: any, data: any) => {
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: 'Helvetica', Arial, sans-serif; color: #000000; margin: 0; padding: 40px; line-height: 1.5; font-size: 12px; }
-        .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
-        .photo-box { width: 90px; height: 90px; border-radius: 50%; overflow: hidden; background-color: #e5e7eb; border: 1px solid #d1d5db; }
-        .photo-img { width: 100%; height: 100%; object-fit: cover; }
-        .logo-box { font-size: 24px; font-weight: bold; color: #003399; font-family: 'Helvetica Neue', Helvetica, sans-serif; }
-        .logo-sub { font-size: 10px; color: #666; font-weight: normal; margin-top: 2px; }
-        .name-container { border-bottom: 1.5px solid #000000; padding-bottom: 8px; margin-bottom: 15px; }
-        .name-text { font-size: 20px; font-weight: bold; text-transform: uppercase; margin: 0; }
-        .info-block { margin-bottom: 20px; font-size: 11px; }
-        .info-row { display: flex; flex-wrap: wrap; margin-bottom: 4px; }
-        .info-item { margin-right: 12px; }
-        .info-label { font-weight: bold; }
-        .sec-title { font-size: 13px; font-weight: bold; color: #000000; text-transform: uppercase; border-bottom: 1px solid #000000; padding-bottom: 4px; margin-top: 25px; margin-bottom: 12px; }
-        .body-text { font-size: 11px; color: #000000; margin-bottom: 12px; }
-        .entry-block { margin-bottom: 15px; }
-        .entry-dates { font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #4b5563; }
-        .entry-title { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; }
-        .bullet-list { margin: 4px 0 0 15px; padding: 0; }
-        .bullet-item { font-size: 11px; color: #000000; margin-bottom: 3px; }
-        .lang-sub { margin-bottom: 8px; font-size: 11px; }
-        .lang-table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 15px; }
-        .lang-th-main { font-weight: bold; text-align: center; font-size: 10px; padding: 4px; text-transform: uppercase; }
-        .lang-th-sub { text-align: center; font-size: 9px; padding: 4px; color: #4b5563; }
-        .lang-row { background-color: #9e3430; color: #ffffff; }
-        .lang-cell { text-align: center; font-size: 11px; padding: 6px; font-weight: bold; border: 1px solid #ffffff; }
-        .lang-name-cell { text-align: left; padding-left: 10px; }
-        .competency-block { font-size: 11px; margin-bottom: 10px; }
-        .competency-title { font-weight: bold; margin-bottom: 4px; }
+        @page { size: A4; margin: 12mm 16mm; }
+        * { box-sizing: border-box; }
+        body {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          color: #000000;
+          margin: 0;
+          padding: 24px;
+          line-height: 1.45;
+          font-size: 11px;
+          background-color: #ffffff;
+        }
+        .top-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 16px;
+        }
+        .photo-box {
+          width: 86px;
+          height: 86px;
+          border-radius: 50%;
+          overflow: hidden;
+          background-color: #e5e7eb;
+          border: 1px solid #cbd5e1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .photo-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+        .photo-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: #f1f5f9;
+        }
+        .photo-initial {
+          font-size: 32px;
+          font-weight: bold;
+          color: #64748b;
+          text-transform: uppercase;
+        }
+        .logo-container {
+          display: flex;
+          align-items: flex-start;
+          justify-content: flex-end;
+        }
+        .logo-img {
+          width: 140px;
+          height: auto;
+          object-fit: contain;
+          display: block;
+        }
+        .name-container {
+          border-bottom: 1.5px solid #000000;
+          padding-bottom: 5px;
+          margin-bottom: 8px;
+        }
+        .name-text {
+          font-size: 18px;
+          font-weight: bold;
+          text-transform: uppercase;
+          margin: 0;
+          color: #000000;
+          letter-spacing: 0.5px;
+        }
+        .info-block {
+          margin-bottom: 14px;
+          font-size: 10px;
+          line-height: 1.6;
+        }
+        .info-row {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+        .info-item {
+          margin-right: 4px;
+        }
+        .info-label {
+          font-weight: bold;
+          color: #000000;
+        }
+        .info-pipe {
+          margin: 0 6px;
+          color: #000000;
+        }
+        .sec-title {
+          font-size: 11px;
+          font-weight: bold;
+          color: #000000;
+          text-transform: uppercase;
+          border-bottom: 1px solid #000000;
+          padding-bottom: 3px;
+          margin-top: 14px;
+          margin-bottom: 8px;
+          letter-spacing: 0.5px;
+        }
+        .body-text {
+          font-size: 10px;
+          color: #000000;
+          margin-bottom: 8px;
+          line-height: 1.45;
+        }
+        .entry-block {
+          margin-bottom: 12px;
+        }
+        .entry-dates {
+          font-size: 10px;
+          font-weight: normal;
+          margin-bottom: 2px;
+          color: #000000;
+        }
+        .entry-title {
+          font-size: 10.5px;
+          font-weight: bold;
+          text-transform: uppercase;
+          color: #000000;
+          margin-bottom: 3px;
+        }
+        .entry-sub {
+          font-size: 9.5px;
+          color: #333333;
+          margin-bottom: 4px;
+        }
+        .bullet-list {
+          margin: 2px 0 0 16px;
+          padding: 0;
+        }
+        .bullet-item {
+          font-size: 10px;
+          color: #000000;
+          margin-bottom: 3px;
+          line-height: 1.4;
+        }
+        .lang-mother-row {
+          margin-bottom: 5px;
+          font-size: 10px;
+        }
+        .lang-other-label {
+          font-size: 10px;
+          margin-bottom: 6px;
+        }
+        .lang-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 6px;
+          margin-bottom: 8px;
+        }
+        .lang-th-empty {
+          width: 95px;
+        }
+        .lang-th-main {
+          font-weight: bold;
+          text-align: center;
+          font-size: 9px;
+          padding: 3px;
+          text-transform: uppercase;
+          color: #000000;
+        }
+        .lang-th-sub {
+          text-align: center;
+          font-size: 8.5px;
+          padding: 3px;
+          color: #000000;
+          font-weight: normal;
+          border-bottom: 1px solid #cccccc;
+        }
+        .lang-row {
+          background-color: #9e3430;
+          color: #ffffff;
+        }
+        .lang-cell {
+          text-align: center;
+          font-size: 10px;
+          padding: 5px 3px;
+          font-weight: bold;
+          border: 1px solid #ffffff;
+          color: #ffffff;
+        }
+        .lang-name-cell {
+          text-align: left;
+          padding-left: 8px;
+          font-weight: bold;
+          color: #ffffff;
+          border: 1px solid #ffffff;
+        }
+        .lang-note {
+          font-size: 8px;
+          color: #555555;
+          margin-top: 4px;
+          margin-bottom: 6px;
+        }
       </style>
     </head>
     <body>
       <div class="top-row">
         <div class="photo-box">
-          ${profile?.avatarUrl ? `<img src="${profile.avatarUrl}" class="photo-img" />` : ''}
+          ${photo ? `<img src="${photo}" class="photo-img" alt="Photo" />` : `<div class="photo-placeholder"><span class="photo-initial">${initial}</span></div>`}
         </div>
-        <div class="logo-box">
-          europass
-          <div class="logo-sub">Curriculum Vitae</div>
+        <div class="logo-container">
+          <img src="${EUROPASS_LOGO_BASE64}" class="logo-img" alt="Europass" />
         </div>
       </div>
 
@@ -245,144 +438,143 @@ const compileEuropassHTML = (profile: any, data: any) => {
 
       <div class="info-block">
         <div class="info-row">
-          ${dob ? `<span class="info-item"><span class="info-label">Date of birth:</span> ${dob}</span>` : ''}
-          ${nationality ? `<span class="info-item"><span class="info-label">Nationality:</span> ${nationality}</span>` : ''}
-          ${phone ? `<span class="info-item"><span class="info-label">Phone number:</span> ${phone}</span>` : ''}
+          ${dob ? `<span class="info-item"><span class="info-label">Date of birth: </span><span>${dob}</span></span>` : ''}
+          ${dob && nationality ? `<span class="info-pipe">|</span>` : ''}
+          ${nationality ? `<span class="info-item"><span class="info-label">Nationality: </span><span>${nationality}</span></span>` : ''}
+          ${(dob || nationality) && phone ? `<span class="info-pipe">|</span>` : ''}
+          ${phone ? `<span class="info-item"><span class="info-label">Phone number: </span><span>${phone}</span></span>` : ''}
         </div>
-        <div class="info-row" style="margin-top: 4px;">
-          ${address ? `<span class="info-item"><span class="info-label">Address:</span> ${address}</span>` : ''}
-          ${email ? `<span class="info-item"><span class="info-label">Email:</span> ${email}</span>` : ''}
-        </div>
+        ${address ? `
+          <div class="info-row" style="margin-top: 2px;">
+            <span class="info-item"><span class="info-label">Address: </span><span>${address}</span></span>
+          </div>
+        ` : ''}
+        ${email ? `
+          <div class="info-row" style="margin-top: 2px;">
+            <span class="info-item"><span class="info-label">Email address: </span><span>${email}</span></span>
+          </div>
+        ` : ''}
         ${linkedin || website ? `
-          <div class="info-row" style="margin-top: 4px;">
-            ${linkedin ? `<span class="info-item"><span class="info-label">LinkedIn:</span> ${linkedin}</span>` : ''}
-            ${website ? `<span class="info-item"><span class="info-label">Website:</span> ${website}</span>` : ''}
+          <div class="info-row" style="margin-top: 2px;">
+            ${linkedin ? `<span class="info-item"><span class="info-label">LinkedIn: </span><span>${linkedin}</span></span>` : ''}
+            ${linkedin && website ? `<span class="info-pipe">|</span>` : ''}
+            ${website ? `<span class="info-item"><span class="info-label">Website: </span><span>${website}</span></span>` : ''}
           </div>
         ` : ''}
       </div>
 
-      ${data.summary ? `
-        <div class="sec-title">About Me</div>
-        <div class="body-text">${data.summary}</div>
+      ${(data.summary || data.headline) ? `
+        <div class="sec-title">ABOUT ME</div>
+        <div class="body-text">${data.summary || data.headline}</div>
       ` : ''}
 
-      ${data.workEntries && data.workEntries.length > 0 ? `
-        <div class="sec-title">Work Experience</div>
-        ${data.workEntries.map((exp: any) => `
-          <div class="entry-block">
-            <div class="entry-dates">${exp.period}</div>
-            <div class="entry-title">${exp.role} | ${exp.company}</div>
-            <ul class="bullet-list">
-              ${bulletsForDuties(exp.duties).map(b => `<li class="bullet-item">${b}</li>`).join('')}
-            </ul>
-          </div>
-        `).join('')}
+      ${data.workEntries && data.workEntries.filter((e: any) => e.role || e.company || e.employer || e.duties).length > 0 ? `
+        <div class="sec-title">WORK EXPERIENCE</div>
+        ${data.workEntries.filter((e: any) => e.role || e.company || e.employer || e.duties).map((exp: any) => {
+          const bullets = dutiesToBullets(exp.duties);
+          const titleLine = [exp.role, exp.company || exp.employer].filter(Boolean).join(' - ');
+          return `
+            <div class="entry-block">
+              ${exp.period || exp.dates ? `<div class="entry-dates">${exp.period || exp.dates}</div>` : ''}
+              ${titleLine ? `<div class="entry-title">${titleLine}</div>` : ''}
+              ${exp.location ? `<div class="entry-sub">${exp.location}</div>` : ''}
+              ${bullets.length > 0 ? `
+                <ul class="bullet-list">
+                  ${bullets.map((b: string) => `<li class="bullet-item">${b}</li>`).join('')}
+                </ul>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
       ` : ''}
 
-      ${data.eduEntries && data.eduEntries.length > 0 ? `
-        <div class="sec-title">Education and Training</div>
-        ${data.eduEntries.map((edu: any) => `
-          <div class="entry-block">
-            <div class="entry-dates">${edu.dates}</div>
-            <div class="entry-title">${edu.qualification} | ${edu.institution}</div>
-            ${edu.fieldOfStudy ? `<ul class="bullet-list"><li class="bullet-item">${edu.fieldOfStudy}</li></ul>` : ''}
-          </div>
-        `).join('')}
+      ${data.eduEntries && data.eduEntries.filter((e: any) => e.qualification || e.institution).length > 0 ? `
+        <div class="sec-title">EDUCATION AND TRAINING</div>
+        ${data.eduEntries.filter((e: any) => e.qualification || e.institution).map((edu: any) => {
+          const titleLine = [edu.qualification, edu.institution].filter(Boolean).join(' - ');
+          const subjects = edu.fieldOfStudy ? edu.fieldOfStudy.split(/[,\n]+/).map((s: string) => s.trim()).filter(Boolean) : [];
+          return `
+            <div class="entry-block">
+              ${edu.dates ? `<div class="entry-dates">${edu.dates}</div>` : ''}
+              ${titleLine ? `<div class="entry-title">${titleLine}</div>` : ''}
+              ${edu.location ? `<div class="entry-sub">${edu.location}</div>` : ''}
+              ${subjects.length > 0 ? `
+                <div class="entry-sub" style="margin-top: 3px; font-weight: bold;">Relevant Subjects:</div>
+                <ul class="bullet-list">
+                  ${subjects.map((sub: string) => `<li class="bullet-item">${sub}</li>`).join('')}
+                </ul>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}
       ` : ''}
 
       ${data.digitalSkills ? `
-        <div class="sec-title">Digital Skills</div>
-        <div class="body-text">${data.digitalSkills.replace(/\n/g, ' | ').replace(/,/g, ' | ')}</div>
+        <div class="sec-title">DIGITAL SKILLS</div>
+        <div class="body-text">${toPipeSeparated(data.digitalSkills)}</div>
       ` : ''}
 
-      <div class="sec-title">Language Skills</div>
-      <div class="lang-sub">Mother Tongue(s): <strong>${(data.motherTongue || 'English').toUpperCase()}</strong></div>
-      
-      ${data.foreignLanguages && data.foreignLanguages.length > 0 ? `
-        <div class="lang-sub">Other language(s):</div>
+      ${communicationLine ? `
+        <div class="sec-title">COMMUNICATION AND INTERPERSONAL SKILLS</div>
+        <div class="body-text">${communicationLine}</div>
+      ` : ''}
+
+      <div class="sec-title">LANGUAGE SKILLS</div>
+      <div class="lang-mother-row">
+        <span>Mother Tongue(s): </span>
+        <strong>${(data.motherTongue || 'English').toUpperCase()}</strong>
+      </div>
+
+      ${data.foreignLanguages && data.foreignLanguages.filter((l: any) => l.language).length > 0 ? `
+        <div class="lang-other-label">Other language(s):</div>
         <table class="lang-table">
           <thead>
             <tr>
-              <th style="width: 100px;"></th>
-              <th colspan="2" class="lang-th-main">Understanding</th>
-              <th colspan="2" class="lang-th-main">Speaking</th>
-              <th class="lang-th-main">Writing</th>
+              <th class="lang-th-empty"></th>
+              <th colspan="2" class="lang-th-main">UNDERSTANDING</th>
+              <th colspan="2" class="lang-th-main">SPEAKING</th>
+              <th class="lang-th-main">WRITING</th>
             </tr>
             <tr>
-              <th></th>
+              <th class="lang-th-empty"></th>
               <th class="lang-th-sub">Listening</th>
               <th class="lang-th-sub">Reading</th>
               <th class="lang-th-sub">Spoken production</th>
               <th class="lang-th-sub">Spoken interaction</th>
-              <th class="lang-th-sub"></th>
+              <th class="lang-th-sub">Writing</th>
             </tr>
           </thead>
           <tbody>
-            ${data.foreignLanguages.map((l: any) => `
+            ${data.foreignLanguages.filter((l: any) => l.language).map((l: any) => `
               <tr class="lang-row">
-                <td class="lang-cell lang-name-cell">${l.language}</td>
-                <td class="lang-cell">${l.listening}</td>
-                <td class="lang-cell">${l.reading}</td>
-                <td class="lang-cell">${l.spokenProduction}</td>
-                <td class="lang-cell">${l.spokenInteraction}</td>
-                <td class="lang-cell">${l.writing}</td>
+                <td class="lang-name-cell">${l.language}</td>
+                <td class="lang-cell">${l.listening || 'B2'}</td>
+                <td class="lang-cell">${l.reading || 'B2'}</td>
+                <td class="lang-cell">${l.spokenProduction || 'B2'}</td>
+                <td class="lang-cell">${l.spokenInteraction || 'B2'}</td>
+                <td class="lang-cell">${l.writing || 'B2'}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
+        <div class="lang-note">
+          Levels: A1/A2: Basic user - B1/B2: Independent user - C1/C2: Proficient user - Common European Framework of Reference for Languages
+        </div>
       ` : ''}
 
-      ${data.communicationCompetencies || data.organisationalCompetencies || data.jobRelatedCompetencies || data.otherCompetencies || data.drivingLicence || data.certifications || data.hobbies ? `
-        <div class="sec-title">Competencies & Personal Skills</div>
-        
-        ${data.communicationCompetencies ? `
-          <div class="competency-block">
-            <div class="competency-title">Communication Competencies</div>
-            <div>${data.communicationCompetencies}</div>
-          </div>
-        ` : ''}
-        
-        ${data.organisationalCompetencies ? `
-          <div class="competency-block">
-            <div class="competency-title">Organisational Competencies</div>
-            <div>${data.organisationalCompetencies}</div>
-          </div>
-        ` : ''}
+      ${data.certifications ? `
+        <div class="sec-title">CERTIFICATES</div>
+        <div class="body-text">${data.certifications}</div>
+      ` : ''}
 
-        ${data.jobRelatedCompetencies ? `
-          <div class="competency-block">
-            <div class="competency-title">Job-Related Competencies</div>
-            <div>${data.jobRelatedCompetencies}</div>
-          </div>
-        ` : ''}
+      ${data.hobbies ? `
+        <div class="sec-title">ADDITIONAL INFORMATION</div>
+        <div class="body-text">${data.hobbies}</div>
+      ` : ''}
 
-        ${data.otherCompetencies ? `
-          <div class="competency-block">
-            <div class="competency-title">Other Competencies</div>
-            <div>${data.otherCompetencies}</div>
-          </div>
-        ` : ''}
-
-        ${data.drivingLicence ? `
-          <div class="competency-block">
-            <div class="competency-title">Driving Licence</div>
-            <div>${data.drivingLicence}</div>
-          </div>
-        ` : ''}
-
-        ${data.certifications ? `
-          <div class="competency-block">
-            <div class="competency-title">Certifications</div>
-            <div>${data.certifications}</div>
-          </div>
-        ` : ''}
-
-        ${data.hobbies ? `
-          <div class="competency-block">
-            <div class="competency-title">Hobbies & Interests</div>
-            <div>${data.hobbies}</div>
-          </div>
-        ` : ''}
+      ${data.drivingLicence ? `
+        <div class="sec-title">DRIVING LICENCE</div>
+        <div class="body-text">${data.drivingLicence}</div>
       ` : ''}
     </body>
     </html>
@@ -620,7 +812,6 @@ const buildCoverLetterText = (
 
 const TEMPLATES = [
   { id: 'steelblue',  name: 'Steel Blue Banner', color: '#1B4F8A' },
-  { id: 'europass',   name: 'Europass Classic',  color: '#003399' },
   { id: 'vivid',      name: 'Vivid Sidebar',     color: '#6366F1' },
   { id: 'minimalist', name: 'Minimalist White',  color: '#10B981' },
   { id: 'darkgreen',  name: 'Dark Green Pro',    color: '#1A3C2A' },
@@ -654,6 +845,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [coverLetter, setCoverLetter] = useState('');
 
   // Europe (Europass) States
+  const [passportImage, setPassportImage] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -677,11 +869,42 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [drivingLicence, setDrivingLicence] = useState('');
   const [hobbies, setHobbies] = useState('');
 
+  const pickPassportImage = async () => {
+    try {
+      const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your photos to select a passport photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const imageUri = asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
+        setPassportImage(imageUri);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (e) {
+      console.error('Error picking passport photo:', e);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    }
+  };
+
   const getCompiledHTML = () => {
     const rawData = isEuropass ? {
       firstName, lastName, dateOfBirth, nationality, address, phone, email, linkedinUrl, website, summary,
       workEntries, eduEntries, motherTongue, foreignLanguages, digitalSkills,
-      communicationCompetencies, organisationalCompetencies, jobRelatedCompetencies, otherCompetencies, drivingLicence, certifications, hobbies
+      communicationCompetencies, organisationalCompetencies, jobRelatedCompetencies, otherCompetencies, drivingLicence, certifications, hobbies,
+      passportImage
     } : {
       headline, education, skills, languages, certifications, strengths, workEntries, summary
     };
@@ -694,6 +917,9 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
     // sanitizeForHtml walks nested objects and arrays, so workEntries and
     // eduEntries are covered too.
     const data = sanitizeForHtml(rawData) as any;
+    if (rawData.passportImage) {
+      data.passportImage = rawData.passportImage;
+    }
     const safeProfile = sanitizeForHtml(profile) as any;
 
     switch (selectedTemplateId) {
@@ -718,6 +944,10 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
     if (visible) {
       setStep(1);
       setLoading(true);
+      if (isEuropass) {
+        setSelectedTemplateId('europass');
+        setSelectedTemplateName('Europass Official');
+      }
       apiFetch('/auth/me/')
         .then(u => {
           setProfile(u);
@@ -735,11 +965,15 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
           setSkills(ep.skills ? (Array.isArray(ep.skills) ? ep.skills.join(', ') : ep.skills) : (u.skills ? u.skills.join(', ') : ''));
           setDigitalSkills(ep.skills ? (Array.isArray(ep.skills) ? ep.skills.join(', ') : ep.skills) : (u.skills ? u.skills.join(', ') : ''));
           setLinkedinUrl(ep.linkedin_url || u.linkedinUrl || '');
+          const photoUri = u.avatar_url || u.avatar || ep.avatar_url || ep.passport_photo_url || null;
+          if (photoUri) {
+            setPassportImage(prev => prev || photoUri);
+          }
         })
         .catch(() => {})
         .finally(() => setLoading(false));
     }
-  }, [visible, prefilledHeadline]);
+  }, [visible, prefilledHeadline, isEuropass]);
 
   // Automatically generate cover letter when we reach the Cover Letter step
   useEffect(() => {
@@ -953,7 +1187,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Feather name="zap" size={16} color={Palette.accent600} />
                 <Text style={[s.headerTitle, { color: colors.text }]}>
-                  {isEuropass ? 'Europe CV Wizard' : 'Standard CV Wizard'}
+                  {isEuropass ? 'Europass CV Wizard' : 'Standard CV Wizard'}
                 </Text>
               </View>
               <Pressable
@@ -1151,6 +1385,54 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     <Animated.View entering={FadeIn} style={s.stepContainer}>
                       <Text style={[s.sectionTitle, { color: colors.text }]}>Personal Details</Text>
                       
+                      {/* Passport Photo Upload UI */}
+                      <View style={s.photoUploadContainer}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Passport Photo</Text>
+                        <View style={s.photoPickerCenter}>
+                          <Pressable
+                            onPress={pickPassportImage}
+                            style={[
+                              s.photoCircle,
+                              {
+                                borderColor: passportImage ? Palette.accent500 : colors.border,
+                                backgroundColor: colors.cardBg,
+                              },
+                            ]}
+                          >
+                            {passportImage ? (
+                              <Image
+                                source={{ uri: passportImage }}
+                                style={s.photoImage}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={s.photoPlaceholder}>
+                                <Feather name="camera" size={26} color={Palette.accent600} />
+                                <Text style={[s.photoPlaceholderText, { color: Palette.accent600 }]}>Add Photo</Text>
+                              </View>
+                            )}
+                          </Pressable>
+
+                          {passportImage ? (
+                            <View style={s.photoActionsRow}>
+                              <Pressable onPress={pickPassportImage} style={s.photoActionBtn}>
+                                <Feather name="refresh-cw" size={12} color={Palette.accent600} />
+                                <Text style={[s.photoActionText, { color: Palette.accent600 }]}>Change</Text>
+                              </Pressable>
+                              <Text style={{ color: colors.border }}>|</Text>
+                              <Pressable onPress={() => setPassportImage(null)} style={s.photoActionBtn}>
+                                <Feather name="trash-2" size={12} color={Palette.red500} />
+                                <Text style={[s.photoActionText, { color: Palette.red500 }]}>Remove</Text>
+                              </Pressable>
+                            </View>
+                          ) : (
+                            <Text style={[s.photoHintText, { color: colors.textMuted }]}>
+                              Tap circle to upload a passport photo
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+
                       <View style={s.row}>
                         <View style={{ flex: 1, marginRight: 10 }}>
                           <Text style={[s.label, { color: colors.textSecondary }]}>First Name *</Text>
@@ -1577,47 +1859,49 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     </View>
                   )}
 
-                  {/* Template Switcher Bar */}
-                  <View style={{ marginTop: 4, marginBottom: 6 }}>
-                    <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>
-                      Change CV Design Template
-                    </Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                      {TEMPLATES.map((tmpl) => {
-                        const isSelected = selectedTemplateId === tmpl.id;
-                        return (
-                          <Pressable
-                            key={tmpl.id}
-                            onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                              setSelectedTemplateId(tmpl.id);
-                              setSelectedTemplateName(tmpl.name);
-                            }}
-                            style={[
-                              s.templatePill,
-                              { borderColor: tmpl.color },
-                              isSelected && { backgroundColor: tmpl.color }
-                            ]}
-                          >
-                            <View style={[s.templateDot, { backgroundColor: isSelected ? '#ffffff' : tmpl.color }]} />
-                            <Text style={[s.templatePillText, { color: isSelected ? '#ffffff' : tmpl.color }]}>
-                              {tmpl.name}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
+                  {/* Template Switcher Bar (Standard CV only) */}
+                  {!isEuropass && (
+                    <View style={{ marginTop: 4, marginBottom: 6 }}>
+                      <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>
+                        Change CV Design Template
+                      </Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                        {TEMPLATES.map((tmpl) => {
+                          const isSelected = selectedTemplateId === tmpl.id;
+                          return (
+                            <Pressable
+                              key={tmpl.id}
+                              onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setSelectedTemplateId(tmpl.id);
+                                setSelectedTemplateName(tmpl.name);
+                              }}
+                              style={[
+                                s.templatePill,
+                                { borderColor: tmpl.color },
+                                isSelected && { backgroundColor: tmpl.color }
+                              ]}
+                            >
+                              <View style={[s.templateDot, { backgroundColor: isSelected ? '#ffffff' : tmpl.color }]} />
+                              <Text style={[s.templatePillText, { color: isSelected ? '#ffffff' : tmpl.color }]}>
+                                {tmpl.name}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
 
                   {/* Tailored CV Preview */}
                   <View style={{ marginBottom: 12 }}>
                     <Text style={[s.label, { color: colors.textSecondary, marginBottom: 6 }]}>
-                      Tailored CV Preview ({selectedTemplateName})
+                      Tailored CV Preview ({isEuropass ? 'Europass Official Format' : selectedTemplateName})
                     </Text>
                     <View style={[s.previewContainer, { borderColor: colors.border, backgroundColor: '#fff', height: 290 }]}>
                       <WebView
                         key={selectedTemplateId}
-                        originWhitelist={['about:blank']}
+                        originWhitelist={['*']}
                         source={{ html: getCompiledHTML() }}
                         style={{ flex: 1 }}
                         scalesPageToFit={true}
@@ -1887,6 +2171,60 @@ const s = StyleSheet.create({
     color: '#fff',
     fontWeight: FontWeight.bold,
     fontSize: FontSize.sm,
+  },
+  photoUploadContainer: {
+    alignItems: 'center',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    gap: 8,
+  },
+  photoPickerCenter: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  photoCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  photoPlaceholderText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  photoActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  photoActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  photoActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  photoHintText: {
+    fontSize: 11,
   },
 });
 
