@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+﻿import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BlobProvider } from '@react-pdf/renderer';
 import {
@@ -355,6 +355,35 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
               {/* ── STEP 1: Personal Details ── */}
               {!generating && step === 1 && (
                 <div className="p-5 sm:p-6 space-y-4">
+
+                  {/* ── Passport Photo Upload ── */}
+                  <div className="flex flex-col items-center gap-3 pb-4 border-b border-gray-100">
+                    <label className="text-sm font-medium text-gray-700">Passport Photo</label>
+                    <label htmlFor="europass-photo-upload" className="cursor-pointer group relative">
+                      <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-blue-300 bg-blue-50 flex items-center justify-center group-hover:border-blue-500 transition-colors">
+                        {passportImage ? (
+                          <img src={passportImage} alt="Passport" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-blue-400 group-hover:text-blue-600 transition-colors">
+                            <Camera className="w-7 h-7" />
+                            <span className="text-[10px] font-medium">Upload</span>
+                          </div>
+                        )}
+                      </div>
+                      {passportImage && (
+                        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Camera className="w-5 h-5 text-white" />
+                        </div>
+                      )}
+                    </label>
+                    <input id="europass-photo-upload" type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                    {passportImage ? (
+                      <button onClick={() => setPassportImage(null)} className="text-xs text-red-500 hover:text-red-700 underline">Remove photo</button>
+                    ) : (
+                      <p className="text-xs text-gray-400">Click the circle to add a photo</p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className={labelCls}>First Name *</label>
