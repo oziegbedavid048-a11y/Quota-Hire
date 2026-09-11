@@ -225,6 +225,19 @@ export default function CompanyPostJob() {
     setStep(step - 1);
   };
 
+  const resetForm = () => {
+    setStep(0);
+    setTitle('');
+    setIsRemote(true);
+    setLocation('');
+    setSalaryRange('');
+    setCommissionRange('');
+    setDescription('');
+    setRequirements('');
+    setSelectedPackage('');
+    setSuggestedTemplate(null);
+  };
+
   const handleSubmit = async () => {
     if (!selectedPackage) {
       Alert.alert('Package Required', 'Please select a service package to post this job.');
@@ -258,15 +271,16 @@ export default function CompanyPostJob() {
         body: JSON.stringify(payload),
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      resetForm();
       if (selectedPackage === 'promoted') {
         Alert.alert(
           'Job Submitted Successfully!',
           'Your job has been submitted under the Promoted Job plan. Please check your email for payment completion instructions to activate promotion and direct applicant access.',
-          [{ text: 'OK', onPress: () => router.replace('/') }]
+          [{ text: 'Post Another Job', onPress: () => resetForm() }]
         );
       } else {
         Alert.alert('Success', 'Job posted successfully! It will be listed once reviewed.', [
-          { text: 'OK', onPress: () => router.replace('/') }
+          { text: 'Post Another Job', onPress: () => resetForm() }
         ]);
       }
     } catch (err: any) {

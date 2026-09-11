@@ -95,6 +95,10 @@ urlpatterns = [
     path('company/jobs/<int:job_id>/applicants/', views.CompanyJobApplicantsView.as_view(), name='company-job-applicants'),
     path('company/applications/<int:pk>/', views.CompanyApplicationDetailView.as_view(), name='company-application-detail'),
     path('company/applications/<int:pk>/shortlist/', views.ShortlistApplicantView.as_view(), name='company-shortlist-applicant'),
+    path('company/applications/<int:pk>/status/', views.ApplicationStatusUpdateView.as_view(), name='company-application-status'),
+    # The ticket route must precede the resume route it guards only for clarity;
+    # they are distinct paths, so order does not affect resolution.
+    path('company/applications/<int:pk>/resume/ticket/', views.ResumeTicketView.as_view(), name='company-resume-ticket'),
     path('company/applications/<int:pk>/resume/', views.ResumeProxyView.as_view(), name='company-resume-proxy'),
     path('company/<str:lookup_val>/',  views.CompanyPublicProfileView.as_view(),    name='company-public-profile'),
 

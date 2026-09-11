@@ -47,8 +47,15 @@ export const Palette = {
   indigo700: '#4338ca',
 
   emerald50:  '#ecfdf5',
+  // 300/700/800 are used by the company applicants screen. Without them the
+  // colour resolves to undefined, React Native drops the style, and the status
+  // badges render in the default colour instead. Values are the standard
+  // Tailwind scale, which the rest of this palette already follows exactly.
+  emerald300: '#6ee7b7',
   emerald500: '#10b981',
   emerald600: '#059669',
+  emerald700: '#047857',
+  emerald800: '#065f46',
 
   violet50:  '#f5f3ff',
   violet500: '#8b5cf6',
@@ -61,14 +68,17 @@ export const Palette = {
   blue700: '#1d4ed8',
 
   amber50:  '#fffbeb',
+  amber300: '#fcd34d',
   amber500: '#f59e0b',
   amber700: '#b45309',
 
   purple50:  '#faf5ff',
+  purple300: '#d8b4fe',
   purple500: '#a855f7',
   purple700: '#7e22ce',
 
   red50:  '#fef2f2',
+  red300: '#fca5a5',
   red400: '#f87171',
   red500: '#ef4444',
   red600: '#dc2626',

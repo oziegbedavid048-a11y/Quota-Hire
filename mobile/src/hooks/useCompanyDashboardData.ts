@@ -14,6 +14,7 @@ export interface CompanyJob {
   status: 'approved' | 'pending' | 'rejected';
   postedAt: string;
   applicantsCount: number;
+  package?: string;
 }
 
 export interface CompanyApplication {
@@ -180,6 +181,7 @@ export function useCompanyDashboardData() {
           status: j.status || 'pending',
           postedAt: j.created_at || new Date().toISOString(),
           applicantsCount: j.applicants_count || 0,
+          package: j.package || '',
         }));
         inMemoryCompanyJobs = normalizedJobs;
         setJobs(normalizedJobs);

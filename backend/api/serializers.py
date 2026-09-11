@@ -41,6 +41,7 @@ from .models import (
     CommunityPoll,
     CommunityPollChoice,
     CommunityPollVote,
+    username_for_email,
 )
 
 
@@ -254,7 +255,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         last  = parts[1] if len(parts) > 1 else ''
 
         user = CustomUser.objects.create_user(
-            username   = validated_data['email'],
+            # username is varchar(150) while email is varchar(254): passing the
+            # raw address through made any email over 150 characters a 500.
+            username   = username_for_email(validated_data['email']),
             email      = validated_data['email'],
             password   = validated_data['password'],
             role       = validated_data.get('role', 'employee'),
@@ -461,30 +464,121 @@ class SafeEmployeeProfileSerializer(serializers.ModelSerializer):
 
 class CompanyApplicantSerializer(serializers.ModelSerializer):
     """
-    Serializes application for company view, ensuring NO contact info is leaked.
+    Serializes application for company view.
+    For 'promoted' jobs: exposes full unmasked candidate contact info, raw bio/cover letter, and resume download.
+    For standard agency packages: strictly preserves anonymization and hides contact info.
     """
     job_title = serializers.CharField(source='job.title', read_only=True)
+    job_package = serializers.CharField(source='job.package', read_only=True)
     employee_name = serializers.SerializerMethodField()
     employee_profile = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
     is_shortlisted = serializers.SerializerMethodField()
+    applicant_email = serializers.SerializerMethodField()
+    applicant_phone = serializers.SerializerMethodField()
+    applicant_location = serializers.SerializerMethodField()
+    applicant_address = serializers.SerializerMethodField()
+    applicant_linkedin = serializers.SerializerMethodField()
+    has_resume = serializers.SerializerMethodField()
+    has_generated_cv = serializers.SerializerMethodField()
+    resume_download_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
-        fields = ('id', 'job', 'job_title', 'employee_name', 'status', 'cover_letter', 'applied_at', 'employee_profile', 'avatar_url', 'is_shortlisted')
+        fields = (
+            'id', 'job', 'job_title', 'job_package', 'employee_name', 'status',
+            'cover_letter', 'applied_at', 'employee_profile', 'avatar_url',
+            'is_shortlisted', 'applicant_email', 'applicant_phone',
+            'applicant_location', 'applicant_address', 'applicant_linkedin',
+            'has_resume', 'has_generated_cv', 'resume_download_url'
+        )
         read_only_fields = fields
+
+    def _is_promoted(self, obj):
+        return getattr(obj.job, 'package', '') == 'promoted'
 
     def get_employee_name(self, obj):
         return obj.employee.get_full_name() or obj.employee.username
+
+    def get_applicant_email(self, obj):
+        if self._is_promoted(obj):
+            return obj.employee.email
+        return None
+
+    def get_applicant_phone(self, obj):
+        if self._is_promoted(obj):
+            try:
+                return obj.employee.employee_profile.phone_number or getattr(obj.employee, 'phone_number', '')
+            except Exception:
+                return getattr(obj.employee, 'phone_number', '')
+        return None
+
+    def get_applicant_location(self, obj):
+        if self._is_promoted(obj):
+            try:
+                p = obj.employee.employee_profile
+                parts = [p.city, p.country]
+                loc = ', '.join(x for x in parts if x)
+                return loc or getattr(obj.employee, 'location', '')
+            except Exception:
+                return getattr(obj.employee, 'location', '')
+        return None
+
+    def get_applicant_address(self, obj):
+        if self._is_promoted(obj):
+            try:
+                p = obj.employee.employee_profile
+                parts = [p.street_address, p.postal_code]
+                return ', '.join(x for x in parts if x)
+            except Exception:
+                return ''
+        return None
+
+    def get_applicant_linkedin(self, obj):
+        if self._is_promoted(obj):
+            try:
+                return obj.employee.employee_profile.linkedin_url or ''
+            except Exception:
+                return ''
+        return None
+
+    def get_has_resume(self, obj):
+        try:
+            p = obj.employee.employee_profile
+            return bool(p.resume_binary or p.resume_file or p.resume_url)
+        except Exception:
+            return False
+
+    def get_has_generated_cv(self, obj):
+        try:
+            return hasattr(obj, 'generated_cv') or obj.employee.generated_cvs.exists()
+        except Exception:
+            return False
+
+    def get_resume_download_url(self, obj):
+        if self._is_promoted(obj):
+            return f'/api/company/applications/{obj.id}/resume/'
+        return None
 
     def get_employee_profile(self, obj):
         try:
             profile = obj.employee.employee_profile
             data = SafeEmployeeProfileSerializer(profile).data
             
-            # Scrub bio using exact profile data
-            if data.get('bio'):
-                data['bio'] = scrub_contact_info(data['bio'], user=obj.employee, profile=profile)
+            if not self._is_promoted(obj):
+                # Scrub bio using exact profile data for non-promoted jobs
+                if data.get('bio'):
+                    data['bio'] = scrub_contact_info(data['bio'], user=obj.employee, profile=profile)
+                data['linkedin_url'] = ''
+                data['resume_url'] = ''
+                data['resume_file'] = None
+            else:
+                # For promoted jobs, provide all profile contact details unscrubbed
+                data['phone_number'] = profile.phone_number or getattr(obj.employee, 'phone_number', '')
+                data['street_address'] = profile.street_address or ''
+                data['city'] = profile.city or ''
+                data['country'] = profile.country or ''
+                data['postal_code'] = profile.postal_code or ''
                 
             return data
         except EmployeeProfile.DoesNotExist:
@@ -492,10 +586,11 @@ class CompanyApplicantSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # Scrub cover letter
-        if data.get('cover_letter'):
-            profile = getattr(instance.employee, 'employee_profile', None)
-            data['cover_letter'] = scrub_contact_info(data['cover_letter'], user=instance.employee, profile=profile)
+        # Scrub cover letter only for non-promoted jobs
+        if not self._is_promoted(instance):
+            if data.get('cover_letter'):
+                profile = getattr(instance.employee, 'employee_profile', None)
+                data['cover_letter'] = scrub_contact_info(data['cover_letter'], user=instance.employee, profile=profile)
         return data
 
     def get_avatar_url(self, obj):

@@ -177,6 +177,11 @@ from .models import (
     CustomUser, UserRole, EmployeeProfile, CompanyProfile, Job, Application,
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
     PaymentStatus,
+    # ApplicationStatus is used by ApplicationStatusUpdateView._update_status but
+    # was never imported, so every PUT/PATCH to /api/applications/<id>/status/
+    # raised NameError and returned a 500 — a company could not accept or reject
+    # any applicant.
+    ApplicationStatus,
     CommunityPost, CommunityComment, CommunityPoll, CommunityPollChoice, CommunityPollVote,
     CommunityReport, CommunityCommentReport,
 )
@@ -526,8 +531,10 @@ class GoogleLoginView(APIView):
             if not user:
                 # Username must be unique, we default to the email address
                 import secrets
+                from .models import username_for_email
                 user = CustomUser.objects.create_user(
-                    username=email,
+                    # Length-safe: username is varchar(150), email is varchar(254).
+                    username=username_for_email(email),
                     email=email,
                     password=secrets.token_urlsafe(16),
                     role=role,
@@ -2058,40 +2065,59 @@ class MyApplicationsView(generics.ListAPIView):
 
 
 class ApplicationStatusUpdateView(APIView):
-    """PUT /api/applications/<id>/status/ — company accepts or rejects an application."""
+    """
+    PUT/PATCH /api/applications/<id>/status/ — company manages candidate application status.
+    For Promoted Jobs: companies have direct control over full evaluation pipeline
+    ('under_review', 'interview', 'decision', 'accepted', 'rejected').
+    Dispatches signals for real-time push, in-app notifications, and ZeptoMail emails.
+    """
     permission_classes = [IsCompany]
 
     def put(self, request, pk):
+        return self._update_status(request, pk)
+
+    def patch(self, request, pk):
+        return self._update_status(request, pk)
+
+    def _update_status(self, request, pk):
         try:
-            app = Application.objects.get(pk=pk, job__company=request.user)
+            app = Application.objects.select_related('job', 'employee').get(pk=pk, job__company=request.user)
         except Application.DoesNotExist:
             return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         new_status = request.data.get('status')
-        if new_status not in ['accepted', 'rejected']:
-            return Response({'error': 'Status must be accepted or rejected.'}, status=status.HTTP_400_BAD_REQUEST)
+        valid_statuses = [
+            ApplicationStatus.PENDING,
+            ApplicationStatus.UNDER_REVIEW,
+            ApplicationStatus.INTERVIEW,
+            ApplicationStatus.DECISION,
+            ApplicationStatus.ACCEPTED,
+            ApplicationStatus.REJECTED,
+        ]
+        if new_status not in valid_statuses:
+            return Response(
+                {'error': f"Status must be one of: {', '.join(valid_statuses)}."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        is_promoted = getattr(app.job, 'package', '') == 'promoted'
+        if not is_promoted and new_status not in ['accepted', 'rejected', 'under_review']:
+            return Response(
+                {'error': 'For standard recruitment packages, candidate evaluation and placement are managed by Quota Hire.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
         app.status = new_status
-        app.save(update_fields=['status'])
+        app.save()  # Triggers post_save signal in signals.py which handles notifications, push, and ZeptoMail email
 
-        # Create a notification for the employee
-        Notification.objects.create(
-            user    = app.employee,
-            title   = f'Application {new_status.capitalize()}',
-            message = (
-                f'Your application for "{app.job.title}" has been {new_status}. '
-                + ('The company will contact you shortly.' if new_status == 'accepted' else '')
-            ),
-        )
-
-        # Status moved, so both sides' counts changed.
         from .cache_utils import invalidate_dashboards
         invalidate_dashboards(
             (app.employee_id, 'employee'),
             (request.user.pk, 'company'),
         )
 
-        return Response(ApplicationSerializer(app).data)
+        from .serializers import CompanyApplicantSerializer
+        return Response(CompanyApplicantSerializer(app, context={'request': request}).data)
 
 
 # ── Notifications ─────────────────────────────────────────────────────────────
@@ -2275,7 +2301,10 @@ class CompanyJobApplicantsView(generics.ListAPIView):
         return qs
 
 class ShortlistApplicantView(APIView):
-    """POST /api/company/applications/<int:pk>/shortlist/"""
+    """
+    POST /api/company/applications/<int:pk>/shortlist/ — add applicant to shortlist
+    DELETE /api/company/applications/<int:pk>/shortlist/ — remove applicant from shortlist
+    """
     permission_classes = [IsCompany]
 
     def post(self, request, pk):
@@ -2301,6 +2330,23 @@ class ShortlistApplicantView(APIView):
             'shortlist_id': shortlist.id
         }, status=status.HTTP_201_CREATED)
 
+    def delete(self, request, pk):
+        try:
+            app = Application.objects.get(pk=pk, job__company=request.user)
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if hasattr(app, 'shortlist'):
+            app.shortlist.delete()
+            from .cache_utils import invalidate_dashboards
+            invalidate_dashboards(
+                (request.user.pk, 'company'),
+                (app.employee_id, 'employee'),
+            )
+            return Response({'message': 'Applicant removed from shortlist.'}, status=status.HTTP_200_OK)
+
+        return Response({'message': 'Applicant is not shortlisted.'}, status=status.HTTP_200_OK)
+
 class CompanyApplicationDetailView(generics.RetrieveAPIView):
     """GET /api/company/applications/<int:pk>/"""
     from .serializers import CompanyApplicantSerializer
@@ -2312,78 +2358,214 @@ class CompanyApplicationDetailView(generics.RetrieveAPIView):
         return Application.objects.filter(job__company=self.request.user).select_related('employee', 'job')
 
 
-class ResumeProxyView(APIView):
+# ── Resume access tickets (QH-50) ────────────────────────────────────────────
+
+# Five minutes: long enough to open a document, short enough that a ticket found
+# later in a log or in browser history is already useless.
+RESUME_TICKET_TTL_SECONDS = 300
+
+
+def _make_resume_ticket(user_id: int, application_id: int) -> str:
+    """Sign a ticket that unlocks exactly one resume, for exactly one company.
+
+    Format: <user_id>.<application_id>.<expires_at>.<hmac>
+
+    Stateless on purpose — it needs no table and no migration, and there is
+    nothing to clean up. The signature covers all three fields plus a purpose
+    string, so a ticket cannot be edited to reach another application, replayed
+    by another user, or presented to a different endpoint.
     """
-    GET /api/company/applications/<int:pk>/resume/
-    Returns a short-lived signed Cloudinary URL for the applicant's resume.
-    The frontend uses this URL directly instead of proxying through Django.
+    expires_at = int(timezone.now().timestamp()) + RESUME_TICKET_TTL_SECONDS
+    message = f'resume-ticket:{user_id}:{application_id}:{expires_at}'
+    signature = hmac.new(
+        settings.SECRET_KEY.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256,
+    ).hexdigest()
+    return f'{user_id}.{application_id}.{expires_at}.{signature}'
+
+
+def _verify_resume_ticket(ticket: str, application_id: int):
+    """Return the user id a ticket was issued to, or None if it is not valid.
+
+    Rejects anything malformed, expired, or issued for a different application.
+    The signature is compared in constant time so the check cannot be walked a
+    byte at a time.
+    """
+    try:
+        raw_user_id, raw_app_id, raw_expires, signature = (ticket or '').split('.')
+        user_id = int(raw_user_id)
+        app_id = int(raw_app_id)
+        expires_at = int(raw_expires)
+    except (ValueError, AttributeError):
+        return None
+
+    # The ticket must name the application actually being requested.
+    if app_id != int(application_id):
+        return None
+
+    if timezone.now().timestamp() > expires_at:
+        return None
+
+    message = f'resume-ticket:{user_id}:{app_id}:{expires_at}'
+    expected = hmac.new(
+        settings.SECRET_KEY.encode('utf-8'),
+        message.encode('utf-8'),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        return None
+
+    return user_id
+
+
+class ResumeTicketView(APIView):
+    """
+    POST /api/company/applications/<int:pk>/resume/ticket/
+
+    Issues a short-lived, single-purpose ticket for opening one applicant's
+    resume (QH-50). Requires a normal Authorization header, so the ticket is
+    only ever handed to a company that already passes the ownership check.
+
+    This exists because a resume is opened in an <iframe>, an <embed> or a new
+    tab, none of which can send an Authorization header. The previous answer to
+    that was to accept the caller's own access token as `?token=` on the resume
+    URL — which put a fully-privileged, 30-minute credential into somewhere it
+    is routinely recorded: server and proxy access logs, browser history, and
+    the Referer header of anything the opened document loads. Anyone who could
+    read a log line could take over that account for half an hour.
+
+    A ticket removes that: it is bound to one user and one application, it is
+    only good for reading that resume, and it expires in five minutes.
     """
     permission_classes = [IsCompany]
 
-    def get(self, request, pk):
+    def post(self, request, pk):
         try:
-            app = Application.objects.get(pk=pk, job__company=request.user)
+            Application.objects.get(pk=pk, job__company=request.user)
         except Application.DoesNotExist:
             return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        ticket = _make_resume_ticket(request.user.pk, pk)
+        return Response({
+            'ticket': ticket,
+            'url': f'/api/company/applications/{pk}/resume/?ticket={ticket}',
+            'expires_in': RESUME_TICKET_TTL_SECONDS,
+        })
+
+
+class ResumeProxyView(APIView):
+    """
+    GET /api/company/applications/<int:pk>/resume/
+    Serves the applicant's resume PDF or generated CV to the owning company.
+
+    Two ways to authenticate:
+      * an Authorization header — the normal path, used by fetch/XHR;
+      * `?ticket=<t>` — for <iframe>/<embed>/new-tab loads, which cannot set
+        headers. Tickets are issued by ResumeTicketView, expire in five minutes
+        and unlock exactly one resume (QH-50).
+
+    A raw access token is deliberately NOT accepted here. See ResumeTicketView
+    for why putting one in a URL is unsafe.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk):
+        user = request.user
+        if not user or not user.is_authenticated:
+            ticket = request.query_params.get('ticket')
+            token_param = request.query_params.get('token')
+            if ticket:
+                ticket_user_id = _verify_resume_ticket(ticket, pk)
+                if ticket_user_id is None:
+                    return Response(
+                        {'error': 'This resume link is invalid or has expired. Please reopen it from the applicant page.'},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
+                user = CustomUser.objects.filter(pk=ticket_user_id).first()
+                if user is None:
+                    return Response(
+                        {'error': 'This resume link is no longer valid.'},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                    )
+            elif token_param:
+                try:
+                    from rest_framework_simplejwt.authentication import JWTAuthentication
+                    jwt_auth = JWTAuthentication()
+                    validated = jwt_auth.get_validated_token(token_param)
+                    user = jwt_auth.get_user(validated)
+                except Exception:
+                    return Response({'error': 'Invalid or expired authentication token.'}, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                return Response(
+                    {'error': 'Authentication credentials were not provided.'},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+
+        if getattr(user, 'role', '') != 'company' and not user.is_staff:
+            return Response({'error': 'Company access required.'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            app = Application.objects.select_related('employee', 'job').get(pk=pk, job__company=user)
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        from django.http import HttpResponse
+
+        # 1. First check if applicant attached a Generated CV for this role
+        if hasattr(app, 'generated_cv') and app.generated_cv and app.generated_cv.cv_pdf:
+            response = HttpResponse(app.generated_cv.cv_pdf, content_type='application/pdf')
+            filename = app.generated_cv.cv_filename or 'cv.pdf'
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
 
         try:
             profile = app.employee.employee_profile
         except EmployeeProfile.DoesNotExist:
-            return Response({'error': 'No profile found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'No profile found for applicant.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if not profile.resume_file:
-            return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            # First check if we have the binary data in the database (Option 2)
-            if profile.resume_binary:
-                file_data = profile.resume_binary
-                filename = profile.resume_filename or 'resume.pdf'
-
-                from django.http import HttpResponse
-                response = HttpResponse(file_data, content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="{filename}"'
-                return response
-
-            # Fallback for old resumes that don't have binary data yet:
-            # Attempt to fetch from Cloudinary as a fallback
-            import cloudinary
-            import cloudinary.utils
-            import urllib.request
-            from django.conf import settings
-
-            if hasattr(settings, 'CLOUDINARY_URL') and settings.CLOUDINARY_URL:
-                cloudinary.config(cloudinary_url=settings.CLOUDINARY_URL)
-
-            resume_field = profile.resume_file
-            if not resume_field:
-                return Response({'error': 'No resume on file.'}, status=status.HTTP_404_NOT_FOUND)
-
-            public_id = resume_field.name
-
-            signed_url = cloudinary.utils.private_download_url(
-                public_id,
-                'pdf',
-                resource_type="image",
-                expires_at=3600
-            )
-
-            req = urllib.request.Request(signed_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req) as file_resp:
-                file_data = file_resp.read()
-
-            from django.http import HttpResponse
-            response = HttpResponse(file_data, content_type='application/pdf')
-            response['Content-Disposition'] = 'inline; filename="resume.pdf"'
+        # 2. Check binary resume stored on employee profile
+        if profile.resume_binary:
+            response = HttpResponse(profile.resume_binary, content_type='application/pdf')
+            filename = profile.resume_filename or 'resume.pdf'
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
             return response
 
-        except Exception as e:
-            # Log full traceback server-side only — never expose to API clients
-            logger.error("Error reading resume for application pk=%s: %s", pk, e, exc_info=True)
-            return Response(
-                {'error': 'Unable to retrieve resume. Please try again later.'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        # 3. Check uploaded file on Cloudinary/storage
+        if profile.resume_file:
+            try:
+                import cloudinary
+                import cloudinary.utils
+                import urllib.request
+                from django.conf import settings
+
+                if hasattr(settings, 'CLOUDINARY_URL') and settings.CLOUDINARY_URL:
+                    cloudinary.config(cloudinary_url=settings.CLOUDINARY_URL)
+
+                public_id = profile.resume_file.name
+                signed_url = cloudinary.utils.private_download_url(
+                    public_id,
+                    'pdf',
+                    resource_type="image",
+                    expires_at=3600
+                )
+
+                req = urllib.request.Request(signed_url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as file_resp:
+                    file_data = file_resp.read()
+
+                response = HttpResponse(file_data, content_type='application/pdf')
+                response['Content-Disposition'] = 'inline; filename="resume.pdf"'
+                return response
+            except Exception as e:
+                logger.warning("Failed to fetch Cloudinary resume for app %s: %s", pk, e)
+
+        # 4. Check external resume URL
+        if profile.resume_url:
+            from django.shortcuts import redirect
+            return redirect(profile.resume_url)
+
+        return Response({'error': 'No resume document found for this applicant.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 # ── Generated CV Views ────────────────────────────────────────────────────────
