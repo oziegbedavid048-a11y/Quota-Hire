@@ -24,7 +24,7 @@ const { width: SCREEN_W } = Dimensions.get('window');
 
 const JOB_STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string; text: string }> = {
   approved: { label: 'Active', dot: Palette.emerald500, bg: '#d1fae5', text: '#065f46' },
-  pending:  { label: 'Pending Review', dot: Palette.amber500, bg: '#fef3c7', text: '#92400e' },
+  pending:  { label: 'Pending', dot: Palette.amber500, bg: '#fef3c7', text: '#92400e' },
   rejected: { label: 'Rejected', dot: Palette.red400, bg: '#fee2e2', text: '#991b1b' },
   closed:   { label: 'Closed', dot: Palette.neutral400, bg: Palette.neutral100, text: Palette.neutral600 },
 };
@@ -170,35 +170,45 @@ export default function CompanyMyJobs({ onSelectJob }: CompanyMyJobsProps = {}) 
                       </View>
                     </View>
 
-                    {/* Middle Row: Badges (Pipeline text-only without emoji/icon, Status, Candidates) */}
-                    <View style={styles.indicatorsRow}>
-                      {/* Pipeline Indicator (Text only, NO emoji, NO icon) */}
-                      <View style={[
-                        styles.pipelineBadge,
-                        isPromoted ? styles.pipelineBadgePromoted : styles.pipelineBadgeAgency
-                      ]}>
-                        <Text style={[
-                          styles.pipelineText,
-                          isPromoted ? styles.pipelineTextPromoted : styles.pipelineTextAgency
-                        ]}>
-                          {isPromoted ? 'Promoted Pipeline' : 'Agency Pipeline'}
-                        </Text>
+                    {/* Vertical Specs: Status, Candidates, Package */}
+                    <View style={styles.specsContainer}>
+                      {/* 1. Status */}
+                      <View style={styles.specRow}>
+                        <Text style={styles.specLabel}>Status</Text>
+                        <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
+                          <View style={[styles.statusDot, { backgroundColor: statusCfg.dot }]} />
+                          <Text style={[styles.statusLabel, { color: statusCfg.text }]}>
+                            {statusCfg.label}
+                          </Text>
+                        </View>
                       </View>
 
-                      {/* Status Badge */}
-                      <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
-                        <View style={[styles.statusDot, { backgroundColor: statusCfg.dot }]} />
-                        <Text style={[styles.statusLabel, { color: statusCfg.text }]}>
-                          {statusCfg.label}
-                        </Text>
-                      </View>
+                      <View style={styles.specDivider} />
 
-                      {/* Candidates Count */}
-                      <View style={styles.candidatesBadge}>
-                        <Feather name="users" size={11} color={colors.textSecondary} />
-                        <Text style={[styles.candidatesText, { color: colors.textSecondary }]}>
+                      {/* 2. Number of Candidates */}
+                      <View style={styles.specRow}>
+                        <Text style={styles.specLabel}>Candidates</Text>
+                        <Text style={styles.specValueText}>
                           {job.applicantsCount || 0} candidate{job.applicantsCount !== 1 ? 's' : ''}
                         </Text>
+                      </View>
+
+                      <View style={styles.specDivider} />
+
+                      {/* 3. Package */}
+                      <View style={styles.specRow}>
+                        <Text style={styles.specLabel}>Package</Text>
+                        <View style={[
+                          styles.pipelineBadge,
+                          isPromoted ? styles.pipelineBadgePromoted : styles.pipelineBadgeAgency
+                        ]}>
+                          <Text style={[
+                            styles.pipelineText,
+                            isPromoted ? styles.pipelineTextPromoted : styles.pipelineTextAgency
+                          ]}>
+                            {isPromoted ? 'Promoted Pipeline' : 'Agency Pipeline'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
 
@@ -259,25 +269,49 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: FontSize.xs },
 
-  // Indicators Row
-  indicatorsRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  // Vertical Specs Container
+  specsContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  specRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  specLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Palette.neutral500,
+  },
+  specValueText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: Palette.neutral800,
+  },
+  specDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    opacity: 0.6,
+  },
 
   // Pipeline Badge (strictly text only, no emoji, no icon)
-  pipelineBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  pipelineBadge: { paddingHorizontal: 9, paddingVertical: 3.5, borderRadius: 8, borderWidth: 1 },
   pipelineBadgePromoted: { backgroundColor: '#ecfdf5', borderColor: '#a7f3d0' },
-  pipelineBadgeAgency: { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' },
-  pipelineText: { fontSize: 10, fontWeight: FontWeight.extrabold, letterSpacing: 0.2 },
+  pipelineBadgeAgency: { backgroundColor: '#ffffff', borderColor: '#cbd5e1' },
+  pipelineText: { fontSize: 10.5, fontWeight: FontWeight.extrabold, letterSpacing: 0.2 },
   pipelineTextPromoted: { color: '#047857' },
   pipelineTextAgency: { color: '#475569' },
 
   // Status Badge
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 3.5, borderRadius: 8 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusLabel: { fontSize: 10, fontWeight: FontWeight.bold },
-
-  // Candidates Count Badge
-  candidatesBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: Palette.neutral50 },
-  candidatesText: { fontSize: 10, fontWeight: FontWeight.bold },
+  statusLabel: { fontSize: 10.5, fontWeight: FontWeight.bold },
 
   cardDivider: { height: 1, backgroundColor: '#f1f5f9' },
 

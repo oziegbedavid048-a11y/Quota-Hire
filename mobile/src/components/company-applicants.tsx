@@ -296,20 +296,6 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         />
-        {/* Banner Top Row: Back navigation */}
-        <View style={styles.bannerTopRow}>
-          <Pressable
-            onPress={handleBack}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={({ pressed }) => [
-              styles.bannerBackBtn,
-              { opacity: pressed ? 0.7 : 1 }
-            ]}
-          >
-            <Feather name="arrow-left" size={15} color={colors.text} />
-            <Text style={styles.bannerBackBtnText}>Back</Text>
-          </Pressable>
-        </View>
 
         <View style={styles.heroContent}>
           {/* Company Logo or Monogram */}
@@ -907,27 +893,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
     gap: 12,
-  },
-  bannerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  bannerBackBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 99,
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-  },
-  bannerBackBtnText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: '#0f172a',
   },
   heroContent: {
     flexDirection: 'row',
