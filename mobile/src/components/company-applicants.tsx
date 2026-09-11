@@ -156,8 +156,25 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
   }, [jobId, params.jobId, jobs, selectedJobId]);
 
   const activeJob: CompanyJob | undefined = jobs.find(j => String(j.id) === String(selectedJobId));
-  const isPromoted = activeJob?.package === 'promoted';
+  const isPromoted = Boolean(
+    activeJob?.package === 'promoted' ||
+    (activeJob?.package && String(activeJob.package).toLowerCase().includes('promoted')) ||
+    (selectedCandidate?.job_package && String(selectedCandidate.job_package).toLowerCase().includes('promoted'))
+  );
   const companyLogo = activeJob?.companyLogoUrl || company?.logoUrl || company?.avatarUrl;
+
+  const getExperienceYears = useCallback((c: any): number => {
+    const raw = c?.experience_years ?? c?.experienceYears ?? c?.employee_profile?.experience_years ?? c?.employee_profile?.experienceYears;
+    const num = Number(raw);
+    return isNaN(num) ? 0 : Math.max(0, num);
+  }, []);
+
+  const formatExperienceText = useCallback((c: any): string => {
+    const yrs = getExperienceYears(c);
+    if (yrs <= 0) return 'No Experience Listed';
+    if (yrs === 1) return '1 Year Experience';
+    return `${yrs} Years Experience`;
+  }, [getExperienceYears]);
 
   // Back navigation returning specifically to My Jobs list
   const handleBack = useCallback(() => {
@@ -426,12 +443,18 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
 
       {/* ── 3. FILTER TABS BAR (Clean & Minimal) ── */}
       <View style={styles.filterBar}>
-        {[
-          { key: 'all', label: `All (${applicants.length})` },
-          { key: 'shortlisted', label: `Shortlisted (${shortlistedCount})` },
-          { key: 'interview', label: `Interview (${interviewCount})` },
-          { key: 'accepted', label: `Hired (${acceptedCount})` },
-        ].map((tab) => (
+        {(isPromoted
+          ? [
+              { key: 'all', label: `All (${applicants.length})` },
+              { key: 'shortlisted', label: `Shortlisted (${shortlistedCount})` },
+              { key: 'interview', label: `Interview (${interviewCount})` },
+              { key: 'accepted', label: `Hired (${acceptedCount})` },
+            ]
+          : [
+              { key: 'all', label: `All (${applicants.length})` },
+              { key: 'shortlisted', label: `Shortlisted (${shortlistedCount})` },
+            ]
+        ).map((tab) => (
           <Pressable
             key={tab.key}
             onPress={() => {
@@ -507,21 +530,23 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                         )}
                       </View>
                       <Text style={[styles.candidateTitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                        {app.employee_profile?.title || 'Applicant'} • {app.employee_profile?.experience_years || 0} yrs exp
+                        {app.employee_profile?.title || 'Applicant'} • {formatExperienceText(app)}
                       </Text>
                     </View>
 
-                    {/* Status badge matching Django Admin & Tracker */}
-                    <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
-                      <View style={[styles.statusDot, { backgroundColor: statusStyle.dot }]} />
-                      <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
-                        {statusStyle.label}
-                      </Text>
-                    </View>
+                    {/* Status badge matching Django Admin & Tracker — Strictly only on promoted pipeline */}
+                    {isPromoted && (
+                      <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
+                        <View style={[styles.statusDot, { backgroundColor: statusStyle.dot }]} />
+                        <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
+                          {statusStyle.label}
+                        </Text>
+                      </View>
+                    )}
                   </View>
 
-                  {/* Candidate Quick Meta: Location & CV Status (Strictly no raw email/phone on card) */}
-                  {(app.applicant_location || app.employee_profile?.city || app.has_resume) && (
+                  {/* Candidate Quick Meta: Location & CV Status (Strictly no raw email/phone on card; CV badge only if promoted) */}
+                  {((app.applicant_location || app.employee_profile?.city) || (isPromoted && app.has_resume)) && (
                     <View style={styles.cardMetaRow}>
                       {(app.applicant_location || app.employee_profile?.city) && (
                         <View style={styles.cardMetaChip}>
@@ -531,7 +556,7 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                           </Text>
                         </View>
                       )}
-                      {app.has_resume && (
+                      {isPromoted && app.has_resume && (
                         <View style={styles.cardCvBadge}>
                           <Feather name="file-text" size={10.5} color={Palette.accent600} />
                           <Text style={styles.cardCvBadgeText}>CV on file</Text>
@@ -632,9 +657,9 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                     {selectedCandidate.employee_profile?.title || 'Applicant'}
                   </Text>
 
-                  {/* Overview Metadata Row: Exp Badge & Evaluated Status (Omit 'Applied') */}
+                  {/* Overview Metadata Row: Exp Badge & Evaluated Status (Status strictly on promoted pipeline) */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                    {selectedCandidate.status && selectedCandidate.status !== 'pending' && (
+                    {isPromoted && selectedCandidate.status && selectedCandidate.status !== 'pending' && (
                       <View style={[
                         styles.statusPill,
                         { backgroundColor: (STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).bg }
@@ -654,7 +679,7 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                     <View style={styles.expBadge}>
                       <Feather name="briefcase" size={11} color={Palette.accent600} />
                       <Text style={styles.expBadgeText}>
-                        {selectedCandidate.employee_profile?.experience_years || 0} Years Exp
+                        {formatExperienceText(selectedCandidate)}
                       </Text>
                     </View>
                   </View>
@@ -891,71 +916,73 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                   </Pressable>
                 </View>
 
-                {/* ── CANDIDATE EVALUATION & STATUS (5 ACTIONS) ── */}
-                <View style={styles.evaluationSectionCard}>
-                  <View style={styles.evaluationSectionHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Feather name="layers" size={15} color={Palette.accent600} />
-                      <Text style={styles.evaluationSectionTitle}>Candidate Evaluation & Status</Text>
+                {/* ── CANDIDATE EVALUATION & STATUS (5 ACTIONS) (PROMOTED PIPELINE ONLY) ── */}
+                {isPromoted && (
+                  <View style={styles.evaluationSectionCard}>
+                    <View style={styles.evaluationSectionHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Feather name="layers" size={15} color={Palette.accent600} />
+                        <Text style={styles.evaluationSectionTitle}>Candidate Evaluation & Status</Text>
+                      </View>
+                      <View style={styles.evaluationStatusBadge}>
+                        <Text style={styles.evaluationStatusBadgeText}>
+                          Current: {(STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).label}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.evaluationStatusBadge}>
-                      <Text style={styles.evaluationStatusBadgeText}>
-                        Current: {(STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).label}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.evaluationSectionSub}>
-                    Updating candidate status automatically sends an email notification directly to the applicant.
-                  </Text>
+                    <Text style={styles.evaluationSectionSub}>
+                      Updating candidate status automatically sends an email notification directly to the applicant.
+                    </Text>
 
-                  <View style={styles.evaluationList}>
-                    {EVALUATION_ACTIONS.map((action) => {
-                      const isActive = selectedCandidate.status === action.status;
-                      return (
-                        <Pressable
-                          key={action.status}
-                          onPress={() => handleUpdateStatus(selectedCandidate.id, action.status)}
-                          disabled={updatingStatus}
-                          style={({ pressed }) => [
-                            styles.evaluationActionRow,
-                            isActive && {
-                              backgroundColor: action.activeBg,
-                              borderColor: action.activeBorder,
-                              borderWidth: 1.5,
-                            },
-                            { opacity: pressed || updatingStatus ? 0.75 : 1 }
-                          ]}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                            <View style={[
-                              styles.evaluationActionIconWrap,
-                              { backgroundColor: isActive ? '#ffffff' : '#f1f5f9' },
-                              isActive && { borderColor: action.activeBorder, borderWidth: 1 }
-                            ]}>
-                              <Feather name={action.icon} size={15} color={action.color} />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                              <Text style={[
-                                styles.evaluationActionLabel,
-                                isActive && { color: action.color, fontWeight: FontWeight.extrabold }
+                    <View style={styles.evaluationList}>
+                      {EVALUATION_ACTIONS.map((action) => {
+                        const isActive = selectedCandidate.status === action.status;
+                        return (
+                          <Pressable
+                            key={action.status}
+                            onPress={() => handleUpdateStatus(selectedCandidate.id, action.status)}
+                            disabled={updatingStatus}
+                            style={({ pressed }) => [
+                              styles.evaluationActionRow,
+                              isActive && {
+                                backgroundColor: action.activeBg,
+                                borderColor: action.activeBorder,
+                                borderWidth: 1.5,
+                              },
+                              { opacity: pressed || updatingStatus ? 0.75 : 1 }
+                            ]}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                              <View style={[
+                                styles.evaluationActionIconWrap,
+                                { backgroundColor: isActive ? '#ffffff' : '#f1f5f9' },
+                                isActive && { borderColor: action.activeBorder, borderWidth: 1 }
                               ]}>
-                                {action.label}
-                              </Text>
+                                <Feather name={action.icon} size={15} color={action.color} />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={[
+                                  styles.evaluationActionLabel,
+                                  isActive && { color: action.color, fontWeight: FontWeight.extrabold }
+                                ]}>
+                                  {action.label}
+                                </Text>
+                              </View>
                             </View>
-                          </View>
 
-                          {isActive ? (
-                            <View style={[styles.activeStatusPill, { backgroundColor: action.color }]}>
-                              <Text style={styles.activeStatusPillText}>Active</Text>
-                            </View>
-                          ) : (
-                            <Feather name="chevron-right" size={16} color={Palette.neutral400} />
-                          )}
-                        </Pressable>
-                      );
-                    })}
+                            {isActive ? (
+                              <View style={[styles.activeStatusPill, { backgroundColor: action.color }]}>
+                                <Text style={styles.activeStatusPillText}>Active</Text>
+                              </View>
+                            ) : (
+                              <Feather name="chevron-right" size={16} color={Palette.neutral400} />
+                            )}
+                          </Pressable>
+                        );
+                      })}
+                    </View>
                   </View>
-                </View>
+                )}
               </ScrollView>
             )}
           </View>
@@ -1553,7 +1580,7 @@ const styles = StyleSheet.create({
     borderColor: '#f59e0b',
   },
   standaloneShortlistBtnInactive: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Palette.accent500,
   },
   standaloneShortlistBtnText: {
     fontSize: 11,

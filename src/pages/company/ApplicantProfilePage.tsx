@@ -116,7 +116,14 @@ export const ApplicantProfilePage = () => {
               
               <div className="flex justify-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800 px-3 py-1.5 rounded-md border border-neutral-200 dark:border-neutral-700">
-                  <Briefcase size={14} className="text-neutral-400" /> {applicant.employee_profile?.experience_years || 0} Years Exp
+                  <Briefcase size={14} className="text-neutral-400" /> {
+                    (() => {
+                      const yrs = Number(applicant.experience_years ?? applicant.employee_profile?.experience_years ?? applicant.employee_profile?.experienceYears ?? 0);
+                      if (yrs <= 0) return 'No Experience Listed';
+                      if (yrs === 1) return '1 Year Experience';
+                      return `${yrs} Years Experience`;
+                    })()
+                  }
                 </span>
               </div>
             </div>

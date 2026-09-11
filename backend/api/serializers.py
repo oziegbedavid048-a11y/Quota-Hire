@@ -114,10 +114,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class EmployeeProfileSerializer(serializers.ModelSerializer):
     bio = serializers.CharField(max_length=2000, allow_blank=True, required=False)
     has_resume = serializers.SerializerMethodField()
+    experienceYears = serializers.IntegerField(source='experience_years', required=False)
 
     class Meta:
         model  = EmployeeProfile
-        fields = ('title', 'bio', 'linkedin_url', 'resume_url', 'resume_file', 'has_resume', 'resume_filename', 'education', 'skills', 'experience_years', 'phone_number', 'country', 'city', 'postal_code', 'street_address')
+        fields = ('title', 'bio', 'linkedin_url', 'resume_url', 'resume_file', 'has_resume', 'resume_filename', 'education', 'skills', 'experience_years', 'experienceYears', 'phone_number', 'country', 'city', 'postal_code', 'street_address')
         read_only_fields = ('has_resume', 'resume_filename')
 
     def validate_bio(self, value):
@@ -475,10 +476,42 @@ def scrub_contact_info(text, user=None, profile=None):
 
     return text
 
+def calculate_experience_from_work_entries(work_entries):
+    """
+    Computes total years of experience from structured CV work experience items.
+    Parses date/year spans such as '2021 - 2023' or '2023 - Present'.
+    """
+    if not work_entries or not isinstance(work_entries, list):
+        return 0
+    total = 0
+    import datetime
+    current_year = datetime.datetime.now().year
+    for entry in work_entries:
+        if not isinstance(entry, dict):
+            continue
+        period = str(entry.get('period', '') or '')
+        years = re.findall(r'\b(20\d\d|19\d\d)\b', period)
+        if len(years) >= 2:
+            y1, y2 = int(years[0]), int(years[1])
+            diff = max(1, abs(y2 - y1))
+            total += diff
+        elif len(years) == 1:
+            y1 = int(years[0])
+            if any(w in period.lower() for w in ('present', 'current', 'now')):
+                diff = max(1, current_year - y1)
+                total += diff
+            else:
+                total += 1
+        elif entry.get('role') or entry.get('company'):
+            total += 1
+    return min(total, 40)
+
 class SafeEmployeeProfileSerializer(serializers.ModelSerializer):
+    experienceYears = serializers.IntegerField(source='experience_years', read_only=True)
+
     class Meta:
         model = EmployeeProfile
-        fields = ('title', 'bio', 'linkedin_url', 'resume_url', 'resume_file', 'education', 'skills', 'experience_years')
+        fields = ('title', 'bio', 'linkedin_url', 'resume_url', 'resume_file', 'education', 'skills', 'experience_years', 'experienceYears')
         read_only_fields = fields
 
 class CompanyApplicantSerializer(serializers.ModelSerializer):
@@ -501,6 +534,7 @@ class CompanyApplicantSerializer(serializers.ModelSerializer):
     has_resume = serializers.SerializerMethodField()
     has_generated_cv = serializers.SerializerMethodField()
     resume_download_url = serializers.SerializerMethodField()
+    experience_years = serializers.SerializerMethodField()
 
     class Meta:
         model = Application
@@ -509,7 +543,7 @@ class CompanyApplicantSerializer(serializers.ModelSerializer):
             'cover_letter', 'applied_at', 'employee_profile', 'avatar_url',
             'is_shortlisted', 'applicant_email', 'applicant_phone',
             'applicant_location', 'applicant_address', 'applicant_linkedin',
-            'has_resume', 'has_generated_cv', 'resume_download_url'
+            'has_resume', 'has_generated_cv', 'resume_download_url', 'experience_years'
         )
         read_only_fields = fields
 
@@ -580,10 +614,35 @@ class CompanyApplicantSerializer(serializers.ModelSerializer):
             return f'/api/company/applications/{obj.id}/resume/'
         return None
 
+    def get_experience_years(self, obj):
+        try:
+            profile = getattr(obj.employee, 'employee_profile', None)
+            if profile and profile.experience_years > 0:
+                return profile.experience_years
+            # Fallback to calculating from GeneratedCV if profile has 0
+            for cv in obj.employee.generated_cvs.all():
+                if cv.work_experience_json:
+                    yrs = calculate_experience_from_work_entries(cv.work_experience_json)
+                    if yrs > 0:
+                        if profile and profile.experience_years == 0:
+                            profile.experience_years = yrs
+                            profile.save(update_fields=['experience_years'])
+                        return yrs
+            return profile.experience_years if profile else 0
+        except Exception:
+            return 0
+
     def get_employee_profile(self, obj):
         try:
             profile = obj.employee.employee_profile
             data = SafeEmployeeProfileSerializer(profile).data
+            
+            # If experience_years is 0, attempt to dynamically resolve from CV
+            if not data.get('experience_years'):
+                calc_exp = self.get_experience_years(obj)
+                if calc_exp > 0:
+                    data['experience_years'] = calc_exp
+            data['experienceYears'] = data.get('experience_years', 0)
             
             if not self._is_promoted(obj):
                 # Scrub bio using exact profile data for non-promoted jobs

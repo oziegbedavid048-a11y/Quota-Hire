@@ -2875,6 +2875,19 @@ class SaveGeneratedCVView(APIView):
             work_experience_json= work_experience_json if isinstance(work_experience_json, list) else [],
         )
 
+        # Automatically update EmployeeProfile experience_years if not set or higher
+        if work_experience_json and isinstance(work_experience_json, list):
+            try:
+                from .serializers import calculate_experience_from_work_entries
+                calc_exp = calculate_experience_from_work_entries(work_experience_json)
+                if calc_exp > 0:
+                    profile, _ = EmployeeProfile.objects.get_or_create(user=request.user)
+                    if profile.experience_years == 0 or calc_exp > profile.experience_years:
+                        profile.experience_years = calc_exp
+                        profile.save(update_fields=['experience_years'])
+            except Exception as _exp_err:
+                logger.warning('Failed to sync experience_years from CV wizard: %s', _exp_err)
+
         serializer = GeneratedCVSerializer(cv_obj, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

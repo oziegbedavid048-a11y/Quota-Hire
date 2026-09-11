@@ -433,7 +433,7 @@ export default function ProfileScreen() {
     } else if (activeSection === "education") {
       setEducation(user.education || "");
     } else if (activeSection === "experience") {
-      setExpYears("");
+      setExpYears(user.experienceYears !== undefined && user.experienceYears !== null && user.experienceYears > 0 ? String(user.experienceYears) : "");
     } else if (activeSection === "generated-cvs") {
       fetchCVs();
     }
