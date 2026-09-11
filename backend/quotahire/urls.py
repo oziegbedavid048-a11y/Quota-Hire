@@ -13,6 +13,9 @@ admin.site.site_title   = 'Quota Hire Admin'
 admin.site.index_title  = 'Welcome to Quota Hire Admin Portal'
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # QH-36: the admin path is configurable via DJANGO_ADMIN_PATH so it can be
+    # moved off the default /admin/ that scanners probe. Defaults to 'admin/',
+    # so nothing changes unless the variable is set.
+    path(settings.DJANGO_ADMIN_PATH, admin.site.urls),
     path('api/', include('api.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

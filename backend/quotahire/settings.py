@@ -35,6 +35,15 @@ else:
         )
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+
+# QH-36: the admin lives at /admin/ by default, which every scanner probes.
+# Set DJANGO_ADMIN_PATH in the environment (e.g. 'internal-9f3a/') to move it.
+# Obscurity is not a control on its own — the rate limit in
+# api.middleware.AdminLoginRateLimitMiddleware is — but it removes the site from
+# the untargeted background noise that finds /admin/ automatically.
+DJANGO_ADMIN_PATH = config('DJANGO_ADMIN_PATH', default='admin/').strip().lstrip('/')
+if DJANGO_ADMIN_PATH and not DJANGO_ADMIN_PATH.endswith('/'):
+    DJANGO_ADMIN_PATH += '/'
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 INSTALLED_APPS = [
@@ -68,6 +77,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # QH-36: rate-limits failed Django admin logins. Must sit after
+    # AuthenticationMiddleware so the admin view has run by the time the
+    # response status tells us whether the attempt succeeded.
+    'api.middleware.AdminLoginRateLimitMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'api.middleware.APICacheControlMiddleware',
@@ -272,7 +285,13 @@ SIMPLE_JWT = {
 }
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://quotahire.org,http://quotahire.org,https://quotahire.co.uk,https://www.quotahire.co.uk,https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
+# QH-46: the fallback list omitted https://www.quotahire.org, which does serve
+# the app. Production reads CORS_ALLOWED_ORIGINS from the environment (set in
+# render.yaml), so this was latent — but if that variable were ever cleared or
+# mistyped, every signup and login from the www host would fail with a
+# connection error and no obvious cause. A fallback should degrade to safe, not
+# to broken.
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://quotahire.org,https://www.quotahire.org,http://quotahire.org,https://quotahire.co.uk,https://www.quotahire.co.uk,https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # ── ZeptoMail API Settings ────────────────────────────────────────────────────

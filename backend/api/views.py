@@ -131,6 +131,37 @@ class CommunityWriteThrottle(UserRateThrottle):
 MAX_LOGIN_OTP_ATTEMPTS = 5
 
 
+# How far below the expected fee a payment may land and still be accepted.
+# The EUR→NGN rate is fetched at initiate and again at verify, so a payment made
+# while the rate moves can arrive slightly short; this absorbs that drift. It is
+# applied identically by PaymentVerifyView and the Paystack webhook (QH-44) —
+# the webhook previously applied no floor at all.
+AMOUNT_TOLERANCE = 0.90
+
+
+def safe_download_filename(name: str, fallback: str = 'document.pdf') -> str:
+    """Make a user-supplied filename safe to put in a Content-Disposition header.
+
+    SECURITY (QH-45): resume and CV filenames come from whoever uploaded them
+    and were interpolated straight into `inline; filename="{name}"`. Django
+    blocks CR/LF in headers, so header splitting was not possible, but quotes
+    and semicolons were not escaped — enough to break out of the quoted string
+    and confuse how a client names or handles the download.
+
+    Any path component is dropped too, so a name like "../../etc/passwd" cannot
+    survive into a Save As dialog.
+    """
+    import os
+    import re
+
+    base = os.path.basename((name or '').replace('\\', '/')).strip()
+    # Keep it to characters that are unambiguous inside a quoted header value.
+    base = re.sub(r'[^A-Za-z0-9._ -]+', '_', base)
+    base = base.lstrip('.').strip()          # no leading dots -> no hidden files
+    base = re.sub(r'\s+', ' ', base)
+    return base[:120] or fallback
+
+
 def hash_otp(code: str) -> str:
     """Digest a one-time code for storage (QH-09).
 
@@ -391,16 +422,47 @@ class IsCompany(permissions.BasePermission):
         return request.user.is_authenticated and request.user.role == 'company'
 
 
+# Roles that count as administrative for API access (QH-49).
+#
+# UserRole declares seven roles, but IsAdmin compared against the single string
+# 'admin', so a SUPERADMIN could not reach any admin endpoint — the most
+# privileged role in the system was locked out of the API.
+#
+# SUPERADMIN is added because it is unambiguously a superset of admin.
+# FINANCE_ADMIN, HR_OPS and SALES_CAM are deliberately NOT added: what each of
+# them should be able to see has never been defined, and granting them blanket
+# admin access — every user's PII, every resume, every generated CV — would be
+# inventing that policy rather than fixing a bug. They remain unprivileged until
+# their scope is decided.
+ADMIN_ROLES = frozenset({UserRole.ADMIN, UserRole.SUPERADMIN})
+
+
+def _is_admin(user) -> bool:
+    """True for the administrative roles, or for Django staff.
+
+    is_staff and is_superuser are included because they cannot be self-assigned
+    through the API (QH-13 relies on the same property), so they are the
+    stronger check of the two.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    return (
+        getattr(user, 'role', None) in ADMIN_ROLES
+        or bool(getattr(user, 'is_staff', False))
+        or bool(getattr(user, 'is_superuser', False))
+    )
+
+
 class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == 'admin'
+        return _is_admin(request.user)
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
-        return request.user.is_authenticated and request.user.role == 'admin'
+        return _is_admin(request.user)
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -419,8 +481,14 @@ def _send_verification_email(user):
     try:
         from .email_templates import get_verification_email_html, send_courier_email
 
+        # SECURITY (QH-43): 'type' names what this token is for. Without it the
+        # verification token was just {email, exp} — indistinguishable from any
+        # other bare-email token signed with the same key, so one could be
+        # presented at a different endpoint. ResetPasswordView already refuses
+        # tokens minted for another purpose; this closes the other direction.
         token = jwt.encode({
             'email': user.email,
+            'type': 'email_verification',
             'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1),
         }, settings.SECRET_KEY, algorithm='HS256')
 
@@ -711,14 +779,22 @@ def _get_or_create_play_review_user():
     return user
 
 
+# One reply for every outcome of an OTP request, so the response cannot be
+# used to tell a registered address from an unregistered one (QH-42).
+OTP_REQUEST_GENERIC_REPLY = (
+    'If that address has a Quota Hire account, a login code is on its way. '
+    'Please check your inbox and your spam folder.'
+)
+
+
 class LoginOTPRequestView(APIView):
     """
     POST /api/auth/login-otp/request/
     Step 1: Check if the email exists, generate a 6-digit OTP, send it.
 
     Request body:  { "email": "user@example.com" }
-    Success (200): { "message": "Login code sent to your email." }
-    Failure (400): { "error": "No account found with this email address." }
+    Always 200 with the same body, whether or not the address is registered
+    (QH-42) — a differing reply would reveal who has an account.
     """
     permission_classes = []
     authentication_classes = []
@@ -734,15 +810,19 @@ class LoginOTPRequestView(APIView):
         # configured PLAY_REVIEW_OTP, which the verify step checks directly.
         if is_play_review_email(email):
             _get_or_create_play_review_user()
-            return Response({'message': 'Login code sent to your email.'}, status=status.HTTP_200_OK)
+            return Response({'message': OTP_REQUEST_GENERIC_REPLY}, status=status.HTTP_200_OK)
 
-        try:
-            user = CustomUser.objects.get(email=email)
-        except CustomUser.DoesNotExist:
-            # Explicitly tell the user the email is not registered — this is a login, not sensitive
+        # SECURITY (QH-42): this used to answer "No account found with this email
+        # address." for an unknown address, with a code comment calling it "not
+        # sensitive". It is: it turns the endpoint into a free oracle for sorting
+        # any list of addresses into Quota Hire members and non-members, which is
+        # exactly what the login form was hardened against in QH-04. The reply is
+        # now the same either way, and no code is issued for an unknown address.
+        user = CustomUser.objects.filter(email=email).first()
+        if user is None:
             return Response(
-                {'error': 'No account found with this email address. Please check and try again.'},
-                status=status.HTTP_400_BAD_REQUEST,
+                {'message': OTP_REQUEST_GENERIC_REPLY},
+                status=status.HTTP_200_OK,
             )
 
         # Generate a secure 6-digit OTP
@@ -785,7 +865,7 @@ class LoginOTPRequestView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-        return Response({'message': 'Login code sent to your email.'}, status=status.HTTP_200_OK)
+        return Response({'message': OTP_REQUEST_GENERIC_REPLY}, status=status.HTTP_200_OK)
 
 
 class LoginOTPVerifyView(APIView):
@@ -1309,6 +1389,15 @@ class VerifyEmailView(APIView):
             if not email:
                 return Response({'error': 'Invalid token payload'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # SECURITY (QH-43): refuse a token minted for anything else — a
+            # password-reset token, for instance, which also carries an email.
+            # Tokens issued before this claim existed have no 'type' and are
+            # still honoured so links already in people's inboxes keep working;
+            # they expire within 24 hours of the deploy.
+            token_type = payload.get('type')
+            if token_type is not None and token_type != 'email_verification':
+                return Response({'error': 'Invalid verification link'}, status=status.HTTP_400_BAD_REQUEST)
+
             # Verification is handled implicitly by successful login if needed, or we could add an is_verified field
             try:
                 user = CustomUser.objects.get(email=email)
@@ -1361,19 +1450,29 @@ class SendVerificationEmailView(APIView):
         if not email:
             return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ── Prevent spam relay: ensure this email is associated with a registered user
+        # SECURITY (QH-42): this used to answer "No account found with this
+        # email address." (404) for an unknown address and "This account is
+        # already verified." for a known one, so anyone could sort a list of
+        # addresses into registered and not — and even learn which accounts were
+        # still unverified. ForgotPasswordView is careful to give one generic
+        # answer; this endpoint handed the oracle straight back.
+        #
+        # The reply is now identical in status, body and shape whatever the
+        # address is. Mail is still only sent to a real, unverified account, so
+        # the endpoint cannot be used as a spam relay either.
         user = CustomUser.objects.filter(email=email).first()
-        if not user:
-            return Response({'error': 'No account found with this email address.'}, status=status.HTTP_404_NOT_FOUND)
+        if user and not user.email_verified:
+            # QH-28: shares the registration path's implementation instead of
+            # spawning another raw daemon thread. Dispatches via Celery with a
+            # synchronous fallback.
+            _send_verification_email(user)
 
-        if user.email_verified:
-            return Response({'message': 'This account is already verified.'}, status=status.HTTP_200_OK)
-
-        # QH-28: shares the registration path's implementation instead of
-        # spawning another raw daemon thread. Dispatches via Celery with a
-        # synchronous fallback.
-        _send_verification_email(user)
-        return Response({'message': 'Verification email sent.'}, status=status.HTTP_200_OK)
+        return Response(
+            {'message': 'If that address has an unverified Quota Hire account, '
+                        'a verification email is on its way. Please check your '
+                        'inbox and your spam folder.'},
+            status=status.HTTP_200_OK,
+        )
 
 
 # ── Password reset helpers (QH-07) ───────────────────────────────────────────
@@ -2322,6 +2421,42 @@ class ResumeUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # SECURITY (QH-37): everything checked so far — the extension and the
+        # Content-Type header — is chosen by whoever made the request, so
+        # neither says anything about what the bytes actually are. The avatar
+        # endpoint was given real content inspection in QH-22; this one was not,
+        # even though its bytes are stored in the database and later served to
+        # recruiters by ResumeProxyView.
+        #
+        # Read the leading bytes and confirm they are the format they claim.
+        # PDF starts "%PDF-", .docx is a ZIP container ("PK\x03\x04"), and .doc
+        # is an OLE2 compound file (D0 CF 11 E0 A1 B1 1A E1).
+        resume_file.seek(0)
+        header = resume_file.read(8)
+        resume_file.seek(0)
+
+        if filename.endswith('.pdf'):
+            looks_right = header.startswith(b'%PDF-')
+            expected = 'a PDF'
+        elif filename.endswith('.docx'):
+            # An empty or "spanned" archive is still a ZIP container.
+            looks_right = header[:4] in (b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08')
+            expected = 'a Word (.docx) document'
+        else:  # .doc
+            looks_right = header.startswith(b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1')
+            expected = 'a Word (.doc) document'
+
+        if not looks_right:
+            logger.info(
+                'Rejected resume upload from user %s: content does not match %s',
+                request.user.pk, filename,
+            )
+            return Response(
+                {'error': f'That file does not look like {expected}. '
+                          'Please upload your CV as a PDF, DOC or DOCX.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Extract text, then parse through the length-capped helper so a
         # deliberately huge document cannot occupy a worker (QH-16).
         text = extract_text_from_file(resume_file, filename) or ""
@@ -2336,7 +2471,10 @@ class ResumeUploadView(APIView):
         profile, _ = EmployeeProfile.objects.get_or_create(user=request.user)
         resume_file.seek(0)  # Reset after text extraction
         profile.resume_binary = resume_file.read()
-        profile.resume_filename = resume_file.name
+        # SECURITY (QH-45): the stored name is interpolated straight into a
+        # Content-Disposition header when the resume is served. Strip anything
+        # that could break out of the quoted filename or confuse a client.
+        profile.resume_filename = safe_download_filename(resume_file.name, fallback='resume.pdf')
         profile.save(update_fields=['resume_binary', 'resume_filename'])
 
         return Response({
@@ -2579,7 +2717,7 @@ class ResumeProxyView(APIView):
         # 1. First check if applicant attached a Generated CV for this role
         if hasattr(app, 'generated_cv') and app.generated_cv and app.generated_cv.cv_pdf:
             response = HttpResponse(app.generated_cv.cv_pdf, content_type='application/pdf')
-            filename = app.generated_cv.cv_filename or 'cv.pdf'
+            filename = safe_download_filename(app.generated_cv.cv_filename, fallback='cv.pdf')
             response['Content-Disposition'] = f'inline; filename="{filename}"'
             return response
 
@@ -2591,7 +2729,7 @@ class ResumeProxyView(APIView):
         # 2. Check binary resume stored on employee profile
         if profile.resume_binary:
             response = HttpResponse(profile.resume_binary, content_type='application/pdf')
-            filename = profile.resume_filename or 'resume.pdf'
+            filename = safe_download_filename(profile.resume_filename, fallback='resume.pdf')
             response['Content-Disposition'] = f'inline; filename="{filename}"'
             return response
 
@@ -2792,7 +2930,7 @@ class DownloadGeneratedCVView(APIView):
             if not cv_obj.cv_pdf:
                 return Response({'error': 'No PDF stored for this CV.'}, status=status.HTTP_404_NOT_FOUND)
             response = HttpResponse(bytes(cv_obj.cv_pdf), content_type='application/pdf')
-            filename = cv_obj.cv_filename or 'cv.pdf'
+            filename = safe_download_filename(cv_obj.cv_filename, fallback='cv.pdf')
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response
 
@@ -2812,7 +2950,7 @@ class DownloadGeneratedCVView(APIView):
             if not cv_obj.cv_pdf:
                 return Response({'error': 'No PDF stored for this CV.'}, status=status.HTTP_404_NOT_FOUND)
             response = HttpResponse(bytes(cv_obj.cv_pdf), content_type='application/pdf')
-            filename = cv_obj.cv_filename or 'cv.pdf'
+            filename = safe_download_filename(cv_obj.cv_filename, fallback='cv.pdf')
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             response['X-Content-Type-Options'] = 'nosniff'
             response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
@@ -2859,7 +2997,7 @@ class DownloadGeneratedCVView(APIView):
             return Response({'error': 'No PDF stored for this CV.'}, status=status.HTTP_404_NOT_FOUND)
 
         response = HttpResponse(bytes(cv_obj.cv_pdf), content_type='application/pdf')
-        filename = cv_obj.cv_filename or 'cv.pdf'
+        filename = safe_download_filename(cv_obj.cv_filename, fallback='cv.pdf')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         # Security headers
         response['X-Content-Type-Options'] = 'nosniff'
@@ -3086,6 +3224,10 @@ class PaymentVerifyView(APIView):
     POST /api/payments/verify/
     Body: { "reference": "<paystack_reference>" }
 
+    QH-44: throttled like every other payment endpoint. PaymentInitiateView and
+    PlayBillingVerifyView both carried PaymentThrottle; this one did not, so it
+    was the one payment route that could be called without limit.
+
     1. Looks up the PaymentTransaction by reference (must belong to this user).
     2. Calls Paystack /transaction/verify/:reference with the secret key.
     3. Validates status == 'success' and amount >= expected.
@@ -3093,6 +3235,7 @@ class PaymentVerifyView(APIView):
     5. Returns: { download_token, cv_id }
     """
     permission_classes = [IsEmployee]
+    throttle_classes = [PaymentThrottle]
 
     def post(self, request):
         reference = request.data.get('reference', '').strip()
@@ -3163,7 +3306,7 @@ class PaymentVerifyView(APIView):
         paid_kobo = pdata.get('amount', 0)
         live_rate = _get_live_eur_ngn_rate()
         expected_kobo = int(settings.CV_DOWNLOAD_FEE_EUR * live_rate * 100)
-        if paid_kobo < expected_kobo * 0.90:  # 10% tolerance covers rate drift between initiate + verify
+        if paid_kobo < expected_kobo * AMOUNT_TOLERANCE:
             transaction.status = PaymentStatus.FAILED
             transaction.save(update_fields=['status', 'updated_at'])
             logger.warning(
@@ -3243,8 +3386,14 @@ class PaystackWebhookView(APIView):
             hashlib.sha512,
         ).hexdigest()
 
-        if not hmac.compare_digest(paystack_sig, expected_sig):
-            logger.warning(f'Paystack webhook: invalid signature received.')
+        # SECURITY (QH-44): compare_digest raises TypeError if either argument
+        # contains non-ASCII, so a header of "é" turned a rejection into a 500
+        # and a noisy Sentry error. Compare bytes, which cannot raise.
+        if not hmac.compare_digest(
+            paystack_sig.encode('utf-8', 'ignore'),
+            expected_sig.encode('utf-8'),
+        ):
+            logger.warning('Paystack webhook: invalid signature received.')
             return HttpResponse('Invalid signature', status=401)
 
         try:
@@ -3263,6 +3412,20 @@ class PaystackWebhookView(APIView):
                 try:
                     tx = PaymentTransaction.objects.get(reference=reference)
                     if tx.status != PaymentStatus.PAID:
+                        # SECURITY (QH-44): the signature proves the event really
+                        # came from Paystack, but says nothing about how much was
+                        # paid. This used to mark the transaction PAID on whatever
+                        # amount the event carried, so an underpayment would still
+                        # have unlocked the download. Hold it to the same floor
+                        # PaymentVerifyView applies.
+                        expected_kobo = int(settings.CV_DOWNLOAD_FEE_EUR * _get_live_eur_ngn_rate() * 100)
+                        if paid_kobo < expected_kobo * AMOUNT_TOLERANCE:
+                            logger.warning(
+                                'Webhook: underpayment ignored ref=%s paid=%s expected>=%s',
+                                reference, paid_kobo, expected_kobo,
+                            )
+                            return HttpResponse('OK', status=200)
+
                         tx.status = PaymentStatus.PAID
                         tx.paystack_id = paystack_id
                         tx.amount_kobo = paid_kobo

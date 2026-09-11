@@ -1,4 +1,93 @@
-from django.http import JsonResponse
+import logging
+
+from django.core.cache import cache
+from django.http import HttpResponse, JsonResponse
+
+logger = logging.getLogger(__name__)
+
+
+def _client_ip(request):
+    """The caller's address, as far as it can be trusted behind one proxy.
+
+    Render appends the real client address to X-Forwarded-For, so the LAST entry
+    is the one the platform wrote and the only one an attacker cannot choose.
+    Reading the first entry instead would let anyone reset their own counter by
+    sending a fresh X-Forwarded-For header.
+    """
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded:
+        parts = [p.strip() for p in forwarded.split(',') if p.strip()]
+        if parts:
+            return parts[-1]
+    return request.META.get('REMOTE_ADDR', '') or 'unknown'
+
+
+class AdminLoginRateLimitMiddleware:
+    """Rate-limit failed Django admin logins.
+
+    SECURITY (QH-36): /admin/login/ is reachable from the internet and had no
+    attempt limit of any kind. DRF's LoginThrottle only covers /api/auth/login/;
+    the admin login is a plain Django view, so none of the API throttling
+    touched it. Credentials could be guessed at full speed, indefinitely — and
+    an admin account can read every user's email, phone, address, uploaded
+    resume and generated CV.
+
+    Only *failed* attempts count. Django's admin answers a bad login by
+    re-rendering the form (200) and a good one with a redirect (302), so the
+    outcome is read from the response and a success clears the counter. That
+    way a busy legitimate admin is never locked out by their own activity.
+
+    Deliberately fails open if the cache is unavailable: Redis is configured
+    with IGNORE_EXCEPTIONS, and locking every administrator out of the site
+    because a cache node blipped would be worse than the brute-force risk this
+    mitigates. Pair it with a non-default admin path (DJANGO_ADMIN_PATH) and 2FA
+    for defence in depth.
+    """
+
+    MAX_FAILURES = 10
+    WINDOW_SECONDS = 15 * 60
+    CACHE_PREFIX = 'admin-login-fail:'
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def _is_admin_login(self, request):
+        from django.conf import settings
+        admin_path = '/' + getattr(settings, 'DJANGO_ADMIN_PATH', 'admin/').lstrip('/')
+        return request.method == 'POST' and request.path.startswith(admin_path + 'login')
+
+    def __call__(self, request):
+        if not self._is_admin_login(request):
+            return self.get_response(request)
+
+        key = f'{self.CACHE_PREFIX}{_client_ip(request)}'
+        try:
+            failures = cache.get(key) or 0
+        except Exception:
+            failures = 0
+
+        if failures >= self.MAX_FAILURES:
+            logger.warning('Admin login blocked for %s after %s failures', _client_ip(request), failures)
+            return HttpResponse(
+                'Too many failed sign-in attempts. Please try again later.',
+                status=429,
+                content_type='text/plain',
+            )
+
+        response = self.get_response(request)
+
+        try:
+            if response.status_code in (301, 302):
+                # A redirect from the login view means the credentials were good.
+                cache.delete(key)
+            else:
+                # Re-set rather than incr() so the key is created on the first
+                # miss and the window always restarts from the latest attempt.
+                cache.set(key, failures + 1, self.WINDOW_SECONDS)
+        except Exception:
+            pass
+
+        return response
 
 
 class RequestSizeLimitMiddleware:
