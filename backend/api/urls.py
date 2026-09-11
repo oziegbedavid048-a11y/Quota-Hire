@@ -42,6 +42,11 @@ urlpatterns = [
     path('auth/me/',                views.MeView.as_view(),                      name='auth-me'),
     path('auth/change-password/',   views.ChangePasswordView.as_view(),          name='auth-change-password'),
     path('auth/delete/',            views.DeleteAccountView.as_view(),           name='auth-delete'),
+    # The mobile app calls /auth/delete-account/, which was never registered, so
+    # "Delete Account" returned 404 for every user. Google Play requires that
+    # path to work, so both spellings are served rather than waiting for an app
+    # release to correct the client.
+    path('auth/delete-account/',    views.DeleteAccountView.as_view(),           name='auth-delete-account'),
     path('auth/send-verification/', views.SendVerificationEmailView.as_view(),   name='auth-send-verification'),
     path('auth/verify-email/',      views.VerifyEmailView.as_view(),             name='auth-verify-email'),
     path('auth/forgot-password/',   views.ForgotPasswordView.as_view(),          name='auth-forgot-password'),

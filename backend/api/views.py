@@ -944,11 +944,75 @@ class ChangePasswordView(APIView):
 
 
 class DeleteAccountView(APIView):
-    """DELETE /api/auth/delete/ — permanently delete the authenticated user's account."""
+    """DELETE /api/auth/delete/ — permanently delete the authenticated user's account.
+
+    SECURITY (QH-40): this used to delete the account on the strength of a bearer
+    token alone. One stolen access token — or a refresh token lifted out of
+    localStorage — irreversibly destroyed the account, its applications, its
+    saved jobs and its generated CVs, with no confirmation and no recovery.
+    ChangePasswordView already demanded the current password before the far less
+    destructive act of changing it; deletion asked for nothing.
+
+    The caller must now prove they are the account holder, not merely holding a
+    token, in one of two ways:
+
+      * `password` — the account password.
+      * `otp_code` — a code from /api/auth/login-otp/request/.
+
+    The second exists because accounts created through Google Sign-In are given
+    a random password the user has never seen; requiring a password alone would
+    have locked them out of deleting their own account, which Google Play
+    requires to work. The OTP path reuses the same hashed-code machinery, expiry
+    and attempt counter as passwordless login.
+    """
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [AuthEmailThrottle]
 
     def delete(self, request):
         user = request.user
+        password = (request.data.get('password') or '').strip()
+        otp_code = (request.data.get('otp_code') or '').strip()
+
+        if not password and not otp_code:
+            return Response(
+                {
+                    'error': 'reauthentication_required',
+                    'message': 'For your security, confirm your password before deleting your account. '
+                               'If you signed in with Google, request an email code instead.',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if password:
+            if not user.check_password(password):
+                return Response(
+                    {'error': 'invalid_credentials', 'message': 'That password is incorrect.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        else:
+            stored = user.login_otp_code or ''
+            expires_at = user.login_otp_expires_at
+            valid = bool(stored) and expires_at is not None and timezone.now() <= expires_at
+            if valid and user.login_otp_attempts >= MAX_LOGIN_OTP_ATTEMPTS:
+                valid = False
+            if not valid or not hmac.compare_digest(stored, hash_otp(otp_code)):
+                # Count the miss so the six-digit space cannot be walked, and
+                # answer with one message for every failure mode.
+                if stored:
+                    user.login_otp_attempts = (user.login_otp_attempts or 0) + 1
+                    user.save(update_fields=['login_otp_attempts'])
+                return Response(
+                    {'error': 'invalid_credentials',
+                     'message': 'That code is invalid or has expired. Please request a new one.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            # Burn the code so it cannot be replayed.
+            user.login_otp_code = ''
+            user.login_otp_expires_at = None
+            user.login_otp_attempts = 0
+            user.save(update_fields=['login_otp_code', 'login_otp_expires_at', 'login_otp_attempts'])
+
+        logger.info('Account deletion confirmed for user %s', user.pk)
         user.delete()
         return Response({'message': 'Account deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
