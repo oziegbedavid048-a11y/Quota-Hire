@@ -1,3 +1,64 @@
+from django.http import JsonResponse
+
+
+class RequestSizeLimitMiddleware:
+    """Reject oversized request bodies before anything reads them.
+
+    SECURITY (QH-41): Django's DATA_UPLOAD_MAX_MEMORY_SIZE (2.5 MB by default)
+    is enforced inside HttpRequest.body and _load_post_and_files. DRF's parsers
+    read request.stream instead, so neither is ever consulted on a JSON
+    endpoint and the limit simply does not apply. Measured directly: a 6.6 MB
+    JSON body reached /api/cv/save/ and was fully buffered into memory before
+    the view's own 2 MB rule rejected it.
+
+    On a 512 MB instance running three Gunicorn workers that is a cheap way to
+    exhaust memory — the per-view throttles bound how *often* a request can be
+    made, never how *large* it is.
+
+    Content-Length is checked before the body is touched, so an oversized
+    request costs nothing to refuse. Requests without a Content-Length (chunked
+    uploads) are passed through: Django still enforces its own limits on the
+    multipart path, which is where those arrive.
+    """
+
+    # Generous next to the largest legitimate request — a ~2 MB generated CV,
+    # base64-encoded to roughly 2.7 MB, plus its JSON envelope — while still far
+    # below anything that threatens the worker.
+    MAX_BODY_BYTES = 12 * 1024 * 1024
+
+    # File uploads legitimately exceed the JSON limit; the views that accept
+    # them apply their own size rules (10 MB resume, 5 MB avatar).
+    MULTIPART_MAX_BODY_BYTES = 24 * 1024 * 1024
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        raw_length = request.META.get('CONTENT_LENGTH') or ''
+        try:
+            content_length = int(raw_length)
+        except (TypeError, ValueError):
+            return self.get_response(request)
+
+        content_type = (request.META.get('CONTENT_TYPE') or '').lower()
+        limit = (
+            self.MULTIPART_MAX_BODY_BYTES
+            if content_type.startswith('multipart/form-data')
+            else self.MAX_BODY_BYTES
+        )
+
+        if content_length > limit:
+            return JsonResponse(
+                {
+                    'error': 'request_too_large',
+                    'message': 'That request is too large. Please try a smaller file.',
+                },
+                status=413,
+            )
+
+        return self.get_response(request)
+
+
 class APICacheControlMiddleware:
     """
     Inject Cache-Control headers on successful GET requests.

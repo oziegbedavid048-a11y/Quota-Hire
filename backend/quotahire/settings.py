@@ -57,6 +57,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # Must be first
+    # QH-41: refuse oversized bodies before any parser reads them. Placed early
+    # and right after CORS, so an abusive request is dropped having cost only
+    # the header parse — and so a rejected preflight still gets CORS headers.
+    'api.middleware.RequestSizeLimitMiddleware',
     'django.middleware.gzip.GZipMiddleware',  # Compress responses
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
