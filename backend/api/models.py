@@ -8,7 +8,38 @@ Mirrors the TypeScript types defined in src/types.ts:
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from decimal import Decimal
+import hashlib
 import uuid
+
+
+# ── Username derivation ───────────────────────────────────────────────────────
+
+# AbstractUser.username is varchar(150); CustomUser.email is varchar(254). Both
+# the registration serializer and the Google login view set username = email, so
+# any address longer than 150 characters raised a Postgres DataError and returned
+# an uncaught 500. SQLite does not enforce varchar length, which is why the test
+# suite never caught it.
+USERNAME_MAX_LENGTH = 150
+
+
+def username_for_email(email: str) -> str:
+    """A unique, length-safe username derived from an email address.
+
+    Short addresses keep using the address itself, so nothing changes for
+    existing accounts or for the overwhelming majority of new ones. A long
+    address is truncated and given a digest of the full address, which keeps the
+    value inside the column and still unique per address — two addresses sharing
+    a 100-character prefix produce different digests.
+
+    username is only a display fallback here (USERNAME_FIELD is 'email'), so a
+    derived value costs nothing functionally.
+    """
+    email = (email or '').strip()
+    if len(email) <= USERNAME_MAX_LENGTH:
+        return email
+    digest = hashlib.sha256(email.encode('utf-8')).hexdigest()[:12]
+    keep = USERNAME_MAX_LENGTH - len(digest) - 1
+    return f'{email[:keep]}-{digest}'
 
 
 # ── User Roles ───────────────────────────────────────────────────────────────
