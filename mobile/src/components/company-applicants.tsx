@@ -520,23 +520,21 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                     </View>
                   </View>
 
-                  {/* Promoted Direct Contact Info Snippet */}
-                  {isPromoted && (app.applicant_email || app.applicant_phone) && (
-                    <View style={styles.contactSnippetRow}>
-                      {app.applicant_email && (
-                        <View style={styles.contactSnippetChip}>
-                          <Feather name="mail" size={11} color={Palette.accent600} />
-                          <Text style={styles.contactSnippetText} numberOfLines={1}>
-                            {app.applicant_email}
+                  {/* Candidate Quick Meta: Location & CV Status (Strictly no raw email/phone on card) */}
+                  {(app.applicant_location || app.employee_profile?.city || app.has_resume) && (
+                    <View style={styles.cardMetaRow}>
+                      {(app.applicant_location || app.employee_profile?.city) && (
+                        <View style={styles.cardMetaChip}>
+                          <Feather name="map-pin" size={10.5} color={colors.textMuted} />
+                          <Text style={[styles.cardMetaText, { color: colors.textSecondary }]} numberOfLines={1}>
+                            {app.applicant_location || app.employee_profile?.city}
                           </Text>
                         </View>
                       )}
-                      {app.applicant_phone && (
-                        <View style={styles.contactSnippetChip}>
-                          <Feather name="phone" size={11} color={Palette.accent600} />
-                          <Text style={styles.contactSnippetText} numberOfLines={1}>
-                            {app.applicant_phone}
-                          </Text>
+                      {app.has_resume && (
+                        <View style={styles.cardCvBadge}>
+                          <Feather name="file-text" size={10.5} color={Palette.accent600} />
+                          <Text style={styles.cardCvBadgeText}>CV on file</Text>
                         </View>
                       )}
                     </View>
@@ -1192,27 +1190,41 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.bold,
   },
 
-  // Contact Snippet
-  contactSnippetRow: {
+  // Card Meta (Location & CV on file)
+  cardMetaRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     flexWrap: 'wrap',
   },
-  contactSnippetChip: {
+  cardMetaChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Palette.neutral50,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+  },
+  cardMetaText: {
+    fontSize: 10.5,
+    fontWeight: FontWeight.semibold,
+  },
+  cardCvBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Palette.accent50,
+    borderWidth: 1,
+    borderColor: '#cbedc6',
+    paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  contactSnippetText: {
+  cardCvBadgeText: {
     fontSize: 10,
-    fontWeight: FontWeight.medium,
-    color: Palette.neutral600,
+    fontWeight: FontWeight.bold,
+    color: Palette.accent700,
   },
 
   candidateBio: {
@@ -1253,7 +1265,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0f172a',
+    backgroundColor: Palette.brandGreen,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
