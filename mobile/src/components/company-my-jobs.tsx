@@ -85,40 +85,21 @@ export default function CompanyMyJobs({ onSelectJob }: CompanyMyJobsProps = {}) 
     }
   }, []);
 
-  const handleToggleStatus = useCallback((job: CompanyJob) => {
-    const isCurrentlyClosed = job.status === 'closed';
-    const newStatus = isCurrentlyClosed ? 'approved' : 'closed';
-
-    if (isCurrentlyClosed) {
-      Alert.alert(
-        'Reopen Job Listing?',
-        `Are you sure you want to reopen "${job.title}"? The listing will resume accepting new candidate applications immediately.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Reopen Listing',
-            onPress: () => {
-              executeStatusUpdate(job, newStatus);
-            },
+  const handleCloseJob = useCallback((job: CompanyJob) => {
+    Alert.alert(
+      'Close Job Listing?',
+      `Are you sure you want to close "${job.title}"? This action cannot be undone. This position will permanently stop accepting new applications, but all existing applicant submissions will remain accessible.`,
+      [
+        { text: 'Keep Listing Open', style: 'cancel' },
+        {
+          text: 'Close Job Listing',
+          style: 'destructive',
+          onPress: () => {
+            executeStatusUpdate(job, 'closed');
           },
-        ]
-      );
-    } else {
-      Alert.alert(
-        'Close Job Listing?',
-        `Are you sure you want to close "${job.title}"? This position will no longer accept new applications, but all existing applicant submissions will remain accessible for review.`,
-        [
-          { text: 'Keep Listing Open', style: 'cancel' },
-          {
-            text: 'Close Listing',
-            style: 'destructive',
-            onPress: () => {
-              executeStatusUpdate(job, newStatus);
-            },
-          },
-        ]
-      );
-    }
+        },
+      ]
+    );
   }, [executeStatusUpdate]);
 
   return (
@@ -297,31 +278,27 @@ export default function CompanyMyJobs({ onSelectJob }: CompanyMyJobsProps = {}) 
                       <Feather name="arrow-right" size={13} color={Palette.accent600} />
                     </Pressable>
 
-                    {/* Close / Reopen Listing Button */}
-                    {(job.status === 'approved' || job.status === 'closed') && (
+                    {/* Close Job Listing Button (only shown for active approved jobs; cannot be reopened) */}
+                    {job.status === 'approved' && (
                       <Pressable
-                        onPress={() => handleToggleStatus(job)}
+                        onPress={() => handleCloseJob(job)}
                         disabled={updatingJobId === job.id}
                         style={({ pressed }) => [
-                          styles.statusToggleBtn,
-                          job.status === 'closed' ? styles.statusToggleBtnReopen : styles.statusToggleBtnClose,
+                          styles.closeJobBtn,
                           { opacity: pressed || updatingJobId === job.id ? 0.6 : 1 }
                         ]}
                       >
                         {updatingJobId === job.id ? (
-                          <ActivityIndicator size="small" color={job.status === 'closed' ? Palette.accent600 : '#dc2626'} />
+                          <ActivityIndicator size="small" color="#dc2626" />
                         ) : (
                           <>
                             <Feather
-                              name={job.status === 'closed' ? "refresh-cw" : "lock"}
+                              name="lock"
                               size={12}
-                              color={job.status === 'closed' ? Palette.accent600 : '#b91c1c'}
+                              color="#dc2626"
                             />
-                            <Text style={[
-                              styles.statusToggleText,
-                              { color: job.status === 'closed' ? Palette.accent600 : '#b91c1c' }
-                            ]}>
-                              {job.status === 'closed' ? 'Reopen Listing' : 'Close Listing'}
+                            <Text style={styles.closeJobBtnText}>
+                              Close Job Listing
                             </Text>
                           </>
                         )}
@@ -442,7 +419,7 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.extrabold,
     color: Palette.accent600,
   },
-  statusToggleBtn: {
+  closeJobBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -450,17 +427,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-  },
-  statusToggleBtnClose: {
     backgroundColor: '#fef2f2',
-    borderColor: '#fecaca',
+    borderColor: '#fca5a5',
   },
-  statusToggleBtnReopen: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
-  },
-  statusToggleText: {
+  closeJobBtnText: {
     fontSize: 11.5,
     fontWeight: FontWeight.bold,
+    color: '#dc2626',
   },
 });

@@ -1904,8 +1904,10 @@ class JobStatusUpdateView(APIView):
         if is_admin_user:
             valid = ['pending', 'approved', 'rejected', 'closed']
         else:
-            # Company can only close an active job or reopen a closed job
-            valid = ['closed', 'approved']
+            # Company can ONLY close an active approved job; closing is a one-time decision and cannot be reopened
+            if job.status != 'approved':
+                return Response({'error': 'Only active approved job listings can be closed.'}, status=status.HTTP_400_BAD_REQUEST)
+            valid = ['closed']
 
         if new_status not in valid:
             return Response({'error': f'Status must be one of: {valid}'}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, MapPin, Users, Loader2, ArrowRight, Lock, RotateCcw, X } from 'lucide-react';
+import { Briefcase, MapPin, Users, Loader2, ArrowRight, Lock, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../../context/AppContext';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
@@ -53,23 +53,22 @@ const getStatusBadge = (status: string) => {
 export const MyJobs = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pendingStatusJob, setPendingStatusJob] = useState<{ job: any; targetStatus: 'closed' | 'approved' } | null>(null);
+  const [pendingStatusJob, setPendingStatusJob] = useState<any | null>(null);
   const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
   const navigate = useNavigate();
 
   const handleConfirmStatusChange = async () => {
     if (!pendingStatusJob) return;
-    const { job, targetStatus } = pendingStatusJob;
     setIsSubmittingStatus(true);
     try {
-      const res = await apiFetch(`/jobs/${job.id}/status/`, {
+      const res = await apiFetch(`/jobs/${pendingStatusJob.id}/status/`, {
         method: 'PUT',
-        body: JSON.stringify({ status: targetStatus }),
+        body: JSON.stringify({ status: 'closed' }),
       });
       if (res?.error) {
         throw new Error(res.error);
       }
-      setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: targetStatus } : j));
+      setJobs(prev => prev.map(j => j.id === pendingStatusJob.id ? { ...j, status: 'closed' } : j));
       setPendingStatusJob(null);
     } catch (err: any) {
       alert(err?.message || 'Failed to update job status. Please try again.');
@@ -200,7 +199,7 @@ export const MyJobs = () => {
                             <span>{job.applicants_count || 0}</span>
                           </div>
                         </td>
-                        <td className="py-4 px-6 text-right min-w-[200px]">
+                        <td className="py-4 px-6 text-right min-w-[220px]">
                           <div className="flex items-center justify-end gap-2">
                             <Link 
                               to={`/company/jobs/${job.id}/applicants`}
@@ -210,27 +209,14 @@ export const MyJobs = () => {
                               <ArrowRight size={13} />
                             </Link>
 
-                            {(job.status === 'approved' || job.status === 'closed') && (
+                            {job.status === 'approved' && (
                               <button
-                                onClick={() => setPendingStatusJob({ job, targetStatus: job.status === 'closed' ? 'approved' : 'closed' })}
-                                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-200 border ${
-                                  job.status === 'closed'
-                                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
-                                    : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:bg-red-950/20 dark:hover:bg-red-900/30 dark:text-red-400 dark:border-red-800'
-                                }`}
-                                title={job.status === 'closed' ? 'Reopen listing' : 'Close listing'}
+                                onClick={() => setPendingStatusJob(job)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-200 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 dark:bg-red-950/20 dark:hover:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+                                title="Close Job Listing"
                               >
-                                {job.status === 'closed' ? (
-                                  <>
-                                    <RotateCcw size={12} />
-                                    <span>Reopen</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Lock size={12} />
-                                    <span>Close</span>
-                                  </>
-                                )}
+                                <Lock size={12} className="text-red-600 dark:text-red-400" />
+                                <span>Close Job Listing</span>
                               </button>
                             )}
                           </div>
@@ -250,12 +236,8 @@ export const MyJobs = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 dark:border-neutral-800 space-y-4">
             <div className="flex items-start justify-between gap-4">
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                pendingStatusJob.targetStatus === 'closed'
-                  ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                  : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-              }`}>
-                {pendingStatusJob.targetStatus === 'closed' ? <Lock size={22} /> : <RotateCcw size={22} />}
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                <Lock size={22} />
               </div>
               <button
                 onClick={() => !isSubmittingStatus && setPendingStatusJob(null)}
@@ -267,12 +249,10 @@ export const MyJobs = () => {
 
             <div>
               <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-1.5">
-                {pendingStatusJob.targetStatus === 'closed' ? 'Close Job Listing?' : 'Reopen Job Listing?'}
+                Close Job Listing?
               </h3>
               <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                {pendingStatusJob.targetStatus === 'closed'
-                  ? `Are you sure you want to close "${pendingStatusJob.job.title}"? This position will no longer accept new applications, but all existing applicant submissions will remain accessible.`
-                  : `Are you sure you want to reopen "${pendingStatusJob.job.title}"? It will resume accepting new candidate applications immediately.`}
+                Are you sure you want to close "{pendingStatusJob.title}"? This action cannot be undone. This position will permanently stop accepting new applications, but all existing applicant submissions will remain accessible.
               </p>
             </div>
 
@@ -282,19 +262,15 @@ export const MyJobs = () => {
                 onClick={() => setPendingStatusJob(null)}
                 className="px-4 py-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors"
               >
-                {pendingStatusJob.targetStatus === 'closed' ? 'Keep Listing Open' : 'Cancel'}
+                Keep Listing Open
               </button>
               <button
                 disabled={isSubmittingStatus}
                 onClick={handleConfirmStatusChange}
-                className={`inline-flex items-center gap-2 px-5 py-2 text-sm font-bold text-white rounded-xl shadow-sm transition-all disabled:opacity-50 ${
-                  pendingStatusJob.targetStatus === 'closed'
-                    ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20'
-                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
-                }`}
+                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-bold text-white rounded-xl shadow-sm transition-all bg-red-600 hover:bg-red-700 shadow-red-500/20 disabled:opacity-50"
               >
                 {isSubmittingStatus && <Loader2 size={14} className="animate-spin" />}
-                <span>{pendingStatusJob.targetStatus === 'closed' ? 'Close Listing' : 'Reopen Listing'}</span>
+                <span>Close Job Listing</span>
               </button>
             </div>
           </div>
