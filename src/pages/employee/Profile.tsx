@@ -21,6 +21,7 @@ import {
   CreditCard,
   Download,
 } from 'lucide-react';
+import { getProfileRequirements } from '../../utils/profileCompletion';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
@@ -221,6 +222,12 @@ export const EmployeeProfilePage = () => {
     actionText?: string;
     actionColor?: string;
   };
+  // Shared with the Apply gate so the page and the gate can never disagree:
+  // if every card here is ticked, applying works.
+  const requirementByKey = Object.fromEntries(
+    getProfileRequirements(profile).map(r => [r.key, r.filled])
+  );
+
   const profileSections: { group: string, items: ProfileSectionItem[] }[] = [
     {
       group: 'Account Info',
@@ -230,7 +237,7 @@ export const EmployeeProfilePage = () => {
           icon: User,
           label: 'Personal Details',
           subtitle: (profile as any).location || 'Name, phone, and location.',
-          filled: !!((profile as any).location || (profile as any).phone),
+          filled: requirementByKey.contact,
         },
       ],
     },
@@ -241,12 +248,12 @@ export const EmployeeProfilePage = () => {
           key: 'resume' as SectionKey,
           icon: FileText,
           label: 'Smart Resume Upload',
-          subtitle: (profile.resumeUrl || profile.resumeFile) ? 'Resume uploaded' : 'Upload CV to automatically fill your profile.',
-          filled: !!(profile.resumeUrl || profile.resumeFile),
+          subtitle: requirementByKey.resume ? 'Resume uploaded' : 'Upload CV to automatically fill your profile.',
+          filled: requirementByKey.resume,
           isLink: true,
           path: '/employee/resume',
-          actionText: (profile.resumeUrl || profile.resumeFile) ? 'Update' : 'Add',
-          actionColor: (profile.resumeUrl || profile.resumeFile) ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400' : 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400'
+          actionText: requirementByKey.resume ? 'Update' : 'Add',
+          actionColor: requirementByKey.resume ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400' : 'text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400'
         },
       ],
     },
@@ -258,28 +265,28 @@ export const EmployeeProfilePage = () => {
           icon: FileText,
           label: 'About You (Bio)',
           subtitle: profile.bio ? 'Bio added' : 'Tell employers about yourself.',
-          filled: !!profile.bio,
+          filled: requirementByKey.bio,
         },
         {
           key: 'qualifications' as SectionKey,
           icon: Star,
           label: 'Skills & Expertise',
           subtitle: profile.skills?.length ? `${profile.skills.length} skill${profile.skills.length > 1 ? 's' : ''} added` : 'Highlight your skills and expertise.',
-          filled: !!(profile.skills && profile.skills.length > 0),
+          filled: requirementByKey.qualifications,
         },
         {
           key: 'experience' as SectionKey,
           icon: Briefcase,
           label: 'Work Experience',
           subtitle: profile.title ? profile.title : 'Add your work experience and title.',
-          filled: !!profile.title,
+          filled: requirementByKey.experience,
         },
         {
           key: 'education' as SectionKey,
           icon: GraduationCap,
           label: 'Education',
           subtitle: profile.education ? profile.education.substring(0, 60) + (profile.education.length > 60 ? '…' : '') : 'Add your education background.',
-          filled: !!profile.education,
+          filled: requirementByKey.education,
         },
       ],
     },
@@ -595,10 +602,12 @@ export const EmployeeProfilePage = () => {
                     <Mail size={14} className="shrink-0" />
                     <span className="truncate">{profile.email}</span>
                   </div>
-                  {(profile as any).phone && (
+                  {/* phoneNumber, not phone — the mapped profile has no `phone`
+                      field, so this row never rendered even with a number saved. */}
+                  {(profile as any).phoneNumber && (
                     <div className="flex items-center gap-1.5">
                       <Phone size={14} className="shrink-0" />
-                      <span>{(profile as any).phone}</span>
+                      <span>{(profile as any).phoneNumber}</span>
                     </div>
                   )}
                   {(profile as any).location && (

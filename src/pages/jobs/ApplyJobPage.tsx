@@ -144,8 +144,20 @@ export const ApplyJobPage = () => {
     formData.streetAddress.trim()
   );
 
-  // A resume must be selected (profile resume or a generated CV) before submitting
-  const isResumeSelected = Boolean((!generatedCvId && profile?.resumeUrl) || generatedCvId);
+  // A resume must be selected (profile resume or a generated CV) before submitting.
+  //
+  // This used to test `profile?.resumeUrl`, which is empty for anyone who
+  // uploaded their CV through the app: ResumeUploadView stores the file in
+  // resume_binary and never fills resume_url or resume_file. The Submit button
+  // is disabled on this flag, so an applicant with a CV on file and a complete
+  // profile found Submit permanently greyed out with no way to proceed.
+  //
+  // `hasResume` is reported by the API and is true for a stored upload, an
+  // uploaded file, or an external link.
+  const hasProfileResume = Boolean(
+    profile?.hasResume || profile?.resumeUrl || profile?.resumeFile
+  );
+  const isResumeSelected = Boolean((!generatedCvId && hasProfileResume) || generatedCvId);
   const hasNoResume = !isResumeSelected;
 
   const handleContinue = async (e: React.FormEvent) => {
@@ -436,11 +448,11 @@ export const ApplyJobPage = () => {
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                               <FileText size={18} className="text-accent-600 shrink-0" />
                               <span className="text-sm font-bold text-neutral-900 dark:text-white truncate">
-                                {(!generatedCvId && profile?.resumeUrl)
-                                  ? 'Attached Profile Resume'
+                                {(!generatedCvId && hasProfileResume)
+                                  ? (profile?.resumeFilename || 'Attached Profile Resume')
                                   : savedCvs.find(cv => cv.id === generatedCvId)
                                     ? `${savedCvs.find(cv => cv.id === generatedCvId)?.target_role || 'Tailored CV'} (${savedCvs.find(cv => cv.id === generatedCvId)?.template_name})`
-                                    : (!profile?.resumeUrl && savedCvs.length === 0)
+                                    : (!hasProfileResume && savedCvs.length === 0)
                                       ? 'No resume saved'
                                       : 'Select a Resume'}
                               </span>
@@ -462,7 +474,7 @@ export const ApplyJobPage = () => {
                               >
                                 <div className="p-2 space-y-1">
                                   {/* Option: Main Profile Resume */}
-                                  {profile?.resumeUrl && (
+                                  {hasProfileResume && (
                                     <div
                                       onClick={() => { setGeneratedCvId(null); setIsResumeSelectOpen(false); }}
                                       className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-all ${!generatedCvId ? 'bg-accent-50 dark:bg-accent-900/10' : 'hover:bg-neutral-50 dark:hover:bg-neutral-700/50'}`}
@@ -475,9 +487,18 @@ export const ApplyJobPage = () => {
                                           <FileText size={14} className={!generatedCvId ? 'text-accent-600' : 'text-neutral-500'} />
                                           Attached Profile Resume
                                         </p>
-                                        <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-accent-600 hover:underline mt-1 inline-block" onClick={(e) => e.stopPropagation()}>
-                                          View Resume
-                                        </a>
+                                        {profile?.resumeUrl ? (
+                                          <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-accent-600 hover:underline mt-1 inline-block" onClick={(e) => e.stopPropagation()}>
+                                            View Resume
+                                          </a>
+                                        ) : (
+                                          /* An in-app upload has no public URL — it is served only
+                                             to the hiring company — so name the file instead of
+                                             rendering a link that goes nowhere. */
+                                          <p className="text-xs font-medium text-neutral-500 mt-1">
+                                            {profile?.resumeFilename || 'Uploaded to your profile'}
+                                          </p>
+                                        )}
                                       </div>
                                     </div>
                                   )}
@@ -503,7 +524,7 @@ export const ApplyJobPage = () => {
                                   ))}
 
                                   {/* No resume saved fallback */}
-                                  {!profile?.resumeUrl && savedCvs.length === 0 && (
+                                  {!hasProfileResume && savedCvs.length === 0 && (
                                     <div className="p-4 text-center">
                                       <p className="text-sm font-medium text-neutral-500">No resume saved on your profile.</p>
                                     </div>
@@ -647,7 +668,7 @@ export const ApplyJobPage = () => {
           setShowIncompleteProfile(false);
           navigate(`/jobs/${id}`);
         }}
-        missing={profileCompletion.missing}
+        requirements={profileCompletion.requirements}
       />
     </div>
   );

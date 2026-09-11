@@ -1,41 +1,38 @@
 /**
- * Is an employee's profile complete enough to apply for a job?
+ * What an employee must complete before applying for a job.
  *
- * This replaces calculateProfileStrength(), which returned a percentage that was
- * shown as a "Profile Strength" meter and a scrolling banner, and was also used
- * to gate the Apply button with `score < 100`.
+ * This is the single source of truth for two things that used to disagree:
+ * the checklist on the profile page, and the check the Apply button runs.
+ * When they disagreed the page showed every section complete while Apply still
+ * refused, with no way for the applicant to tell what was wrong.
  *
- * Two problems with that:
+ * The rule now is simply: if every card on the profile page is ticked, Apply
+ * works. The page renders these requirements, and the Apply gate reads the same
+ * list, so the two cannot drift apart.
  *
- *  1. It could not reach 100. Twenty of the hundred points came from
- *     `resumeUrl || resumeFile`, but uploading a CV through the app writes it to
- *     `resume_binary` and leaves both of those empty, so the points were never
- *     awarded. Applicants with a genuinely complete profile were told it was
- *     incomplete and blocked from applying.
- *
- *  2. A percentage is the wrong answer to "why can't I apply?". It tells someone
- *     they are at 85% without saying what is missing.
- *
- * So this returns the list of what is actually missing, and the caller shows
- * those field names. The backend now reports `has_resume`, which is true if a CV
- * exists by any route, so the resume check finally works.
+ * History worth knowing: the previous version demanded a phone number AND a
+ * location, a bio of at least twenty characters, and education OR years of
+ * experience — none of which the profile page asked for or showed. Before that,
+ * a percentage score gated Apply at 100%, which was unreachable because an
+ * uploaded CV was invisible to it.
  */
 
-export interface ProfileCompletion {
-  /** True when nothing is outstanding. */
-  complete: boolean;
-  /** Human-readable names of the sections still to fill in, in page order. */
-  missing: string[];
+export interface ProfileRequirement {
+  /** Matches the section key on the profile page, so a caller can deep-link. */
+  key: string;
+  /** The exact label shown on the profile page card. */
+  label: string;
+  filled: boolean;
 }
 
-/**
- * Whether a field has actually been filled in, ignoring whitespace-only strings
- * and empty arrays.
- *
- * Numbers must be greater than zero. The only numeric field here is
- * experienceYears, where 0 is the untouched default rather than a real answer —
- * treating it as filled would let an empty profile past the check.
- */
+export interface ProfileCompletion {
+  complete: boolean;
+  /** Labels of the sections still to fill, in page order. */
+  missing: string[];
+  requirements: ProfileRequirement[];
+}
+
+/** Non-empty, ignoring whitespace-only strings and empty arrays. */
 const filled = (value: unknown): boolean => {
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === 'number') return Number.isFinite(value) && value > 0;
@@ -43,38 +40,42 @@ const filled = (value: unknown): boolean => {
 };
 
 /**
- * The sections an employee must complete before applying. Each entry is checked
- * against the profile object the app already holds, so no extra request is made.
+ * The required sections, in the order they appear on the profile page.
+ * "My Tailored CVs" is deliberately absent — generating a tailored CV is
+ * optional, and applicants can do it during the application itself.
  */
-export const getProfileCompletion = (profile: any): ProfileCompletion => {
-  if (!profile) return { complete: false, missing: ['Your profile'] };
+export const getProfileRequirements = (profile: any): ProfileRequirement[] => {
+  const p = profile || {};
 
-  const missing: string[] = [];
+  // A CV counts by any route. `hasResume` comes from the API and is the only
+  // reliable signal: uploading through the app stores the file in resume_binary
+  // and leaves resume_url and resume_file empty. The other two are kept as a
+  // fallback for a profile cached before that flag existed.
+  const hasCv = Boolean(p.hasResume) || filled(p.resumeUrl) || filled(p.resumeFile);
 
-  if (!filled(profile.name)) missing.push('Full name');
-  if (!filled(profile.phoneNumber)) missing.push('Phone number');
-  if (!filled(profile.location) && !(filled(profile.city) && filled(profile.country))) {
-    missing.push('Location');
-  }
-  if (!filled(profile.title)) missing.push('Professional headline');
-  // A one-word bio is not an "About you"; ask for a real sentence.
-  if (!filled(profile.bio) || String(profile.bio).trim().length < 20) {
-    missing.push('About you');
-  }
-  if (!filled(profile.skills)) missing.push('Skills and expertise');
-  if (!filled(profile.education) && !filled(profile.experienceYears)) {
-    missing.push('Education or work experience');
-  }
-  // hasResume comes from the API and is true for an uploaded file, a stored
-  // binary, or an external link. The two legacy fields are kept as a fallback so
-  // a cached profile fetched before this field existed still works.
-  if (!profile.hasResume && !filled(profile.resumeUrl) && !filled(profile.resumeFile)) {
-    missing.push('CV / resume');
-  }
-
-  return { complete: missing.length === 0, missing };
+  return [
+    {
+      key: 'contact',
+      label: 'Personal Details',
+      // Either is enough, matching the profile page card.
+      filled: filled(p.location) || filled(p.phoneNumber),
+    },
+    { key: 'resume',         label: 'Smart Resume Upload', filled: hasCv },
+    { key: 'bio',            label: 'About You (Bio)',     filled: filled(p.bio) },
+    { key: 'qualifications', label: 'Skills & Expertise',  filled: filled(p.skills) },
+    { key: 'experience',     label: 'Work Experience',     filled: filled(p.title) },
+    { key: 'education',      label: 'Education',           filled: filled(p.education) },
+  ];
 };
 
-/** Convenience wrapper for the common yes/no question. */
+export const getProfileCompletion = (profile: any): ProfileCompletion => {
+  // No profile loaded yet is not the same as an incomplete one. Callers must
+  // wait for the profile before judging it, or every user sees the prompt on
+  // first paint.
+  const requirements = getProfileRequirements(profile);
+  const missing = requirements.filter((r) => !r.filled).map((r) => r.label);
+  return { complete: missing.length === 0, missing, requirements };
+};
+
 export const isProfileComplete = (profile: any): boolean =>
   getProfileCompletion(profile).complete;

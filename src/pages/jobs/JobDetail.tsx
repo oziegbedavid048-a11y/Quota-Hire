@@ -21,7 +21,7 @@ export const JobDetail = () => {
   const [hasAppliedLocal, setHasAppliedLocal] = useState(false);
   // Shown instead of navigating to the apply form when the profile is unfinished.
   const [showIncompleteProfile, setShowIncompleteProfile] = useState(false);
-  const [missingProfileFields, setMissingProfileFields] = useState<string[]>([]);
+  const [profileRequirements, setProfileRequirements] = useState<{ label: string; filled: boolean }[]>([]);
 
   const job = jobs.find((j) => String(j.id) === String(id));
 
@@ -303,9 +303,9 @@ export const JobDetail = () => {
                     // matter. The old check was `score < 100` from a percentage
                     // that could never reach 100, because an uploaded CV was
                     // invisible to it — so complete profiles were blocked.
-                    const { complete, missing } = getProfileCompletion(currentUser);
+                    const { complete, requirements } = getProfileCompletion(currentUser);
                     if (!complete) {
-                      setMissingProfileFields(missing);
+                      setProfileRequirements(requirements);
                       setShowIncompleteProfile(true);
                       return;
                     }
@@ -374,7 +374,7 @@ export const JobDetail = () => {
       <IncompleteProfileModal
         open={showIncompleteProfile}
         onClose={() => setShowIncompleteProfile(false)}
-        missing={missingProfileFields}
+        requirements={profileRequirements}
       />
 
     </div>

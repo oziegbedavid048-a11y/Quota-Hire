@@ -76,7 +76,11 @@ export const EXCHANGE_RATES: Record<string, number> = {
   ILS: 3.70,
 };
 
-export const getCurrencySymbol = (code: string): string => {
+// `code` is optional because Job.currency is: a job posted without one passed
+// undefined here and the caller rendered the literal text "undefined" next to
+// the salary. Return an empty string instead so the amount just appears bare.
+export const getCurrencySymbol = (code?: string): string => {
+  if (!code) return '';
   const found = worldCurrencies.find(c => c.code === code);
   return found ? found.symbol : code;
 };
