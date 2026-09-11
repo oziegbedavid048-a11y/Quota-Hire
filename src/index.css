@@ -99,18 +99,8 @@
   animation: float 3s ease-in-out infinite;
 }
 
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.animate-marquee {
-  display: inline-flex;
-  animation: marquee 28s linear infinite;
-  white-space: nowrap;
-}
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
+/* The marquee keyframes and .animate-marquee lived here. They existed only for
+   the scrolling "Action Required" profile banner, which has been removed. */
 
 /* Blob animation — replaces Framer Motion infinite rotate on AnimatedBackground.
    Runs on the GPU compositor thread with zero JS overhead. */

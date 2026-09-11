@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { EmployeeProfile } from '../../types';
-import { calculateProfileStrength } from '../../utils/profile';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 import { PaymentModal } from '../../components/ui/PaymentModal';
 import { ImageCropperModal } from '../../components/ui/ImageCropperModal';
@@ -127,7 +126,6 @@ export const EmployeeProfilePage = () => {
 
   if (!profile || profile.role !== 'employee') return null;
 
-  const completionScore = calculateProfileStrength(profile);
 
   const openSection = (key: SectionKey) => setActiveSection(key);
   const closeSection = () => setActiveSection(null);
@@ -615,30 +613,6 @@ export const EmployeeProfilePage = () => {
               </div>
             </div>
 
-            {/* Right: Profile Strength */}
-            <div className="w-full md:w-64 shrink-0 flex flex-col justify-center mt-2 md:mt-0 pt-5 md:pt-0 border-t md:border-t-0 md:border-l border-neutral-200 dark:border-neutral-800/50 md:pl-6">
-              <div className="flex justify-between items-center gap-2 mb-2.5">
-                <span className="text-xs font-bold text-neutral-500 flex items-center gap-1.5">
-                  <Award size={14} className="text-accent-500" /> Profile Strength
-                </span>
-                <span className="text-sm font-black text-neutral-900 dark:text-white">{completionScore}%</span>
-              </div>
-              <div className="w-full bg-neutral-200/60 dark:bg-neutral-800/60 rounded-full h-2.5 mb-2 overflow-hidden shadow-inner">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-accent-500 to-warm-500 transition-all duration-700 relative"
-                  style={{ width: `${completionScore}%` }}
-                />
-              </div>
-              {completionScore < 100 ? (
-                <p className="text-[11px] text-neutral-400 leading-tight">
-                  Complete your profile to increase visibility to employers.
-                </p>
-              ) : (
-                <p className="text-[11px] text-emerald-500 font-bold leading-tight flex items-center gap-1">
-                  <CheckCircle2 size={12} /> Ready for employers
-                </p>
-              )}
-            </div>
 
           </div>
         </motion.div>

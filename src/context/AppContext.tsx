@@ -393,6 +393,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               linkedinUrl: profileData.linkedin_url || '',
               resumeUrl: profileData.resume_url || '',
               resumeFile: profileData.resume_file || '',
+              // True when a CV exists by any route. Uploading through the app
+              // stores the file in resume_binary and leaves resume_url and
+              // resume_file empty, so those two alone made an uploaded CV
+              // invisible to the profile-completeness check.
+              hasResume: Boolean(profileData.has_resume),
+              resumeFilename: profileData.resume_filename || '',
               education: profileData.education || '',
               skills: profileData.skills || [],
               experienceYears: profileData.experience_years || 0,

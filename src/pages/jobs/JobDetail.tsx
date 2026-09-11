@@ -8,7 +8,8 @@ import {
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { toast } from 'sonner';
-import { calculateProfileStrength } from '../../utils/profile';
+import { getProfileCompletion } from '../../utils/profileCompletion';
+import { IncompleteProfileModal } from '../../components/ui/IncompleteProfileModal';
 import { EmployeeProfile } from '../../types';
 import { getCurrencySymbol } from '../../utils/currencies';
 
@@ -19,6 +20,9 @@ export const JobDetail = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasAppliedLocal, setHasAppliedLocal] = useState(false);
+  // Shown instead of navigating to the apply form when the profile is unfinished.
+  const [showIncompleteProfile, setShowIncompleteProfile] = useState(false);
+  const [missingProfileFields, setMissingProfileFields] = useState<string[]>([]);
 
   const job = jobs.find((j) => String(j.id) === String(id));
 
@@ -279,28 +283,17 @@ export const JobDetail = () => {
               ) : (
                 <button
                   onClick={() => {
-                    const score = calculateProfileStrength(currentUser as EmployeeProfile);
-                    if (score < 100) {
-                      toast.custom((t) => (
-                        <div className="bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-800 rounded-xl p-4 shadow-xl flex items-start gap-3 w-[320px]">
-                           <div className="text-amber-500 mt-0.5 text-xl">⚠️</div>
-                           <div className="flex-1">
-                             <p className="font-bold text-sm text-neutral-900 dark:text-white mb-1">Incomplete Profile</p>
-                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3 leading-relaxed">Your profile is missing details. Please complete your profile and resume details before applying to jobs to ensure accurate employer matching.</p>
-                             <div className="flex gap-2">
-                               <button 
-                                 onClick={() => { toast.dismiss(t); navigate('/employee/profile'); }} 
-                                 className="w-full text-xs font-bold text-accent-600 hover:text-accent-700 bg-accent-50 dark:bg-accent-900/30 px-3 py-2 rounded-lg transition-colors text-center"
-                               >
-                                 Complete Profile Now
-                               </button>
-                             </div>
-                           </div>
-                        </div>
-                      ), { duration: 8000 });
-                    } else {
-                      navigate(`/jobs/${job.id}/apply`);
+                    // Requirements are raised here, at the one moment they
+                    // matter. The old check was `score < 100` from a percentage
+                    // that could never reach 100, because an uploaded CV was
+                    // invisible to it — so complete profiles were blocked.
+                    const { complete, missing } = getProfileCompletion(currentUser);
+                    if (!complete) {
+                      setMissingProfileFields(missing);
+                      setShowIncompleteProfile(true);
+                      return;
                     }
+                    navigate(`/jobs/${job.id}/apply`);
                   }}
                   className="w-full sm:w-auto flex items-center justify-center gap-2 bg-accent-600 hover:bg-accent-700 active:scale-95 text-white px-6 sm:px-8 py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-accent-500/25 transition-all duration-200"
                 >
@@ -362,6 +355,11 @@ export const JobDetail = () => {
         </div>
       </div>
 
+      <IncompleteProfileModal
+        open={showIncompleteProfile}
+        onClose={() => setShowIncompleteProfile(false)}
+        missing={missingProfileFields}
+      />
 
     </div>
   );

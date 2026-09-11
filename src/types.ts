@@ -20,6 +20,9 @@ export interface EmployeeProfile extends User {
   linkedinUrl?: string;
   resumeUrl?: string;
   resumeFile?: string;
+  /** True when a CV is on file by any route (upload, stored binary, or link). */
+  hasResume?: boolean;
+  resumeFilename?: string;
   education?: string;
   skills?: string[];
   experienceYears?: number;

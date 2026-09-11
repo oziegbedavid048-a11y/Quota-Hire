@@ -9,6 +9,8 @@ import { EmployeeProfile } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 import { toast } from 'sonner';
 import { ApplyJobCVWizard } from '../../components/cv/ApplyJobCVWizard';
+import { getProfileCompletion } from '../../utils/profileCompletion';
+import { IncompleteProfileModal } from '../../components/ui/IncompleteProfileModal';
 import { apiFetch } from '../../context/AppContext';
 
 type FlowState = 'step1' | 'transition' | 'step2' | 'submitting' | 'success';
@@ -34,6 +36,21 @@ export const ApplyJobPage = () => {
   const [savedCvs, setSavedCvs] = useState<any[]>([]);
   const [loadingCvs, setLoadingCvs] = useState(false);
   const [isResumeSelectOpen, setIsResumeSelectOpen] = useState(false);
+
+  // The same profile requirement as the Apply button on the job page. Checked
+  // here too because this route can be reached directly — a bookmark, a shared
+  // link, or the browser back button — and the gate must not be bypassable by
+  // skipping the button that enforces it.
+  const [showIncompleteProfile, setShowIncompleteProfile] = useState(false);
+  const profileCompletion = getProfileCompletion(currentUser);
+
+  useEffect(() => {
+    // Wait until the profile has actually loaded before judging it, otherwise
+    // the modal flashes on first paint for everyone.
+    if (currentUser && !profileCompletion.complete) {
+      setShowIncompleteProfile(true);
+    }
+  }, [currentUser, profileCompletion.complete]);
 
   const fetchCvs = async () => {
     setLoadingCvs(true);
@@ -620,6 +637,17 @@ export const ApplyJobPage = () => {
           fetchCvs();
           toast.success("CV generated successfully. Don't forget to submit your application!");
         }}
+      />
+
+      {/* Closing this returns to the job rather than leaving the applicant on a
+          form they cannot submit. */}
+      <IncompleteProfileModal
+        open={showIncompleteProfile}
+        onClose={() => {
+          setShowIncompleteProfile(false);
+          navigate(`/jobs/${id}`);
+        }}
+        missing={profileCompletion.missing}
       />
     </div>
   );
