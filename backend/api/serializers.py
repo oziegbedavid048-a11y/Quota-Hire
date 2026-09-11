@@ -495,7 +495,8 @@ class CompanyApplicantSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def _is_promoted(self, obj):
-        return getattr(obj.job, 'package', '') == 'promoted'
+        pkg = str(getattr(obj.job, 'package', '') or '').strip().lower()
+        return pkg == 'promoted' or 'promoted' in pkg
 
     def get_employee_name(self, obj):
         return obj.employee.get_full_name() or obj.employee.username
@@ -870,50 +871,6 @@ class JobListSerializer(serializers.ModelSerializer):
     def get_description(self, obj):
         desc = obj.description or ''
         return desc[:250] + '...' if len(desc) > 250 else desc
-
-
-class CompanyApplicantListSerializer(serializers.ModelSerializer):
-    """
-    Lightweight serializer for applicants list card, omitting cover letters, education, and full profile details.
-    """
-    job_title = serializers.CharField(source='job.title', read_only=True)
-    employee_name = serializers.SerializerMethodField()
-    employee_profile = serializers.SerializerMethodField()
-    avatar_url = serializers.SerializerMethodField()
-    is_shortlisted = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Application
-        fields = ('id', 'job', 'job_title', 'employee_name', 'status', 'applied_at', 'employee_profile', 'avatar_url', 'is_shortlisted')
-        read_only_fields = fields
-
-    def get_employee_name(self, obj):
-        return obj.employee.get_full_name() or obj.employee.username
-
-    def get_employee_profile(self, obj):
-        try:
-            profile = obj.employee.employee_profile
-            # Return only minified title, bio (truncated), and first 4 skills to avoid loading excessive details
-            bio = profile.bio or ''
-            truncated_bio = bio[:200] + '...' if len(bio) > 200 else bio
-            return {
-                'title': profile.title,
-                'bio': scrub_contact_info(truncated_bio, user=obj.employee, profile=profile),
-                'skills': profile.skills[:4] if profile.skills else []
-            }
-        except EmployeeProfile.DoesNotExist:
-            return None
-
-    def get_avatar_url(self, obj):
-        request = self.context.get('request')
-        if obj.employee.avatar:
-            if request:
-                return optimize_image_url(request.build_absolute_uri(obj.employee.avatar.url))
-            return optimize_image_url(obj.employee.avatar.url)
-        return None
-
-    def get_is_shortlisted(self, obj):
-        return hasattr(obj, 'shortlist')
 
 
 class ApplicationListSerializer(serializers.ModelSerializer):

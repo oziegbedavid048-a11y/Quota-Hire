@@ -11,6 +11,8 @@ import {
   Linking,
   PanResponder,
   BackHandler,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Text } from '@/components/ui/text';
@@ -19,6 +21,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { WebView } from 'react-native-webview';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors, Palette, FontSize, FontWeight, TabBarHeight } from '@/constants/theme';
 import { apiFetch, API_BASE, getAccessToken } from '@/services/api';
@@ -77,6 +81,11 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
   const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
   const [candidateModalVisible, setCandidateModalVisible] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // In-App Resume / CV Viewer State
+  const [resumeModalVisible, setResumeModalVisible] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+  const [loadingResume, setLoadingResume] = useState(false);
 
   // Sync selected job ID from props/params or fallback to first job
   useEffect(() => {
@@ -237,32 +246,42 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
   //
   // The server now issues a ticket that unlocks exactly this one resume and
   // expires in five minutes, so it does not matter where the URL ends up.
-  // The backend no longer accepts a raw access token here at all.
-  // There is deliberately no `?token=` fallback. The server rejects a raw access
-  // token here with 401, so a fallback could never succeed — it would only keep
-  // the credential-in-URL pattern alive in the codebase, waiting to be copied.
+  // View Resume PDF directly in-app
   const handleOpenResume = async (appId: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLoadingResume(true);
     try {
       const { url } = await apiFetch(`/company/applications/${appId}/resume/ticket/`, {
         method: 'POST',
       });
-      // A missing url used to fall through silently, leaving the button dead
-      // with nothing shown to the user.
       if (!url) throw new Error('The server did not return a resume link.');
-      await Linking.openURL(`${API_BASE.replace(/\/api\/?$/, '')}${url}`);
+      const fullUrl = `${API_BASE.replace(/\/api\/?$/, '')}${url}`;
+      setResumeUrl(fullUrl);
+      setResumeModalVisible(true);
     } catch (err: any) {
       Alert.alert(
         'Resume Viewer',
         err?.message || 'Unable to open resume document at this time.'
       );
+    } finally {
+      setLoadingResume(false);
     }
   };
 
-  const handleViewCandidate = (candidate: any) => {
+  const handleViewCandidate = async (candidate: any) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedCandidate(candidate);
     setCandidateModalVisible(true);
+
+    // Concurrently fetch full application detail to guarantee fresh, unmasked contact fields
+    try {
+      const detailed = await apiFetch(`/company/applications/${candidate.id}/`);
+      if (detailed && detailed.id === candidate.id) {
+        setSelectedCandidate(detailed);
+      }
+    } catch {
+      // Retain already set candidate state
+    }
   };
 
   // Filtering
@@ -582,6 +601,28 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                   </View>
                 </View>
 
+                {/* ── PROFESSIONAL SUMMARY (Rearranged & Professionalized) ── */}
+                {selectedCandidate.employee_profile?.bio && (
+                  <View style={styles.summaryCard}>
+                    <View style={styles.summaryHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Feather name="file-text" size={13} color={Palette.accent600} />
+                        <Text style={styles.summaryTitle}>Executive Summary</Text>
+                      </View>
+                      <View style={styles.summaryBadge}>
+                        <Text style={styles.summaryBadgeText}>Candidate Bio</Text>
+                      </View>
+                    </View>
+                    <View style={styles.summaryContentBox}>
+                      <Text style={styles.summaryText}>
+                        {isPromoted
+                          ? selectedCandidate.employee_profile.bio
+                          : cleanText(selectedCandidate.employee_profile.bio)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
                 {/* ── UNMASKED CONTACT INFO CARD (PROMOTED ONLY) ── */}
                 {isPromoted ? (
                   <View style={styles.contactCard}>
@@ -700,28 +741,26 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.resumeTitle}>Candidate Resume / CV</Text>
-                        <Text style={styles.resumeSub}>Original application document (PDF format)</Text>
+                        <Text style={styles.resumeSub}>Original application document</Text>
                       </View>
                     </View>
                     <Pressable
                       onPress={() => handleOpenResume(selectedCandidate.id)}
-                      style={styles.resumeDownloadBtn}
+                      disabled={loadingResume}
+                      style={({ pressed }) => [
+                        styles.resumeViewBtn,
+                        { opacity: pressed || loadingResume ? 0.8 : 1 }
+                      ]}
                     >
-                      <Feather name="download" size={14} color="#ffffff" style={{ marginRight: 6 }} />
-                      <Text style={styles.resumeDownloadBtnText}>View / Download</Text>
+                      {loadingResume ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <>
+                          <Feather name="eye" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+                          <Text style={styles.resumeViewBtnText}>View CV</Text>
+                        </>
+                      )}
                     </Pressable>
-                  </View>
-                )}
-
-                {/* ── PROFESSIONAL SUMMARY ── */}
-                {selectedCandidate.employee_profile?.bio && (
-                  <View style={styles.modalSectionCard}>
-                    <Text style={styles.modalSectionLabel}>Professional Summary</Text>
-                    <Text style={styles.modalSectionVal}>
-                      {isPromoted
-                        ? selectedCandidate.employee_profile.bio
-                        : cleanText(selectedCandidate.employee_profile.bio)}
-                    </Text>
                   </View>
                 )}
 
@@ -875,6 +914,72 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
             )}
           </View>
         </View>
+      </Modal>
+
+      {/* ── 7. IN-APP RESUME / CV VIEWER MODAL ── */}
+      <Modal
+        visible={resumeModalVisible}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setResumeModalVisible(false)}
+      >
+        <SafeAreaView style={styles.viewerSafeArea} edges={['top', 'bottom', 'left', 'right']}>
+          {/* Top Navigation Bar with Title and Close Button */}
+          <View style={styles.viewerHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.viewerTitle} numberOfLines={1}>
+                {selectedCandidate?.employee_name ? `${selectedCandidate.employee_name}'s CV` : 'Candidate Resume'}
+              </Text>
+              <Text style={styles.viewerSub} numberOfLines={1}>
+                {activeJob?.title || 'Job Application'}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setResumeModalVisible(false);
+              }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={({ pressed }) => [
+                styles.viewerCloseBtn,
+                { opacity: pressed ? 0.7 : 1 }
+              ]}
+            >
+              <Feather name="x" size={16} color="#0f172a" />
+              <Text style={styles.viewerCloseBtnText}>Close</Text>
+            </Pressable>
+          </View>
+
+          {/* In-App Document Viewer */}
+          <View style={styles.viewerContent}>
+            {resumeUrl ? (
+              <WebView
+                source={{
+                  uri: Platform.OS === 'android'
+                    ? `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(resumeUrl)}`
+                    : resumeUrl
+                }}
+                style={styles.viewerWebView}
+                scalesPageToFit={true}
+                startInLoadingState={true}
+                renderLoading={() => (
+                  <View style={styles.viewerLoadingWrap}>
+                    <ActivityIndicator size="large" color={Palette.accent600} />
+                    <Text style={styles.viewerLoadingText}>Loading Document...</Text>
+                  </View>
+                )}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+              />
+            ) : (
+              <View style={styles.viewerLoadingWrap}>
+                <ActivityIndicator size="large" color={Palette.accent600} />
+                <Text style={styles.viewerLoadingText}>Opening Document...</Text>
+              </View>
+            )}
+          </View>
+        </SafeAreaView>
       </Modal>
     </View>
   );
@@ -1336,18 +1441,124 @@ const styles = StyleSheet.create({
     color: Palette.emerald600,
     marginTop: 1,
   },
-  resumeDownloadBtn: {
+  resumeViewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Palette.emerald600,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 10,
   },
-  resumeDownloadBtnText: {
+  resumeViewBtnText: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
     color: '#ffffff',
+  },
+
+  // Professional Summary Card
+  summaryCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderLeftWidth: 3.5,
+    borderLeftColor: Palette.accent600,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
+    gap: 8,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.extrabold,
+    color: Palette.neutral900,
+  },
+  summaryBadge: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  summaryBadgeText: {
+    fontSize: 9.5,
+    fontWeight: FontWeight.bold,
+    color: Palette.neutral500,
+  },
+  summaryContentBox: {
+    paddingTop: 2,
+  },
+  summaryText: {
+    fontSize: 13,
+    color: '#334155',
+    lineHeight: 20,
+    letterSpacing: 0.1,
+  },
+
+  // In-App Viewer Styles
+  viewerSafeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  viewerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+    gap: 12,
+  },
+  viewerTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.extrabold,
+    color: '#0f172a',
+  },
+  viewerSub: {
+    fontSize: 11,
+    color: Palette.neutral500,
+    marginTop: 1,
+  },
+  viewerCloseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 99,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  viewerCloseBtnText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: '#0f172a',
+  },
+  viewerContent: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  viewerWebView: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  viewerLoadingWrap: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  viewerLoadingText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Palette.neutral600,
   },
 
   // Modal Section Cards
