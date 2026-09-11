@@ -197,7 +197,11 @@ class APICacheControlMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
 
-        if request.method != 'GET' or response.status_code != 200:
+        # HEAD is included: per RFC 9110 it must return the same headers as GET,
+        # and skipping it meant private endpoints answered a HEAD request with no
+        # `no-store` at all — the security-relevant half of this middleware
+        # simply did not apply.
+        if request.method not in ('GET', 'HEAD') or response.status_code != 200:
             return response
 
         if not request.path.startswith('/api/'):
