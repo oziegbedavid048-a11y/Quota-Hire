@@ -56,3 +56,11 @@ SECURITY_FIXES_DEPLOY.md
 # Build artefacts
 build_output.txt
 build.zip
+
+# Third-party agent skills installed via `npx skills add`.
+# These are vendor packages, not project source, and they run with full agent
+# permissions — keep them out of the public repo and off other machines.
+.agents/
+.claude/skills/
+# ignore the installer lockfile too
+skills-lock.json
