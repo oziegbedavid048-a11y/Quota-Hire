@@ -15,6 +15,8 @@ export interface CompanyJob {
   postedAt: string;
   applicantsCount: number;
   package?: string;
+  companyLogoUrl?: string;
+  companyName?: string;
 }
 
 export interface CompanyApplication {
@@ -182,6 +184,8 @@ export function useCompanyDashboardData() {
           postedAt: j.created_at || new Date().toISOString(),
           applicantsCount: j.applicants_count || 0,
           package: j.package || '',
+          companyLogoUrl: j.company_logo_url || j.company_logo || '',
+          companyName: j.company_name || '',
         }));
         inMemoryCompanyJobs = normalizedJobs;
         setJobs(normalizedJobs);
@@ -202,6 +206,7 @@ export function useCompanyDashboardData() {
             industry: compProfile.industry || normalizedCompany.industry || '',
             aboutCompany: compProfile.about_company || normalizedCompany.aboutCompany || '',
             avatarUrl: compProfile.logo_url || normalizedCompany.avatarUrl || '',
+            logoUrl: compProfile.logo_url || normalizedCompany.logoUrl || '',
           };
           inMemoryCompany = updatedCompany;
           setCompany(updatedCompany);

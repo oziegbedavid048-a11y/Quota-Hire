@@ -29,20 +29,27 @@ const JOB_STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string
   closed:   { label: 'Closed', dot: Palette.neutral400, bg: Palette.neutral100, text: Palette.neutral600 },
 };
 
-export default function CompanyMyJobs() {
+interface CompanyMyJobsProps {
+  onSelectJob?: (job: CompanyJob) => void;
+}
+
+export default function CompanyMyJobs({ onSelectJob }: CompanyMyJobsProps = {}) {
   const colors = Colors.light;
   const router = useRouter();
   
-  const { jobs, refreshData, isLoading } = useCompanyDashboardData();
+  const { jobs, company, refreshData, isLoading } = useCompanyDashboardData();
 
   const handleManage = useCallback((job: CompanyJob) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (onSelectJob) {
+      onSelectJob(job);
+    }
     // Navigates to Job Applicants view passing the jobId parameter
     router.push({
       pathname: '/tracker',
       params: { jobId: job.id, view: 'applicants' },
     } as any);
-  }, []);
+  }, [onSelectJob, router]);
 
   return (
     <View style={styles.root}>
@@ -117,22 +124,43 @@ export default function CompanyMyJobs() {
           <View style={styles.listContainer}>
             {jobs.map((job, index) => {
               const statusCfg = JOB_STATUS_CONFIG[job.status] || JOB_STATUS_CONFIG.pending;
+              const logoUri = job.companyLogoUrl || company?.logoUrl || company?.avatarUrl;
+              const isPromoted = job.package === 'promoted';
+
               return (
                 <Animated.View
                   key={job.id}
                   entering={FadeInDown.delay(index * 60).springify()}
                   style={[styles.jobCard, { borderColor: colors.borderMid }]}
                 >
-                  {/* Left Initial bubble */}
+                  {/* Left Company Logo or Initial bubble */}
                   <View style={styles.jobCardTop}>
-                    <LinearGradient
-                      colors={['#FCEFCF', '#E1F6DD']}
-                      style={styles.initialBubble}
-                    >
-                      <Text style={styles.initialText}>{(job.title || 'J').charAt(0)}</Text>
-                    </LinearGradient>
+                    {logoUri ? (
+                      <View style={[styles.logoBubble, { borderColor: colors.borderMid }]}>
+                        <Image source={{ uri: logoUri }} style={styles.logoImg} contentFit="contain" />
+                      </View>
+                    ) : (
+                      <LinearGradient
+                        colors={['#FCEFCF', '#E1F6DD']}
+                        style={styles.initialBubble}
+                      >
+                        <Text style={styles.initialText}>
+                          {(company?.companyName || job.companyName || job.title || 'Q').charAt(0).toUpperCase()}
+                        </Text>
+                      </LinearGradient>
+                    )}
                     <View style={styles.jobInfo}>
-                      <Text style={[styles.jobTitle, { color: colors.text }]} numberOfLines={1}>{job.title}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={[styles.jobTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>
+                          {job.title}
+                        </Text>
+                        {isPromoted && (
+                          <View style={styles.promotedTag}>
+                            <Feather name="zap" size={10} color={Palette.emerald700} />
+                            <Text style={styles.promotedTagText}>Promoted</Text>
+                          </View>
+                        )}
+                      </View>
                       <View style={styles.metaRow}>
                         <Feather name="map-pin" size={11} color={colors.textMuted} />
                         <Text style={[styles.metaText, { color: colors.textMuted }]}>
@@ -213,8 +241,12 @@ const styles = StyleSheet.create({
   jobCardTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   initialBubble: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   initialText: { fontSize: 18, fontWeight: FontWeight.extrabold, color: Palette.neutral800 },
+  logoBubble: { width: 44, height: 44, borderRadius: 10, borderWidth: 1, backgroundColor: '#ffffff', overflow: 'hidden', alignItems: 'center', justifyContent: 'center', padding: 3 },
+  logoImg: { width: '100%', height: '100%' },
   jobInfo: { flex: 1, gap: 4 },
   jobTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.extrabold },
+  promotedTag: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#dcfce7', borderWidth: 1, borderColor: '#86efac', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99 },
+  promotedTagText: { fontSize: 9, fontWeight: FontWeight.extrabold, color: '#15803d' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: FontSize.xs },
 

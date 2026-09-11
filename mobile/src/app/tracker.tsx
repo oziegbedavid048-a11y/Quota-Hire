@@ -16,7 +16,7 @@ import * as Haptics from 'expo-haptics';
 
 import CompanyMyJobs from '@/components/company-my-jobs';
 import CompanyApplicants from '@/components/company-applicants';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SkeletonApplicationCard } from '@/components/ui/skeleton';
 import {
   Colors, Palette, Shadow, BorderRadius, TabBarHeight,
@@ -42,12 +42,22 @@ export default function TrackerScreen() {
   const c = Colors[isDark ? 'dark' : 'light'];
   
   const role = useStoredRole();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ jobId?: string; view?: string }>();
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(params.jobId || null);
+
+  useEffect(() => {
+    if (params.jobId) {
+      setSelectedJobId(params.jobId);
+    } else if (params.view !== 'applicants' && !params.jobId) {
+      setSelectedJobId(null);
+    }
+  }, [params.jobId, params.view]);
 
   const { applications, jobs, isLoading } = useEmployeeDashboardData();
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<typeof ALL_STATUSES[number]>('all');
-
 
   const filtered = applications.filter(app => {
     const matchSearch =
@@ -62,13 +72,26 @@ export default function TrackerScreen() {
     return acc;
   }, {} as Record<string, number>);
 
-  const params = useLocalSearchParams<{ jobId?: string; view?: string }>();
-
   if (role === 'company') {
-    if (params.view === 'applicants' || params.jobId) {
-      return <CompanyApplicants />;
+    if (selectedJobId || params.view === 'applicants' || params.jobId) {
+      return (
+        <CompanyApplicants
+          jobId={selectedJobId || params.jobId}
+          onBack={() => {
+            setSelectedJobId(null);
+            router.replace({ pathname: '/tracker', params: {} } as any);
+          }}
+        />
+      );
     }
-    return <CompanyMyJobs />;
+    return (
+      <CompanyMyJobs
+        onSelectJob={(job) => {
+          setSelectedJobId(job.id);
+          router.setParams({ jobId: job.id, view: 'applicants' } as any);
+        }}
+      />
+    );
   }
 
   return (

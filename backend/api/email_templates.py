@@ -395,6 +395,7 @@ def get_job_submitted_email_html(user, job_title, package=None, currency='USD'):
     if package == 'promoted':
         fee_info = get_promoted_job_fee(currency)
         fee_formatted = _esc(fee_info['formatted'])
+        paystack_payment_url = "https://paystack.shop/pay/li1aaf6q8c"
         frontend_url = getattr(settings, 'FRONTEND_URL', 'https://quotahire.org').strip()
         dashboard_url = f"{frontend_url}/dashboard"
 
@@ -434,11 +435,15 @@ def get_job_submitted_email_html(user, job_title, package=None, currency='USD'):
             '</ul>'
             '</div>' +
             _p(
-                "Click the button below to review your listing and complete your payment via your company dashboard:"
+                "Click the button below to complete your payment securely via Paystack and launch your listing:"
             ) +
-            _cta(dashboard_url, "Complete Payment &amp; View Job") +
+            _cta(paystack_payment_url, "Pay Now via Paystack") +
+            '<div style="background-color:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:14px;margin:18px 0;text-align:center;">'
+            '<div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Direct Paystack Payment Link</div>'
+            f'<a href="{paystack_payment_url}" target="_blank" rel="noopener noreferrer" style="color:#1A6515;font-weight:700;font-size:13px;word-break:break-all;text-decoration:underline;">{paystack_payment_url}</a>'
+            '</div>' +
             _p(
-                '<span style="font-size:13px;color:#64748b;">Need an invoice or bank transfer details? Simply reply directly to this email or contact our support desk at <a href="mailto:support@quotahire.org" style="color:#1A6515;text-decoration:underline;">support@quotahire.org</a>.</span>'
+                f'<span style="font-size:13px;color:#64748b;">You can also review your job submission anytime from your <a href="{dashboard_url}" style="color:#1A6515;text-decoration:underline;">company dashboard</a>. Need an invoice or bank transfer details? Simply reply directly to this email or contact our support desk at <a href="mailto:support@quotahire.org" style="color:#1A6515;text-decoration:underline;">support@quotahire.org</a>.</span>'
             ) +
             _signoff()
         )

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -9,7 +9,10 @@ import {
   Dimensions,
   FlatList,
   Linking,
+  PanResponder,
+  BackHandler,
 } from 'react-native';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Text } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -54,11 +57,18 @@ const cleanText = (text: string) => {
   return cleaned.trim();
 };
 
-export default function CompanyApplicants() {
-  const colors = Colors.light;
+interface CompanyApplicantsProps {
+  jobId?: string;
+  onBack?: () => void;
+}
 
-  const { jobs } = useCompanyDashboardData();
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsProps = {}) {
+  const colors = Colors.light;
+  const router = useRouter();
+  const params = useLocalSearchParams<{ jobId?: string; view?: string }>();
+
+  const { jobs, company } = useCompanyDashboardData();
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(jobId || params.jobId || null);
   const [applicants, setApplicants] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'shortlisted' | 'interview' | 'accepted' | 'rejected'>('all');
@@ -68,15 +78,59 @@ export default function CompanyApplicants() {
   const [candidateModalVisible, setCandidateModalVisible] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  // Auto-select first job if none selected
+  // Sync selected job ID from props/params or fallback to first job
   useEffect(() => {
-    if (!selectedJobId && jobs && jobs.length > 0) {
+    if (jobId) {
+      setSelectedJobId(jobId);
+    } else if (params.jobId) {
+      setSelectedJobId(params.jobId);
+    } else if (!selectedJobId && jobs && jobs.length > 0) {
       setSelectedJobId(jobs[0].id);
     }
-  }, [jobs, selectedJobId]);
+  }, [jobId, params.jobId, jobs, selectedJobId]);
 
   const activeJob: CompanyJob | undefined = jobs.find(j => String(j.id) === String(selectedJobId));
   const isPromoted = activeJob?.package === 'promoted';
+  const companyLogo = activeJob?.companyLogoUrl || company?.logoUrl || company?.avatarUrl;
+
+  // Back navigation returning specifically to My Jobs list
+  const handleBack = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (onBack) {
+      onBack();
+    } else {
+      router.replace({ pathname: '/tracker', params: {} } as any);
+    }
+  }, [onBack, router]);
+
+  // Android hardware back button handler -> returns to roles list
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBack();
+        return true;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [handleBack])
+  );
+
+  // Left swipe gesture detector -> swiping from the left-hand edge returns to My Jobs list
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const isFromLeftEdge = evt.nativeEvent.pageX <= 80;
+        const isMovingRight = gestureState.dx > 25;
+        const isHorizontal = gestureState.dx > Math.abs(gestureState.dy) * 1.5;
+        return isFromLeftEdge && isMovingRight && isHorizontal;
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (gestureState.dx > 50 || gestureState.vx > 0.35) {
+          handleBack();
+        }
+      },
+    })
+  ).current;
 
   const fetchApplicants = async (id: string) => {
     setLoading(true);
@@ -184,26 +238,24 @@ export default function CompanyApplicants() {
   // The server now issues a ticket that unlocks exactly this one resume and
   // expires in five minutes, so it does not matter where the URL ends up.
   // The backend no longer accepts a raw access token here at all.
+  // There is deliberately no `?token=` fallback. The server rejects a raw access
+  // token here with 401, so a fallback could never succeed — it would only keep
+  // the credential-in-URL pattern alive in the codebase, waiting to be copied.
   const handleOpenResume = async (appId: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       const { url } = await apiFetch(`/company/applications/${appId}/resume/ticket/`, {
         method: 'POST',
       });
-      if (url) {
-        await Linking.openURL(`${API_BASE.replace(/\/api\/?$/, '')}${url}`);
-        return;
-      }
-    } catch (_ticketErr) {
-      // Fallback to direct token
-      try {
-        const token = await getAccessToken();
-        const fallbackUrl = `${API_BASE}/company/applications/${appId}/resume/?token=${encodeURIComponent(token || '')}`;
-        await Linking.openURL(fallbackUrl);
-        return;
-      } catch (err: any) {
-        Alert.alert('Resume Viewer', err?.message || 'Unable to open resume document at this time.');
-      }
+      // A missing url used to fall through silently, leaving the button dead
+      // with nothing shown to the user.
+      if (!url) throw new Error('The server did not return a resume link.');
+      await Linking.openURL(`${API_BASE.replace(/\/api\/?$/, '')}${url}`);
+    } catch (err: any) {
+      Alert.alert(
+        'Resume Viewer',
+        err?.message || 'Unable to open resume document at this time.'
+      );
     }
   };
 
@@ -227,7 +279,7 @@ export default function CompanyApplicants() {
   const acceptedCount = applicants.filter(a => a.status === 'accepted').length;
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} {...panResponder.panHandlers}>
       {/* Background Gradient */}
       <LinearGradient
         colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
@@ -236,39 +288,35 @@ export default function CompanyApplicants() {
         end={{ x: 1, y: 1 }}
       />
 
-      {/* ── 1. HEADER (No back arrow button) ── */}
+      {/* ── 1. HEADER (With Back Arrow, No roles count or package badge at top) ── */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.headerTitle}>Job Applicants</Text>
-            <Text style={styles.headerSub}>
-              {jobs.length} Active {jobs.length === 1 ? 'Role' : 'Roles'} Listed
+          <Pressable
+            onPress={handleBack}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={({ pressed }) => [
+              styles.backBtn,
+              { opacity: pressed ? 0.65 : 1 }
+            ]}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+            <Text style={styles.backBtnText}>My Jobs</Text>
+          </Pressable>
+
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle} numberOfLines={1}>Job Applicants</Text>
+          </View>
+
+          <View style={styles.headerCountBadge}>
+            <Feather name="users" size={11} color={Palette.accent700} />
+            <Text style={styles.headerCountText}>
+              {applicants.length} Candidate{applicants.length !== 1 ? 's' : ''}
             </Text>
           </View>
-          {activeJob && (
-            <View style={[
-              styles.packageBadge,
-              isPromoted
-                ? { backgroundColor: Palette.emerald50, borderColor: '#a7f3d0' }
-                : { backgroundColor: Palette.neutral100, borderColor: '#cbd5e1' }
-            ]}>
-              <Feather
-                name={isPromoted ? "zap" : "shield"}
-                size={11}
-                color={isPromoted ? Palette.emerald600 : Palette.neutral600}
-              />
-              <Text style={[
-                styles.packageBadgeText,
-                { color: isPromoted ? EmeraldGreen : Palette.neutral600 }
-              ]}>
-                {isPromoted ? 'Promoted Direct Access' : 'Agency Package'}
-              </Text>
-            </View>
-          )}
         </View>
       </View>
 
-      {/* ── 2. HERO BANNER (Directly below header) ── */}
+      {/* ── 2. HERO BANNER (Directly below Header — Single Clicked Job Only) ── */}
       <Animated.View entering={FadeInDown.springify()} style={[styles.heroCard, { borderColor: colors.borderMid }]}>
         <LinearGradient
           colors={['#FCEFCF', '#E1F6DD']}
@@ -277,69 +325,66 @@ export default function CompanyApplicants() {
           end={{ x: 1, y: 1 }}
         />
         <View style={styles.heroContent}>
-          <View style={{ flex: 1 }}>
-            <View style={[styles.badge, { backgroundColor: 'rgba(255, 255, 255, 0.7)', borderColor: colors.borderMid }]}>
-              <Feather name={isPromoted ? "zap" : "users"} size={11} color={Palette.accent600} />
-              <Text style={styles.badgeText}>
-                {isPromoted ? '⚡ Promoted Job Pipeline' : 'Applicants Pipeline'}
+          {/* Company Logo or Monogram */}
+          {companyLogo ? (
+            <View style={[styles.bannerLogoWrap, { borderColor: colors.borderMid }]}>
+              <Image source={{ uri: companyLogo }} style={styles.bannerLogoImg} contentFit="contain" />
+            </View>
+          ) : (
+            <LinearGradient colors={['#FCEFCF', '#E1F6DD']} style={styles.bannerLogoWrap}>
+              <Text style={styles.bannerLogoInitial}>
+                {(company?.companyName || activeJob?.companyName || activeJob?.title || 'Q').charAt(0).toUpperCase()}
+              </Text>
+            </LinearGradient>
+          )}
+
+          <View style={{ flex: 1, gap: 3 }}>
+            <View style={[
+              styles.packagePill,
+              isPromoted
+                ? { backgroundColor: '#dcfce7', borderColor: '#86efac' }
+                : { backgroundColor: 'rgba(255,255,255,0.75)', borderColor: colors.borderMid }
+            ]}>
+              <Feather
+                name={isPromoted ? "zap" : "users"}
+                size={10}
+                color={isPromoted ? EmeraldDark : Palette.accent700}
+              />
+              <Text style={[
+                styles.packagePillText,
+                { color: isPromoted ? EmeraldDark : Palette.accent700 }
+              ]}>
+                {isPromoted ? 'Promoted • Direct Access' : 'Evaluating Candidates'}
               </Text>
             </View>
-            <Text style={styles.heroTitle}>
-              {isPromoted ? 'Direct Candidate Access' : 'Evaluate Candidates'}
+
+            <Text style={styles.heroJobTitle} numberOfLines={1}>
+              {activeJob?.title || 'Job Listing'}
             </Text>
-            <Text style={styles.heroSub}>
-              {isPromoted
-                ? 'Review full candidate contact info, download original CVs, and manage hiring decisions directly.'
-                : 'Review anonymized candidate profiles and shortlist top talent for Quota Hire placement.'}
-            </Text>
+
+            <View style={styles.heroMetaRow}>
+              <Text style={[styles.heroCompanyText, { color: colors.textSecondary }]} numberOfLines={1}>
+                {activeJob?.companyName || company?.companyName || 'Company'}
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 10 }}>•</Text>
+              <Feather name="map-pin" size={11} color={colors.textMuted} />
+              <Text style={[styles.heroMetaText, { color: colors.textMuted }]}>
+                {activeJob?.workType === 'Remote' ? 'Remote' : activeJob?.location || 'Hybrid'}
+              </Text>
+            </View>
           </View>
-          <Image
-            source={require('../../assets/images/illustrations/applicant_reviewer.webp')}
-            style={styles.heroIllustration}
-            contentFit="contain"
-          />
+        </View>
+
+        <View style={styles.bannerBottomStrip}>
+          <Text style={styles.bannerBottomText} numberOfLines={2}>
+            {isPromoted
+              ? '⚡ Direct Access Plan: Unmasked applicant email, phone, and original CV downloads are active.'
+              : 'Review candidate profiles and shortlist qualified sales talent for Quota Hire placement.'}
+          </Text>
         </View>
       </Animated.View>
 
-      {/* ── 3. JOB SELECTOR CHIPS (Cleanly below hero banner) ── */}
-      <View style={styles.jobSelectorSection}>
-        <Text style={styles.jobSelectorLabel}>SELECT JOB LISTING</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.jobChips}
-        >
-          {jobs.map(job => {
-            const isThisPromoted = job.package === 'promoted';
-            const isSelected = String(selectedJobId) === String(job.id);
-            return (
-              <Pressable
-                key={job.id}
-                onPress={() => {
-                  setSelectedJobId(job.id);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                style={[
-                  styles.jobChip,
-                  isSelected ? styles.jobChipActive : { backgroundColor: '#ffffff', borderColor: colors.borderMid }
-                ]}
-              >
-                {isThisPromoted && (
-                  <View style={[styles.promotedChipTag, isSelected && { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
-                    <Feather name="zap" size={10} color={isSelected ? '#ffffff' : Palette.emerald600} />
-                    <Text style={[styles.promotedChipTagText, isSelected && { color: '#ffffff' }]}>Promoted</Text>
-                  </View>
-                )}
-                <Text style={[styles.jobChipText, isSelected && { color: '#ffffff' }]} numberOfLines={1}>
-                  {job.title}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* ── 4. FILTER TABS BAR ── */}
+      {/* ── 3. FILTER TABS BAR (Clean & Minimal) ── */}
       <View style={styles.filterBar}>
         {[
           { key: 'all', label: `All (${applicants.length})` },
@@ -355,7 +400,7 @@ export default function CompanyApplicants() {
             }}
             style={[styles.filterTab, activeFilter === tab.key && styles.filterTabActive]}
           >
-            <Text style={[styles.filterTabText, activeFilter === tab.key && { color: Palette.accent600 }]}>
+            <Text style={[styles.filterTabText, activeFilter === tab.key && styles.filterTabActiveText]}>
               {tab.label}
             </Text>
           </Pressable>
@@ -900,138 +945,140 @@ export default function CompanyApplicants() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
-  // Header (No back arrow button)
+  // Header
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 14,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
-    backgroundColor: 'rgba(255, 251, 235, 0.95)',
+    backgroundColor: 'rgba(255, 251, 235, 0.96)',
   },
   headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  headerTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.extrabold,
-    color: '#0f172a',
-  },
-  headerSub: {
-    fontSize: FontSize.xs,
-    color: Palette.neutral500,
-    marginTop: 2,
-  },
-  packageBadge: {
+  backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    paddingVertical: 6,
     paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  backBtnText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: '#0f172a',
+  },
+  headerTitleWrap: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  headerTitle: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.extrabold,
+    color: '#0f172a',
+  },
+  headerCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 9,
     paddingVertical: 5,
     borderRadius: 99,
-    borderWidth: 1,
   },
-  packageBadgeText: {
+  headerCountText: {
     fontSize: 10,
     fontWeight: FontWeight.bold,
+    color: Palette.neutral700,
   },
 
-  // Hero banner (Directly below header)
+  // Hero Banner
   heroCard: {
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     padding: 16,
     marginHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 10,
+    marginTop: 12,
+    marginBottom: 8,
+    gap: 10,
   },
   heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  badge: {
+  bannerLogoWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 3,
+  },
+  bannerLogoImg: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerLogoInitial: {
+    fontSize: 20,
+    fontWeight: FontWeight.extrabold,
+    color: Palette.neutral800,
+  },
+  packagePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 99,
     borderWidth: 1,
     alignSelf: 'flex-start',
-    marginBottom: 6,
   },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: FontWeight.bold,
-    color: Palette.neutral700,
+  packagePillText: {
+    fontSize: 9,
+    fontWeight: FontWeight.extrabold,
   },
-  heroTitle: {
-    fontSize: 17,
+  heroJobTitle: {
+    fontSize: FontSize.base,
     fontWeight: FontWeight.extrabold,
     color: '#0f172a',
-    marginBottom: 3,
   },
-  heroSub: {
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  heroCompanyText: {
     fontSize: 11,
+    fontWeight: FontWeight.semibold,
+  },
+  heroMetaText: {
+    fontSize: 11,
+  },
+  bannerBottomStrip: {
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+  },
+  bannerBottomText: {
+    fontSize: 10,
+    lineHeight: 14,
     color: Palette.neutral600,
-    lineHeight: 15,
-  },
-  heroIllustration: {
-    width: 76,
-    height: 76,
-    marginLeft: 8,
-  },
-
-  // Job Selector
-  jobSelectorSection: {
-    paddingHorizontal: 16,
-    marginBottom: 10,
-  },
-  jobSelectorLabel: {
-    fontSize: 9,
-    fontWeight: FontWeight.extrabold,
-    color: Palette.neutral400,
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-  jobChips: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  jobChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  jobChipActive: {
-    backgroundColor: Palette.accent600,
-    borderColor: Palette.accent600,
-  },
-  jobChipText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: Palette.neutral700,
-  },
-  promotedChipTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: Palette.emerald50,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  promotedChipTagText: {
-    fontSize: 9,
-    fontWeight: FontWeight.extrabold,
-    color: EmeraldGreen,
+    fontWeight: FontWeight.medium,
   },
 
   // Filters Bar
@@ -1040,21 +1087,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
     backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 4,
+    marginBottom: 6,
+    padding: 3,
   },
   filterTab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderRadius: 9,
   },
   filterTabActive: {
-    borderBottomColor: Palette.accent500,
+    backgroundColor: Palette.accent500,
   },
   filterTabText: {
     fontSize: 11,
     fontWeight: FontWeight.bold,
     color: Palette.neutral500,
+  },
+  filterTabActiveText: {
+    color: '#ffffff',
   },
 
   // Candidate Cards List
