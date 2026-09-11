@@ -10,7 +10,6 @@ import { useAppContext } from '../../context/AppContext';
 import { toast } from 'sonner';
 import { getProfileCompletion } from '../../utils/profileCompletion';
 import { IncompleteProfileModal } from '../../components/ui/IncompleteProfileModal';
-import { EmployeeProfile } from '../../types';
 import { getCurrencySymbol } from '../../utils/currencies';
 
 export const JobDetail = () => {

@@ -2133,10 +2133,20 @@ class ApplyForJobView(APIView):
         except Job.DoesNotExist:
             return Response({'error': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        # A closed role is publicly visible — JobDetailView serves both
+        # 'approved' and 'closed' — so saying so is useful and reveals nothing.
         if job.status == 'closed':
-            return Response({'error': 'This position is closed and is no longer accepting applications.'}, status=status.HTTP_400_BAD_REQUEST)
-        elif job.status != 'approved':
-            return Response({'error': 'Job is not open for applications.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'This position is closed and is no longer accepting applications.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 'pending' and 'rejected' jobs are NOT publicly visible: the job list
+        # filters to approved, and JobDetailView 404s on them. Answering 400
+        # here told an employee that a job id exists but has not been approved,
+        # which is exactly what those 404s are there to hide. Match them.
+        if job.status != 'approved':
+            return Response({'error': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         if Application.objects.filter(job=job, employee=request.user).exists():
             return Response({'error': 'You have already applied for this job.'}, status=status.HTTP_400_BAD_REQUEST)

@@ -13,7 +13,7 @@ import pdfjsPolyfillSource from '../../utils/pdfjsPolyfills.js?raw';
 
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
-import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 // Use the CDN worker that matches the installed pdfjs-dist version.
 // This is the most reliable approach for blob: URL rendering in Vite.
@@ -103,9 +103,14 @@ export function PdfPreview({ url }: PdfPreviewProps) {
         const arrayBuffer = await response.arrayBuffer();
         if (!isActive) return;
 
+        // `isEvalSupported: false` used to be passed here. pdf.js 6 removed the
+        // option entirely — it appears nowhere in the runtime — so it was
+        // silently ignored and gave no protection. Dropping it stops the code
+        // implying a safeguard that does not exist. What actually limits risk
+        // here is that this component only ever renders a PDF the app generated
+        // moments earlier, never a user-supplied file.
         const loadingTask = pdfjsLib.getDocument({
           data: new Uint8Array(arrayBuffer),
-          isEvalSupported: false,
         });
         const pdf = await loadingTask.promise;
         

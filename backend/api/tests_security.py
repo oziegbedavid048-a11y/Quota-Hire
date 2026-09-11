@@ -2629,14 +2629,62 @@ class JobApprovalWorkflowTests(ThrottleIsolatedTestCase):
 
     # -- the approval itself --------------------------------------------------
 
-    def test_only_an_admin_can_change_status(self):
+    def test_nobody_but_an_admin_can_approve_a_job(self):
+        """The owning company may now close its own approved listing, so it is no
+        longer refused outright at the permission layer. What must never happen
+        is a company approving its own job and skipping review — that is what
+        this asserts, by status and by the stored value."""
+        from .models import Job
         job_id = self._post_job().data['id']
         url = reverse('job-status-update', args=[job_id])
+
         for actor in (self.company, self.employee):
             with self.subTest(actor=actor.role):
                 self.client.force_authenticate(user=actor)
                 resp = self.client.put(url, {'status': 'approved'}, format='json')
-                self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+                self.assertIn(
+                    resp.status_code,
+                    (status.HTTP_400_BAD_REQUEST, status.HTTP_403_FORBIDDEN),
+                    'a non-admin must not be able to approve a job',
+                )
+                self.assertEqual(
+                    Job.objects.get(pk=job_id).status, 'pending',
+                    'the job was approved by a non-admin',
+                )
+
+    def test_a_company_cannot_approve_even_its_own_approved_job(self):
+        """Once approved, the owner may close it — but not set any other status."""
+        from .models import Job
+        job_id = self._post_job().data['id']
+        Job.objects.filter(pk=job_id).update(status='approved')
+        url = reverse('job-status-update', args=[job_id])
+        self.client.force_authenticate(user=self.company)
+
+        for attempt in ('pending', 'approved', 'rejected'):
+            with self.subTest(attempt=attempt):
+                resp = self.client.put(url, {'status': attempt}, format='json')
+                self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertEqual(Job.objects.get(pk=job_id).status, 'approved')
+
+        # The one transition the owner is allowed.
+        resp = self.client.put(url, {'status': 'closed'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(Job.objects.get(pk=job_id).status, 'closed')
+
+    def test_a_company_cannot_touch_another_companys_job(self):
+        from .models import Job
+        from django.contrib.auth import get_user_model
+        other = get_user_model().objects.create_user(
+            username='rival@example.com', email='rival@example.com',
+            password='Str0ngPassw0rd!x9', role='company', email_verified=True)
+        job_id = self._post_job().data['id']
+        Job.objects.filter(pk=job_id).update(status='approved')
+
+        self.client.force_authenticate(user=other)
+        resp = self.client.put(reverse('job-status-update', args=[job_id]),
+                               {'status': 'closed'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Job.objects.get(pk=job_id).status, 'approved')
 
     def test_approval_makes_the_job_visible(self):
         from .models import Job
