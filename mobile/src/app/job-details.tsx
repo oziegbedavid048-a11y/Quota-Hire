@@ -9,6 +9,7 @@ import {
   Alert,
   PanResponder,
   BackHandler,
+  DeviceEventEmitter,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -21,7 +22,8 @@ import * as Haptics from 'expo-haptics';
 import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
-import { useEmployeeDashboardData } from '@/hooks/useEmployeeDashboardData';
+import { useEmployeeDashboardData, Job, JOB_STATUS_UPDATED } from '@/hooks/useEmployeeDashboardData';
+import { apiFetch } from '@/services/api';
 import ApplyJobModal from '@/components/apply-job-modal';
 import { SkeletonBox, SkeletonLine } from '@/components/ui/skeleton';
 
@@ -39,8 +41,61 @@ export default function JobDetailsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Find job
-  const job = jobs.find(j => String(j.id) === String(id));
+  // Find job from cache/hook or live fetch
+  const [liveJob, setLiveJob] = useState<Job | null>(null);
+  const matchedJob = jobs.find(j => String(j.id) === String(id));
+  const job = liveJob || matchedJob;
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
+
+  const effectiveStatus = localStatus || job?.status || 'approved';
+
+  useEffect(() => {
+    if (job?.status && localStatus === null) {
+      setLocalStatus(job.status);
+    }
+  }, [job?.status, localStatus]);
+
+  // Real-time synchronization if company closes/reopens this job
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(JOB_STATUS_UPDATED, ({ jobId, status }: { jobId: string; status: any }) => {
+      if (String(jobId) === String(id)) {
+        setLocalStatus(status);
+        if (liveJob) {
+          setLiveJob(prev => prev ? { ...prev, status } : prev);
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [id, liveJob]);
+
+  // Fallback direct fetch if accessed directly or not in current list
+  useEffect(() => {
+    if (!matchedJob && id) {
+      apiFetch(`/jobs/${id}/`).then(res => {
+        if (res && res.id) {
+          setLiveJob({
+            id: String(res.id),
+            title: res.title,
+            companyName: res.company_name || 'Company',
+            companyLogoUrl: res.company_logo_url,
+            companyIsVerified: Boolean(res.company_is_verified),
+            location: res.location,
+            workType: res.is_remote ? 'Remote' : 'Hybrid',
+            salaryRange: res.salary_range,
+            commissionRange: res.commission_range,
+            currency: res.currency || 'USD',
+            description: res.description,
+            requirements: res.requirements || [],
+            status: res.status || 'approved',
+            postedAt: res.created_at || new Date().toISOString(),
+          });
+          setLocalStatus(res.status || 'approved');
+        }
+      }).catch(err => {
+        console.warn('Failed to fetch job detail in job-details.tsx:', err);
+      });
+    }
+  }, [id, matchedJob]);
 
   // Determine if already applied
   const hasApplied = applications.some(a => String(a.job) === String(job?.id));
@@ -60,6 +115,10 @@ export default function JobDetailsScreen() {
   };
 
   const handleApply = () => {
+    if (effectiveStatus === 'closed') {
+      Alert.alert('Applications Closed', 'This position has been closed by the employer and is no longer accepting applications.');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const hasBasicProfile = !!user.name && (!!user.title || (user.skills && user.skills.length > 0) || !!user.bio || !!user.education || profileScore >= 40);
     if (!hasBasicProfile) {
@@ -231,6 +290,12 @@ export default function JobDetailsScreen() {
 
           {/* Tags */}
           <View style={s.tagsRow}>
+            {effectiveStatus === 'closed' && (
+              <View style={[s.tag, { backgroundColor: '#fee2e2', borderColor: '#fecaca', borderWidth: 0.5 }]}>
+                <Feather name="lock" size={11} color="#b91c1c" />
+                <Text style={[s.tagText, { color: '#b91c1c', fontWeight: FontWeight.bold }]}>Closed</Text>
+              </View>
+            )}
             <View style={[s.tag, { backgroundColor: 'rgba(255,255,255,0.7)' }]}>
               <Feather name="map-pin" size={11} color={colors.textMuted} />
               <Text style={[s.tagText, { color: colors.textSecondary }]}>{job.location}</Text>
@@ -295,6 +360,19 @@ export default function JobDetailsScreen() {
           </View>
         </View>
 
+        {/* Closed Position Notice */}
+        {effectiveStatus === 'closed' && (
+          <View style={s.closedNoticeCard}>
+            <Feather name="lock" size={16} color="#92400e" style={{ marginTop: 2 }} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={s.closedNoticeTitle}>Applications Closed</Text>
+              <Text style={s.closedNoticeSub}>
+                This position has been closed by the hiring team and is no longer accepting new applications.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* ── ACTION BUTTONS ── */}
         <View style={s.actionBarPage}>
           {/* Save Job Button */}
@@ -317,7 +395,12 @@ export default function JobDetailsScreen() {
           </Pressable>
 
           {/* Apply Button */}
-          {hasApplied ? (
+          {effectiveStatus === 'closed' ? (
+            <View style={s.closedBtn}>
+              <Feather name="lock" size={15} color="#64748b" />
+              <Text style={s.closedBtnText}>Applications Closed</Text>
+            </View>
+          ) : hasApplied ? (
             <View style={s.appliedBtn}>
               <Feather name="check-circle" size={15} color={Palette.emerald600} />
               <Text style={s.appliedBtnText}>Already Applied</Text>
@@ -584,6 +667,43 @@ const s = StyleSheet.create({
   },
   appliedBtnText: {
     color: Palette.emerald600,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  closedNoticeCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 14,
+    borderRadius: BorderRadius.md,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  closedNoticeTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: '#92400e',
+  },
+  closedNoticeSub: {
+    fontSize: FontSize.xs,
+    color: '#92400e',
+    lineHeight: 16,
+  },
+  closedBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 48,
+    backgroundColor: '#f1f5f9',
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: '#cbd5e1',
+  },
+  closedBtnText: {
+    color: '#64748b',
     fontWeight: '700',
     fontSize: 14,
   },

@@ -1352,7 +1352,7 @@ class JobListCreateView(generics.ListCreateAPIView):
         return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
-        qs = Job.objects.filter(status='approved').select_related(
+        qs = Job.objects.filter(status__in=['approved', 'closed']).select_related(
             'company', 'company__company_profile'
         ).only(
             'id', 'company__id', 'company__username', 'company__first_name', 'company__last_name',
@@ -1862,13 +1862,13 @@ class MobileResetPasswordView(APIView):
 
 class JobDetailView(generics.RetrieveAPIView):
     """
-    GET /api/jobs/<id>/ — get a single approved job.
+    GET /api/jobs/<id>/ — get a single approved or closed job.
     Cached 60 s. Cache is cleared immediately when the job’s status changes
     via JobStatusUpdateView or the Django admin (signals.py handles both).
     """
     serializer_class   = JobSerializer
     permission_classes = [permissions.AllowAny]
-    queryset           = Job.objects.filter(status='approved')
+    queryset           = Job.objects.filter(status__in=['approved', 'closed'])
 
     def get(self, request, *args, **kwargs):
         from .cache_utils import job_detail_key, safe_get, safe_set, JOB_DETAIL_TTL
@@ -1885,8 +1885,8 @@ class JobDetailView(generics.RetrieveAPIView):
 
 
 class JobStatusUpdateView(APIView):
-    """PUT /api/jobs/<id>/status/ — approve / reject / close a job (admin only)."""
-    permission_classes = [IsAdmin]
+    """PUT /api/jobs/<id>/status/ — approve / reject / close a job (admin or owning company)."""
+    permission_classes = [permissions.IsAuthenticated]
 
     def put(self, request, pk):
         try:
@@ -1894,8 +1894,19 @@ class JobStatusUpdateView(APIView):
         except Job.DoesNotExist:
             return Response({'error': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        is_admin_user = _is_admin(request.user)
+        is_owner = (getattr(request.user, 'role', None) == 'company' and job.company_id == request.user.id)
+
+        if not (is_admin_user or is_owner):
+            return Response({'error': 'You do not have permission to update this job status.'}, status=status.HTTP_403_FORBIDDEN)
+
         new_status = request.data.get('status')
-        valid = ['pending', 'approved', 'rejected', 'closed']
+        if is_admin_user:
+            valid = ['pending', 'approved', 'rejected', 'closed']
+        else:
+            # Company can only close an active job or reopen a closed job
+            valid = ['closed', 'approved']
+
         if new_status not in valid:
             return Response({'error': f'Status must be one of: {valid}'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1903,11 +1914,12 @@ class JobStatusUpdateView(APIView):
         job.save(update_fields=['status'])
 
         # Immediately clear the public job-list cache and this job’s detail cache
-        # so the status change is visible to users within the same request cycle.
-        from .cache_utils import invalidate_jobs_cache
+        # so the status change is visible in real-time across all clients.
+        from .cache_utils import invalidate_jobs_cache, invalidate_dashboards
         invalidate_jobs_cache(job_pk=pk)
+        invalidate_dashboards((job.company_id, 'company'))
 
-        return Response(JobSerializer(job).data)
+        return Response(JobSerializer(job, context={'request': request}).data)
 
 
 # ── Analytics ─────────────────────────────────────────────────────────────────
@@ -2078,7 +2090,7 @@ class SavedJobToggleView(APIView):
 
     def post(self, request, pk):
         try:
-            job = Job.objects.get(pk=pk, status='approved')
+            job = Job.objects.get(pk=pk, status__in=['approved', 'closed'])
         except Job.DoesNotExist:
             return Response({'error': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -2115,9 +2127,14 @@ class ApplyForJobView(APIView):
 
     def post(self, request, pk):
         try:
-            job = Job.objects.get(pk=pk, status='approved')
+            job = Job.objects.get(pk=pk)
         except Job.DoesNotExist:
-            return Response({'error': 'Job not found or not open.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if job.status == 'closed':
+            return Response({'error': 'This position is closed and is no longer accepting applications.'}, status=status.HTTP_400_BAD_REQUEST)
+        elif job.status != 'approved':
+            return Response({'error': 'Job is not open for applications.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if Application.objects.filter(job=job, employee=request.user).exists():
             return Response({'error': 'You have already applied for this job.'}, status=status.HTTP_400_BAD_REQUEST)

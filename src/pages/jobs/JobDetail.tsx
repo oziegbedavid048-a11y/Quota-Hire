@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, MapPin, Banknote, Briefcase, CheckCircle2,
   BadgeCheck, Globe, TrendingUp,
-  Bookmark, BookmarkCheck, Flag, Send,
+  Bookmark, BookmarkCheck, Flag, Send, Lock, Info,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
@@ -141,6 +141,11 @@ export const JobDetail = () => {
 
           {/* Tags */}
           <div className="flex flex-wrap gap-2 sm:gap-3">
+            {job.status === 'closed' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 text-xs sm:text-sm font-bold rounded-xl border border-red-200 dark:border-red-800/40">
+                <Lock size={13} className="shrink-0" /> Closed
+              </span>
+            )}
             {job.location && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-xs sm:text-sm font-bold rounded-xl">
                 <MapPin size={13} className="text-neutral-400 shrink-0" /> {job.location}
@@ -176,6 +181,13 @@ export const JobDetail = () => {
 
       {/* ── MAIN CONTENT ── */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        {job.status === 'closed' && (
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 text-amber-900 dark:text-amber-200 text-sm mb-6 shadow-sm">
+            <Info size={18} className="text-amber-600 shrink-0 mt-0.5" />
+            <p>This position has been closed by the hiring team and is no longer accepting new applications.</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
 
           {/* ── LEFT COLUMN ── */}
@@ -266,7 +278,12 @@ export const JobDetail = () => {
 
           {/* Apply Button Area - Top on mobile, Right on desktop */}
           <div className="order-1 sm:order-4 sm:ml-auto w-full sm:w-auto flex flex-col gap-2">
-            {!currentUser ? (
+            {job.status === 'closed' ? (
+              <div className="w-full sm:w-auto flex items-center justify-center gap-2 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 px-6 sm:px-8 py-3.5 rounded-xl font-bold text-sm border-2 border-neutral-200 dark:border-neutral-700 cursor-not-allowed select-none">
+                <Lock size={17} />
+                <span>Applications Closed</span>
+              </div>
+            ) : !currentUser ? (
               <button
                 onClick={() => navigate('/signup?role=employee')}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-accent-600 hover:bg-accent-700 active:scale-95 text-white px-6 sm:px-8 py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-accent-500/25 transition-all duration-200"
@@ -308,7 +325,7 @@ export const JobDetail = () => {
             )}
             
             {/* External Apply Link */}
-            {job.external_apply_url && (
+            {job.external_apply_url && job.status !== 'closed' && (
               <a
                 href={job.external_apply_url}
                 target="_blank"

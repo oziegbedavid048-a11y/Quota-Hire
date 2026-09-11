@@ -6,12 +6,14 @@ import { apiFetch, getAccessToken } from '../services/api';
 import { cacheGet, cacheSet, CacheKeys } from '../services/app-cache';
 import { rememberUserRole } from '../services/user-role';
 
+export const JOB_STATUS_UPDATED = 'JOB_STATUS_UPDATED';
+
 export interface CompanyJob {
   id: string;
   title: string;
   location: string;
   workType: 'Remote' | 'On-Site' | 'Hybrid';
-  status: 'approved' | 'pending' | 'rejected';
+  status: 'approved' | 'pending' | 'rejected' | 'closed';
   postedAt: string;
   applicantsCount: number;
   package?: string;
@@ -315,10 +317,17 @@ export function useCompanyDashboardData() {
         setCompany(prev => ({ ...prev, ...partial }));
       }
     });
+    const subJobStatus = DeviceEventEmitter.addListener(JOB_STATUS_UPDATED, ({ jobId, status }: { jobId: string; status: any }) => {
+      if (!jobId) return;
+      inMemoryCompanyJobs = inMemoryCompanyJobs.map(j => String(j.id) === String(jobId) ? { ...j, status } : j);
+      setJobs(prev => prev.map(j => String(j.id) === String(jobId) ? { ...j, status } : j));
+      cacheSet(CacheKeys.companyJobs, inMemoryCompanyJobs);
+    });
     return () => {
       sub.remove();
       subProfile.remove();
       subData.remove();
+      subJobStatus.remove();
     };
   }, [fetchLiveCompanyData]);
 

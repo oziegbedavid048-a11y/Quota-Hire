@@ -8,6 +8,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  DeviceEventEmitter,
 } from 'react-native';
 import { Text, TextInput } from '@/components/ui/text';
 import { Image } from 'expo-image';
@@ -25,7 +26,7 @@ import {
   Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight, TabBarHeight,
 } from '@/constants/theme';
 import { HapticPressable } from '@/components/haptic-pressable';
-import { useEmployeeDashboardData, Job } from '@/hooks/useEmployeeDashboardData';
+import { useEmployeeDashboardData, Job, JOB_STATUS_UPDATED } from '@/hooks/useEmployeeDashboardData';
 import { apiFetch } from '@/services/api';
 import { cacheGet, cacheSet, CacheKeys } from '@/services/app-cache';
 import { useStoredRole } from '@/services/user-role';
@@ -114,34 +115,34 @@ export default function JobsScreen() {
         postedAt: j.created_at || new Date().toISOString(),
       }));
 
-      // Only show approved jobs
-      let approvedOnly = formattedJobs.filter((j: any) => j.status === 'approved');
+      // Show approved jobs and closed jobs (closed positions remain visible per company spec)
+      let visibleJobs = formattedJobs.filter((j: any) => j.status === 'approved' || j.status === 'closed');
 
       // Client-side targeted filtering when search mode is active
       if (cleanSearch) {
         const q = cleanSearch.toLowerCase();
         if (currentMode === 'code') {
-          const matched = approvedOnly.filter((j: any) =>
+          const matched = visibleJobs.filter((j: any) =>
             j.id.toLowerCase().includes(q) || `#${j.id}`.toLowerCase().includes(q)
           );
-          if (matched.length > 0) approvedOnly = matched;
+          if (matched.length > 0) visibleJobs = matched;
         } else if (currentMode === 'location') {
-          const matched = approvedOnly.filter((j: any) =>
+          const matched = visibleJobs.filter((j: any) =>
             (j.location || '').toLowerCase().includes(q)
           );
-          if (matched.length > 0) approvedOnly = matched;
+          if (matched.length > 0) visibleJobs = matched;
         } else if (currentMode === 'title') {
-          const matched = approvedOnly.filter((j: any) =>
+          const matched = visibleJobs.filter((j: any) =>
             (j.title || '').toLowerCase().includes(q)
           );
-          if (matched.length > 0) approvedOnly = matched;
+          if (matched.length > 0) visibleJobs = matched;
         }
       }
 
-      setJobs(prev => isAppend ? [...prev, ...approvedOnly] : approvedOnly);
+      setJobs(prev => isAppend ? [...prev, ...visibleJobs] : visibleJobs);
       // Cache page 1 results for instant restore next open
       if (pageNum === 1 && !isAppend) {
-        cacheSet(CacheKeys.exploreJobs, approvedOnly);
+        cacheSet(CacheKeys.exploreJobs, visibleJobs);
       }
       setHasMore(!!nextUrl);
     } catch (e) {
@@ -163,6 +164,21 @@ export default function JobsScreen() {
         }
       } catch (_e) {}
     })();
+  }, []);
+
+  // Real-time synchronization of job status changes (e.g. company closing/reopening a job)
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(JOB_STATUS_UPDATED, ({ jobId, status }: { jobId: string; status: any }) => {
+      if (!jobId) return;
+      setJobs(prev => prev.map(j => String(j.id) === String(jobId) ? { ...j, status } : j));
+      cacheGet<Job[]>(CacheKeys.exploreJobs).then(cached => {
+        if (cached) {
+          const updated = cached.map(j => String(j.id) === String(jobId) ? { ...j, status } : j);
+          cacheSet(CacheKeys.exploreJobs, updated);
+        }
+      });
+    });
+    return () => sub.remove();
   }, []);
 
   const handleRefresh = async () => {
@@ -245,8 +261,14 @@ export default function JobsScreen() {
             </Pressable>
           </View>
 
-          {/* Tags: location / work type / salary / OTE */}
+          {/* Tags: location / work type / salary / OTE / closed */}
           <View style={s.tagsRow}>
+            {job.status === 'closed' && (
+              <View style={[s.tag, { backgroundColor: '#fee2e2', borderColor: '#fecaca', borderWidth: 0.5 }]}>
+                <Feather name="lock" size={10} color="#b91c1c" />
+                <Text style={[s.tagText, { color: '#b91c1c', fontWeight: FontWeight.bold }]}>Closed</Text>
+              </View>
+            )}
             <View style={[s.tag, { backgroundColor: Palette.neutral100 }]}>
               <Feather name="map-pin" size={10} color={colors.textMuted} />
               <Text style={[s.tagText, { color: colors.textSecondary }]}>{job.location}</Text>

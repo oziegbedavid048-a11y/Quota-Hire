@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, MapPin, Banknote, Briefcase, Filter, BadgeCheck, TrendingUp } from 'lucide-react';
+import { Search, MapPin, Banknote, Briefcase, Filter, BadgeCheck, TrendingUp, Lock } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { useAppContext, apiFetch } from '../../context/AppContext';
 import { getCurrencySymbol } from '../../utils/currencies';
@@ -266,6 +266,11 @@ export const JobsList = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 mb-4 mt-2">
+                      {job.status === 'closed' && (
+                        <span className="inline-flex items-center gap-1.5 text-sm font-bold px-3 py-1 rounded-lg text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40">
+                          <Lock size={14} /> Closed
+                        </span>
+                      )}
                       {job.salaryRange && (
                         <span className="inline-flex items-center gap-1.5 text-sm font-bold text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-lg">
                           <Banknote size={14} /> {getCurrencySymbol(job.currency)}{job.salaryRange}

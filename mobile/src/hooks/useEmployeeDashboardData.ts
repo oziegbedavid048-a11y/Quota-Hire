@@ -29,7 +29,7 @@ export interface Job {
   currency?: string;
   description: string;
   requirements: string[];
-  status: "approved" | "pending" | "rejected";
+  status: "approved" | "pending" | "rejected" | "closed";
   postedAt: string;
 }
 
@@ -202,6 +202,7 @@ function normalizeAnalytics(analData: any | null, appCount: number): any {
  * Payload: the newly created Application, or undefined to just refetch.
  */
 export const APPLICATIONS_UPDATED = "APPLICATIONS_UPDATED";
+export const JOB_STATUS_UPDATED = "JOB_STATUS_UPDATED";
 
 let inMemoryUser: UserProfile | null = null;
 let inMemoryJobs: Job[] = [];
@@ -471,12 +472,27 @@ export function useEmployeeDashboardData() {
       }
     );
 
+    const subJobStatus = DeviceEventEmitter.addListener(
+      JOB_STATUS_UPDATED,
+      ({ jobId, status }: { jobId: string; status: any }) => {
+        if (!jobId) return;
+        inMemoryJobs = inMemoryJobs.map((j) =>
+          String(j.id) === String(jobId) ? { ...j, status } : j
+        );
+        setJobs((prev) =>
+          prev.map((j) => (String(j.id) === String(jobId) ? { ...j, status } : j))
+        );
+        cacheSet(CacheKeys.jobs, inMemoryJobs);
+      }
+    );
+
     return () => {
       subAvatar.remove();
       subData.remove();
       subProfile.remove();
       subSaved.remove();
       subApps.remove();
+      subJobStatus.remove();
     };
   }, [fetchLiveDashboard]);
 

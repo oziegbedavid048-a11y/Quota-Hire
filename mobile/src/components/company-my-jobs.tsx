@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Dimensions,
+  Alert,
+  DeviceEventEmitter,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
@@ -17,8 +19,9 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 
 import { Colors, Palette, BorderRadius, FontSize, FontWeight, TabBarHeight } from '@/constants/theme';
-import { useCompanyDashboardData, CompanyJob } from '@/hooks/useCompanyDashboardData';
+import { useCompanyDashboardData, CompanyJob, JOB_STATUS_UPDATED } from '@/hooks/useCompanyDashboardData';
 import { SkeletonJobCard } from '@/components/ui/skeleton';
+import { apiFetch } from '@/services/api';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -38,6 +41,7 @@ export default function CompanyMyJobs({ onSelectJob }: CompanyMyJobsProps = {}) 
   const router = useRouter();
   
   const { jobs, company, refreshData, isLoading } = useCompanyDashboardData();
+  const [updatingJobId, setUpdatingJobId] = useState<string | null>(null);
 
   const handleManage = useCallback((job: CompanyJob) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -50,6 +54,72 @@ export default function CompanyMyJobs({ onSelectJob }: CompanyMyJobsProps = {}) 
       params: { jobId: job.id, view: 'applicants' },
     } as any);
   }, [onSelectJob, router]);
+
+  const executeStatusUpdate = useCallback(async (job: CompanyJob, newStatus: 'approved' | 'closed') => {
+    setUpdatingJobId(job.id);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Optimistic real-time update
+    DeviceEventEmitter.emit(JOB_STATUS_UPDATED, { jobId: job.id, status: newStatus });
+
+    try {
+      const res = await apiFetch(`/jobs/${job.id}/status/`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res?.error) {
+        throw new Error(res.error);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Re-emit confirmed status
+      DeviceEventEmitter.emit(JOB_STATUS_UPDATED, { jobId: job.id, status: newStatus });
+    } catch (err: any) {
+      // Revert optimistic update on error
+      DeviceEventEmitter.emit(JOB_STATUS_UPDATED, { jobId: job.id, status: job.status });
+      Alert.alert(
+        'Action Failed',
+        err?.message || 'Unable to update job status. Please check your network connection and try again.'
+      );
+    } finally {
+      setUpdatingJobId(null);
+    }
+  }, []);
+
+  const handleToggleStatus = useCallback((job: CompanyJob) => {
+    const isCurrentlyClosed = job.status === 'closed';
+    const newStatus = isCurrentlyClosed ? 'approved' : 'closed';
+
+    if (isCurrentlyClosed) {
+      Alert.alert(
+        'Reopen Job Listing?',
+        `Are you sure you want to reopen "${job.title}"? The listing will resume accepting new candidate applications immediately.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Reopen Listing',
+            onPress: () => {
+              executeStatusUpdate(job, newStatus);
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Close Job Listing?',
+        `Are you sure you want to close "${job.title}"? This position will no longer accept new applications, but all existing applicant submissions will remain accessible for review.`,
+        [
+          { text: 'Keep Listing Open', style: 'cancel' },
+          {
+            text: 'Close Listing',
+            style: 'destructive',
+            onPress: () => {
+              executeStatusUpdate(job, newStatus);
+            },
+          },
+        ]
+      );
+    }
+  }, [executeStatusUpdate]);
 
   return (
     <View style={styles.root}>
@@ -211,16 +281,53 @@ export default function CompanyMyJobs({ onSelectJob }: CompanyMyJobsProps = {}) 
                         </View>
                       </View>
                     </View>
-
-                    {/* Divider */}
-                    <View style={styles.cardDivider} />
-
-                    {/* Action Row */}
-                    <View style={styles.actionRow}>
-                      <Text style={styles.actionBtnText}>Manage Candidates</Text>
-                      <Feather name="arrow-right" size={14} color={Palette.accent600} />
-                    </View>
                   </Pressable>
+
+                  {/* Divider */}
+                  <View style={styles.cardDivider} />
+
+                  {/* Action Row */}
+                  <View style={styles.cardActionsRow}>
+                    <Pressable
+                      onPress={() => handleManage(job)}
+                      style={({ pressed }) => [styles.manageBtn, { opacity: pressed ? 0.75 : 1 }]}
+                    >
+                      <Feather name="users" size={13} color={Palette.accent600} />
+                      <Text style={styles.actionBtnText}>Manage Candidates</Text>
+                      <Feather name="arrow-right" size={13} color={Palette.accent600} />
+                    </Pressable>
+
+                    {/* Close / Reopen Listing Button */}
+                    {(job.status === 'approved' || job.status === 'closed') && (
+                      <Pressable
+                        onPress={() => handleToggleStatus(job)}
+                        disabled={updatingJobId === job.id}
+                        style={({ pressed }) => [
+                          styles.statusToggleBtn,
+                          job.status === 'closed' ? styles.statusToggleBtnReopen : styles.statusToggleBtnClose,
+                          { opacity: pressed || updatingJobId === job.id ? 0.6 : 1 }
+                        ]}
+                      >
+                        {updatingJobId === job.id ? (
+                          <ActivityIndicator size="small" color={job.status === 'closed' ? Palette.accent600 : '#dc2626'} />
+                        ) : (
+                          <>
+                            <Feather
+                              name={job.status === 'closed' ? "refresh-cw" : "lock"}
+                              size={12}
+                              color={job.status === 'closed' ? Palette.accent600 : '#b91c1c'}
+                            />
+                            <Text style={[
+                              styles.statusToggleText,
+                              { color: job.status === 'closed' ? Palette.accent600 : '#b91c1c' }
+                            ]}>
+                              {job.status === 'closed' ? 'Reopen Listing' : 'Close Listing'}
+                            </Text>
+                          </>
+                        )}
+                      </Pressable>
+                    )}
+                  </View>
                 </Animated.View>
               );
             })}
@@ -316,6 +423,44 @@ const styles = StyleSheet.create({
   cardDivider: { height: 1, backgroundColor: '#f1f5f9' },
 
   // Action Row
-  actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2 },
-  actionBtnText: { fontSize: FontSize.xs, fontWeight: FontWeight.extrabold, color: Palette.accent600 },
+  cardActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  manageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  actionBtnText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.extrabold,
+    color: Palette.accent600,
+  },
+  statusToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  statusToggleBtnClose: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+  statusToggleBtnReopen: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
+  },
+  statusToggleText: {
+    fontSize: 11.5,
+    fontWeight: FontWeight.bold,
+  },
 });
