@@ -500,19 +500,6 @@ export default function CompanyPostJob() {
                 </Pressable>
               </View>
 
-              <SearchablePickerModal
-                visible={currencyModalVisible}
-                onClose={() => setCurrencyModalVisible(false)}
-                title="Select Currency"
-                items={currencyPickerItems}
-                selectedValue={currency}
-                onSelect={(item) => {
-                  setCurrency(item.value);
-                }}
-                placeholder="Search currency code, name, or country..."
-                emptyMessage="No matching currencies found"
-              />
-
               <View style={styles.field}>
                 <Text style={styles.label}>Salary Range</Text>
                 <TextInput value={salaryRange} onChangeText={setSalaryRange} placeholder={`e.g. ${selectedCurrencyObj.symbol}80k - ${selectedCurrencyObj.symbol}120k Base`} style={styles.input} />
@@ -617,6 +604,19 @@ export default function CompanyPostJob() {
           </View>
         </View>
       </ScrollView>
+
+      <SearchablePickerModal
+        visible={currencyModalVisible}
+        onClose={() => setCurrencyModalVisible(false)}
+        title="Select Currency"
+        items={currencyPickerItems}
+        selectedValue={currency}
+        onSelect={(item) => {
+          setCurrency(item.value);
+        }}
+        placeholder="Search currency code, name, or country..."
+        emptyMessage="No matching currencies found"
+      />
     </View>
   );
 }
