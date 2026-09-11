@@ -288,35 +288,7 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
         end={{ x: 1, y: 1 }}
       />
 
-      {/* ── 1. HEADER (With Back Arrow, No roles count or package badge at top) ── */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Pressable
-            onPress={handleBack}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={({ pressed }) => [
-              styles.backBtn,
-              { opacity: pressed ? 0.65 : 1 }
-            ]}
-          >
-            <Feather name="arrow-left" size={20} color={colors.text} />
-            <Text style={styles.backBtnText}>My Jobs</Text>
-          </Pressable>
-
-          <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle} numberOfLines={1}>Job Applicants</Text>
-          </View>
-
-          <View style={styles.headerCountBadge}>
-            <Feather name="users" size={11} color={Palette.accent700} />
-            <Text style={styles.headerCountText}>
-              {applicants.length} Candidate{applicants.length !== 1 ? 's' : ''}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ── 2. HERO BANNER (Directly below Header — Single Clicked Job Only) ── */}
+      {/* ── HERO BANNER (Clean, Single Clicked Job Only) ── */}
       <Animated.View entering={FadeInDown.springify()} style={[styles.heroCard, { borderColor: colors.borderMid }]}>
         <LinearGradient
           colors={['#FCEFCF', '#E1F6DD']}
@@ -324,6 +296,21 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         />
+        {/* Banner Top Row: Back navigation */}
+        <View style={styles.bannerTopRow}>
+          <Pressable
+            onPress={handleBack}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={({ pressed }) => [
+              styles.bannerBackBtn,
+              { opacity: pressed ? 0.7 : 1 }
+            ]}
+          >
+            <Feather name="arrow-left" size={15} color={colors.text} />
+            <Text style={styles.bannerBackBtnText}>Back</Text>
+          </Pressable>
+        </View>
+
         <View style={styles.heroContent}>
           {/* Company Logo or Monogram */}
           {companyLogo ? (
@@ -338,26 +325,7 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
             </LinearGradient>
           )}
 
-          <View style={{ flex: 1, gap: 3 }}>
-            <View style={[
-              styles.packagePill,
-              isPromoted
-                ? { backgroundColor: '#dcfce7', borderColor: '#86efac' }
-                : { backgroundColor: 'rgba(255,255,255,0.75)', borderColor: colors.borderMid }
-            ]}>
-              <Feather
-                name={isPromoted ? "zap" : "users"}
-                size={10}
-                color={isPromoted ? EmeraldDark : Palette.accent700}
-              />
-              <Text style={[
-                styles.packagePillText,
-                { color: isPromoted ? EmeraldDark : Palette.accent700 }
-              ]}>
-                {isPromoted ? 'Promoted • Direct Access' : 'Evaluating Candidates'}
-              </Text>
-            </View>
-
+          <View style={{ flex: 1, gap: 4 }}>
             <Text style={styles.heroJobTitle} numberOfLines={1}>
               {activeJob?.title || 'Job Listing'}
             </Text>
@@ -373,14 +341,6 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
               </Text>
             </View>
           </View>
-        </View>
-
-        <View style={styles.bannerBottomStrip}>
-          <Text style={styles.bannerBottomText} numberOfLines={2}>
-            {isPromoted
-              ? '⚡ Direct Access Plan: Unmasked applicant email, phone, and original CV downloads are active.'
-              : 'Review candidate profiles and shortlist qualified sales talent for Quota Hire placement.'}
-          </Text>
         </View>
       </Animated.View>
 
@@ -581,15 +541,7 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setCandidateModalVisible(false)} />
           <View style={[styles.modalSheet, { backgroundColor: '#ffffff' }]}>
             <View style={styles.modalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={[styles.modalHeaderTitle, { color: colors.text }]}>Candidate Profile</Text>
-                {isPromoted && (
-                  <View style={styles.promotedAccessBadge}>
-                    <Feather name="zap" size={10} color={EmeraldGreen} />
-                    <Text style={styles.promotedAccessBadgeText}>Direct Access</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={[styles.modalHeaderTitle, { color: colors.text }]}>Candidate Profile</Text>
               <Pressable onPress={() => setCandidateModalVisible(false)} style={styles.modalClose}>
                 <Feather name="x" size={20} color={colors.textMuted} />
               </Pressable>
@@ -945,63 +897,6 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
-  // Header
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    backgroundColor: 'rgba(255, 251, 235, 0.96)',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  backBtnText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: '#0f172a',
-  },
-  headerTitleWrap: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  headerTitle: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.extrabold,
-    color: '#0f172a',
-  },
-  headerCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 99,
-  },
-  headerCountText: {
-    fontSize: 10,
-    fontWeight: FontWeight.bold,
-    color: Palette.neutral700,
-  },
-
   // Hero Banner
   heroCard: {
     borderRadius: 16,
@@ -1011,7 +906,28 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 8,
-    gap: 10,
+    gap: 12,
+  },
+  bannerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  bannerBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 99,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  bannerBackBtnText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: '#0f172a',
   },
   heroContent: {
     flexDirection: 'row',
@@ -1038,20 +954,6 @@ const styles = StyleSheet.create({
     fontWeight: FontWeight.extrabold,
     color: Palette.neutral800,
   },
-  packagePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 99,
-    borderWidth: 1,
-    alignSelf: 'flex-start',
-  },
-  packagePillText: {
-    fontSize: 9,
-    fontWeight: FontWeight.extrabold,
-  },
   heroJobTitle: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.extrabold,
@@ -1068,17 +970,6 @@ const styles = StyleSheet.create({
   },
   heroMetaText: {
     fontSize: 11,
-  },
-  bannerBottomStrip: {
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.06)',
-  },
-  bannerBottomText: {
-    fontSize: 10,
-    lineHeight: 14,
-    color: Palette.neutral600,
-    fontWeight: FontWeight.medium,
   },
 
   // Filters Bar
@@ -1296,20 +1187,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: FontWeight.extrabold,
   },
-  promotedAccessBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: Palette.emerald50,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 99,
-  },
-  promotedAccessBadgeText: {
-    fontSize: 10,
-    fontWeight: FontWeight.bold,
-    color: EmeraldGreen,
-  },
+
   modalClose: {
     width: 32,
     height: 32,
