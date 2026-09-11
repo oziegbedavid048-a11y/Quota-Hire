@@ -8,6 +8,7 @@ import {
   Notification
 } from '../types';
 import { toast } from 'sonner';
+import { isRateLimited, rateLimitMessage } from '../utils/apiErrors';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -464,7 +465,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await fetchData();
       toast.success(`Welcome back!`);
     } catch (error: any) {
-      toast.error(`${error.message || 'Failed to login'}`);
+      // A rate-limited request would otherwise toast DRF's raw wording
+      // ("Request was throttled. Expected available in 3600 seconds.").
+      toast.error(
+        isRateLimited(error)
+          ? rateLimitMessage(error, 'login attempts')
+          : `${error.message || 'Failed to login'}`
+      );
       throw error;
     }
   };
@@ -512,7 +519,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               password: userData.password,
               password2: userData.password2,
               role: userData.role || 'employee',
-              phone: userData.phone || '',
+              // Must be `phone_number`, not `phone`. RegisterSerializer declares
+              // phone_number; DRF drops unknown keys without complaint, so every
+              // phone number typed into the web signup form was silently thrown
+              // away and the profile was created with an empty number. The
+              // mobile client already sent phone_number — this was web-only.
+              phone_number: userData.phone || '',
               city: userData.city || '',
               country: userData.country || '',
           })
@@ -525,7 +537,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       toast.success('Account created successfully!');
     } catch (error: any) {
-      toast.error(`${error.message || 'Failed to register'}. Please try again.`);
+      // "Please try again." is wrong for a rate limit — trying again is exactly
+      // what will not work until the window resets.
+      toast.error(
+        isRateLimited(error)
+          ? rateLimitMessage(error, 'sign-up attempts')
+          : `${error.message || 'Failed to register'}. Please try again.`
+      );
       throw error;
     }
   };

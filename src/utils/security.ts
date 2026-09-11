@@ -4,12 +4,26 @@
 
 // Regex patterns to block XSS and malicious characters
 export const strictNoHtmlRegex = /^[^<>]*$/;
-export const strictNameRegex = /^[a-zA-Z\s.,'-]+$/;
+
+// Personal and company names.
+//
+// This used to be /^[a-zA-Z\s.,'-]+$/, which allowed only unaccented A-Z. That
+// rejected a large share of real signups at step 1 of the form: every company
+// name containing a digit, an ampersand or a bracket ("9mobile Nigeria (Ltd) &
+// Co", "H&M", "3M"), and every personal name outside plain ASCII ("José",
+// "Müller", "Adébáyọ̀"). The backend accepts all of them, so the rule cost
+// signups without protecting anything.
+//
+// The allowlist is now Unicode-aware: letters (\p{L}) and the combining marks
+// that tonal and accented scripts need (\p{M}), digits (\p{N}), whitespace,
+// and the punctuation that legitimately appears in names. Angle brackets are
+// still excluded, so the anti-markup intent of the original rule is kept.
+export const strictNameRegex = /^[\p{L}\p{M}\p{N}\s.,'’\-&()/+]+$/u;
 
 // Error messages for validation
 export const ERROR_MSGS = {
   NO_HTML: "HTML tags (<, >) are not allowed.",
-  INVALID_NAME: "Only letters and basic punctuation (.,'-) are allowed.",
+  INVALID_NAME: "Please use letters, numbers and standard punctuation only.",
   REQUIRED: "This field is required.",
 };
 

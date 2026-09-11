@@ -12,15 +12,18 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { strictNoHtmlRegex, ERROR_MSGS } from '../../utils/security';
+import { isRateLimited, rateLimitMessage } from '../../utils/apiErrors';
 
 const loginSchema = z.object({
   email: z.string()
     .min(1, "Email is required")
     .email("Invalid email address")
     .regex(strictNoHtmlRegex, ERROR_MSGS.NO_HTML),
+  // No markup check on the password — it is hashed, never rendered. Worse than
+  // on signup: this rule stopped anyone whose password contains < or > from
+  // logging in at all, even though the account was created successfully.
   password: z.string()
-    .min(6, "Password must be at least 6 characters")
-    .regex(strictNoHtmlRegex, ERROR_MSGS.NO_HTML),
+    .min(6, "Password must be at least 6 characters"),
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
@@ -134,6 +137,13 @@ export const Login = () => {
         setGlobalError('Your email address has not been verified. Please check your inbox (and spam folder) for the verification link.');
         return; // Don\'t count this as a lockout-able failed attempt
       }
+      // A server-side rate limit is not a wrong-password attempt, so it must
+      // not feed the local attempt counter, and it must report the real wait.
+      // The old branch said "a few minutes" for what is a one-hour cap.
+      if (isRateLimited(error)) {
+        setGlobalError(rateLimitMessage(error, 'login attempts'));
+        return;
+      }
       const newAttempts = failedAttempts + 1;
       setFailedAttempts(newAttempts);
       if (newAttempts >= 3) {
@@ -145,8 +155,6 @@ export const Login = () => {
         // enumerate registered users. Show it as-is.
         if (msg === 'Incorrect email or password.') {
           setGlobalError(msg);
-        } else if (msg.toLowerCase().includes('too many')) {
-          setGlobalError('Too many login attempts. Please wait a few minutes and try again.');
         } else {
           setGlobalError('An unexpected error occurred. Please try again.');
         }

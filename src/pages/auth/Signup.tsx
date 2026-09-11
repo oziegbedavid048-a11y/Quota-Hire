@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { strictNoHtmlRegex, strictNameRegex, ERROR_MSGS } from '../../utils/security';
+import { isRateLimited, rateLimitMessage } from '../../utils/apiErrors';
 
 const signupSchema = z.object({
   role: z.enum(['employee', 'company']),
@@ -26,12 +27,14 @@ const signupSchema = z.object({
   phone: z.string().optional(),
   city: z.string().optional(),
   country: z.string().optional(),
+  // No markup check on passwords. A password is hashed and never rendered, so
+  // the anti-HTML rule bought nothing here — it only refused strong passwords
+  // containing < or >, under the baffling message "HTML tags are not allowed".
+  // The backend accepts them; only this schema did not.
   password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(strictNoHtmlRegex, ERROR_MSGS.NO_HTML),
+    .min(8, "Password must be at least 8 characters"),
   passwordConfirm: z.string()
-    .min(1, "Please confirm your password")
-    .regex(strictNoHtmlRegex, ERROR_MSGS.NO_HTML),
+    .min(1, "Please confirm your password"),
 }).superRefine((data, ctx) => {
   if (data.role === 'employee') {
     if (!data.firstName) {
@@ -70,10 +73,14 @@ export const Signup = () => {
   const initialRole = (queryParams.get('role') as 'employee' | 'company') || 'employee';
 
   const [globalError, setGlobalError] = useState('');
+  // Whether the current error is worth retrying. A rate-limit rejection is not:
+  // offering "Try Again" on one guarantees another failure for up to an hour.
+  const [canRetry, setCanRetry] = useState(true);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [isResending, setIsResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendError, setResendError] = useState('');
   const [step, setStep] = useState(1);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isSlowSubmit, setIsSlowSubmit] = useState(false);
@@ -172,6 +179,7 @@ export const Signup = () => {
 
   const onSubmit = async (data: SignupFormValues) => {
     setGlobalError('');
+    setCanRetry(true);
     setIsSlowSubmit(false);
     // After 5 seconds of waiting, show a "server is starting up" hint on the button
     const slowTimer = setTimeout(() => setIsSlowSubmit(true), 5000);
@@ -198,10 +206,26 @@ export const Signup = () => {
     } catch (error: any) {
       console.error(error);
       const msg = error?.message || '';
-      if (msg.toLowerCase().includes('starting up') || msg.toLowerCase().includes('too long') || msg.toLowerCase().includes('timed out')) {
-        setGlobalError('Our server is starting up — this can take up to 60 seconds on first load. Please wait a moment and try again.');
+      // Checked first, and by status rather than wording: a rate-limited
+      // request is the one failure that retrying cannot fix, so it must never
+      // fall through to the generic "something went wrong" branch below.
+      if (isRateLimited(error)) {
+        setGlobalError(rateLimitMessage(error, 'sign-up attempts'));
+        setCanRetry(false);
+      } else if (msg.toLowerCase().includes('starting up') || msg.toLowerCase().includes('too long') || msg.toLowerCase().includes('timed out')) {
+        // A timeout here does NOT mean the account was not created. The server
+        // sends the verification email inside the registration request, so on a
+        // cold start the work can finish after the client has already given up.
+        // Telling the user only to "try again" sent them into a loop that ended
+        // at "an account with this email already exists" — which reads as a
+        // second failure. Point them at login first.
+        setGlobalError(
+          'Our server was starting up and took too long to answer. Your account may ' +
+          'already have been created — check your email for the verification link, or ' +
+          'try logging in. If neither works, wait a moment and sign up again.'
+        );
       } else if (msg.toLowerCase().includes('already exists')) {
-        setGlobalError('An account with this email already exists.');
+        setGlobalError('An account with this email already exists. Please log in instead, or reset your password if you have forgotten it.');
       } else if (msg.toLowerCase().includes('password')) {
         setGlobalError(msg);
       } else if (msg.toLowerCase().includes('connect')) {
@@ -280,17 +304,19 @@ export const Signup = () => {
                         <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 mt-0.5" />
                         <p className="break-words">{globalError}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGlobalError('');
-                          handleSubmit(onSubmit)();
-                        }}
-                        className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>Try Again</span>
-                      </button>
+                      {canRetry && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGlobalError('');
+                            handleSubmit(onSubmit)();
+                          }}
+                          className="shrink-0 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Try Again</span>
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -575,6 +601,14 @@ export const Signup = () => {
                 <span className="font-bold text-red-500 dark:text-red-400">Please check your spam folder if it is not in your inbox.</span>
               </p>
 
+              {/* Resend failure — previously swallowed, so the button appeared dead */}
+              {resendError && (
+                <div className="flex items-start justify-center gap-2 mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-xs sm:text-sm font-bold text-left">
+                  <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                  <span>{resendError}</span>
+                </div>
+              )}
+
               {/* Resend email button / success state */}
               {resendSuccess ? (
                 <div className="flex items-center justify-center gap-2 mb-6 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-green-700 dark:text-green-400 text-sm font-bold">
@@ -587,13 +621,26 @@ export const Signup = () => {
                   onClick={async () => {
                     if (!registeredEmail || isResending) return;
                     setIsResending(true);
+                    setResendError('');
                     try {
                       await apiFetch('/auth/send-verification/', {
                         method: 'POST',
                         body: JSON.stringify({ email: registeredEmail }),
                       });
                       setResendSuccess(true);
-                    } catch { /* silently ignore */ }
+                    } catch (error: any) {
+                      // This used to be `catch { /* silently ignore */ }`, so a
+                      // failed resend looked identical to no click at all. The
+                      // usual cause is the 5-per-IP-per-hour email cap, which
+                      // verification, password reset and login OTP all share —
+                      // so the user needs to be told to wait, not left guessing.
+                      setResendError(
+                        isRateLimited(error)
+                          ? rateLimitMessage(error, 'email requests')
+                          : 'We could not resend the email just now. Please try again in a moment, ' +
+                            'or log in later using the link in the message we already sent.'
+                      );
+                    }
                     finally { setIsResending(false); }
                   }}
                   disabled={isResending}

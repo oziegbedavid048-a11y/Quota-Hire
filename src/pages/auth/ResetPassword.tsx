@@ -10,15 +10,14 @@ import { Logo } from '../../components/ui/Logo';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { strictNoHtmlRegex, ERROR_MSGS } from '../../utils/security';
 
 const resetPasswordSchema = z.object({
+  // No markup check on passwords — they are hashed, never rendered, so this
+  // rule only blocked users from choosing a password containing < or >.
   password: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(strictNoHtmlRegex, ERROR_MSGS.NO_HTML),
+    .min(8, "Password must be at least 8 characters"),
   passwordConfirm: z.string()
-    .min(1, "Please confirm your password")
-    .regex(strictNoHtmlRegex, ERROR_MSGS.NO_HTML),
+    .min(1, "Please confirm your password"),
 }).refine((data) => data.password === data.passwordConfirm, {
   message: "Passwords do not match",
   path: ["passwordConfirm"],
