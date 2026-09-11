@@ -103,32 +103,66 @@ def handle_job_post_save(sender, instance, created, **kwargs):
 
     if created:
         # ── New job submitted ─────────────────────────────────────────────────
-        Notification.objects.create(
-            user=company_user,
-            title="Job Submitted for Review",
-            message=(
-                f"Your job posting '{instance.title}' has been submitted successfully. "
-                "Our team will review it and it will go live within a few hours once approved."
+        is_promoted = getattr(instance, 'package', '') == 'promoted'
+        from .email_templates import get_job_submitted_email_html, get_promoted_job_fee
+
+        if is_promoted:
+            fee_info = get_promoted_job_fee(instance.currency or 'USD')
+            Notification.objects.create(
+                user=company_user,
+                title="Action Required: Complete Payment",
+                message=(
+                    f"Your job posting '{instance.title}' has been submitted under the Promoted Job plan ({fee_info['formatted']}). "
+                    "Please complete your promotional payment so our team can approve and boost your listing."
+                )
             )
-        )
 
-        _send_push_safe(
-            user=company_user,
-            title="Job Submitted for Review",
-            body=f"Your posting for {instance.title} is under review. We will notify you once approved.",
-            data={"type": "job_submitted", "job_id": str(instance.pk)},
-        )
+            _send_push_safe(
+                user=company_user,
+                title="Complete Payment to Promote Job",
+                body=f"Complete payment for {instance.title} ({fee_info['formatted']}) to activate promotion and direct applicant access.",
+                data={"type": "job_payment_required", "job_id": str(instance.pk)},
+            )
 
-        from .email_templates import get_job_submitted_email_html
-        html = get_job_submitted_email_html(
-            user=company_name,
-            job_title=instance.title,
-        )
-        _send_email_safe(
-            to_email=company_user.email,
-            subject=f"Job submitted for review - {instance.title}",
-            html_content=html,
-        )
+            html = get_job_submitted_email_html(
+                user=company_name,
+                job_title=instance.title,
+                package=instance.package,
+                currency=instance.currency,
+            )
+            _send_email_safe(
+                to_email=company_user.email,
+                subject=f"Action Required: Complete Payment to Promote Your Job - {instance.title}",
+                html_content=html,
+            )
+        else:
+            Notification.objects.create(
+                user=company_user,
+                title="Job Submitted for Review",
+                message=(
+                    f"Your job posting '{instance.title}' has been submitted successfully. "
+                    "Our team will review it and it will go live within a few hours once approved."
+                )
+            )
+
+            _send_push_safe(
+                user=company_user,
+                title="Job Submitted for Review",
+                body=f"Your posting for {instance.title} is under review. We will notify you once approved.",
+                data={"type": "job_submitted", "job_id": str(instance.pk)},
+            )
+
+            html = get_job_submitted_email_html(
+                user=company_name,
+                job_title=instance.title,
+                package=instance.package,
+                currency=instance.currency,
+            )
+            _send_email_safe(
+                to_email=company_user.email,
+                subject=f"Job submitted for review - {instance.title}",
+                html_content=html,
+            )
 
         # If created directly as approved, also send the approval notification
         if instance.status == JobStatus.APPROVED:

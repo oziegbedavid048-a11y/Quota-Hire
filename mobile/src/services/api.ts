@@ -203,7 +203,24 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}): Pro
     let message = `Request failed (${response.status})`;
     try {
       const err = await response.json();
-      message = err?.detail || err?.error || err?.message || message;
+      if (err && typeof err === 'object') {
+        if (typeof err.detail === 'string') {
+          message = err.detail;
+        } else if (typeof err.error === 'string') {
+          message = err.error;
+        } else if (typeof err.message === 'string') {
+          message = err.message;
+        } else {
+          // DRF validation errors: { field_name: ["error text"] }
+          const entries = Object.entries(err);
+          if (entries.length > 0) {
+            const [field, val] = entries[0];
+            const msg = Array.isArray(val) ? val[0] : typeof val === 'string' ? val : JSON.stringify(val);
+            const cleanField = field.replace(/_/g, ' ');
+            message = `${cleanField}: ${msg}`;
+          }
+        }
+      }
     } catch {}
     throw new ApiError(message, response.status);
   }

@@ -336,13 +336,115 @@ def get_welcome_email_html(user, is_company=False):
 
 
 # =============================================================================
-# 4. JOB SUBMITTED FOR REVIEW
+# 4. JOB SUBMITTED FOR REVIEW & PROMOTED JOB PAYMENT
 # =============================================================================
 
-def get_job_submitted_email_html(user, job_title):
+PROMOTED_JOB_PRICING = {
+    'NGN': {'amount': '50,000',   'symbol': '₦',   'code': 'NGN', 'formatted': '₦50,000 NGN'},
+    'USD': {'amount': '35',       'symbol': '$',   'code': 'USD', 'formatted': '$35 USD'},
+    'EUR': {'amount': '32',       'symbol': '€',   'code': 'EUR', 'formatted': '€32 EUR'},
+    'GBP': {'amount': '28',       'symbol': '£',   'code': 'GBP', 'formatted': '£28 GBP'},
+    'CAD': {'amount': '48',       'symbol': 'CA$', 'code': 'CAD', 'formatted': 'CA$48 CAD'},
+    'AUD': {'amount': '52',       'symbol': 'AU$', 'code': 'AUD', 'formatted': 'AU$52 AUD'},
+    'ZAR': {'amount': '620',      'symbol': 'R',   'code': 'ZAR', 'formatted': 'R620 ZAR'},
+    'KES': {'amount': '4,500',    'symbol': 'KSh', 'code': 'KES', 'formatted': 'KSh 4,500 KES'},
+    'GHS': {'amount': '520',      'symbol': 'GH₵', 'code': 'GHS', 'formatted': 'GH₵ 520 GHS'},
+    'AED': {'amount': '130',      'symbol': 'AED', 'code': 'AED', 'formatted': 'AED 130'},
+    'SAR': {'amount': '130',      'symbol': 'SAR', 'code': 'SAR', 'formatted': 'SAR 130'},
+    'INR': {'amount': '2,900',    'symbol': '₹',   'code': 'INR', 'formatted': '₹2,900 INR'},
+    'JPY': {'amount': '5,200',    'symbol': '¥',   'code': 'JPY', 'formatted': '¥5,200 JPY'},
+    'CNY': {'amount': '250',      'symbol': '¥',   'code': 'CNY', 'formatted': '¥250 CNY'},
+    'SGD': {'amount': '46',       'symbol': 'S$',  'code': 'SGD', 'formatted': 'S$46 SGD'},
+    'NZD': {'amount': '58',       'symbol': 'NZ$', 'code': 'NZD', 'formatted': 'NZ$58 NZD'},
+    'CHF': {'amount': '30',       'symbol': 'CHF', 'code': 'CHF', 'formatted': 'CHF 30'},
+    'BRL': {'amount': '190',      'symbol': 'R$',  'code': 'BRL', 'formatted': 'R$ 190 BRL'},
+    'MXN': {'amount': '650',      'symbol': 'Mex$', 'code': 'MXN', 'formatted': 'Mex$ 650 MXN'},
+    'SEK': {'amount': '360',      'symbol': 'kr',  'code': 'SEK', 'formatted': '360 kr SEK'},
+    'KRW': {'amount': '47,000',   'symbol': '₩',   'code': 'KRW', 'formatted': '₩47,000 KRW'},
+    'RUB': {'amount': '3,200',    'symbol': '₽',   'code': 'RUB', 'formatted': '3,200 ₽ RUB'},
+    'TRY': {'amount': '1,150',    'symbol': '₺',   'code': 'TRY', 'formatted': '1,150 ₺ TRY'},
+    'ARS': {'amount': '34,000',   'symbol': '$',   'code': 'ARS', 'formatted': '$34,000 ARS'},
+    'COP': {'amount': '140,000',  'symbol': '$',   'code': 'COP', 'formatted': '$140,000 COP'},
+    'CLP': {'amount': '33,000',   'symbol': '$',   'code': 'CLP', 'formatted': '$33,000 CLP'},
+    'PEN': {'amount': '130',      'symbol': 'S/',  'code': 'PEN', 'formatted': 'S/ 130 PEN'},
+    'VND': {'amount': '880,000',  'symbol': '₫',   'code': 'VND', 'formatted': '₫880,000 VND'},
+    'THB': {'amount': '1,200',    'symbol': '฿',   'code': 'THB', 'formatted': '฿1,200 THB'},
+    'IDR': {'amount': '550,000',  'symbol': 'Rp',  'code': 'IDR', 'formatted': 'Rp 550,000 IDR'},
+    'MYR': {'amount': '150',      'symbol': 'RM',  'code': 'MYR', 'formatted': 'RM 150 MYR'},
+    'PHP': {'amount': '1,950',    'symbol': '₱',   'code': 'PHP', 'formatted': '₱1,950 PHP'},
+    'PKR': {'amount': '9,800',    'symbol': '₨',   'code': 'PKR', 'formatted': '₨9,800 PKR'},
+    'EGP': {'amount': '1,700',    'symbol': 'E£',  'code': 'EGP', 'formatted': 'E£ 1,700 EGP'},
+    'ILS': {'amount': '130',      'symbol': '₪',   'code': 'ILS', 'formatted': '₪130 ILS'},
+    'HKD': {'amount': '270',      'symbol': 'HK$', 'code': 'HKD', 'formatted': 'HK$270 HKD'},
+}
+
+
+def get_promoted_job_fee(currency_code: str = 'USD') -> dict:
+    """Returns the localized fee equivalent of 50,000 NGN for the given currency code."""
+    code = (currency_code or 'USD').strip().upper()
+    if code in PROMOTED_JOB_PRICING:
+        return PROMOTED_JOB_PRICING[code]
+    return PROMOTED_JOB_PRICING['USD']
+
+
+def get_job_submitted_email_html(user, job_title, package=None, currency='USD'):
     # QH-18: escape every user-controlled value before it reaches the HTML.
     user = _esc(user)
     job_title = _esc(job_title)
+
+    if package == 'promoted':
+        fee_info = get_promoted_job_fee(currency)
+        fee_formatted = _esc(fee_info['formatted'])
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'https://quotahire.org').strip()
+        dashboard_url = f"{frontend_url}/dashboard"
+
+        body = (
+            _h1("Job Submitted — Complete Payment to Launch", "Priority promotion & direct applicant access") +
+            _p(f"Hi <strong>{user}</strong>,") +
+            _badge("Action Required &bull; Payment Pending", "yellow") +
+            _p(
+                "Thank you for posting your role on Quota Hire. Your job listing has been received and registered under our "
+                "<strong>Promoted Job &amp; Direct Applicant Access</strong> plan."
+            ) +
+            _dbox("Submitted Job", job_title) +
+            '<div style="background-color:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:18px 20px;margin:20px 0;">'
+            '<table style="width:100%;border-collapse:collapse;">'
+            '<tr>'
+            '<td style="vertical-align:middle;">'
+            '<div style="font-size:11px;font-weight:700;color:#1A6515;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">One-Time Promotion Fee</div>'
+            f'<div style="font-size:24px;font-weight:800;color:#111827;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">{fee_formatted}</div>'
+            '</td>'
+            '<td style="text-align:right;vertical-align:middle;">'
+            '<span style="display:inline-block;padding:5px 12px;background-color:#dcfce7;color:#15803d;font-size:12px;font-weight:700;border-radius:20px;">Direct Hire Plan</span>'
+            '</td>'
+            '</tr>'
+            '</table>'
+            '</div>' +
+            _p(
+                "To activate priority listing placement and begin receiving top candidates, please complete the promotional payment. "
+                "Once payment is confirmed, our team will immediately approve and promote your listing across our active network of qualified sales talent."
+            ) +
+            '<div style="background-color:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">'
+            '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">Included with your Promoted Job:</div>'
+            '<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.8;color:#475569;">'
+            '<li><strong>Promoted Placement:</strong> Boosted position on the job feed for maximum visibility.</li>'
+            '<li><strong>Direct Candidate Access:</strong> View applicant profiles, contact information, and timeline as soon as they apply.</li>'
+            '<li><strong>Full CV &amp; Cover Letter Downloads:</strong> Direct access to complete resumes and candidate cover letters.</li>'
+            '<li><strong>Zero Placement Fees:</strong> You interview, select, and hire directly on your own terms.</li>'
+            '</ul>'
+            '</div>' +
+            _p(
+                "Click the button below to review your listing and complete your payment via your company dashboard:"
+            ) +
+            _cta(dashboard_url, "Complete Payment &amp; View Job") +
+            _p(
+                '<span style="font-size:13px;color:#64748b;">Need an invoice or bank transfer details? Simply reply directly to this email or contact our support desk at <a href="mailto:support@quotahire.org" style="color:#1A6515;text-decoration:underline;">support@quotahire.org</a>.</span>'
+            ) +
+            _signoff()
+        )
+        return _build_email(title="Action Required: Complete Payment - Quota Hire", body_html=body)
+
+    # Standard review email for all other recruitment packages
     body = (
         _h1("Job Listing Submitted for Review") +
         _p(f"Hi <strong>{user}</strong>,") +

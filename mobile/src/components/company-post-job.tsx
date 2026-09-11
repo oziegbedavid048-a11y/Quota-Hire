@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { Colors, Palette, BorderRadius, FontSize, FontWeight } from '@/constants/theme';
 import { apiFetch } from '@/services/api';
 import { worldCurrencies } from '@/constants/currencies';
+import { SearchablePickerModal, PickerItem } from '@/components/searchable-picker-modal';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -84,6 +85,17 @@ const findMatchingTemplate = (title: string): string | null => {
 
 const PACKAGES = [
   {
+    id: 'promoted',
+    title: 'QUOTA HIRE PROMOTED JOBS',
+    subtitle: 'Promoted Job Post & Direct Applicant Access',
+    bestFor: 'Fast hiring with unrestricted direct access to candidates',
+    weDo: 'Boost your job listing on the platform, deliver applicant profiles, CVs & cover letters directly to your dashboard',
+    youDo: 'Review applicants directly, schedule interviews, and hire on your terms',
+    promise: 'Boosted listing reach and direct access to candidate CVs & cover letters.',
+    fee: 'One-time promotion fee',
+    guarantee: 'Active until fulfilled'
+  },
+  {
     id: 'pipeline',
     title: 'QUOTA HIRE PIPELINE',
     subtitle: 'Recruit Sales Associate Only',
@@ -130,6 +142,7 @@ export default function CompanyPostJob() {
   const [isRemote, setIsRemote] = useState(true);
   const [location, setLocation] = useState('');
   const [currency, setCurrency] = useState('USD');
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
   const [salaryRange, setSalaryRange] = useState('');
   const [commissionRange, setCommissionRange] = useState('');
   const [description, setDescription] = useState('');
@@ -141,6 +154,15 @@ export default function CompanyPostJob() {
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [companyAddress, setCompanyAddress] = useState('');
   const [selectedPackage, setSelectedPackage] = useState('');
+
+  const currencyPickerItems: PickerItem[] = useMemo(() => {
+    return worldCurrencies.map((c) => ({
+      label: `${c.code} — ${c.name} (${c.symbol})`,
+      value: c.code,
+      subtitle: `${c.country} • ${c.symbol}`,
+      badge: c.code,
+    }));
+  }, []);
 
   // Auto load company info on mount
   useEffect(() => {
@@ -217,16 +239,16 @@ export default function CompanyPostJob() {
       description,
       requirements: requirements.split('\n').filter((r) => r.trim() !== ''),
       employment_type: 'Full-time',
-      isRemote,
+      is_remote: isRemote,
       location: isRemote ? 'Remote' : location,
-      salaryRange,
-      commissionRange,
+      salary_range: salaryRange,
+      commission_range: commissionRange,
       currency,
-      contactEmail,
-      contactPhone,
-      whatsappNumber,
-      companyAddress,
-      companyName,
+      contact_email: contactEmail,
+      contact_phone: contactPhone,
+      whatsapp_number: whatsappNumber,
+      company_address: companyAddress,
+      custom_company_name: companyName,
       package: selectedPackage,
     };
 
@@ -236,9 +258,17 @@ export default function CompanyPostJob() {
         body: JSON.stringify(payload),
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Success', 'Job posted successfully! It will be listed once reviewed.', [
-        { text: 'OK', onPress: () => router.replace('/') }
-      ]);
+      if (selectedPackage === 'promoted') {
+        Alert.alert(
+          'Job Submitted Successfully!',
+          'Your job has been submitted under the Promoted Job plan. Please check your email for payment completion instructions to activate promotion and direct applicant access.',
+          [{ text: 'OK', onPress: () => router.replace('/') }]
+        );
+      } else {
+        Alert.alert('Success', 'Job posted successfully! It will be listed once reviewed.', [
+          { text: 'OK', onPress: () => router.replace('/') }
+        ]);
+      }
     } catch (err: any) {
       Alert.alert('Post Failed', err?.message || 'Unable to post job at this time.');
     } finally {
@@ -447,9 +477,41 @@ export default function CompanyPostJob() {
               )}
 
               <View style={styles.field}>
-                <Text style={styles.label}>Currency (e.g. USD, EUR, NGN)</Text>
-                <TextInput value={currency} onChangeText={setCurrency} placeholder="USD" style={styles.input} autoCapitalize="characters" />
+                <Text style={styles.label}>Currency</Text>
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setCurrencyModalVisible(true);
+                  }}
+                  style={styles.currencySelectBtn}
+                >
+                  <View style={styles.currencySelectLeft}>
+                    <View style={styles.currencyBadge}>
+                      <Text style={styles.currencyBadgeText}>{selectedCurrencyObj.symbol}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.currencyCodeText}>{selectedCurrencyObj.code}</Text>
+                      <Text style={styles.currencyNameText} numberOfLines={1}>
+                        {selectedCurrencyObj.name} ({selectedCurrencyObj.country})
+                      </Text>
+                    </View>
+                  </View>
+                  <Feather name="chevron-down" size={18} color={Palette.neutral500} />
+                </Pressable>
               </View>
+
+              <SearchablePickerModal
+                visible={currencyModalVisible}
+                onClose={() => setCurrencyModalVisible(false)}
+                title="Select Currency"
+                items={currencyPickerItems}
+                selectedValue={currency}
+                onSelect={(item) => {
+                  setCurrency(item.value);
+                }}
+                placeholder="Search currency code, name, or country..."
+                emptyMessage="No matching currencies found"
+              />
 
               <View style={styles.field}>
                 <Text style={styles.label}>Salary Range</Text>
@@ -633,4 +695,47 @@ const styles = StyleSheet.create({
   nextBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: '#fff' },
   submitBtn: { flex: 1.5, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   submitBtnText: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: '#fff' },
+
+  // Currency Dropdown Button
+  currencySelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 52,
+    backgroundColor: '#f8fafc',
+  },
+  currencySelectLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  currencyBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Palette.accent50,
+    borderWidth: 1,
+    borderColor: Palette.accent200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  currencyBadgeText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Palette.accent700,
+  },
+  currencyCodeText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Palette.neutral800,
+  },
+  currencyNameText: {
+    fontSize: 11,
+    color: Palette.neutral500,
+  },
 });

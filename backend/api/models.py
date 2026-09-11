@@ -173,6 +173,7 @@ class JobStatus(models.TextChoices):
 
 
 class JobPackage(models.TextChoices):
+    PROMOTED  = 'promoted',  'Quota Hire Promoted Job'
     PIPELINE  = 'pipeline',  'Quota Hire Pipeline'
     HUNTERS   = 'hunters',   'Quota Hire Commission Hunters'
     SALES_OPS = 'sales_ops', 'Quota Hire Sales Ops'
