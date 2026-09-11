@@ -75,6 +75,14 @@ export default function SettingsScreen() {
   // Delete Account States
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
+  // QH-40: the server now requires re-authentication before deleting an account.
+  // Accounts created with Google Sign-In on the website have no password their
+  // owner knows, and they can still reach this app through email-code login, so
+  // a code is offered as an equal alternative to a password.
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteMethod, setDeleteMethod] = useState<'password' | 'code'>('password');
+  const [deleteCode, setDeleteCode] = useState('');
+  const [sendingDeleteCode, setSendingDeleteCode] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Fetch initial profile & settings data
@@ -217,9 +225,46 @@ export default function SettingsScreen() {
   };
 
   // Permanent Delete Account Action
+  //
+  // SECURITY (QH-40): the server now requires proof that the person pressing
+  // this is the account holder, not just someone holding a token. Typing DELETE
+  // is a guard against misclicks, not authentication — a stolen token could type
+  // it too. The password is sent as that proof; accounts created through Google
+  // Sign-In have no password the user knows and can confirm with an emailed code
+  // instead (POST /auth/login-otp/request/ then pass otp_code).
+  // Sends the confirmation code used by the 'code' method. Reuses the same
+  // passwordless-login endpoint, so there is no second code system to maintain.
+  const requestDeleteCode = async () => {
+    if (!email) {
+      Alert.alert('Email Missing', 'We could not read your email address. Please reopen Settings.');
+      return;
+    }
+    setSendingDeleteCode(true);
+    try {
+      await apiFetch('/auth/login-otp/request/', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      Alert.alert('Code Sent', `We sent a confirmation code to ${email}.`);
+    } catch (err: any) {
+      Alert.alert('Could Not Send Code', err?.message || 'Please try again in a moment.');
+    } finally {
+      setSendingDeleteCode(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteInput !== 'DELETE') {
       Alert.alert('Error', 'Please type DELETE exactly to confirm.');
+      return;
+    }
+    const usingCode = deleteMethod === 'code';
+    if (usingCode && deleteCode.trim().length !== 6) {
+      Alert.alert('Code Required', 'Enter the 6-digit code we emailed you.');
+      return;
+    }
+    if (!usingCode && !deletePassword.trim()) {
+      Alert.alert('Password Required', 'Enter your password to confirm account deletion.');
       return;
     }
 
@@ -229,6 +274,9 @@ export default function SettingsScreen() {
     try {
       await apiFetch('/auth/delete-account/', {
         method: 'DELETE',
+        body: JSON.stringify(
+          usingCode ? { otp_code: deleteCode.trim() } : { password: deletePassword }
+        ),
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -610,7 +658,7 @@ export default function SettingsScreen() {
                 <View style={s.confirmHeaderRow}>
                   <Feather name="alert-circle" size={16} color={Palette.red600} style={{ marginTop: 1 }} />
                   <Text style={s.confirmText}>
-                    This action is permanent and cannot be undone. Type <Text style={{ fontWeight: '800' }}>DELETE</Text> below to confirm.
+                    This action is permanent and cannot be undone. Type <Text style={{ fontWeight: '800' }}>DELETE</Text> below and enter your password to confirm.
                   </Text>
                 </View>
 
@@ -623,11 +671,71 @@ export default function SettingsScreen() {
                   style={s.confirmInput}
                 />
 
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                  <Pressable
+                    onPress={() => setDeleteMethod('password')}
+                    style={[s.methodTab, deleteMethod === 'password' && s.methodTabActive]}
+                  >
+                    <Text style={[s.methodTabText, deleteMethod === 'password' && s.methodTabTextActive]}>
+                      Use password
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setDeleteMethod('code')}
+                    style={[s.methodTab, deleteMethod === 'code' && s.methodTabActive]}
+                  >
+                    <Text style={[s.methodTabText, deleteMethod === 'code' && s.methodTabTextActive]}>
+                      Email me a code
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {deleteMethod === 'password' ? (
+                  <TextInput
+                    value={deletePassword}
+                    onChangeText={setDeletePassword}
+                    placeholder="Your password"
+                    placeholderTextColor={Palette.red400}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoComplete="current-password"
+                    style={[s.confirmInput, { marginTop: 10 }]}
+                  />
+                ) : (
+                  <View style={{ marginTop: 10, gap: 8 }}>
+                    <Text style={s.confirmHelpText}>
+                      Signed up with Google? You have no password to type — send yourself a code instead.
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TextInput
+                        value={deleteCode}
+                        onChangeText={(t) => setDeleteCode(t.replace(/\D/g, ''))}
+                        placeholder="6-digit code"
+                        placeholderTextColor={Palette.red400}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        style={[s.confirmInput, { flex: 1, letterSpacing: 4 }]}
+                      />
+                      <Pressable
+                        onPress={requestDeleteCode}
+                        disabled={sendingDeleteCode}
+                        style={[s.sendCodeBtn, sendingDeleteCode && { opacity: 0.5 }]}
+                      >
+                        <Text style={s.sendCodeBtnText}>
+                          {sendingDeleteCode ? 'Sending…' : 'Send code'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
                 <View style={s.confirmActionsRow}>
                   <Pressable
                     onPress={() => {
                       setShowDeleteConfirm(false);
                       setDeleteInput('');
+                      setDeletePassword('');
+                      setDeleteCode('');
                     }}
                     style={s.confirmCancelBtn}
                   >
@@ -635,11 +743,13 @@ export default function SettingsScreen() {
                   </Pressable>
 
                   <Pressable
-                    disabled={deleting || deleteInput !== 'DELETE'}
+                    disabled={deleting || deleteInput !== 'DELETE' ||
+                      (deleteMethod === 'password' ? !deletePassword.trim() : deleteCode.trim().length !== 6)}
                     onPress={handleDeleteAccount}
                     style={[
                       s.confirmDeleteBtn,
-                      deleteInput !== 'DELETE' && { opacity: 0.45 },
+                      (deleteInput !== 'DELETE' ||
+                        (deleteMethod === 'password' ? !deletePassword.trim() : deleteCode.trim().length !== 6)) && { opacity: 0.45 },
                     ]}
                   >
                     {deleting ? (
@@ -951,6 +1061,47 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     backgroundColor: '#ffffff',
+    color: Palette.red700,
+  },
+  // QH-40: choosing between password and emailed-code confirmation.
+  confirmHelpText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Palette.red700,
+    lineHeight: 15,
+  },
+  methodTab: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  methodTabActive: {
+    backgroundColor: Palette.red600,
+    borderColor: Palette.red600,
+  },
+  methodTabText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Palette.red700,
+  },
+  methodTabTextActive: {
+    color: '#ffffff',
+  },
+  sendCodeBtn: {
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+    backgroundColor: '#ffffff',
+  },
+  sendCodeBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
     color: Palette.red700,
   },
   confirmActionsRow: {

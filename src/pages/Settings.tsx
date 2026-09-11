@@ -6,6 +6,7 @@ import {
   Settings as SettingsIcon, CheckCircle2,
 } from 'lucide-react';
 import { useAppContext, apiFetch } from '../context/AppContext';
+import { isRateLimited, rateLimitMessage } from '../utils/apiErrors';
 import { toast } from 'sonner';
 
 type Tab = 'account' | 'security';
@@ -37,6 +38,14 @@ export const Settings = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  // QH-40: re-authentication before deletion. 'password' for ordinary accounts,
+  // 'code' for accounts created with Google Sign-In, which have no password
+  // their owner has ever seen.
+  const [deleteMethod, setDeleteMethod] = useState<'password' | 'code'>('password');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteCode, setDeleteCode] = useState('');
+  const [deleteCodeSent, setDeleteCodeSent] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
 
   const handleSaveAccount = async () => {
     if (!accountForm.name.trim()) {
@@ -86,22 +95,82 @@ export const Settings = () => {
     }
   };
 
+  // QH-40: deleting an account now requires proof that the person pressing the
+  // button is the account holder, not just someone holding a token. Typing
+  // DELETE guards against a misclick; it is not authentication.
+  //
+  // Two ways to confirm, because not every account has a password its owner
+  // knows: signing up with Google creates one at random that the user never
+  // sees. Those accounts confirm with a code emailed to the address instead —
+  // Google sign-in only exists on the website, so this is the path that matters
+  // for them.
+  const requestDeleteCode = async () => {
+    const email = (currentUser as any)?.email;
+    if (!email) {
+      toast.error('We could not read your email address. Please reload and try again.');
+      return;
+    }
+    setIsSendingCode(true);
+    try {
+      await apiFetch('/auth/login-otp/request/', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      setDeleteCodeSent(true);
+      toast.success(`We sent a confirmation code to ${email}.`);
+    } catch (error: any) {
+      toast.error(
+        isRateLimited(error)
+          ? rateLimitMessage(error, 'email requests')
+          : 'Could not send the code just now. Please try again in a moment.'
+      );
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteInput !== 'DELETE') {
       toast.error('Please type DELETE exactly to confirm.');
       return;
     }
+    const usingCode = deleteMethod === 'code';
+    if (usingCode && deleteCode.trim().length !== 6) {
+      toast.error('Enter the 6-digit code we emailed you.');
+      return;
+    }
+    if (!usingCode && !deletePassword.trim()) {
+      toast.error('Enter your password to confirm.');
+      return;
+    }
+
     setIsDeleting(true);
     try {
-      await apiFetch('/auth/delete/', { method: 'DELETE' });
+      await apiFetch('/auth/delete/', {
+        method: 'DELETE',
+        body: JSON.stringify(
+          usingCode ? { otp_code: deleteCode.trim() } : { password: deletePassword }
+        ),
+      });
       toast.success('Your account has been deleted.');
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       setTimeout(() => {
         window.location.href = import.meta.env.BASE_URL || '/';
       }, 1500);
-    } catch {
-      toast.error('Could not delete account. Please try again.');
+    } catch (error: any) {
+      // The server distinguishes "you did not prove who you are" from a genuine
+      // failure, so say which it was rather than a blanket "try again".
+      const status = error?.status;
+      toast.error(
+        status === 403
+          ? (usingCode
+              ? 'That code is invalid or has expired. Please request a new one.'
+              : 'That password is incorrect.')
+          : status === 400
+            ? 'Please confirm with your password or an emailed code.'
+            : 'Could not delete account. Please try again.'
+      );
       setIsDeleting(false);
     }
   };
@@ -273,7 +342,7 @@ export const Settings = () => {
                       <AlertTriangle className="text-red-500 mt-0.5 shrink-0" size={16} />
                       <p className="text-xs sm:text-sm text-red-700 dark:text-red-400 font-medium leading-relaxed">
                         This action is <strong>irreversible</strong>. All your data, applications, and profile will be permanently deleted.
-                        Type <strong>DELETE</strong> below to confirm.
+                        Type <strong>DELETE</strong> below and confirm it is you.
                       </p>
                     </div>
 
@@ -285,16 +354,91 @@ export const Settings = () => {
                       className="w-full rounded-xl border-2 border-red-300 dark:border-red-800 bg-white dark:bg-neutral-900 px-4 py-2.5 text-sm font-bold text-red-700 dark:text-red-400 placeholder:text-red-300 dark:placeholder:text-red-900 focus:ring-2 focus:ring-red-400 outline-none"
                     />
 
+                    {/* Confirm it is really you. Accounts created with Google
+                        have no password their owner knows, so an emailed code
+                        is offered as an equal alternative rather than a
+                        fallback buried behind an error. */}
+                    <div className="flex gap-2 text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setDeleteMethod('password')}
+                        className={`flex-1 py-2 rounded-lg border transition ${
+                          deleteMethod === 'password'
+                            ? 'bg-red-600 text-white border-red-600'
+                            : 'border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
+                        }`}
+                      >
+                        Use my password
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteMethod('code')}
+                        className={`flex-1 py-2 rounded-lg border transition ${
+                          deleteMethod === 'code'
+                            ? 'bg-red-600 text-white border-red-600'
+                            : 'border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
+                        }`}
+                      >
+                        Email me a code
+                      </button>
+                    </div>
+
+                    {deleteMethod === 'password' ? (
+                      <input
+                        type="password"
+                        autoComplete="current-password"
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        placeholder="Your password"
+                        className="w-full rounded-xl border-2 border-red-300 dark:border-red-800 bg-white dark:bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-900 dark:text-white placeholder:text-red-300 dark:placeholder:text-red-900 focus:ring-2 focus:ring-red-400 outline-none"
+                      />
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-red-700 dark:text-red-400 font-medium">
+                          Signed up with Google? You have no password to type — send yourself a code instead.
+                        </p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={deleteCode}
+                            onChange={(e) => setDeleteCode(e.target.value.replace(/\D/g, ''))}
+                            placeholder="6-digit code"
+                            className="flex-1 rounded-xl border-2 border-red-300 dark:border-red-800 bg-white dark:bg-neutral-900 px-4 py-2.5 text-sm font-bold tracking-widest text-neutral-900 dark:text-white placeholder:text-red-300 dark:placeholder:text-red-900 focus:ring-2 focus:ring-red-400 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={requestDeleteCode}
+                            disabled={isSendingCode}
+                            className="shrink-0 px-4 py-2.5 rounded-xl border-2 border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-60 transition"
+                          >
+                            {isSendingCode ? 'Sending…' : deleteCodeSent ? 'Resend' : 'Send code'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-col sm:flex-row gap-3">
                       <button
-                        onClick={() => { setShowDeleteConfirm(false); setDeleteInput(''); }}
+                        onClick={() => {
+                          setShowDeleteConfirm(false);
+                          setDeleteInput('');
+                          setDeletePassword('');
+                          setDeleteCode('');
+                          setDeleteCodeSent(false);
+                        }}
                         className="flex-1 py-3 rounded-xl font-bold text-sm text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleDeleteAccount}
-                        disabled={isDeleting || deleteInput !== 'DELETE'}
+                        disabled={
+                          isDeleting ||
+                          deleteInput !== 'DELETE' ||
+                          (deleteMethod === 'password' ? !deletePassword.trim() : deleteCode.trim().length !== 6)
+                        }
                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white bg-red-600 hover:bg-red-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isDeleting
