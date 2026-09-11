@@ -2263,15 +2263,8 @@ class ApplicationStatusUpdateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        is_promoted = getattr(app.job, 'package', '') == 'promoted'
-        if not is_promoted and new_status not in ['accepted', 'rejected', 'under_review']:
-            return Response(
-                {'error': 'For standard recruitment packages, candidate evaluation and placement are managed by Quota Hire.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
         app.status = new_status
-        app.save()  # Triggers post_save signal in signals.py which handles notifications, push, and ZeptoMail email
+        app.save()  # Triggers post_save signal in signals.py which handles notifications, push, and email
 
         from .cache_utils import invalidate_dashboards
         invalidate_dashboards(

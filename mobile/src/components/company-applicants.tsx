@@ -44,9 +44,66 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; d
   under_review: { label: 'Under Review',     bg: Palette.amber50,    text: Palette.amber700,   dot: Palette.amber500 },
   interview:    { label: 'Interview',        bg: Palette.purple50,   text: Palette.purple700,  dot: Palette.purple500 },
   decision:     { label: 'Decision Pending', bg: Palette.blue50,     text: Palette.blue600,    dot: Palette.blue500 },
-  accepted:     { label: 'Accepted (Hired)', bg: Palette.emerald50,  text: EmeraldGreen,       dot: Palette.emerald500 },
+  accepted:     { label: 'Accepted',         bg: Palette.emerald50,  text: EmeraldGreen,       dot: Palette.emerald500 },
   rejected:     { label: 'Rejected',         bg: Palette.red50,      text: Palette.red700,     dot: Palette.red500 },
 };
+
+// 5 Evaluation Actions matching Django Admin & Product Specification
+const EVALUATION_ACTIONS: Array<{
+  status: string;
+  label: string;
+  shortLabel: string;
+  icon: 'eye' | 'calendar' | 'clock' | 'check-circle' | 'x-circle';
+  color: string;
+  activeBg: string;
+  activeBorder: string;
+}> = [
+  {
+    status: 'under_review',
+    label: 'Mark as Under Review',
+    shortLabel: 'Under Review',
+    icon: 'eye',
+    color: '#d97706',
+    activeBg: '#fef3c7',
+    activeBorder: '#f59e0b',
+  },
+  {
+    status: 'interview',
+    label: 'Mark for Interview',
+    shortLabel: 'Interview',
+    icon: 'calendar',
+    color: '#7c3aed',
+    activeBg: '#f3e8ff',
+    activeBorder: '#a855f7',
+  },
+  {
+    status: 'decision',
+    label: 'Mark as Decision Pending',
+    shortLabel: 'Decision Pending',
+    icon: 'clock',
+    color: '#2563eb',
+    activeBg: '#eff6ff',
+    activeBorder: '#3b82f6',
+  },
+  {
+    status: 'accepted',
+    label: 'Accept Application',
+    shortLabel: 'Accepted',
+    icon: 'check-circle',
+    color: '#059669',
+    activeBg: '#ecfdf5',
+    activeBorder: '#10b981',
+  },
+  {
+    status: 'rejected',
+    label: 'Reject Application',
+    shortLabel: 'Rejected',
+    icon: 'x-circle',
+    color: '#dc2626',
+    activeBg: '#fef2f2',
+    activeBorder: '#ef4444',
+  },
+];
 
 // Mask contact information strictly for non-promoted agency packages
 const cleanText = (text: string) => {
@@ -200,19 +257,34 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
     }
   };
 
-  // Status Change Workflow (Promoted Jobs)
+  // Status Change Workflow with Accidental-Click Protection Prompt
   const handleUpdateStatus = (appId: number, newStatus: string) => {
-    const config = STATUS_CONFIG[newStatus] || { label: newStatus };
+    const currentStatusKey = selectedCandidate?.status || 'pending';
+    const currentConfig = STATUS_CONFIG[currentStatusKey] || STATUS_CONFIG.pending;
+    const actionConfig = EVALUATION_ACTIONS.find(a => a.status === newStatus) || { label: newStatus, shortLabel: newStatus };
+    const candidateName = selectedCandidate?.employee_name || 'this applicant';
+
+    if (currentStatusKey === newStatus) {
+      Alert.alert(
+        'Current Status',
+        `${candidateName} is already marked as "${actionConfig.shortLabel}".`
+      );
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
     Alert.alert(
-      `Set Status: ${config.label}`,
-      `Are you sure you want to mark this applicant as "${config.label}"? An automated email and real-time push notification will be sent immediately.`,
+      'Update Application Status',
+      `You are changing ${candidateName}'s application status from "${currentConfig.label}" to "${actionConfig.shortLabel}".\n\nAn automated email notification will be sent to the applicant immediately.\n\nAre you sure you want to proceed?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm',
+          text: 'Confirm Update',
+          style: newStatus === 'rejected' ? 'destructive' : 'default',
           onPress: async () => {
             setUpdatingStatus(true);
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             try {
               await apiFetch(`/company/applications/${appId}/status/`, {
                 method: 'PUT',
@@ -223,7 +295,10 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
               if (selectedCandidate && selectedCandidate.id === appId) {
                 setSelectedCandidate((prev: any) => ({ ...prev, status: newStatus }));
               }
-              Alert.alert('Status Updated', `Candidate is now marked as "${config.label}". Real-time notifications dispatched.`);
+              Alert.alert(
+                'Status Updated',
+                `${candidateName}'s application has been updated to "${actionConfig.shortLabel}". The candidate has been notified via email.`
+              );
             } catch (err: any) {
               Alert.alert('Update Failed', err?.message || 'Failed to update candidate status.');
             } finally {
@@ -488,38 +563,22 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
 
                   <View style={styles.cardDivider} />
 
-                  {/* Action Buttons */}
-                  <View style={styles.cardActions}>
-                    <Pressable
-                      onPress={() => handleViewCandidate(app)}
-                      style={[styles.viewProfileBtn, { backgroundColor: Palette.neutral100 }]}
-                    >
-                      <Feather name="user" size={12} color={colors.text} />
-                      <Text style={[styles.viewProfileText, { color: colors.text }]}>View Details</Text>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => handleToggleShortlist(app.id, app.is_shortlisted)}
-                      style={[
-                        styles.shortlistBtn,
-                        app.is_shortlisted
-                          ? { backgroundColor: Palette.amber50, borderWidth: 1, borderColor: AmberBorder }
-                          : { backgroundColor: Palette.accent600 }
-                      ]}
-                    >
-                      <Feather
-                        name="star"
-                        size={12}
-                        color={app.is_shortlisted ? Palette.amber700 : '#ffffff'}
-                      />
-                      <Text style={[
-                        styles.shortlistBtnText,
-                        { color: app.is_shortlisted ? Palette.amber700 : '#ffffff' }
-                      ]}>
-                        {app.is_shortlisted ? 'Shortlisted' : 'Shortlist'}
-                      </Text>
-                    </Pressable>
-                  </View>
+                  {/* Action CTA: Redesigned Minimal View Details */}
+                  <Pressable
+                    onPress={() => handleViewCandidate(app)}
+                    style={({ pressed }) => [
+                      styles.viewDetailsBtn,
+                      { opacity: pressed ? 0.88 : 1 }
+                    ]}
+                  >
+                    <View style={styles.viewDetailsLeft}>
+                      <View style={styles.viewDetailsIconCircle}>
+                        <Feather name="eye" size={13} color="#ffffff" />
+                      </View>
+                      <Text style={styles.viewDetailsBtnText}>View Details</Text>
+                    </View>
+                    <Feather name="chevron-right" size={15} color="rgba(255,255,255,0.75)" />
+                  </Pressable>
                 </Pressable>
               </Animated.View>
             );
@@ -575,23 +634,25 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                     {selectedCandidate.employee_profile?.title || 'Applicant'}
                   </Text>
 
-                  {/* Status & Exp Row */}
+                  {/* Overview Metadata Row: Exp Badge & Evaluated Status (Omit 'Applied') */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                    <View style={[
-                      styles.statusPill,
-                      { backgroundColor: (STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).bg }
-                    ]}>
+                    {selectedCandidate.status && selectedCandidate.status !== 'pending' && (
                       <View style={[
-                        styles.statusDot,
-                        { backgroundColor: (STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).dot }
-                      ]} />
-                      <Text style={[
-                        styles.statusPillText,
-                        { color: (STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).text }
+                        styles.statusPill,
+                        { backgroundColor: (STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).bg }
                       ]}>
-                        {(STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).label}
-                      </Text>
-                    </View>
+                        <View style={[
+                          styles.statusDot,
+                          { backgroundColor: (STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).dot }
+                        ]} />
+                        <Text style={[
+                          styles.statusPillText,
+                          { color: (STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).text }
+                        ]}>
+                          {(STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).label}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.expBadge}>
                       <Feather name="briefcase" size={11} color={Palette.accent600} />
                       <Text style={styles.expBadgeText}>
@@ -600,28 +661,6 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                     </View>
                   </View>
                 </View>
-
-                {/* ── PROFESSIONAL SUMMARY (Rearranged & Professionalized) ── */}
-                {selectedCandidate.employee_profile?.bio && (
-                  <View style={styles.summaryCard}>
-                    <View style={styles.summaryHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Feather name="file-text" size={13} color={Palette.accent600} />
-                        <Text style={styles.summaryTitle}>Executive Summary</Text>
-                      </View>
-                      <View style={styles.summaryBadge}>
-                        <Text style={styles.summaryBadgeText}>Candidate Bio</Text>
-                      </View>
-                    </View>
-                    <View style={styles.summaryContentBox}>
-                      <Text style={styles.summaryText}>
-                        {isPromoted
-                          ? selectedCandidate.employee_profile.bio
-                          : cleanText(selectedCandidate.employee_profile.bio)}
-                      </Text>
-                    </View>
-                  </View>
-                )}
 
                 {/* ── UNMASKED CONTACT INFO CARD (PROMOTED ONLY) ── */}
                 {isPromoted ? (
@@ -800,116 +839,125 @@ export default function CompanyApplicants({ jobId, onBack }: CompanyApplicantsPr
                   </View>
                 )}
 
-                {/* ── HIRING & EVALUATION WORKFLOW (PROMOTED JOBS) ── */}
-                {isPromoted ? (
-                  <View style={styles.pipelineActionsCard}>
-                    <Text style={styles.pipelineSectionTitle}>Candidate Evaluation & Status</Text>
-                    <Text style={styles.pipelineSectionSub}>
-                      Moving candidate status triggers instant push and automated email notifications.
-                    </Text>
-
-                    <View style={styles.pipelineButtonsGrid}>
-                      {/* Shortlist */}
-                      <Pressable
-                        onPress={() => handleToggleShortlist(selectedCandidate.id, selectedCandidate.is_shortlisted)}
-                        style={[
-                          styles.pipelineBtn,
-                          selectedCandidate.is_shortlisted
-                            ? { backgroundColor: Palette.amber50, borderColor: AmberBorder }
-                            : { backgroundColor: '#ffffff', borderColor: colors.borderMid }
-                        ]}
-                      >
-                        <Feather
-                          name="star"
-                          size={14}
-                          color={selectedCandidate.is_shortlisted ? Palette.amber700 : Palette.neutral700}
-                        />
-                        <Text style={[
-                          styles.pipelineBtnText,
-                          { color: selectedCandidate.is_shortlisted ? Palette.amber700 : Palette.neutral700 }
-                        ]}>
-                          {selectedCandidate.is_shortlisted ? 'Shortlisted' : 'Shortlist'}
-                        </Text>
-                      </Pressable>
-
-                      {/* Interview */}
-                      <Pressable
-                        onPress={() => handleUpdateStatus(selectedCandidate.id, 'interview')}
-                        disabled={updatingStatus}
-                        style={[
-                          styles.pipelineBtn,
-                          selectedCandidate.status === 'interview'
-                            ? { backgroundColor: Palette.purple50, borderColor: PurpleBorder }
-                            : { backgroundColor: '#ffffff', borderColor: colors.borderMid }
-                        ]}
-                      >
-                        <Feather name="calendar" size={14} color={Palette.purple700} />
-                        <Text style={[styles.pipelineBtnText, { color: Palette.purple700 }]}>
-                          Interview
-                        </Text>
-                      </Pressable>
-
-                      {/* Approve / Hire */}
-                      <Pressable
-                        onPress={() => handleUpdateStatus(selectedCandidate.id, 'accepted')}
-                        disabled={updatingStatus}
-                        style={[
-                          styles.pipelineBtn,
-                          selectedCandidate.status === 'accepted'
-                            ? { backgroundColor: Palette.emerald50, borderColor: EmeraldBorder }
-                            : { backgroundColor: '#ffffff', borderColor: colors.borderMid }
-                        ]}
-                      >
-                        <Feather name="check-circle" size={14} color={EmeraldGreen} />
-                        <Text style={[styles.pipelineBtnText, { color: EmeraldGreen }]}>
-                          Approve / Hire
-                        </Text>
-                      </Pressable>
-
-                      {/* Reject */}
-                      <Pressable
-                        onPress={() => handleUpdateStatus(selectedCandidate.id, 'rejected')}
-                        disabled={updatingStatus}
-                        style={[
-                          styles.pipelineBtn,
-                          selectedCandidate.status === 'rejected'
-                            ? { backgroundColor: Palette.red50, borderColor: RedBorder }
-                            : { backgroundColor: '#ffffff', borderColor: colors.borderMid }
-                        ]}
-                      >
-                        <Feather name="x-circle" size={14} color={Palette.red600} />
-                        <Text style={[styles.pipelineBtnText, { color: Palette.red600 }]}>
-                          Reject
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.modalActions}>
-                    <Pressable
-                      onPress={() => handleToggleShortlist(selectedCandidate.id, selectedCandidate.is_shortlisted)}
-                      style={[
-                        styles.modalShortlistBtn,
-                        selectedCandidate.is_shortlisted
-                          ? { backgroundColor: Palette.amber50, borderWidth: 1, borderColor: AmberBorder }
-                          : { backgroundColor: Palette.accent600 }
-                      ]}
-                    >
+                {/* ── DEDICATED SHORTLIST ACTION (STANDALONE) ── */}
+                <View style={[
+                  styles.standaloneShortlistCard,
+                  selectedCandidate.is_shortlisted && styles.standaloneShortlistCardActive
+                ]}>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Feather
                         name="star"
-                        size={14}
-                        color={selectedCandidate.is_shortlisted ? Palette.amber700 : '#ffffff'}
-                        style={{ marginRight: 6 }}
+                        size={15}
+                        color={selectedCandidate.is_shortlisted ? Palette.amber500 : Palette.neutral600}
                       />
                       <Text style={[
-                        styles.modalShortlistBtnText,
-                        { color: selectedCandidate.is_shortlisted ? Palette.amber700 : '#ffffff' }
+                        styles.standaloneShortlistTitle,
+                        selectedCandidate.is_shortlisted && { color: Palette.amber700 }
                       ]}>
-                        {selectedCandidate.is_shortlisted ? 'Remove from Shortlist' : 'Shortlist Candidate'}
+                        {selectedCandidate.is_shortlisted ? 'Candidate Shortlisted' : 'Shortlist Candidate'}
                       </Text>
-                    </Pressable>
+                    </View>
+                    <Text style={[
+                      styles.standaloneShortlistSub,
+                      selectedCandidate.is_shortlisted && { color: Palette.amber700 }
+                    ]}>
+                      {selectedCandidate.is_shortlisted
+                        ? 'Bookmarked in your Shortlisted filter tab'
+                        : 'Bookmark to quickly access in the Shortlisted tab'}
+                    </Text>
                   </View>
-                )}
+
+                  <Pressable
+                    onPress={() => handleToggleShortlist(selectedCandidate.id, selectedCandidate.is_shortlisted)}
+                    style={({ pressed }) => [
+                      styles.standaloneShortlistBtn,
+                      selectedCandidate.is_shortlisted
+                        ? styles.standaloneShortlistBtnActive
+                        : styles.standaloneShortlistBtnInactive,
+                      { opacity: pressed ? 0.85 : 1 }
+                    ]}
+                  >
+                    <Feather
+                      name="star"
+                      size={13}
+                      color={selectedCandidate.is_shortlisted ? Palette.amber700 : '#ffffff'}
+                      style={{ marginRight: 5 }}
+                    />
+                    <Text style={[
+                      styles.standaloneShortlistBtnText,
+                      { color: selectedCandidate.is_shortlisted ? Palette.amber700 : '#ffffff' }
+                    ]}>
+                      {selectedCandidate.is_shortlisted ? 'Remove' : 'Shortlist'}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* ── CANDIDATE EVALUATION & STATUS (5 ACTIONS) ── */}
+                <View style={styles.evaluationSectionCard}>
+                  <View style={styles.evaluationSectionHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Feather name="layers" size={15} color={Palette.accent600} />
+                      <Text style={styles.evaluationSectionTitle}>Candidate Evaluation & Status</Text>
+                    </View>
+                    <View style={styles.evaluationStatusBadge}>
+                      <Text style={styles.evaluationStatusBadgeText}>
+                        Current: {(STATUS_CONFIG[selectedCandidate.status] || STATUS_CONFIG.pending).label}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.evaluationSectionSub}>
+                    Updating candidate status automatically sends an email notification directly to the applicant.
+                  </Text>
+
+                  <View style={styles.evaluationList}>
+                    {EVALUATION_ACTIONS.map((action) => {
+                      const isActive = selectedCandidate.status === action.status;
+                      return (
+                        <Pressable
+                          key={action.status}
+                          onPress={() => handleUpdateStatus(selectedCandidate.id, action.status)}
+                          disabled={updatingStatus}
+                          style={({ pressed }) => [
+                            styles.evaluationActionRow,
+                            isActive && {
+                              backgroundColor: action.activeBg,
+                              borderColor: action.activeBorder,
+                              borderWidth: 1.5,
+                            },
+                            { opacity: pressed || updatingStatus ? 0.75 : 1 }
+                          ]}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                            <View style={[
+                              styles.evaluationActionIconWrap,
+                              { backgroundColor: isActive ? '#ffffff' : '#f1f5f9' },
+                              isActive && { borderColor: action.activeBorder, borderWidth: 1 }
+                            ]}>
+                              <Feather name={action.icon} size={15} color={action.color} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[
+                                styles.evaluationActionLabel,
+                                isActive && { color: action.color, fontWeight: FontWeight.extrabold }
+                              ]}>
+                                {action.label}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {isActive ? (
+                            <View style={[styles.activeStatusPill, { backgroundColor: action.color }]}>
+                              <Text style={styles.activeStatusPillText}>Active</Text>
+                            </View>
+                          ) : (
+                            <Feather name="chevron-right" size={16} color={Palette.neutral400} />
+                          )}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
               </ScrollView>
             )}
           </View>
@@ -1201,35 +1249,33 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#f1f5f9',
   },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  viewProfileBtn: {
-    flex: 1,
+  viewDetailsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 38,
-    borderRadius: 10,
+    justifyContent: 'space-between',
+    backgroundColor: '#0f172a',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
   },
-  viewProfileText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-  },
-  shortlistBtn: {
-    flex: 1.1,
+  viewDetailsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 38,
-    borderRadius: 10,
+    gap: 8,
   },
-  shortlistBtnText: {
+  viewDetailsIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewDetailsBtnText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
+    color: '#ffffff',
+    letterSpacing: 0.15,
   },
 
   // Modal Slide Up Sheet
@@ -1455,47 +1501,51 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  // Professional Summary Card
-  summaryCard: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderLeftWidth: 3.5,
-    borderLeftColor: Palette.accent600,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
-    gap: 8,
-  },
-  summaryHeader: {
+  // Standalone Dedicated Shortlist Card
+  standaloneShortlistCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    gap: 12,
   },
-  summaryTitle: {
+  standaloneShortlistCardActive: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#fde68a',
+  },
+  standaloneShortlistTitle: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.extrabold,
-    color: Palette.neutral900,
-  },
-  summaryBadge: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderRadius: 6,
-  },
-  summaryBadgeText: {
-    fontSize: 9.5,
     fontWeight: FontWeight.bold,
+    color: Palette.neutral800,
+  },
+  standaloneShortlistSub: {
+    fontSize: 10.5,
     color: Palette.neutral500,
+    marginTop: 1,
   },
-  summaryContentBox: {
-    paddingTop: 2,
+  standaloneShortlistBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
   },
-  summaryText: {
-    fontSize: 13,
-    color: '#334155',
-    lineHeight: 20,
-    letterSpacing: 0.1,
+  standaloneShortlistBtnActive: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+  standaloneShortlistBtnInactive: {
+    backgroundColor: '#0f172a',
+  },
+  standaloneShortlistBtnText: {
+    fontSize: 11,
+    fontWeight: FontWeight.bold,
   },
 
   // In-App Viewer Styles
@@ -1603,8 +1653,8 @@ const styles = StyleSheet.create({
     color: Palette.neutral700,
   },
 
-  // Candidate Pipeline Action Grid
-  pipelineActionsCard: {
+  // 5 Candidate Evaluation & Status Workflow
+  evaluationSectionCard: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#cbd5e1',
@@ -1613,52 +1663,71 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     gap: 10,
   },
-  pipelineSectionTitle: {
+  evaluationSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  evaluationSectionTitle: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.extrabold,
     color: '#0f172a',
   },
-  pipelineSectionSub: {
+  evaluationStatusBadge: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  evaluationStatusBadgeText: {
+    fontSize: 9.5,
+    fontWeight: FontWeight.bold,
+    color: Palette.neutral600,
+  },
+  evaluationSectionSub: {
     fontSize: 11,
     color: Palette.neutral500,
+    lineHeight: 16,
   },
-  pipelineButtonsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  evaluationList: {
     gap: 8,
     marginTop: 4,
   },
-  pipelineBtn: {
-    flex: 1,
-    minWidth: '46%',
+  evaluationActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 42,
-    borderRadius: 10,
+    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  pipelineBtnText: {
+  evaluationActionIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  evaluationActionLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.bold,
+    color: '#1e293b',
   },
-
-  // Modal Actions for agency package
-  modalActions: {
-    marginTop: 10,
-    marginBottom: 20,
+  activeStatusPill: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 99,
   },
-  modalShortlistBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 48,
-    borderRadius: 12,
-  },
-  modalShortlistBtnText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
+  activeStatusPillText: {
+    fontSize: 9.5,
+    fontWeight: FontWeight.extrabold,
+    color: '#ffffff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
 
   // Empty State

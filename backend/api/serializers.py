@@ -113,13 +113,32 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class EmployeeProfileSerializer(serializers.ModelSerializer):
     bio = serializers.CharField(max_length=2000, allow_blank=True, required=False)
+    has_resume = serializers.SerializerMethodField()
 
     class Meta:
         model  = EmployeeProfile
-        fields = ('title', 'bio', 'linkedin_url', 'resume_url', 'resume_file', 'education', 'skills', 'experience_years', 'phone_number', 'country', 'city', 'postal_code', 'street_address')
+        fields = ('title', 'bio', 'linkedin_url', 'resume_url', 'resume_file', 'has_resume', 'resume_filename', 'education', 'skills', 'experience_years', 'phone_number', 'country', 'city', 'postal_code', 'street_address')
+        read_only_fields = ('has_resume', 'resume_filename')
 
     def validate_bio(self, value):
         return sanitize_text(value)
+
+    def get_has_resume(self, obj) -> bool:
+        """Whether this profile has a CV on file, by any of the three routes.
+
+        ResumeUploadView deliberately stores the file in `resume_binary` and
+        stops there — it used to also assign `resume_file`, which pushed the
+        document at Cloudinary's image endpoint and failed for every PDF and
+        DOCX. But `resume_binary` is not in this serializer (it is a BinaryField
+        of megabytes), so the only resume fields the frontend could see were the
+        two that an upload no longer fills.
+
+        The result was that a freshly uploaded CV looked like no CV at all: the
+        profile-completeness check never counted it, and the Apply button — which
+        required a "100%" profile — could never be satisfied by anyone who had
+        uploaded through the app. This flag reports the real answer.
+        """
+        return bool(obj.resume_binary or obj.resume_file or obj.resume_url)
 
 
 class CompanyProfileSerializer(serializers.ModelSerializer):
