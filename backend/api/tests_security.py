@@ -2843,3 +2843,107 @@ class CommunityWaitlistTests(ThrottleIsolatedTestCase):
             CommunityWaitlistEntry.objects.get(email='waiting@example.com').notified_at,
             'A fresh entry was already marked as notified, so the launch mail would skip them.',
         )
+
+
+class JobSearchAndFilterTests(TestCase):
+    """One search box across job code, title and location, plus the filters.
+
+    The list endpoint used to match the title alone and to ignore
+    employment_type entirely, so searching for a city or a job code found
+    nothing and the Full-time filter did nothing at all.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.url = reverse('job-list-create')
+
+        self.company = CustomUser.objects.create_user(
+            username='hiring@example.com', email='hiring@example.com',
+            password='A-Str0ng-Passw0rd!x', role=UserRole.COMPANY,
+        )
+        from .models import Job, JobStatus
+
+        def make(title, location, employment_type, is_remote):
+            return Job.objects.create(
+                company=self.company, title=title, location=location,
+                description='d', requirements=['r'],
+                employment_type=employment_type, is_remote=is_remote,
+                status=JobStatus.APPROVED,
+            )
+
+        self.lagos = make('Enterprise Account Executive', 'Lagos, Nigeria', 'Full-time', False)
+        self.london = make('Sales Development Rep', 'London, United Kingdom', 'Contract', True)
+        self.remote_ft = make('Regional Sales Manager', 'Manchester, United Kingdom', 'Full-time', True)
+
+    def _titles(self, **params):
+        resp = self.client.get(self.url, params)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        rows = resp.data.get('results', resp.data)
+        return {r['title'] for r in rows}
+
+    def test_search_matches_the_title(self):
+        self.assertEqual(self._titles(search='Enterprise'), {self.lagos.title})
+
+    def test_search_matches_the_location(self):
+        """A city used to return nothing, because only titles were searched."""
+        self.assertEqual(self._titles(search='Lagos'), {self.lagos.title})
+
+    def test_search_matches_a_partial_location(self):
+        self.assertEqual(
+            self._titles(search='United Kingdom'),
+            {self.london.title, self.remote_ft.title},
+        )
+
+    def test_search_matches_the_job_code(self):
+        code = self.lagos.job_code
+        self.assertTrue(code, 'Job was saved without a job code.')
+        self.assertEqual(self._titles(search=code), {self.lagos.title})
+
+    def test_a_leading_hash_is_ignored(self):
+        self.assertEqual(self._titles(search=f'#{self.lagos.job_code}'), {self.lagos.title})
+
+    def test_search_matches_the_numeric_id(self):
+        self.assertEqual(self._titles(search=str(self.lagos.id)), {self.lagos.title})
+
+    def test_a_very_long_number_does_not_crash(self):
+        """A digit string too large for the id column must not raise."""
+        resp = self.client.get(self.url, {'search': '9' * 40})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_search_finds_nothing_when_nothing_matches(self):
+        self.assertEqual(self._titles(search='Reykjavik'), set())
+
+    def test_remote_filter(self):
+        self.assertEqual(
+            self._titles(remote='true'),
+            {self.london.title, self.remote_ft.title},
+        )
+
+    def test_employment_type_filter(self):
+        """This parameter was sent by the app and ignored by the server."""
+        self.assertEqual(
+            self._titles(employment_type='Full-time'),
+            {self.lagos.title, self.remote_ft.title},
+        )
+
+    def test_employment_type_is_case_insensitive(self):
+        self.assertEqual(
+            self._titles(employment_type='full-time'),
+            {self.lagos.title, self.remote_ft.title},
+        )
+
+    def test_filters_combine(self):
+        self.assertEqual(
+            self._titles(remote='true', employment_type='Full-time'),
+            {self.remote_ft.title},
+        )
+
+    def test_a_filtered_page_is_not_cached_as_the_unfiltered_one(self):
+        """The page-1 cache key is built from `remote` alone."""
+        self._titles(employment_type='Full-time')
+        self.assertEqual(
+            self._titles(),
+            {self.lagos.title, self.london.title, self.remote_ft.title},
+            'The employment_type result was served to an unfiltered request.',
+        )

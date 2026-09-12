@@ -1341,7 +1341,13 @@ class JobListCreateView(generics.ListCreateAPIView):
         # Only cache: no free-text search, and only page 1 (the most-visited page).
         # Pages 2+ go direct to DB — they’re rarely hit and the count/next/previous
         # URLs in the paginated response would be wrong if served from a page-1 cache.
-        use_cache = (not search) and (page == '1')
+        #
+        # An employment_type filter is excluded too. The cache key is built from
+        # `remote` alone and the invalidation list in cache_utils enumerates those
+        # keys by hand, so caching a filtered page under one of them would serve
+        # the filtered list to everybody asking for the unfiltered one.
+        employment_type = request.query_params.get('employment_type', '')
+        use_cache = (not search) and (not employment_type) and (page == '1')
 
         if use_cache:
             cache_key = jobs_list_key(remote=remote)
@@ -1387,10 +1393,35 @@ class JobListCreateView(generics.ListCreateAPIView):
         # Optional filters from query params
         search = self.request.query_params.get('search')
         remote = self.request.query_params.get('remote')
+        employment_type = self.request.query_params.get('employment_type')
+
+        # One search box, three things a person might type. It used to match the
+        # title alone, so a city or a job code returned nothing — and the mobile
+        # app papered over that by re-filtering the page it got back, which only
+        # ever searched the twenty rows already on screen. Matching here means
+        # the whole table is searched.
         if search:
-            qs = qs.filter(title__icontains=search)
+            term = search.strip().lstrip('#')
+            if term:
+                criteria = (
+                    models.Q(title__icontains=term)
+                    | models.Q(location__icontains=term)
+                    | models.Q(job_code__icontains=term)
+                )
+                # A bare number is the job's id. Length-capped so a long digit
+                # string cannot overflow the integer column and raise.
+                if term.isdigit() and len(term) <= 9:
+                    criteria |= models.Q(pk=int(term))
+                qs = qs.filter(criteria)
+
         if remote == 'true':
             qs = qs.filter(is_remote=True)
+
+        # The mobile app has been sending employment_type since the Full-time
+        # filter was added, and nothing here read it, so that filter did nothing.
+        if employment_type:
+            qs = qs.filter(employment_type__iexact=employment_type.strip())
+
         return qs
 
 
