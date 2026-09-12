@@ -19,8 +19,15 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 // This is the most reliable approach for blob: URL rendering in Vite.
 // The local ?url import can fail in some environments when the worker
 // tries to fetch a blob: URL from a different origin context.
-const PDFJS_VERSION = '6.1.200';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
+//
+// The version is read from the library rather than written here. It used to be
+// a hardcoded '6.1.200', which meant that upgrading pdfjs-dist — as the fix for
+// the arbitrary-code-execution advisory required — left the worker a version
+// behind the API. pdf.js refuses that pairing outright and the preview dies
+// with "The API version does not match the Worker version". Reading it from
+// the package keeps the two in step through every future upgrade.
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 // ── Polyfill the worker realm ────────────────────────────────────────────────
 //

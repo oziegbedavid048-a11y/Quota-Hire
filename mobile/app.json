@@ -72,7 +72,10 @@
           }
         }
       ],
-      "expo-screen-orientation"
+      "expo-screen-orientation",
+      "expo-font",
+      "expo-image",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
