@@ -105,6 +105,17 @@ if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.VITE_POSTHOG_HOST) {
 
 import { SmoothScroll } from "./components/ui/SmoothScroll";
 
+
+// Chrome restores a remembered scroll offset once the document is tall enough,
+// which for this app is after a lazily loaded route arrives. That happens well
+// after App's own scroll-to-top has run against a still-short page, so the
+// restore wins and a reload lands partway down. The app decides where the page
+// starts, not the browser.
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
+
+
 const root = createRoot(document.getElementById("root")!);
 root.render(
   <PostHogProvider client={posthog}>

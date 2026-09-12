@@ -28,12 +28,26 @@ import { useEffect, useRef, useState } from 'react';
  * genuinely starts centred and genuinely reaches the edge at any size.
  */
 
-/** Beat timings, in milliseconds. */
-const ROLL_OUT = 900;
-const PAUSE = 400;
-const ROLL_BACK = 900;
-const FADE = 450;
+/** Beat timings, in milliseconds.
+ *
+ * Slower than the mobile original, which ran 900/400/900. On a phone the
+ * splash covers a cold start and is gone before it registers; on a desktop the
+ * same timings read as a flicker rather than an animation.
+ *
+ * The ratio between the beats is preserved, because the keyframe percentages
+ * in index.css are that ratio: ROLL_OUT / TOTAL and (ROLL_OUT + PAUSE) / TOTAL.
+ * Change one beat without the others and the CSS stops lining up.
+ */
+const ROLL_OUT = 1200;
+const PAUSE = 500;
+const ROLL_BACK = 1200;
+const FADE = 500;
 const TOTAL = ROLL_OUT + PAUSE + ROLL_BACK;
+
+/** The wordmark starts halfway through, as it does on mobile, and settles
+ *  before the logo begins its return so the two meet rather than collide. */
+const WORD_DELAY = Math.round(TOTAL * 0.5);
+const WORD_DURATION = ROLL_OUT - 100;
 
 /** Gap between the logo and the wordmark once they meet. */
 const GAP = 12;
@@ -87,6 +101,11 @@ export const Preloader = () => {
       root.style.setProperty('--qh-travel', `${travel}px`);
     };
 
+    root.style.setProperty('--qh-total', `${TOTAL}ms`);
+    root.style.setProperty('--qh-fade', `${FADE}ms`);
+    root.style.setProperty('--qh-word-delay', `${WORD_DELAY}ms`);
+    root.style.setProperty('--qh-word-dur', `${WORD_DURATION}ms`);
+
     measure();
     window.addEventListener('resize', measure);
 
@@ -101,7 +120,16 @@ export const Preloader = () => {
     // from an unmeasured position.
     const raf = requestAnimationFrame(() => setStarted(true));
 
-    const fadeAt = window.setTimeout(() => setFading(true), TOTAL);
+    const fadeAt = window.setTimeout(() => {
+      // The page is only its full height once the lazily loaded route has
+      // arrived, which is after App's own scroll-to-top has already run
+      // against a short document. The browser restores its remembered offset
+      // at that later moment and wins, so a reload surfaces partway down the
+      // page. Putting it back here, immediately before the curtain lifts, is
+      // the last point at which it is certain to be both tall and unseen.
+      window.scrollTo(0, 0);
+      setFading(true);
+    }, TOTAL);
     const goneAt = window.setTimeout(() => setGone(true), TOTAL + FADE);
 
     return () => {

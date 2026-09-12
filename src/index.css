@@ -133,12 +133,18 @@
   justify-content: center;
   background: linear-gradient(135deg, #EDEEDE 0%, #E2E1D4 100%);
   opacity: 1;
-  transition: opacity 450ms ease;
+  transition: opacity var(--qh-fade, 500ms) ease;
 
   /* Sized against the viewport so it holds from a 320px phone to a desktop. */
   --qh-logo: clamp(3.5rem, 13vw, 5.5rem);
   --qh-solo: 0px;
   --qh-travel: 0px;
+  /* Timings come from Preloader.tsx so there is one source of truth. The
+     fallbacks here match its constants. */
+  --qh-total: 2900ms;
+  --qh-fade: 500ms;
+  --qh-word-delay: 1450ms;
+  --qh-word-dur: 1100ms;
 }
 
 .qh-preloader--out {
@@ -176,26 +182,29 @@
 }
 
 .qh-preloader--run .qh-preloader__logo {
-  animation: qh-logo-roll 2200ms both;
+  animation: qh-logo-roll var(--qh-total, 2900ms) both;
 }
 
 .qh-preloader--run .qh-preloader__word {
-  animation: qh-word-in 830ms cubic-bezier(0.33, 1, 0.68, 1) 1100ms both;
+  animation: qh-word-in var(--qh-word-dur, 1100ms) cubic-bezier(0.33, 1, 0.68, 1)
+    var(--qh-word-delay, 1450ms) both;
 }
 
 /* Rolls out to the edge, waits, then rolls back beside the wordmark. The
-   percentages are the millisecond beats over the 2200ms total: 900 out (41%),
-   400 waiting (59%), 900 back. */
+   percentages are the beats as a fraction of the total, and they have to match
+   the constants in Preloader.tsx: 1200 out of 2900 is 41.4%, and 1200 + 500 of
+   2900 is 58.6%. Keyframe offsets cannot be custom properties, which is why
+   these two numbers are the one place the timings are duplicated. */
 @keyframes qh-logo-roll {
   0% {
     transform: translateX(var(--qh-solo)) rotate(0deg);
     animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
   }
-  41% {
+  41.4% {
     transform: translateX(var(--qh-travel)) rotate(360deg);
     animation-timing-function: linear;
   }
-  59% {
+  58.6% {
     transform: translateX(var(--qh-travel)) rotate(360deg);
     animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
   }
