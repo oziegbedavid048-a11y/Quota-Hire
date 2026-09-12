@@ -4,7 +4,6 @@
  *
  * - Hero Banner: Polished gradient banner with 3D illustration and title.
  * - CV Cards: Structured cards with top icon header, feature pills, description, and CTA.
- * - Info Strip: Clear guidance that generated CVs are automatically saved in My Profile.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -38,9 +37,6 @@ const CV_CARDS = [
     subtitle: 'ATS-Friendly & Modern Layouts',
     description: 'Answer a few guided questions about your experience, skills, and accomplishments to instantly generate a polished, ATS-optimized sales resume.',
     features: ['Multi-Template', 'ATS Optimized', 'Instant PDF'],
-    icon: 'file-text' as const,
-    gradFrom: '#15750a',
-    gradTo:   '#72dd15',
   },
   {
     id: 'europass' as const,
@@ -49,9 +45,6 @@ const CV_CARDS = [
     subtitle: 'Official European Commission Format',
     description: 'Create an official Europe-formatted CV with CEFR language proficiencies, digital skills matrix, and optional passport photo.',
     features: ['Europass Format', 'CEFR Languages', 'Photo Ready'],
-    icon: 'globe' as const,
-    gradFrom: '#116108',
-    gradTo:   '#48b30d',
   },
 ];
 
@@ -118,16 +111,23 @@ export default function CVScreen() {
           {CV_CARDS.map((card, i) => (
             <Animated.View key={card.id} entering={FadeInDown.delay(i * 70 + 80).springify()}>
               <View style={[s.cvCard, { backgroundColor: '#ffffff', borderColor: colors.borderMid }, Shadow.card]}>
-                {/* Top Header: Icon + Title + Badge */}
+                {/* Top Header: Real Icon + Title + Badge (no green square layout) */}
                 <View style={s.cvCardTop}>
-                  <LinearGradient
-                    colors={[card.gradFrom, card.gradTo]}
-                    style={s.cvCardIconWrap}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <Feather name={card.icon} size={22} color="#ffffff" />
-                  </LinearGradient>
+                  <View style={s.cardIconBox}>
+                    {card.id === 'europass' ? (
+                      <Image
+                        source={require('@/assets/images/eu_flag.png')}
+                        style={s.cardEuFlag}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Image
+                        source={require('@/assets/images/standard_cv_icon.webp')}
+                        style={s.cardStandardIcon}
+                        contentFit="contain"
+                      />
+                    )}
+                  </View>
 
                   <View style={{ flex: 1 }}>
                     <View style={s.titleBadgeRow}>
@@ -175,25 +175,6 @@ export default function CVScreen() {
           ))}
         </View>
 
-        {/* ── INFO STRIP ── */}
-        <Animated.View
-          entering={FadeInDown.delay(220).springify()}
-          style={[s.infoStrip, { backgroundColor: '#ffffff', borderColor: colors.borderMid }, Shadow.card]}
-        >
-          <View style={[s.infoIconWrap, { backgroundColor: Palette.accent50 }]}>
-            <Feather name="folder" size={20} color={Palette.accent600} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.infoTitle, { color: colors.text }]}>Automatically Saved</Text>
-            <Text style={[s.infoSub, { color: colors.textSecondary }]}>
-              All created documents appear in{' '}
-              <Text style={{ fontWeight: FontWeight.bold, color: colors.text }}>
-                My Profile → Tailored CVs
-              </Text>
-              {' '}and can be downloaded as PDF at any time.
-            </Text>
-          </View>
-        </Animated.View>
 
       </ScrollView>
 
@@ -257,12 +238,25 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  cvCardIconWrap: {
+  cardIconBox: {
     width: 48,
     height: 48,
-    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cardStandardIcon: {
+    width: 44,
+    height: 48,
+  },
+  cardEuFlag: {
+    width: 46,
+    height: 31,
+    borderRadius: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
   },
   titleBadgeRow: {
     flexDirection: 'row',
@@ -336,31 +330,5 @@ const s = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '800',
     letterSpacing: 0.2,
-  },
-
-  // Info Strip
-  infoStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  infoIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoTitle: {
-    fontSize: 13.5,
-    fontWeight: '800',
-    marginBottom: 2,
-  },
-  infoSub: {
-    fontSize: 11.5,
-    lineHeight: 16.5,
   },
 });

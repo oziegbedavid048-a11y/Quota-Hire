@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Globe, FileText, ArrowRight, Star } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { GenerateCVModal } from '../../components/cv/GenerateCVModal';
 import { EuropassCVWizard } from '../../components/cv/EuropassCVWizard';
 import { toast } from 'sonner';
@@ -59,8 +59,12 @@ export function CVGeneratorPage() {
           onClick={() => setShowStandard(true)}
           className="group relative cursor-pointer rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/40 hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:border-accent-500/50 dark:hover:border-accent-500/50 shadow-sm hover:shadow-xl hover:shadow-accent-500/5 transition-all duration-300 overflow-hidden flex flex-col sm:flex-row items-center p-6 sm:p-8 gap-6 sm:gap-8"
         >
-          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl bg-gradient-to-br from-[#116108] to-[#72dd15] flex items-center justify-center shadow-lg shadow-accent-900/20 group-hover:scale-105 transition-transform">
-            <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <img
+              src="/standard_cv_icon.webp"
+              alt="Standard Professional CV"
+              className="w-full h-full object-contain drop-shadow-md"
+            />
           </div>
 
           <div className="flex-1 text-center sm:text-left">
@@ -87,8 +91,12 @@ export function CVGeneratorPage() {
           onClick={() => setShowEuropass(true)}
           className="group relative cursor-pointer rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/40 hover:bg-neutral-50 dark:hover:bg-neutral-900 hover:border-accent-500/50 dark:hover:border-accent-500/50 shadow-sm hover:shadow-xl hover:shadow-accent-500/5 transition-all duration-300 overflow-hidden flex flex-col sm:flex-row items-center p-6 sm:p-8 gap-6 sm:gap-8"
         >
-          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl bg-gradient-to-br from-[#15750a] to-[#72dd15] flex items-center justify-center shadow-lg shadow-accent-900/20 group-hover:scale-105 transition-transform relative">
-            <Globe className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <img
+              src="/eu_flag.png"
+              alt="Europe CV"
+              className="w-14 sm:w-16 h-auto rounded-md shadow-md object-contain"
+            />
           </div>
 
           <div className="flex-1 text-center sm:text-left">
@@ -114,23 +122,6 @@ export function CVGeneratorPage() {
         </motion.div>
       </div>
 
-      {/* ——— Info strip ——— */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="mt-10 p-5 sm:p-6 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 flex items-start gap-4 sm:gap-5"
-      >
-        <div className="w-10 h-10 shrink-0 rounded-xl bg-accent-100 dark:bg-accent-900/40 flex items-center justify-center text-accent-600 dark:text-accent-400">
-          <FileText className="w-5 h-5" />
-        </div>
-        <div>
-          <p className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white mb-1">Your CVs are saved automatically</p>
-          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
-            Once generated, all your CVs appear under <strong className="text-neutral-700 dark:text-neutral-300">My Profile → Generated Documents</strong> and can be downloaded as PDF at any time. CVs generated during job applications are also saved there automatically.
-          </p>
-        </div>
-      </motion.div>
 
       {/* ── Modals ── */}
       <GenerateCVModal isOpen={showStandard} onClose={() => setShowStandard(false)} />

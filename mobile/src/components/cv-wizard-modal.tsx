@@ -26,6 +26,7 @@ import { Colors, Palette, Shadow, BorderRadius, FontSize, FontWeight } from '@/c
 import { apiFetch } from '@/services/api';
 import { sanitizeForHtml } from '@/utils/html';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EUROPASS_LOGO_BASE64 } from '@/constants/europass-logo';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 
@@ -180,8 +181,6 @@ const compileStandardHTML = (profile: any, data: any) => {
 };
 
 // ─── Europass template HTML compiler ──────────────────────────────────────────
-const EUROPASS_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPoAAACUCAYAAAC6EjQXAAAUOUlEQVR4nO2dCXRV1b3G/5nnOdxAiIxGQAkJEgQVCiigiE9UKoj68D0UJ/QVW6xPpHa9OrCqVnkV61PQVi0iVBQUrBRssMyjJBFDCIEQQmJC5pA5cN769vVc7k1uIpCbBO7+fmtlkXvPsPc5Od/e/2kfPAzDEEKIe+PZ1R0ghHQ8FDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGkChE6IBFDohGuAtFxkPzV1phEUHiTvheeaMjEzuJXfckujR1X0henLRCX3J/x4QSY4QtyK/ThZGutfgRS4tLjqhS4ivWEJ8xJ0oij7T1V0gmqO1j950hpY00QNPXQVeVO8pV3SrVf8S4u546jZr43Ogz2l5cuxx+c3MbTIuur7L+kZIZ+H2Qi+t9ZKHx2dLUYmv9XOjh4zuXyYLHvxYbvm3T+WeKd/aZnX8e2X3GrmmTwXNeuJWXHzBOBeBmXtIbLW8OP47uXPcZiktD5K/7ekukT6GLN/dXW5IGS3xuQny2qdD1XfYf2zvU/KL6fukV2yRrN6QKM+vixeLHwNp5NLHrWf0wyf9lchDwvMl1lJlm7njIuuVwMfOv1liQhtt+9c1eiqRXz38n13Ya0Jcj7e7+uTenobkVfrKouW3S3FRmJTXnf2+4bSnFJ7yUjN5Wn6Q+g7HVdR6ydJlP5PgdUNl84Eeart5TuxDyKWKWwndDLSF+J2WwlO+Yglqkrc39lczeVxgk4MZ3ly4+FxV7yUr9neT0kaL2tfcJya4QZ3P2XGEXAq4lekOQf7nuKMye2K2+uzrZRU2RItZ/KfAPhCy/YDQL6pOfnnntzLjmgKKnFyyeLvTbA5BPjjrAyk92leOF4bI65sua1cwDZbAn2duU9H5oweT5VjxHbI2M6JLA3T5R4uM7V+myqEduVJ1skZ9FzsoWhLHXiGjpwxzWgH03Y4s40h6nvrdL9BXEq6Ll9i+ljb3xX71NQ1y2+xxHvZtp2/LUt/H9ImSEROG2LZ9viTF2LM2Q+oqGyQiLkSe+fABh/Pj2D0bD8ihXblSdLhMvP28VL/jk3udU3/AoGv6SXxibw/z+00r9kh+RrHa1jc5Vq69dYgMHhnfZhVU/o/XkLUnV4qOlKn++of6iqVfRJv30CQr9ZixZ8MByUktkLK8KnUdId0CpU9iD0kYFd9q+5vX7DVSNx1q0eZPXb+rcBuhI2320ZqhEt+/XA5mdpevUi02H7s9vPXZMOnTI1/Wb0uWtanRYgk7G7zrbJa/+qWx+qkt4h/iI97BXrbvC9PKZPOidFmZtNF4+K07Wzxs+77OkHULdqjfw/oESs/lFjxYTtvYvjZNNr64V7VRV9UIodu2HT/8g6x86ms5VVAnPUZEQuhKcEvnrpGCnaUSOSBYGiqb1MNvzwcvfm6gfZzTL+pseXNxZoXqd3APf5n2yo3GTfde3+JhT9+SJbhmcNVdveW5lQ/LkgWrDPQRx3n5eaqfwrQDqt+j5yYYj78+w6lo5t/8hpG9vqDF/QM/pJWqvqwakWLMeH6iwyBmDhAfvfR32b00s+X9lzI5/PUJs5/G60fm2oQLgX/09HopzTyl+mvPid3Fsvvdg1JXtU7GPzvMmP3C1A4Tu9sIHbNsVo2XTPuficpkh5/eXn8a5yyu8pOrHpglcZY6Fa0/FxegI1j85HIDD6IlKUyaak9LRJ8QibwsVG07tucH8Q31Vt+//einct/Lkwz7BzUoPEA9ZP5RvuIT1Paf3C/AR+0bGOMndfsrWmwP6RWotpV9X6Uefoi8prBODSAQOQaBodOjbfu/Ovt9A+JAv+vLrYNkeJ9gaahtUsdhcPAO8JL37lsnpQUVxox5tzg87L52/SnMKFODHQSN40J6BKrzVOXWqO34+XZFliwJWuVUNGU5VTaxRQ0IVZaHj7+3VBZVK6Gjj+jTX55YK5ErwgzTegDvP/eFHFyTa7uO7kMiJdQSJI11TWpmL8msVANAz+uibSLHILj49lWqr+Z1xg6OVm3WVNRJaW6V6rtUNcrA4X2kI3EboYO8Gu8fc+JeLhPkoZMBYolqsJ27K4JxMIvxAOMhO9NkyNU/HyBj70WZizEVlpYIRBcY3WTegjXL9kul13e3egocxB9CIz1k6VPf6YeVAwyV03qKz0uj5aG2kaJi49R+0GUpshrCutl0OTeMuLWwRIRYx2gTmQXydaVqTaRYUbslxjnMEjZ4+ntIV/9bqcMf3CAjJ42VIJCAmznWbUgRXyCvdVgtu+TTNk5Jq3Fee75/U2y5ZP9cvXNA6Vnf4tExoSp76srawXm+MbX9qjBojK7Rn2OT+xtM9f3/zXbdh1j5iTJtbcmSlCotX3c/7LCSoFpAvPfBK4FBhZPH08J6xkkkx69TvoPuczWZmlRheQdKpSCw8W27zsKb3fxz1EBN7Z/pWzKDpXIgNMuOzeEDV99UIS1VDYDwg9qks4Evi/EBIHFDIoQ+9kKYoYZ/uCiKcbz1/5ZPYzZX+VL9r3HWzXPXQFmp7zdJ9XMOHX+DS1MXQDhmhbI5Tf2lHvmT3LwRQePjJdwS4ix5g/fqNk2enCoLP/NP5RL4AxcP2bMeUvud2gL54HJDKsA7dWVNEnmrpwW5xk9ZZjH6CnDnJ4bos5JLTBydxeqQSx9Y7bMmGfdBkGawGIZf89Ih+sw73Pzc+fuL1R/t8ZTTSoe4cz/HzFBOgVPdxD5df3KZcbQQvnDk18psSP67sqVaRA5Ivm/uC1DtWNG8zsD+HiVhTVqVjjTeEZGTBnsdD/45fCbIQb4j3lZhR3eN8ygMxdOdipy9Nv8Hf7pqJ8nOQ044diBo3srsx8zNkxnzKDO2sP1J4zv77Qv8O8xe+L6IS4Ey2DtnM/19BzYzdoPH0+pOFFt+960HABcFPjq5wJcA+AX7iOZm3Jl/bKtXZabveSFDvYfD5HFT/9FEi7fKnePPSwZZX4uM7Exm6N67vaJO+Thh96R4Vee7FQ/vSivVD38EAEewHCL9eFxRlxCNyUGBKdKTrT0r10JZum4pG6tRplhxkIUEB5m2e59zvrtzUEEHya3SdqWQ073gwgR2W6NodPj1ewJa6MgrUSZx+dC/tEiA4NLZXG1unfNgYkP/xvXAtFmbz4hD/V9wYBr0tZ5r/pZPzXIARy7+vlv5NfjFhnw3aWTueRNd1UBdyhY0nMT5PjWkZKdHyJS5yXiohQY/HKUxv7jX1fL8KpQ2f19NyX+zkqxVZfXyul6a1sQ+2sTPxaRj50+KGbAB/vXnWro0H5BdPB1WwMzGGZ8DDwxg6Js/qwz4C8HRftLdXGdEhp81tYw/WpnIFWFKDbEaAqsOctf/dJIeXOfVORYU5P2YGDCsRClPbBEHls11Xjn/tXKWsCAi/sMn371U1sMZANmPHuzLfVngtTkoV25Rsa6Y+o4HINrhIsFV2Pa4nEydc6ETnkpwiUvdBDZt1bu/O1NUlrmo6LjkSFNLh1IjpT4yyPvJ4m8mawCc52dR7efZeDHtgUeUnNg6EoQFITQgY9f1zxm9bUNDgHNZQ9tUDMzfHAMin7hvhIY7qe2IyUIF+l0vfP4DlyMyL+HGWsWb5K89JPKyoIVguAdYhULkt5Wqb07/+tGBxcF8YRVb24w9n5xUMUh8LeBhQNWPp4iG9/YbSBI+FP5+/biFkI3a9UhwppGx/yoK8C5VcQ9qmNnydYwhQsRj7p/iASFtT47gsaGJrHERV5QW/W1jU7N1/MlMMZf6sut96uxvnOClyjksccvwOoO7NyQpkRun5qEr98vMU4iLWE2a2Pdu5tl97IM2wDVHMzY85bcr86X9k2WHN2Tr2oYIHicG9ZEVXENioUcjsOsPXXOBDXYoGAIpr8pePxNkYKT1WJ0pNjdQui26Hi1t8SFNqgcuqui4zDTR8bWqDRbVyxuwWxoL7wxU5M7tIqqvto1gxniBYc2HleiQb64LX8Zqana8nrlmpxpFInq6dw8x31A0U5r2YTCY6W2ghyY4SarXvqnsoQgKuTekeZyJqrg8AADAvQJbvvaMLubxUIo6Nn5yfdqUAvtHyhIw+2c2TK1B1SV4WxroHLn2u8EJj0sAlgXqxamtIjauxK3CMaZzBmTJwvu+k7m371LRd/bC6LrT03IljlT9sqvbj2kXj3V2e+Zi+wRpvxGAH8XZaTnC3LbAELCA1ld5Vx0CEghJdTajHY+JIy9XPnBaBPFNfYpquYgQ2AW00BomGlb40iqtRzWGeZsjFkbBS3mTF2SWan6gUBdr6SYVs1kBDDPx5pBIBIFPpOeuFb53wCRf6T22gLtI9U4ctZV6rpV8HBnqXQkbiN0zLy+Pqdl1l3vy5UDrKml9ooSRTLhwU0yffKnkjTguFrG2tmgDjokxhq9RhAIOfXzTRthsGg6ZfU9a/LrpTCnxOl+iHabomgv9uWsmGU3r/y21cElY3OOTWD1JY1O03UAIkZ+2xkwp82BBYHCyxJinFo+fkG+rfYjbXW2bVA9379RRK8QWxAP7s9Pgb6hGg7X2xm4jdBBVkGwpB++Xvalx0mwf6Oqf28P8MuLywIlK3uo5J8MlpKazn8NNR4ILNjAbISH+GRmufzf3E+U2dh8XwwACPygXNZ+MOg3OE7VrYPg3gGy4U+7WuR0VWnpG7sd0lztZfILI6Vof4USD8x4lMPa58hxDR8+t05dE2Y17HvbwlGtnk9ZBzlVsvDf33U4D0xhlK2aQS4Mas5KSn2CveXAxqNqULD/Hp//+B/IZjgH25+b8ifDvjbAHiySQXUf+oeCml6Duqvv0U/U5bdWF5CybI8KDGKAsHc1OgK38dERCd+VEybDHpku4n9afcaPqppr/DGYdg7+tfkWGnP/Zdt7yutrZ4kEN6k17V0xNqISLmvrIqM855R6WEuOVMorE/+KTQb8QpiqSCchogwGTunVIojUY0SkgUixOWNhccp7961TN8RcpKFSR+cwm5/rjD/z2ds8Dm4+ZiBgBV8UQagXVryHQcfWLh50iBylpSj4OZd009EtBfLCmrPnMWvhAc4z/IGBDub5mDlJ8vXv9yofGlF1pMk+iPrSQFnqiW3WVB62wdzHvXVG5ud5ahHK4ttXGWgPFYGgcG+ZundoH38HXJNpzWB1IRa7bPljmuorBqKAcD9Vn28uAjIHuHvf6dgSObea0QFWl5kCNyvYljxgXbnVHGem/aPDi2TO9fmSGHa2us5MqXXVghbwcspcj76jeth8TQgEP6Zvq9JFUdbVYVg00ZxfL5+pIuF4GHEMRG0utsAxmMkn/epaLIhRDyME4wyznh4z17nw0ldPeKEG3Uz7makt/OB3fIdt2GfRjnltihzt/nLFveo67M+Da8E2/OA8SHE1H3BihkU4XDvuIVbP4doh8gmPXSO/W/OYR1S/UDl1rFbqShyDkhCwec/wLwZd/KAfcDtwbqTrFmyeZTvGXMWHNnAc2sYx5mIeXDuOG//sMIflwB2B28zozcEsftPAMrlvcqpMGLVOikoj5K31/VX6zZzhEVzbkRusovMQ9U0Di2X6HfskoVe6/G3DBEl5P0ksfhfPG2WwxttM7VQUnlIroOyj8yHRgWphyZBRV7TwT/F50Y55ykQ/kXnSdiyOi+4dLkPGxNt84yOpeUZJUsvgGUpBk6bE2yLzbVXp2YNcsrkeG+knM90WGOYvYTHBDm23BYQB6wTXgaWvJw6edDhX36TYVi2Cl1Pmqnz20f35asUZjjPv2djpybYKv+unJYqlX67Dsehb+VtVBtawoxDJPN68fxhYnbU97ZkJaolwUU6ZwzEXcu3txcMwLp4HGXiEvmhYksNdcq6iAn858OFSCQhukrc+HiOvfHGFKqbB22FHDy6QkQnHZO3XQ9TrowBeQ/XG49tk8s8+k/ufmS/L07u5pDimqKReFs5Okv9+/AaX/kHt/fDzTbmZx3b0Cw/a2zbE+eWL25VpDCvj+a2POBx3IdeR74Jrb0+77W37QnDbGV0R2SBLPxungnQKf2vkGSWtd0/cLlcm75CNOwbYZnjk399dkyD/2tVXjpYEueTFFR1Jex6WrhB4R7R9IeeKdUH7XdXuheLWQsdsjNdJAYjW9N135AfKvoN9JacgVn4o8Rdp8hRvvyYVVc/IjBA5EKXMeb4IkrgLbi100Nz0tr780ZCXPr5GvfUVs7j9+nW1P//TBuJmuL3QW8N8fTOCc5y5ibujrdAp7ksHFMA0hZ62VfcRdxB6VYMU/VjF5TYUd82qN3cgODxQeo+LUTnppgEUutuk1x6au9KIiGx7GealyMjkXnLHLYldFnUlenPRCZ0Q4nrcrgSWENISCp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCdEACp0QDaDQCRH35/8BoTq/s6sr7WwAAAAASUVORK5CYII=';
-
 const compileEuropassHTML = (profile: any, data: any) => {
   const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim() || profile?.name || 'Applicant';
   const email = data.email || profile?.email || '';
@@ -189,10 +188,10 @@ const compileEuropassHTML = (profile: any, data: any) => {
   const address = data.address || profile?.location || '';
   const dob = data.dateOfBirth || '';
   const nationality = data.nationality || '';
+  const gender = data.gender || profile?.employee_profile?.gender || profile?.gender || '';
   const linkedin = data.linkedinUrl || profile?.employee_profile?.linkedin_url || profile?.linkedinUrl || '';
   const website = data.website || '';
-  const photo = data.passportImage || profile?.avatar_url || profile?.avatarUrl || '';
-  const initial = (data.firstName || fullName || 'U').charAt(0).toUpperCase();
+  const photo = data.passportImage || '';
 
   const dutiesToBullets = (raw: string): string[] => {
     if (!raw) return [];
@@ -215,39 +214,77 @@ const compileEuropassHTML = (profile: any, data: any) => {
     data.otherCompetencies
   );
 
+  // Demarcated Personal Info lines matching reference PDF
+  const line1Parts = [
+    dob ? `<span class="info-lbl">Date of birth: </span><span class="info-val">${dob}</span>` : '',
+    nationality ? `<span class="info-lbl">Nationality: </span><span class="info-val">${nationality}</span>` : '',
+    phone ? `<span class="info-lbl">Phone number: </span><span class="info-val">${phone}</span>` : '',
+  ].filter(Boolean);
+
+  const line2Parts = [
+    gender ? `<span class="info-lbl">Gender: </span><span class="info-val">${gender}</span>` : '',
+    address ? `<span class="info-lbl">Address: </span><span class="info-val">${address}</span>` : '',
+  ].filter(Boolean);
+
+  const line3Parts = [
+    email ? `<span class="info-lbl">Email address: </span><span class="info-val">${email}</span>` : '',
+    linkedin ? `<span class="info-lbl">LinkedIn: </span><span class="info-val">${linkedin}</span>` : '',
+    website ? `<span class="info-lbl">Website: </span><span class="info-val">${website}</span>` : '',
+  ].filter(Boolean);
+
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
       <style>
-        @page { size: A4; margin: 12mm 16mm; }
-        * { box-sizing: border-box; }
-        body {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          color: #000000;
-          margin: 0;
-          padding: 24px;
-          line-height: 1.45;
-          font-size: 11px;
-          background-color: #ffffff;
+        @page {
+          size: A4;
+          margin: 14mm 18mm;
         }
-        .top-row {
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+          color: #000000;
+          background: #ffffff;
+          padding: 16px 20px;
+          font-size: 10.5pt;
+          line-height: 1.45;
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          overflow-x: hidden;
+        }
+        .header-row {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 16px;
-        }
-        .photo-box {
-          width: 86px;
-          height: 86px;
-          border-radius: 50%;
-          overflow: hidden;
-          background-color: #e5e7eb;
-          border: 1px solid #cbd5e1;
-          display: flex;
           align-items: center;
-          justify-content: center;
+          width: 100%;
+          margin-bottom: 12px;
+          box-sizing: border-box;
+        }
+        .photo-cell {
+          flex: 0 0 96px;
+          width: 96px;
+        }
+        .logo-cell {
+          margin-left: auto;
+          text-align: right;
+          max-width: 55%;
+        }
+        .photo-wrapper {
+          width: 96px;
+          height: 128px;
+          border-radius: 50% / 50%;
+          overflow: hidden;
+          position: relative;
+          background-color: #f1f5f9;
+          box-shadow: 0 0 12px 4px rgba(0, 0, 0, 0.18);
         }
         .photo-img {
           width: 100%;
@@ -255,229 +292,204 @@ const compileEuropassHTML = (profile: any, data: any) => {
           object-fit: cover;
           display: block;
         }
-        .photo-placeholder {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background-color: #f1f5f9;
-        }
-        .photo-initial {
-          font-size: 32px;
-          font-weight: bold;
-          color: #64748b;
-          text-transform: uppercase;
-        }
-        .logo-container {
-          display: flex;
-          align-items: flex-start;
-          justify-content: flex-end;
+        .photo-vignette {
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          border-radius: 50%;
+          box-shadow: inset 0 0 14px 7px rgba(45, 45, 45, 0.38);
+          pointer-events: none;
         }
         .logo-img {
-          width: 140px;
+          width: 145px;
+          max-width: 100%;
           height: auto;
           object-fit: contain;
           display: block;
+          margin-left: auto;
         }
-        .name-container {
-          border-bottom: 1.5px solid #000000;
-          padding-bottom: 5px;
-          margin-bottom: 8px;
-        }
-        .name-text {
-          font-size: 18px;
+        .name-title {
+          font-size: 17pt;
           font-weight: bold;
-          text-transform: uppercase;
-          margin: 0;
           color: #000000;
-          letter-spacing: 0.5px;
+          margin-top: 4px;
+          margin-bottom: 6px;
+          letter-spacing: 0.2px;
         }
-        .info-block {
-          margin-bottom: 14px;
-          font-size: 10px;
+        .name-rule {
+          width: 100%;
+          height: 1.5px;
+          background-color: #000000;
+          margin-bottom: 10px;
+        }
+        .personal-info {
+          font-size: 9.5pt;
           line-height: 1.6;
+          margin-bottom: 14px;
+          color: #000000;
         }
-        .info-row {
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
+        .info-line {
+          margin-bottom: 2px;
         }
-        .info-item {
-          margin-right: 4px;
-        }
-        .info-label {
+        .info-lbl {
           font-weight: bold;
+          color: #000000;
+        }
+        .info-val {
           color: #000000;
         }
         .info-pipe {
-          margin: 0 6px;
+          margin: 0 7px;
           color: #000000;
+          font-weight: normal;
         }
-        .sec-title {
-          font-size: 11px;
+        .sec-heading {
+          font-size: 11pt;
           font-weight: bold;
-          color: #000000;
           text-transform: uppercase;
+          color: #000000;
           border-bottom: 1px solid #000000;
           padding-bottom: 3px;
-          margin-top: 14px;
-          margin-bottom: 8px;
-          letter-spacing: 0.5px;
+          margin-top: 18px;
+          margin-bottom: 10px;
+          page-break-after: avoid;
+          letter-spacing: 0.3px;
         }
-        .body-text {
-          font-size: 10px;
-          color: #000000;
-          margin-bottom: 8px;
+        .sec-body {
+          font-size: 10pt;
           line-height: 1.45;
-        }
-        .entry-block {
+          color: #000000;
           margin-bottom: 12px;
         }
-        .entry-dates {
-          font-size: 10px;
-          font-weight: normal;
-          margin-bottom: 2px;
-          color: #000000;
+        .entry-block {
+          margin-bottom: 14px;
+          page-break-inside: avoid;
         }
-        .entry-title {
-          font-size: 10.5px;
-          font-weight: bold;
-          text-transform: uppercase;
+        .entry-dates {
+          font-size: 9.5pt;
           color: #000000;
           margin-bottom: 3px;
         }
-        .entry-sub {
-          font-size: 9.5px;
+        .entry-role-company {
+          font-size: 10pt;
+          font-weight: bold;
+          text-transform: uppercase;
+          color: #000000;
+          margin-bottom: 5px;
+        }
+        .entry-location {
+          font-size: 9.5pt;
           color: #333333;
           margin-bottom: 4px;
         }
+        .entry-subjects-lbl {
+          font-size: 9.5pt;
+          color: #000000;
+          margin-top: 5px;
+          margin-bottom: 3px;
+        }
         .bullet-list {
-          margin: 2px 0 0 16px;
+          margin: 4px 0 10px 22px;
           padding: 0;
         }
         .bullet-item {
-          font-size: 10px;
+          font-size: 9.5pt;
           color: #000000;
-          margin-bottom: 3px;
-          line-height: 1.4;
+          margin-bottom: 4px;
+          line-height: 1.42;
         }
-        .lang-mother-row {
-          margin-bottom: 5px;
-          font-size: 10px;
-        }
-        .lang-other-label {
-          font-size: 10px;
+        .lang-row-lead {
+          font-size: 10pt;
           margin-bottom: 6px;
+          color: #000000;
         }
         .lang-table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 6px;
-          margin-bottom: 8px;
+          margin-top: 8px;
+          margin-bottom: 14px;
+          page-break-inside: avoid;
         }
         .lang-th-empty {
-          width: 95px;
+          width: 18%;
         }
-        .lang-th-main {
+        .lang-th-cat {
+          font-size: 9.5pt;
           font-weight: bold;
-          text-align: center;
-          font-size: 9px;
-          padding: 3px;
           text-transform: uppercase;
+          text-align: center;
+          padding: 4px 2px;
           color: #000000;
         }
         .lang-th-sub {
+          font-size: 8.5pt;
           text-align: center;
-          font-size: 8.5px;
-          padding: 3px;
+          padding: 4px 2px;
           color: #000000;
           font-weight: normal;
-          border-bottom: 1px solid #cccccc;
         }
-        .lang-row {
-          background-color: #9e3430;
+        .lang-data-row {
+          background-color: #9e3938;
           color: #ffffff;
         }
-        .lang-cell {
+        .lang-td-name {
+          font-size: 9.5pt;
+          font-weight: bold;
+          color: #ffffff;
+          padding: 6px 8px;
+          border-right: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .lang-td-cell {
+          font-size: 9.5pt;
+          font-weight: bold;
           text-align: center;
-          font-size: 10px;
-          padding: 5px 3px;
-          font-weight: bold;
-          border: 1px solid #ffffff;
           color: #ffffff;
+          padding: 6px 4px;
+          border-right: 1px solid rgba(255, 255, 255, 0.6);
         }
-        .lang-name-cell {
-          text-align: left;
-          padding-left: 8px;
-          font-weight: bold;
-          color: #ffffff;
-          border: 1px solid #ffffff;
-        }
-        .lang-note {
-          font-size: 8px;
-          color: #555555;
-          margin-top: 4px;
-          margin-bottom: 6px;
+        .lang-td-cell:last-child {
+          border-right: none;
         }
       </style>
     </head>
     <body>
-      <div class="top-row">
-        <div class="photo-box">
-          ${photo ? `<img src="${photo}" class="photo-img" alt="Photo" />` : `<div class="photo-placeholder"><span class="photo-initial">${initial}</span></div>`}
-        </div>
-        <div class="logo-container">
+      <div class="header-row">
+        ${photo ? `
+          <div class="photo-cell">
+            <div class="photo-wrapper">
+              <img src="${photo}" class="photo-img" alt="Photo" />
+              <div class="photo-vignette"></div>
+            </div>
+          </div>
+        ` : ''}
+        <div class="logo-cell">
           <img src="${EUROPASS_LOGO_BASE64}" class="logo-img" alt="Europass" />
         </div>
       </div>
 
-      <div class="name-container">
-        <h1 class="name-text">${fullName}</h1>
-      </div>
+      <div class="name-title">${fullName}</div>
+      <div class="name-rule"></div>
 
-      <div class="info-block">
-        <div class="info-row">
-          ${dob ? `<span class="info-item"><span class="info-label">Date of birth: </span><span>${dob}</span></span>` : ''}
-          ${dob && nationality ? `<span class="info-pipe">|</span>` : ''}
-          ${nationality ? `<span class="info-item"><span class="info-label">Nationality: </span><span>${nationality}</span></span>` : ''}
-          ${(dob || nationality) && phone ? `<span class="info-pipe">|</span>` : ''}
-          ${phone ? `<span class="info-item"><span class="info-label">Phone number: </span><span>${phone}</span></span>` : ''}
-        </div>
-        ${address ? `
-          <div class="info-row" style="margin-top: 2px;">
-            <span class="info-item"><span class="info-label">Address: </span><span>${address}</span></span>
-          </div>
-        ` : ''}
-        ${email ? `
-          <div class="info-row" style="margin-top: 2px;">
-            <span class="info-item"><span class="info-label">Email address: </span><span>${email}</span></span>
-          </div>
-        ` : ''}
-        ${linkedin || website ? `
-          <div class="info-row" style="margin-top: 2px;">
-            ${linkedin ? `<span class="info-item"><span class="info-label">LinkedIn: </span><span>${linkedin}</span></span>` : ''}
-            ${linkedin && website ? `<span class="info-pipe">|</span>` : ''}
-            ${website ? `<span class="info-item"><span class="info-label">Website: </span><span>${website}</span></span>` : ''}
-          </div>
-        ` : ''}
+      <div class="personal-info">
+        ${line1Parts.length > 0 ? `<div class="info-line">${line1Parts.join('<span class="info-pipe">|</span>')}</div>` : ''}
+        ${line2Parts.length > 0 ? `<div class="info-line">${line2Parts.join('<span class="info-pipe">|</span>')}</div>` : ''}
+        ${line3Parts.length > 0 ? `<div class="info-line">${line3Parts.join('<span class="info-pipe">|</span>')}</div>` : ''}
       </div>
 
       ${(data.summary || data.headline) ? `
-        <div class="sec-title">ABOUT ME</div>
-        <div class="body-text">${data.summary || data.headline}</div>
+        <div class="sec-heading">ABOUT ME</div>
+        <div class="sec-body">${data.summary || data.headline}</div>
       ` : ''}
 
       ${data.workEntries && data.workEntries.filter((e: any) => e.role || e.company || e.employer || e.duties).length > 0 ? `
-        <div class="sec-title">WORK EXPERIENCE</div>
+        <div class="sec-heading">WORK EXPERIENCE</div>
         ${data.workEntries.filter((e: any) => e.role || e.company || e.employer || e.duties).map((exp: any) => {
           const bullets = dutiesToBullets(exp.duties);
-          const titleLine = [exp.role, exp.company || exp.employer].filter(Boolean).join(' - ');
+          const titleLine = [exp.role, exp.company || exp.employer].filter(Boolean).join(' – ').toUpperCase();
           return `
             <div class="entry-block">
               ${exp.period || exp.dates ? `<div class="entry-dates">${exp.period || exp.dates}</div>` : ''}
-              ${titleLine ? `<div class="entry-title">${titleLine}</div>` : ''}
-              ${exp.location ? `<div class="entry-sub">${exp.location}</div>` : ''}
+              ${titleLine ? `<div class="entry-role-company">${titleLine}</div>` : ''}
+              ${exp.location ? `<div class="entry-location">${exp.location}</div>` : ''}
               ${bullets.length > 0 ? `
                 <ul class="bullet-list">
                   ${bullets.map((b: string) => `<li class="bullet-item">${b}</li>`).join('')}
@@ -489,17 +501,17 @@ const compileEuropassHTML = (profile: any, data: any) => {
       ` : ''}
 
       ${data.eduEntries && data.eduEntries.filter((e: any) => e.qualification || e.institution).length > 0 ? `
-        <div class="sec-title">EDUCATION AND TRAINING</div>
+        <div class="sec-heading">EDUCATION AND TRAINING</div>
         ${data.eduEntries.filter((e: any) => e.qualification || e.institution).map((edu: any) => {
-          const titleLine = [edu.qualification, edu.institution].filter(Boolean).join(' - ');
-          const subjects = edu.fieldOfStudy ? edu.fieldOfStudy.split(/[,\n]+/).map((s: string) => s.trim()).filter(Boolean) : [];
+          const titleLine = [edu.qualification, edu.institution].filter(Boolean).join(' – ').toUpperCase();
+          const subjects = edu.fieldOfStudy ? edu.fieldOfStudy.split(/[,\n]+/).map((s: string) => s.trim().replace(/^[-*•]\s*/, '')).filter(Boolean) : [];
           return `
             <div class="entry-block">
               ${edu.dates ? `<div class="entry-dates">${edu.dates}</div>` : ''}
-              ${titleLine ? `<div class="entry-title">${titleLine}</div>` : ''}
-              ${edu.location ? `<div class="entry-sub">${edu.location}</div>` : ''}
+              ${titleLine ? `<div class="entry-role-company">${titleLine}</div>` : ''}
+              ${edu.location ? `<div class="entry-location">${edu.location}</div>` : ''}
               ${subjects.length > 0 ? `
-                <div class="entry-sub" style="margin-top: 3px; font-weight: bold;">Relevant Subjects:</div>
+                <div class="entry-subjects-lbl">Relevant Subjects:</div>
                 <ul class="bullet-list">
                   ${subjects.map((sub: string) => `<li class="bullet-item">${sub}</li>`).join('')}
                 </ul>
@@ -510,71 +522,68 @@ const compileEuropassHTML = (profile: any, data: any) => {
       ` : ''}
 
       ${data.digitalSkills ? `
-        <div class="sec-title">DIGITAL SKILLS</div>
-        <div class="body-text">${toPipeSeparated(data.digitalSkills)}</div>
+        <div class="sec-heading">DIGITAL SKILLS</div>
+        <div class="sec-body">${toPipeSeparated(data.digitalSkills)}</div>
       ` : ''}
 
       ${communicationLine ? `
-        <div class="sec-title">COMMUNICATION AND INTERPERSONAL SKILLS</div>
-        <div class="body-text">${communicationLine}</div>
+        <div class="sec-heading">COMMUNICATION AND INTERPERSONAL SKILLS</div>
+        <div class="sec-body">${communicationLine}</div>
       ` : ''}
 
-      <div class="sec-title">LANGUAGE SKILLS</div>
-      <div class="lang-mother-row">
-        <span>Mother Tongue(s): </span>
-        <strong>${(data.motherTongue || 'English').toUpperCase()}</strong>
+      <div class="sec-heading">LANGUAGE SKILLS</div>
+      <div class="lang-row-lead">
+        Mother Tongue(s): <strong>${(data.motherTongue || 'English').toUpperCase()}</strong>
       </div>
 
       ${data.foreignLanguages && data.foreignLanguages.filter((l: any) => l.language).length > 0 ? `
-        <div class="lang-other-label">Other language(s):</div>
+        <div class="lang-row-lead">Other language(s):</div>
         <table class="lang-table">
-          <thead>
-            <tr>
-              <th class="lang-th-empty"></th>
-              <th colspan="2" class="lang-th-main">UNDERSTANDING</th>
-              <th colspan="2" class="lang-th-main">SPEAKING</th>
-              <th class="lang-th-main">WRITING</th>
+          <tr>
+            <th class="lang-th-empty"></th>
+            <th colspan="2" class="lang-th-cat">UNDERSTANDING</th>
+            <th colspan="2" class="lang-th-cat">SPEAKING</th>
+            <th class="lang-th-cat">WRITING</th>
+          </tr>
+          <tr>
+            <th class="lang-th-empty"></th>
+            <th class="lang-th-sub">Listening</th>
+            <th class="lang-th-sub">Reading</th>
+            <th class="lang-th-sub">Spoken production</th>
+            <th class="lang-th-sub">Spoken interaction</th>
+            <th class="lang-th-sub"></th>
+          </tr>
+          ${data.foreignLanguages.filter((l: any) => l.language).map((l: any) => `
+            <tr class="lang-data-row">
+              <td class="lang-td-name">${l.language}</td>
+              <td class="lang-td-cell">${l.listening || 'B2'}</td>
+              <td class="lang-td-cell">${l.reading || 'B2'}</td>
+              <td class="lang-td-cell">${l.spokenProduction || 'B2'}</td>
+              <td class="lang-td-cell">${l.spokenInteraction || 'B2'}</td>
+              <td class="lang-td-cell">${l.writing || 'B2'}</td>
             </tr>
-            <tr>
-              <th class="lang-th-empty"></th>
-              <th class="lang-th-sub">Listening</th>
-              <th class="lang-th-sub">Reading</th>
-              <th class="lang-th-sub">Spoken production</th>
-              <th class="lang-th-sub">Spoken interaction</th>
-              <th class="lang-th-sub">Writing</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.foreignLanguages.filter((l: any) => l.language).map((l: any) => `
-              <tr class="lang-row">
-                <td class="lang-name-cell">${l.language}</td>
-                <td class="lang-cell">${l.listening || 'B2'}</td>
-                <td class="lang-cell">${l.reading || 'B2'}</td>
-                <td class="lang-cell">${l.spokenProduction || 'B2'}</td>
-                <td class="lang-cell">${l.spokenInteraction || 'B2'}</td>
-                <td class="lang-cell">${l.writing || 'B2'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
+          `).join('')}
         </table>
-        <div class="lang-note">
-          Levels: A1/A2: Basic user - B1/B2: Independent user - C1/C2: Proficient user - Common European Framework of Reference for Languages
-        </div>
       ` : ''}
 
       ${data.certifications ? `
-        <div class="sec-title">CERTIFICATES</div>
-        <div class="body-text">${data.certifications}</div>
+        <div class="sec-heading">CERTIFICATES</div>
+        <div class="sec-body">${data.certifications}</div>
       ` : ''}
 
-      ${data.hobbies ? `
-        <div class="sec-title">ADDITIONAL INFORMATION</div>
-        <div class="body-text">${data.hobbies}</div>
+      ${data.careerObjective ? `
+        <div class="sec-heading">CAREER OBJECTIVE</div>
+        <div class="sec-body">${data.careerObjective}</div>
       ` : ''}
 
       ${data.drivingLicence ? `
-        <div class="sec-title">DRIVING LICENCE</div>
-        <div class="body-text">${data.drivingLicence}</div>
+        <div class="sec-heading">DRIVING LICENCE</div>
+        <div class="sec-body">${data.drivingLicence}</div>
+      ` : ''}
+
+      ${data.hobbies ? `
+        <div class="sec-heading">ADDITIONAL INFORMATION</div>
+        <div class="sec-body">${data.hobbies}</div>
       ` : ''}
     </body>
     </html>
@@ -850,12 +859,14 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [nationality, setNationality] = useState('');
+  const [gender, setGender] = useState('Male');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [website, setWebsite] = useState('');
   const [summary, setSummary] = useState('');
+  const [careerObjective, setCareerObjective] = useState('');
   const [eduEntries, setEduEntries] = useState<EduEntry[]>([{ dates: '', qualification: '', institution: '', location: '', fieldOfStudy: '' }]);
   const [motherTongue, setMotherTongue] = useState('English');
   const [foreignLanguages, setForeignLanguages] = useState<LangEntry[]>([
@@ -880,7 +891,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect: [3, 4],
         quality: 0.8,
         base64: true,
       });
@@ -901,7 +912,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
 
   const getCompiledHTML = () => {
     const rawData = isEuropass ? {
-      firstName, lastName, dateOfBirth, nationality, address, phone, email, linkedinUrl, website, summary,
+      firstName, lastName, dateOfBirth, nationality, gender, address, phone, email, linkedinUrl, website, summary, careerObjective,
       workEntries, eduEntries, motherTongue, foreignLanguages, digitalSkills,
       communicationCompetencies, organisationalCompetencies, jobRelatedCompetencies, otherCompetencies, drivingLicence, certifications, hobbies,
       passportImage
@@ -917,9 +928,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
     // sanitizeForHtml walks nested objects and arrays, so workEntries and
     // eduEntries are covered too.
     const data = sanitizeForHtml(rawData) as any;
-    if (rawData.passportImage) {
-      data.passportImage = rawData.passportImage;
-    }
+    data.passportImage = rawData.passportImage || null;
     const safeProfile = sanitizeForHtml(profile) as any;
 
     switch (selectedTemplateId) {
@@ -1491,6 +1500,33 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                       </View>
 
                       <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Gender</Text>
+                        <View style={s.genderRow}>
+                          {['Male', 'Female', 'Other'].map(g => {
+                            const active = gender.toLowerCase() === g.toLowerCase();
+                            return (
+                              <Pressable
+                                key={g}
+                                onPress={() => {
+                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                  setGender(g);
+                                }}
+                                style={[
+                                  s.genderBtn,
+                                  { borderColor: colors.border, backgroundColor: colors.cardBg },
+                                  active && { backgroundColor: Palette.accent600, borderColor: Palette.accent600 },
+                                ]}
+                              >
+                                <Text style={[s.genderBtnText, { color: colors.text }, active && { color: '#ffffff' }]}>
+                                  {g}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      <View style={s.inputRow}>
                         <Text style={[s.label, { color: colors.textSecondary }]}>Email Address *</Text>
                         <TextInput
                           value={email}
@@ -1530,6 +1566,18 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                           value={summary}
                           onChangeText={setSummary}
                           placeholder="Write a brief professional intro..."
+                          placeholderTextColor={colors.textMuted}
+                          multiline
+                          style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
+                        />
+                      </View>
+
+                      <View style={s.inputRow}>
+                        <Text style={[s.label, { color: colors.textSecondary }]}>Career Objective (Optional)</Text>
+                        <TextInput
+                          value={careerObjective}
+                          onChangeText={setCareerObjective}
+                          placeholder="e.g. To pursue a successful career in Computer Science and Data Analytics..."
                           placeholderTextColor={colors.textMuted}
                           multiline
                           style={[s.input, { borderColor: colors.border, color: colors.text }, s.textArea]}
@@ -1900,7 +1948,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                     </Text>
                     <View style={[s.previewContainer, { borderColor: colors.border, backgroundColor: '#fff', height: 290 }]}>
                       <WebView
-                        key={selectedTemplateId}
+                        key={`${selectedTemplateId}_${step}`}
                         originWhitelist={['*']}
                         source={{ html: getCompiledHTML() }}
                         style={{ flex: 1 }}
@@ -2184,14 +2232,31 @@ const s = StyleSheet.create({
     gap: 6,
   },
   photoCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 86,
+    height: 114,
+    borderRadius: 43,
     borderWidth: 2,
     borderStyle: 'dashed',
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  genderBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genderBtnText: {
+    fontSize: FontSize.xs,
+    fontWeight: 'bold',
   },
   photoImage: {
     width: '100%',
