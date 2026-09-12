@@ -330,9 +330,24 @@ SENTRY_DSN = config('SENTRY_DSN', default=None)
 if RUNNING_TESTS:
     SENTRY_DSN = None
 
+# Which environment an event came from. Everything used to arrive tagged
+# "production", including events raised on a developer's laptop running against
+# these same settings — a `manage.py shell`, a one-off script, a local
+# runserver. An issue that says production should mean a user hit it.
+#
+# Render sets RENDER in the environment of every service it runs, so its
+# presence is the honest test for "this is the deployed server". Anything else
+# reports as local and can be filtered out in Sentry. SENTRY_ENVIRONMENT
+# overrides both, for a staging service or a one-off.
+SENTRY_ENVIRONMENT = config(
+    'SENTRY_ENVIRONMENT',
+    default='production' if os.environ.get('RENDER') else 'local',
+)
+
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
         # Set traces_sample_rate to 1.0 to capture 100%
         # of transactions for performance monitoring.
         traces_sample_rate=1.0,
