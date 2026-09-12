@@ -55,6 +55,7 @@
           "sounds": []
         }
       ],
+      "./plugins/withNotificationLargeIcon",
       "expo-web-browser",
       [
         "expo-local-authentication",
