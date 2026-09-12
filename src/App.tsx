@@ -11,6 +11,7 @@ import { AppProvider, useAppContext } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
+import { Preloader } from './components/ui/Preloader';
 import { preloadImages, PRELOAD_ILLUSTRATIONS } from './utils/preloadImages';
 
 const MyJobs = React.lazy(() => import('./pages/company/MyJobs').then(m => ({ default: m.MyJobs })));
@@ -52,7 +53,7 @@ import { GlobalErrorState } from './components/ui/GlobalErrorState';
 import { CookieBanner } from './components/ui/CookieBanner';
 
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-[50vh] w-full">
+  <div className="flex items-center justify-center min-h-screen w-full">
     <div className="w-8 h-8 border-4 border-accent-600 border-t-transparent rounded-full animate-spin" />
   </div>
 );
@@ -103,6 +104,7 @@ const AppRoutes = () => {
   
   return (
     <ErrorBoundary>
+      <Preloader />
       <div className={`flex flex-col ${isDashboardRoute ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
         {!isDashboardRoute && <Navbar />}
         <main className="flex-grow flex flex-col">

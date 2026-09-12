@@ -115,3 +115,111 @@
 .animation-delay-5000 {
   animation-delay: 5s;
 }
+
+/* ── Opening animation ────────────────────────────────────────────────────────
+   The mobile app's splash, rebuilt for the browser. The distances come from
+   two custom properties that Preloader.tsx measures at runtime, so the logo
+   starts genuinely centred and reaches the genuine edge of whatever screen it
+   is on rather than the phone-sized constants the native version uses. */
+
+.qh-preloader {
+  position: fixed;
+  inset: 0;
+  /* Above the cookie banner, which is also z-[9999] and would otherwise win on
+     DOM order and sit on top of the opening animation. */
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #EDEEDE 0%, #E2E1D4 100%);
+  opacity: 1;
+  transition: opacity 450ms ease;
+
+  /* Sized against the viewport so it holds from a 320px phone to a desktop. */
+  --qh-logo: clamp(3.5rem, 13vw, 5.5rem);
+  --qh-solo: 0px;
+  --qh-travel: 0px;
+}
+
+.qh-preloader--out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.qh-preloader__stage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Never let a long viewport-scaled wordmark push past the screen edge. */
+  max-width: 92vw;
+}
+
+.qh-preloader__logo {
+  width: var(--qh-logo);
+  height: var(--qh-logo);
+  flex: none;
+  /* Starts offset to the right so the logo alone reads as centred. */
+  transform: translateX(var(--qh-solo));
+  will-change: transform;
+}
+
+.qh-preloader__word {
+  font-weight: 900;
+  font-size: clamp(1.5rem, 6.5vw, 2.5rem);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: #0f172a;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(40%);
+  will-change: transform, opacity;
+}
+
+.qh-preloader--run .qh-preloader__logo {
+  animation: qh-logo-roll 2200ms both;
+}
+
+.qh-preloader--run .qh-preloader__word {
+  animation: qh-word-in 830ms cubic-bezier(0.33, 1, 0.68, 1) 1100ms both;
+}
+
+/* Rolls out to the edge, waits, then rolls back beside the wordmark. The
+   percentages are the millisecond beats over the 2200ms total: 900 out (41%),
+   400 waiting (59%), 900 back. */
+@keyframes qh-logo-roll {
+  0% {
+    transform: translateX(var(--qh-solo)) rotate(0deg);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  41% {
+    transform: translateX(var(--qh-travel)) rotate(360deg);
+    animation-timing-function: linear;
+  }
+  59% {
+    transform: translateX(var(--qh-travel)) rotate(360deg);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+@keyframes qh-word-in {
+  0% { opacity: 0; transform: translateX(40%); }
+  84% { opacity: 1; transform: translateX(-2%); }  /* slight overshoot */
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* Anyone who has asked for less motion gets the same screen without the
+   travel: the mark and the name simply appear, then it fades as usual. */
+@media (prefers-reduced-motion: reduce) {
+  .qh-preloader--run .qh-preloader__logo,
+  .qh-preloader--run .qh-preloader__word {
+    animation: qh-preloader-appear 300ms ease both;
+  }
+  .qh-preloader__logo { transform: none; }
+  @keyframes qh-preloader-appear {
+    from { opacity: 0; }
+    to { opacity: 1; transform: none; }
+  }
+}
