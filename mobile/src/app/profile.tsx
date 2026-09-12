@@ -163,8 +163,10 @@ export default function ProfileScreen() {
     SecureStore.getItemAsync("user_role").then((r) => setRole(r || "employee"));
   }, []);
 
-  const { user, profileScore, profileItems, refreshData, isFetching, isLoading } =
-    useEmployeeDashboardData();
+  const {
+    user, profileScore, profileItems, refreshData,
+    isFetching, isLoading, hasError, isNetworkError,
+  } = useEmployeeDashboardData();
   const firstName = user.name.split(" ")[0];
   const initial = user.name.charAt(0).toUpperCase();
 
@@ -982,11 +984,28 @@ export default function ProfileScreen() {
     ]);
   }, []);
 
-  if (role === "company") {
+  // What to put on screen is not known until two things are settled: which
+  // role this account has, which is read from SecureStore in an effect, and
+  // whether the employee profile has actually arrived. `normalizeUser` always
+  // fills a name, falling back to the email and then to "User", so an empty
+  // name means nothing real is in state yet — it is the honest test for "no
+  // data", and a truer one than isLoading.
+  //
+  // The old guard was `isLoading && !user.name`, and two things leaked past it.
+  // A company account saw the employee profile for as long as SecureStore took
+  // to answer, because `role` is null on the first render. And once isLoading
+  // went false with EMPTY_USER still in state — a cache miss, or a request
+  // that failed — the screen drew itself hollow: no name, no picture, 0%, every
+  // section blank. That reads as placeholder content rather than as loading,
+  // which is exactly what it looked like.
+  const roleKnown = role !== null;
+  const hasProfile = Boolean(user.name);
+
+  if (roleKnown && role === "company") {
     return <CompanyProfile />;
   }
 
-  if (isLoading && !user.name) {
+  if (!roleKnown || (!hasProfile && !hasError)) {
     return (
       <View style={s.safe}>
         <LinearGradient
@@ -1051,6 +1070,69 @@ export default function ProfileScreen() {
             ))}
           </View>
         </ScrollView>
+      </View>
+    );
+  }
+
+  // The load failed and there is nothing to show. Drawing the profile anyway
+  // produces the same hollow page the skeleton exists to avoid, so say what
+  // happened and offer the retry instead.
+  if (!hasProfile) {
+    return (
+      <View style={s.safe}>
+        <LinearGradient
+          colors={['#FFFBEB', '#F1FAF4', '#FFFBEB']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 32,
+            paddingBottom: TabBarHeight,
+            gap: 10,
+          }}
+        >
+          <Feather
+            name={isNetworkError ? "wifi-off" : "alert-circle"}
+            size={30}
+            color={colors.textMuted}
+          />
+          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.text }}>
+            {isNetworkError ? "No connection" : "We could not load your profile"}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              lineHeight: 19,
+              color: colors.textMuted,
+              textAlign: "center",
+            }}
+          >
+            {isNetworkError
+              ? "Check your network connection and try again."
+              : "Something went wrong on our side. Please try again."}
+          </Text>
+          <Pressable
+            onPress={refreshData}
+            disabled={isFetching}
+            style={{
+              marginTop: 6,
+              backgroundColor: Palette.accent600,
+              borderRadius: 10,
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+              opacity: isFetching ? 0.6 : 1,
+            }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "700", color: "#ffffff" }}>
+              {isFetching ? "Retrying..." : "Try again"}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
