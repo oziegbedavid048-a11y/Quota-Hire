@@ -2,7 +2,7 @@
   "expo": {
     "name": "Quota Hire",
     "slug": "quota-hire",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "quotahire",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.oziegbedavid.quotahire",
-      "versionCode": 8,
+      "versionCode": 9,
       "allowBackup": false,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
