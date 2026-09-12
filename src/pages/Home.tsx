@@ -386,7 +386,7 @@ export const Home = () => {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-xl md:text-2xl md:text-xl md:text-2xl md:text-2xl md:text-xl md:text-2xl font-display font-bold text-neutral-900 dark:text-white mb-6">
-              Why Quota Hire?
+              Why Quotahire?
             </h2>
           </div>
 
@@ -459,7 +459,7 @@ export const Home = () => {
               Don't just take our word for it
             </h2>
             <p className="text-lg text-neutral-600 dark:text-neutral-400">
-              See what top sales professionals and hiring managers are saying about their experience with Quota Hire.
+              See what top sales professionals and hiring managers are saying about their experience with Quotahire.
             </p>
           </div>
 
@@ -467,7 +467,7 @@ export const Home = () => {
             <CircularTestimonials
               testimonials={[
                 {
-                  quote: 'Closed my OTE within 60 days of starting. Quota Hire actually screened for the qualities that matter.',
+                  quote: 'Closed my OTE within 60 days of starting. Quotahire actually screened for the qualities that matter.',
                   name: 'Marcus Reed',
                   designation: 'Enterprise AE @ Northwind Cloud',
                   src: 'https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?w=120&h=120&q=75&fit=crop&auto=format&fm=webp'
@@ -535,7 +535,7 @@ export const Home = () => {
             </h2>
             <p className="text-xl text-neutral-600 dark:text-neutral-400 mb-10">
               Join thousands of top sales professionals and high-growth
-              companies already on Quota Hire.
+              companies already on Quotahire.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link to="/signup?role=employee">
@@ -644,7 +644,7 @@ export const Home = () => {
               Get in Touch
             </h2>
             <p className="text-lg text-neutral-600 dark:text-neutral-400">
-              Have questions about how Quota Hire can accelerate your hiring or job search? We're here to help.
+              Have questions about how Quotahire can accelerate your hiring or job search? We're here to help.
             </p>
           </div>
           <div className="max-w-xl mx-auto bg-white/10 dark:bg-neutral-900/20 backdrop-blur-xl p-8 rounded-3xl border border-white/20 dark:border-neutral-800/50 shadow-elevated">

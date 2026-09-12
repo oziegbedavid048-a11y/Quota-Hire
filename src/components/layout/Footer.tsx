@@ -90,13 +90,13 @@ export const Footer = () => {
 					<Link className="flex items-center gap-2 mb-4" to="/">
             <Logo size={30} />
             <span className="font-display font-bold text-xl tracking-tight text-neutral-900 dark:text-white">
-              Quota Hire
+              Quotahire
             </span>
           </Link>
 					<p className="text-neutral-500 dark:text-neutral-400 mt-8 text-sm md:mt-0 max-w-xs">
 						Where elite sales talent meets quota-crushing companies.
 						<br/><br/>
-						© {new Date().getFullYear()} Quota Hire. All rights reserved.
+						© {new Date().getFullYear()} Quotahire. All rights reserved.
 					</p>
 				</AnimatedContainer>
 

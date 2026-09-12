@@ -2,6 +2,8 @@
 Quota Hire Django Settings
 """
 
+import os
+import sys
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
@@ -11,6 +13,9 @@ from posthog import Posthog
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# True while `manage.py test` or pytest is running.
+RUNNING_TESTS = 'test' in sys.argv or 'PYTEST_CURRENT_TEST' in os.environ
 
 # SECURITY (QH-10): DEBUG defaults to False. It previously defaulted to True,
 # so any environment that forgot the variable came up serving full tracebacks —
@@ -297,7 +302,7 @@ CORS_ALLOW_CREDENTIALS = True
 # ── ZeptoMail API Settings ────────────────────────────────────────────────────
 EMAIL_BACKEND = 'api.email_backend.ZeptoMailBackend'
 ZEPTOMAIL_API_KEY = config('ZEPTOMAIL_API_KEY', default=config('EMAIL_HOST_PASSWORD', default=''))
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Quota Hire <noreply@quotahire.org>')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Quotahire <noreply@quotahire.org>')
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 # Fallback SMTP settings (in case SMTP is used elsewhere)
@@ -309,6 +314,15 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 
 # ── Sentry Configuration ─────────────────────────────────────────────────────
 SENTRY_DSN = config('SENTRY_DSN', default=None)
+
+# A test run must never report into the production Sentry project. The suite
+# provokes failures deliberately, and every one of them used to arrive in
+# Sentry looking like something a user had hit — PYTHON-DJANGO-33
+# ("database test_quotahire is being accessed by other users") was filed that
+# way, and it is a test-teardown artefact that no user has ever seen.
+if RUNNING_TESTS:
+    SENTRY_DSN = None
+
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,

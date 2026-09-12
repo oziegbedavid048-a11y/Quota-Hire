@@ -8,9 +8,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 # Customise the Admin site header/title
-admin.site.site_header  = 'Quota Hire Administration'
-admin.site.site_title   = 'Quota Hire Admin'
-admin.site.index_title  = 'Welcome to Quota Hire Admin Portal'
+admin.site.site_header  = 'Quotahire Administration'
+admin.site.site_title   = 'Quotahire Admin'
+admin.site.index_title  = 'Welcome to Quotahire Admin Portal'
 
 urlpatterns = [
     # QH-36: the admin path is configurable via DJANGO_ADMIN_PATH so it can be

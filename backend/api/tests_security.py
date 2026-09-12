@@ -1995,8 +1995,11 @@ class HardeningBatchTests(ThrottleIsolatedTestCase):
             format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        # Keyed on the link rather than a word in the subject line: subjects are
+        # marketing copy and get reworded, and this test is about whether the
+        # verification mail goes out at all.
         self.assertTrue(
-            any('erify' in m.subject for m in mail.outbox),
+            any('/verify-email?token=' in (m.body or '') for m in mail.outbox),
             'Registration no longer sends a verification email.',
         )
 

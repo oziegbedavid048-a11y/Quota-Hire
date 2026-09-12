@@ -74,7 +74,7 @@ def create_welcome_notification(sender, instance, created, **kwargs):
     if created:
         Notification.objects.create(
             user=instance,
-            title="Welcome to Quota Hire!",
+            title="Welcome to Quotahire",
             message=(
                 "We're glad to have you here. Please complete your profile "
                 "to get started and enjoy the full experience of the platform."
@@ -170,7 +170,7 @@ def handle_job_post_save(sender, instance, created, **kwargs):
                 user=company_user,
                 title="Job Approved",
                 message=(
-                    f"Your job posting '{instance.title}' has been approved and is now live on Quota Hire."
+                    f"Your job posting '{instance.title}' has been approved and is now live on Quotahire."
                 )
             )
             _send_push_safe(
@@ -202,7 +202,7 @@ def handle_job_post_save(sender, instance, created, **kwargs):
             user=company_user,
             title="Job Approved",
             message=(
-                f"Your job posting '{instance.title}' has been approved and is now live on Quota Hire."
+                f"Your job posting '{instance.title}' has been approved and is now live on Quotahire."
             )
         )
         _send_push_safe(
@@ -404,7 +404,7 @@ def handle_application_post_save(sender, instance, created, **kwargs):
     )
     _send_email_safe(
         to_email=employee_user.email,
-        subject=f"{notif_title} - Quota Hire",
+        subject=f"{notif_title} - Quotahire",
         html_content=html,
         text_content=notif_message,
     )

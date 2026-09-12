@@ -34,7 +34,7 @@ export const About = () => {
             initial="hidden" animate="visible" variants={fadeIn}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-neutral-900/80 text-neutral-900 dark:text-neutral-200 text-sm font-medium mb-8 border border-neutral-200 dark:border-neutral-800 backdrop-blur-md shadow-sm"
           >
-            About Quota Hire
+            About Quotahire
           </motion.div>
           <motion.h1 
             initial="hidden" animate="visible" variants={fadeIn}
@@ -123,7 +123,7 @@ export const About = () => {
                   <div className="md:hidden block w-12 h-12 bg-accent-100 dark:bg-accent-900/30 text-accent-600 rounded-full flex items-center justify-center mb-4 font-bold">Now</div>
                   <h3 className="text-3xl font-display font-bold text-neutral-900 dark:text-white mb-4">The New Standard</h3>
                   <p className="text-lg text-neutral-600 dark:text-neutral-400">
-                    Today, Quota Hire is the premier destination for elite sales talent. We've replaced the noise with signal, helping hundreds of companies build high-performing revenue teams efficiently and transparently.
+                    Today, Quotahire is the premier destination for elite sales talent. We've replaced the noise with signal, helping hundreds of companies build high-performing revenue teams efficiently and transparently.
                   </p>
                 </div>
                 <div className="hidden md:flex absolute left-1/2 w-12 h-12 bg-accent-500 border-4 border-white dark:border-neutral-900 rounded-full items-center justify-center transform -translate-x-1/2 shadow-[0_0_20px_rgba(21,117,10,0.5)] z-10">

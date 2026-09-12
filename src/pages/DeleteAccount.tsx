@@ -15,7 +15,7 @@ export const DeleteAccount: React.FC = () => {
   useScreenInit();
 
   useEffect(() => {
-    document.title = 'Account & Data Deletion Request — Quota Hire';
+    document.title = 'Account & Data Deletion Request — Quotahire';
   }, []);
 
   const [email, setEmail] = useState('');
@@ -49,7 +49,7 @@ export const DeleteAccount: React.FC = () => {
           name: `Account Deletion Request (${accountType})`,
           email: email.trim(),
           subject: `[ACCOUNT DELETION REQUEST] - ${email.trim()} (${generatedTicket})`,
-          message: `Account Deletion Request submitted via Web Deletion Portal.\nApp Name: Quota Hire\nTicket Ref: ${generatedTicket}\nEmail: ${email.trim()}\nAccount Type: ${accountType}\nReason: ${reason || 'N/A'}\nUser Confirmed Permanent Deletion: Yes`
+          message: `Account Deletion Request submitted via Web Deletion Portal.\nApp Name: Quotahire\nTicket Ref: ${generatedTicket}\nEmail: ${email.trim()}\nAccount Type: ${accountType}\nReason: ${reason || 'N/A'}\nUser Confirmed Permanent Deletion: Yes`
         }),
       }).catch(() => {
         // Fallback: accept request visually even if contact API is offline
@@ -89,21 +89,21 @@ export const DeleteAccount: React.FC = () => {
             </div>
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold mb-4 tracking-tight">
-              Quota Hire Account & Data Deletion
+              Quotahire Account & Data Deletion
             </h1>
             <p className="text-base sm:text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-              In accordance with <strong>Google Play Store User Data Policies</strong>, GDPR, and global data privacy standards, users of the <strong>Quota Hire</strong> mobile application and web platform can request the complete deletion of their account and all associated personal data.
+              In accordance with <strong>Google Play Store User Data Policies</strong>, GDPR, and global data privacy standards, users of the <strong>Quotahire</strong> mobile application and web platform can request the complete deletion of their account and all associated personal data.
             </p>
 
             {/* Developer & App Meta Tag Bar */}
             <div className="mt-8 pt-6 border-t border-neutral-200/70 dark:border-neutral-800/70 flex flex-wrap items-center justify-center gap-4 text-xs text-neutral-500 dark:text-neutral-400">
               <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg">
                 <span className="font-semibold text-neutral-700 dark:text-neutral-300">App Name:</span>
-                <span>Quota Hire</span>
+                <span>Quotahire</span>
               </div>
               <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg">
                 <span className="font-semibold text-neutral-700 dark:text-neutral-300">Developer Name:</span>
-                <span>Quota Hire</span>
+                <span>Quotahire</span>
               </div>
               <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg">
                 <span className="font-semibold text-neutral-700 dark:text-neutral-300">Privacy Email:</span>
@@ -139,16 +139,16 @@ export const DeleteAccount: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">Method 1: Instant In-App Deletion (Mobile App & Web)</h3>
-                  <p className="text-xs sm:text-sm text-neutral-500">For logged-in users directly within the Quota Hire application</p>
+                  <p className="text-xs sm:text-sm text-neutral-500">For logged-in users directly within the Quotahire application</p>
                 </div>
               </div>
 
               <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400 mb-6 leading-relaxed">
-                If you have the <strong>Quota Hire</strong> mobile app installed or are logged in on the web platform, you can initiate and complete immediate account deletion yourself without waiting for manual processing:
+                If you have the <strong>Quotahire</strong> mobile app installed or are logged in on the web platform, you can initiate and complete immediate account deletion yourself without waiting for manual processing:
               </p>
 
               <ol className="space-y-3 text-sm sm:text-base text-neutral-700 dark:text-neutral-300 list-decimal list-inside bg-neutral-50 dark:bg-neutral-950/70 p-5 rounded-xl border border-neutral-200/60 dark:border-neutral-800">
-                <li className="pl-1"><strong className="font-semibold text-neutral-900 dark:text-white">Log in</strong> to your <strong>Quota Hire</strong> account on mobile or web.</li>
+                <li className="pl-1"><strong className="font-semibold text-neutral-900 dark:text-white">Log in</strong> to your <strong>Quotahire</strong> account on mobile or web.</li>
                 <li className="pl-1">Navigate to <strong className="font-semibold text-neutral-900 dark:text-white">Settings</strong> (gear icon in profile or navigation drawer).</li>
                 <li className="pl-1">Scroll down to the <strong className="font-semibold text-red-600 dark:text-red-400">Danger Zone</strong> section.</li>
                 <li className="pl-1">Click or tap <strong className="font-semibold text-red-600 dark:text-red-400">Delete My Account</strong>.</li>
@@ -212,7 +212,7 @@ export const DeleteAccount: React.FC = () => {
                       placeholder="e.g. alex@example.com"
                       className="w-full px-4 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-all outline-none text-sm"
                     />
-                    <p className="text-xs text-neutral-500 mt-1">Must match the email address associated with your Quota Hire account.</p>
+                    <p className="text-xs text-neutral-500 mt-1">Must match the email address associated with your Quotahire account.</p>
                   </div>
 
                   <div>
@@ -267,7 +267,7 @@ export const DeleteAccount: React.FC = () => {
                       className="mt-1 w-4 h-4 text-red-600 rounded border-neutral-300 focus:ring-red-500"
                     />
                     <label htmlFor="confirm-check" className="text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed cursor-pointer select-none">
-                      I understand that account deletion is <strong className="text-red-600 dark:text-red-400 font-semibold">permanent and irreversible</strong>. All my profile details, uploaded CVs, application history, and saved data will be permanently deleted from Quota Hire servers.
+                      I understand that account deletion is <strong className="text-red-600 dark:text-red-400 font-semibold">permanent and irreversible</strong>. All my profile details, uploaded CVs, application history, and saved data will be permanently deleted from Quotahire servers.
                     </label>
                   </div>
 

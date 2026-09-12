@@ -42,7 +42,7 @@ export const PhoneMockup = () => {
             <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-neutral-200 shadow-sm sticky top-0 z-30">
               <div className="flex items-center gap-2">
                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent-500 to-warm-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">QH</div>
-                 <span className="font-display font-bold text-neutral-900">Quota Hire</span>
+                 <span className="font-display font-bold text-neutral-900">Quotahire</span>
               </div>
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-500 to-primary-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white shadow-sm">AJ</div>
             </div>

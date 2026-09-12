@@ -856,13 +856,13 @@ class NewsletterAdminForm(forms.ModelForm):
                 'We are excited to share some updates with you...\n\n'
                 'This month we have added new features including...\n\n'
                 'We hope you enjoy the platform!\n\n'
-                'Warm regards,\nThe Quota Hire Team'
+                'Kind regards,\nThe Quotahire Team'
             )
         }),
         help_text=(
             'Write in plain text. Each new line becomes a paragraph in the branded email. '
             'No HTML required. The system will automatically wrap this in the '
-            'Quota Hire email template with your logo and colours.'
+            'Quotahire email template with your logo and colours.'
         )
     )
 

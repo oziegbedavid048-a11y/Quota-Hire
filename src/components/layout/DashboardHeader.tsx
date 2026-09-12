@@ -43,7 +43,7 @@ export const DashboardHeader = () => {
           <Link to="/" className="flex items-center gap-2.5">
             <Logo size={36} />
             <span className="font-display font-bold text-xl tracking-tight text-neutral-900 dark:text-white hidden sm:block">
-              Quota Hire
+              Quotahire
             </span>
           </Link>
         </div>

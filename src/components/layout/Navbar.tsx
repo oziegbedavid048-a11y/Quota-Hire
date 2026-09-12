@@ -51,7 +51,7 @@ export const Navbar = () => {
         <Link to="/" className="flex items-center gap-2.5">
           <Logo size={38} />
           <span className="font-display font-bold text-xl tracking-tight text-neutral-900 dark:text-white">
-            Quota Hire
+            Quotahire
           </span>
         </Link>
 

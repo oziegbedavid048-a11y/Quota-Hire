@@ -1,130 +1,231 @@
 """
-Quota Hire - Professional Email Templates
+Quotahire — transactional email templates.
 
-- Concise yet professional messaging — 3 to 4 sentences per email.
-- Logo is embedded as an inline SVG in the email header.
-- Subjects use ASCII-safe characters only to prevent encoding issues.
-- Emails are delivered via ZeptoMail SMTP using Django's send_mail.
+The rules this file follows, and why:
+
+* **The body is plain text set in HTML.** No cards, no panels, no coloured
+  boxes, no buttons, no badges, no rules. Just paragraphs and inline links,
+  the way a person writes an email. Anything decorative was removed on
+  purpose; please do not add it back.
+* **The logo is a hosted PNG.** Every mail client of consequence — Gmail,
+  Outlook and Yahoo among them — strips inline ``<svg>``, so the SVG logo
+  this file used to carry never once reached a recipient's screen. A hosted
+  PNG is the only form all of them render.
+* **Brand colour appears once, in the footer.** A gradient with a solid
+  ``bgcolor`` underneath it, because Outlook ignores CSS gradients.
+* **Every style is inline.** Gmail's handling of ``<style>`` blocks is not
+  dependable, so the ``<head>`` carries only the responsive media query.
+* **Copy is short.** One purpose per email: what happened, what to do, what
+  happens next.
+* **Everything user-supplied is escaped** before it reaches the HTML
+  (QH-18) — these messages are sent from a domain that passes SPF and DKIM,
+  so injected markup would read as entirely genuine.
 """
 
 from django.utils.html import escape
+from html import unescape
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# LOGO (Inline SVG)
+# BRAND
 # =============================================================================
 
-LOGO_SVG = """\
-<table cellpadding="0" cellspacing="0" border="0">
-<tr>
-  <td style="width:52px;vertical-align:middle;padding-right:14px;">
-    <svg width="48" height="48" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"
-         style="display:block;" aria-label="Quota Hire Logo">
-      <circle cx="50" cy="50" r="48" fill="#1A6515"/>
-      <circle cx="50" cy="50" r="35" fill="#5DDE2A"/>
-      <circle cx="50" cy="50" r="21" fill="#1A6515"/>
-      <rect x="39" y="46" width="22" height="14" rx="2.5" fill="white"/>
-      <path d="M43.5 46 L43.5 42 Q43.5 40 50 40 Q56.5 40 56.5 42 L56.5 46"
-            stroke="white" stroke-width="2.8" fill="none"
-            stroke-linecap="round" stroke-linejoin="round"/>
-      <rect x="39" y="52.5" width="22" height="2" rx="1" fill="#1A6515"/>
-      <rect x="47" y="51" width="6" height="5.5" rx="1.5" fill="#1A6515"/>
-    </svg>
-  </td>
-  <td style="vertical-align:middle;">
-    <div style="font-size:22px;font-weight:700;color:#111111;letter-spacing:-0.4px;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">Quota Hire</div>
-    <div style="font-size:11px;color:#1A6515;font-weight:600;letter-spacing:0.6px;text-transform:uppercase;margin:3px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">Professional Recruitment Platform</div>
-  </td>
-</tr>
-</table>"""
+# Served from the marketing site's public/ directory. Absolute and hard-coded:
+# a logo URL that resolves to localhost in one environment is a broken image in
+# every email that environment sends.
+LOGO_URL = "https://quotahire.org/email-logo.png"
+
+SITE_URL = "https://quotahire.org"
+SUPPORT_EMAIL = "support@quotahire.org"
+
+# Quotahire's regional domains, primary first. All three resolve to the same
+# application, so the footer lists every one and a reader can use whichever
+# belongs to their region. Links inside the body of a message deliberately do
+# not use this list: those are built from FRONTEND_URL, because a verification
+# or password-reset link must land on the domain the token was minted for.
+DOMAINS = ("quotahire.co.uk", "quotahire.ng", "quotahire.org")
+
+# A postal address in the footer is not decoration. Bulk commercial mail is
+# required to carry one (CAN-SPAM in the US, and it is expected under PECR and
+# the GDPR's transparency rules here), and its absence is a well-known spam
+# signal. This is the address published in the site's privacy policy.
+POSTAL_ADDRESS = "128 City Road, London EC1V 2NX, United Kingdom"
+
+# Footer navigation. Every path is a real route in src/App.tsx — a dead link in
+# a footer that goes to every user is worse than no link at all.
+FOOTER_LINKS = (
+    ("Browse jobs", "/jobs"),
+    ("My dashboard", "/dashboard"),
+    ("Contact us", "/contact"),
+    ("Privacy policy", "/privacy"),
+    ("Email preferences", "/settings"),
+)
+
+BRAND_DARK = "#15750a"
+
+# The dashboard overview's hero card gradient, which is what the brand
+# gradient means here: a pale green wash through white into a pale amber.
+# In Tailwind that card is `from-accent-500/10 via-white to-warm-500/10`;
+# these are those three tints flattened onto white, because email clients
+# have no notion of an alpha-composited colour.
+FOOTER_TINT_GREEN = "#e8f1e7"   # accent-500 #15750a at 10% over white
+FOOTER_TINT_AMBER = "#fef5e7"   # warm-500   #f59e0b at 10% over white
+FOOTER_GRADIENT = f"linear-gradient(135deg,{FOOTER_TINT_GREEN} 0%,#ffffff 52%,{FOOTER_TINT_AMBER} 100%)"
+# Outlook ignores CSS gradients, so it gets a single tint from the same family.
+FOOTER_FALLBACK = "#f4f7f2"
+
+FONT = ("-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,"
+        "Helvetica,Arial,sans-serif")
+MONO = "'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace"
+
+P_STYLE = f"margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:1.65;color:#2b2f33;"
+A_STYLE = f"color:{BRAND_DARK};text-decoration:underline;"
+CODE_STYLE = (f"margin:4px 0 20px;font-family:{MONO};font-size:30px;line-height:1.2;"
+              "font-weight:700;letter-spacing:8px;color:#111111;")
+NOTE_STYLE = f"margin:0 0 16px;font-family:{FONT};font-size:13px;line-height:1.6;color:#6b7280;"
 
 
 # =============================================================================
 # HTML SHELL
 # =============================================================================
 
-def _build_email(*, title, body_html):
-    """Assembles the complete HTML email document."""
+def _preheader_from(body_html):
+    """First real sentence of the email, for the inbox preview line.
+
+    Mail clients show the opening body text beside the subject. Left alone
+    that is the greeting — "Hi David," — which tells the reader nothing.
+    Skipping the greeting puts the actual news in the preview.
+    """
+    for para in re.findall(r"<p[^>]*>(.*?)</p>", body_html, re.S):
+        text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", para)).strip()
+        if not text or text.lower().startswith("hi "):
+            continue
+        return text[:140]
+    return ""
+
+
+def _footer_html():
+    """The footer: who sent this, where to go next, and where we are.
+
+    A few short lines rather than one. A transactional footer is the only part
+    of the message that is the same every time, so it is where the things a
+    reader occasionally needs belong — a way back into the product, a way to
+    reach a person, the preferences page, and the postal address that bulk
+    mail is required to carry. Kept to small type on the pale brand wash so it
+    reads as a signature block and never competes with the message above it.
+    """
+    dot = '<span style="color:#a3ab9f;">&nbsp;&middot;&nbsp;</span>'
+
+    nav = dot.join(
+        f'<a href="{SITE_URL}{path}" style="color:{BRAND_DARK};text-decoration:none;'
+        f'white-space:nowrap;">{label}</a>'
+        for label, path in FOOTER_LINKS
+    )
+    domains = dot.join(
+        f'<a href="https://{d}" style="color:#3f4a3d;text-decoration:none;'
+        f'white-space:nowrap;">{d}</a>'
+        for d in DOMAINS
+    )
+
+    return (
+        f'<p style="margin:0 0 10px;font-family:{FONT};font-size:14px;line-height:1.4;'
+        'font-weight:700;color:#111111;letter-spacing:-0.2px;">Quotahire</p>'
+
+        f'<p style="margin:0 0 8px;font-family:{FONT};font-size:12.5px;line-height:1.9;'
+        f'font-weight:600;">{nav}</p>'
+
+        f'<p style="margin:0 0 16px;font-family:{FONT};font-size:12.5px;line-height:1.9;'
+        f'">{domains}</p>'
+
+        '<div style="height:1px;line-height:1px;font-size:0;background-color:#dfe5db;'
+        'margin:0 0 14px;">&nbsp;</div>'
+
+        f'<p style="margin:0 0 6px;font-family:{FONT};font-size:11.5px;line-height:1.65;'
+        f'color:#7b837a;">{POSTAL_ADDRESS}<br>'
+        f'<a href="mailto:{SUPPORT_EMAIL}" style="color:#7b837a;text-decoration:underline;">'
+        f'{SUPPORT_EMAIL}</a></p>'
+
+        f'<p style="margin:0;font-family:{FONT};font-size:11.5px;line-height:1.65;'
+        'color:#7b837a;">&copy; 2026 Quotahire. You are receiving this because you have '
+        'an account with us.</p>'
+    )
+
+
+def _build_email(*, title, body_html, preheader=None):
+    """Wraps a body in the logo header and the brand footer."""
+    preview = preheader if preheader is not None else _preheader_from(body_html)
+    # The invisible padding characters stop Gmail from dragging the opening
+    # lines of the body into the preview line behind the preheader.
+    preview_block = (
+        '<div style="display:none;max-height:0;max-width:0;opacity:0;overflow:hidden;'
+        'mso-hide:all;font-size:1px;line-height:1px;color:#ffffff;">'
+        + preview + ("&#8199;&#65279;&#847;" * 30) +
+        "</div>"
+    ) if preview else ""
+
     return (
         "<!DOCTYPE html>"
         '<html lang="en">'
         "<head>"
         '<meta charset="UTF-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1.0">'
-        '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<meta name="color-scheme" content="light">'
         f"<title>{title}</title>"
         "<style>"
-        "body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}"
-        "table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;}"
-        "img{border:0;outline:none;text-decoration:none;display:block;}"
-        "body{margin:0;padding:0;background-color:#f4f4f5;"
-        "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}"
-        ".wrap{width:100%;background-color:#f4f4f5;padding:32px 0;box-sizing:border-box;}"
-        ".card{max-width:560px;margin:0 auto;background-color:#ffffff;"
-        "overflow:hidden;border:1px solid #e4e4e7;border-radius:10px;}"
-        ".hdr{padding:24px 36px;border-bottom:1px solid #f0fdf0;background-color:#ffffff;}"
-        ".bdy{padding:32px 36px 36px;}"
-        "h1{font-size:20px;font-weight:700;color:#111111;margin:0 0 4px;letter-spacing:-0.3px;line-height:1.3;}"
-        ".sub{font-size:13px;color:#71717a;margin:0 0 20px;}"
-        "hr{border:none;border-top:1px solid #e4e4e7;margin:20px 0;}"
-        "p{font-size:15px;line-height:1.7;color:#3f3f46;margin:0 0 14px;}"
-        ".dbox{background-color:#f0fdf4;border-left:4px solid #1A6515;"
-        "border-radius:6px;padding:14px 18px;margin:18px 0;}"
-        ".dlbl{font-size:11px;font-weight:600;color:#1A6515;text-transform:uppercase;"
-        "letter-spacing:0.8px;margin:0 0 4px;}"
-        ".dval{font-size:16px;font-weight:600;color:#111111;margin:0;}"
-        ".badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;"
-        "font-weight:600;margin:0 0 16px;}"
-        ".b-green{background-color:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;}"
-        ".b-yellow{background-color:#fefce8;color:#ca8a04;border:1px solid #fde68a;}"
-        ".b-blue{background-color:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;}"
-        ".b-red{background-color:#fef2f2;color:#dc2626;border:1px solid #fecaca;}"
-        ".b-gray{background-color:#f9fafb;color:#374151;border:1px solid #e5e7eb;}"
-        ".btnw{margin:24px 0 20px;}"
-        ".btn{display:inline-block;background-color:#1A6515;color:#ffffff !important;"
-        "text-decoration:none;font-size:14px;font-weight:600;padding:12px 28px;"
-        "border-radius:6px;letter-spacing:0.2px;}"
-        ".lf{margin-top:16px;padding:12px 16px;background-color:#fafafa;"
-        "border-radius:6px;border:1px dashed #d4d4d8;}"
-        ".lf p{font-size:12px;color:#71717a;margin:0 0 6px;}"
-        ".lf a{font-size:12px;color:#1A6515;word-break:break-all;}"
-        ".ftr{background-color:#fafafa;border-top:1px solid #e4e4e7;padding:20px 36px;text-align:center;}"
-        ".ftr p{font-size:12px;color:#a1a1aa;margin:0 0 4px;line-height:1.6;}"
-        ".ftr a{color:#71717a;text-decoration:underline;}"
-        "@media only screen and (max-width:600px){"
-        ".hdr,.bdy,.ftr{padding-left:20px!important;padding-right:20px!important;}"
-        "h1{font-size:18px!important;}}"
+        "body{margin:0;padding:0;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}"
+        "table,td{mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;}"
+        "img{border:0;outline:none;text-decoration:none;}"
+        "@media only screen and (max-width:620px){"
+        ".qh-shell{width:100%!important;}"
+        ".qh-pad{padding-left:22px!important;padding-right:22px!important;}}"
         "</style>"
         "</head>"
-        "<body>"
-        '<div class="wrap"><div class="card">'
-        '<div class="hdr">' + LOGO_SVG + "</div>"
-        '<div class="bdy">' + body_html + "</div>"
-        '<div class="ftr">'
-        "<p>&copy; 2026 Quota Hire. All rights reserved.</p>"
-        '<p>You are receiving this because you have an account on '
-        '<a href="https://quotahire.org">quotahire.org</a>.</p>'
-        '<p><a href="https://quotahire.org">Visit Platform</a> &nbsp;&middot;&nbsp; '
-        '<a href="https://quotahire.org/dashboard">My Dashboard</a></p>'
-        "</div>"
-        "</div></div>"
+        '<body style="margin:0;padding:0;background-color:#ffffff;">'
+        + preview_block +
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"'
+        ' style="background-color:#ffffff;"><tr>'
+        '<td align="center" style="padding:0;">'
+        '<table role="presentation" class="qh-shell" width="600" cellpadding="0" cellspacing="0"'
+        ' border="0" style="width:600px;max-width:600px;">'
+
+        # Header: logo and wordmark, nothing else.
+        '<tr><td class="qh-pad" style="padding:32px 36px 22px;">'
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
+        '<td style="padding-right:12px;vertical-align:middle;">'
+        f'<img src="{LOGO_URL}" width="40" height="40" alt="Quotahire"'
+        ' style="display:block;width:40px;height:40px;">'
+        "</td>"
+        f'<td style="vertical-align:middle;font-family:{FONT};font-size:17px;'
+        'font-weight:700;color:#111111;letter-spacing:-0.2px;">Quotahire</td>'
+        "</tr></table>"
+        "</td></tr>"
+
+        # Body.
+        f'<tr><td class="qh-pad" style="padding:0 36px 30px;">{body_html}</td></tr>'
+
+        # Footer: the one place brand colour appears. The wash is pale, so the
+        # type on it stays dark, and a hairline keeps it from bleeding into
+        # the body.
+        f'<tr><td class="qh-pad" bgcolor="{FOOTER_FALLBACK}"'
+        f' style="background-color:{FOOTER_FALLBACK};background-image:{FOOTER_GRADIENT};'
+        'border-top:1px solid #e7ebe4;padding:24px 36px 26px;">'
+        + _footer_html() +
+        "</td></tr>"
+
+        "</table></td></tr></table>"
         "</body></html>"
     )
 
 
 # =============================================================================
-# HELPER BUILDERS
+# BODY PIECES
 # =============================================================================
-
-def _h1(title, subtitle=""):
-    sub = f'<p class="sub">{subtitle}</p>' if subtitle else ""
-    return f"<h1>{title}</h1>{sub}"
-
 
 def _esc(value):
     """HTML-escape a value destined for an email body (QH-18).
@@ -145,44 +246,81 @@ def _esc(value):
 
 
 def _p(text):
-    return f"<p>{text}</p>"
+    return f'<p style="{P_STYLE}">{text}</p>'
 
 
-def _dbox(label, value):
-    return (
-        '<div class="dbox">'
-        f'<p class="dlbl">{label}</p>'
-        f'<p class="dval">{value}</p>'
-        "</div>"
-    )
+def _note(text):
+    """A quieter line, for expiry details, fallback links and small print."""
+    return f'<p style="{NOTE_STYLE}">{text}</p>'
 
 
-def _badge(text, color="green"):
-    return f'<span class="badge b-{color}">{text}</span>'
+def _a(href, label):
+    return f'<a href="{href}" style="{A_STYLE}">{label}</a>'
 
 
-def _cta(href, label):
-    return f'<div class="btnw"><a href="{href}" class="btn">{label}</a></div>'
+def _action(href, label):
+    """The email's single action, as a link on its own line rather than a
+    button. A button is layout; a link is how a colleague would send you
+    somewhere."""
+    return f'<p style="{P_STYLE}font-weight:600;">{_a(href, label)}</p>'
 
 
-def _lf(url):
-    return (
-        '<div class="lf">'
-        "<p>If the button above does not work, copy and paste this link into your browser:</p>"
-        f'<a href="{url}">{url}</a>'
-        "</div>"
-    )
-
-
-def _hr():
-    return "<hr>"
+def _code(value):
+    return f'<p style="{CODE_STYLE}">{value}</p>'
 
 
 def _signoff():
-    return (
-        '<p style="margin-top:24px;font-size:14px;color:#3f3f46;">'
-        'Warm regards,<br><strong>The Quota Hire Team</strong></p>'
-    )
+    return _p("Kind regards,<br>The Quotahire Team")
+
+
+def to_plain_text(html_content: str) -> str:
+    """The text/plain alternative, derived from the HTML the reader will see.
+
+    Every message goes out as multipart: the HTML part and a plain-text part.
+    The text part was previously written by hand at each call site, and had
+    drifted — some senders passed the subject line as the whole body, others
+    the first two hundred characters of a newsletter. Deriving it from the
+    HTML means the two halves of a message can never disagree, and it gives
+    text-only clients, screen readers and spam filters a full copy of what
+    was actually sent.
+
+    Links are rendered as "label: url" so nothing is lost when the anchor
+    cannot be clicked, unless the label already is the URL.
+    """
+    if not html_content:
+        return ""
+
+    # The header and footer are chrome; the reader wants the message.
+    body = html_content
+    if 'class="qh-pad" style="padding:0 36px 30px;">' in body:
+        body = body.split('class="qh-pad" style="padding:0 36px 30px;">', 1)[1]
+        body = body.split('<tr><td class="qh-pad" bgcolor', 1)[0]
+
+    def _unwrap_link(match):
+        href, label = match.group(1), re.sub(r"<[^>]+>", "", match.group(2)).strip()
+        if not label or href.startswith("mailto:") or label in href:
+            return label or href
+        return f"{label}: {href}"
+
+    body = re.sub(r'<a[^>]*href="([^"]*)"[^>]*>(.*?)</a>', _unwrap_link, body, flags=re.S)
+    body = re.sub(r"<br\s*/?>", "\n", body)
+    body = re.sub(r"</p\s*>", "\n\n", body)
+    body = re.sub(r"<[^>]+>", "", body)
+
+    text = unescape(body)
+    lines = [ln.strip() for ln in text.split("\n")]
+    out = []
+    for line in lines:
+        if line or (out and out[-1]):
+            out.append(line)
+    signature = "\n".join([
+        "--",
+        "Quotahire",
+        "  ".join(DOMAINS),
+        POSTAL_ADDRESS,
+        SUPPORT_EMAIL,
+    ])
+    return "\n".join(out).strip() + "\n" + signature
 
 
 # =============================================================================
@@ -190,25 +328,18 @@ def _signoff():
 # =============================================================================
 
 def get_verification_email_html(user, redirect):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
     user = _esc(user)
     redirect = _esc(redirect)
     body = (
-        _h1("Verify Your Email Address", "One step away from your Quota Hire account") +
-        _p(f"Hi <strong>{user}</strong>,") +
-        _p(
-            "Thank you for registering on Quota Hire. To activate your account and gain full "
-            "access to the platform, please verify your email address by clicking the button below."
-        ) +
-        _p(
-            "This verification link is valid for <strong>24 hours</strong>. "
-            "If you did not create a Quota Hire account, please ignore this email. No action is required."
-        ) +
-        _cta(redirect, "Verify My Email Address") +
-        _lf(redirect) +
+        _p(f"Hi {user},") +
+        _p("Please confirm your email address to finish setting up your Quotahire account.") +
+        _action(redirect, "Confirm my email address") +
+        _p("The link expires in 24 hours. If you did not create an account, you can ignore "
+           "this email.") +
+        _note(f"If the link does not open, paste this into your browser:<br>{redirect}") +
         _signoff()
     )
-    return _build_email(title="Verify your email - Quota Hire", body_html=body)
+    return _build_email(title="Confirm your email address - Quotahire", body_html=body)
 
 
 # =============================================================================
@@ -216,123 +347,78 @@ def get_verification_email_html(user, redirect):
 # =============================================================================
 
 def get_recovery_email_html(user, redirect):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
     user = _esc(user)
     redirect = _esc(redirect)
     body = (
-        _h1("Reset Your Password", "A password reset was requested for your account") +
-        _p(f"Hi <strong>{user}</strong>,") +
-        _p(
-            "We received a request to reset the password on your Quota Hire account. "
-            "Click the button below to create a new password. "
-            "This link is valid for <strong>10 minutes</strong> and can only be used once."
-        ) +
-        _p(
-            "If you did not request a password reset, please ignore this email. "
-            "Your current password will remain unchanged and your account is secure."
-        ) +
-        _cta(redirect, "Reset My Password") +
-        _lf(redirect) +
+        _p(f"Hi {user},") +
+        _p("We received a request to reset the password on your Quotahire account.") +
+        _action(redirect, "Choose a new password") +
+        _p("The link expires in 10 minutes and can be used once. If you did not request this, "
+           "no action is needed and your password stays as it is.") +
+        _note(f"If the link does not open, paste this into your browser:<br>{redirect}") +
         _signoff()
     )
-    return _build_email(title="Reset your password - Quota Hire", body_html=body)
+    return _build_email(title="Reset your password - Quotahire", body_html=body)
 
 
 def get_mobile_otp_email_html(user, otp_code):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
+    """Six-digit code for resetting a password in the mobile app."""
     user = _esc(user)
     otp_code = _esc(otp_code)
-    """Generates the HTML email for mobile 6-digit OTP password reset."""
     body = (
-        _h1("Password Reset Code", "Use this code in the Quota Hire app") +
-        _p(f"Hi <strong>{user}</strong>,") +
-        _p(
-            "We received a request to reset your password on the Quota Hire mobile app. "
-            "Please enter the 6-digit code below directly into the app:"
-        ) +
-        '<div style="background-color:#f4fbf2;border:2px dashed #1A6515;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">'
-        f'<div style="font-size:36px;font-weight:900;letter-spacing:12px;color:#1A6515;font-family:monospace;">{otp_code}</div>'
-        '</div>' +
-        _p(
-            "This code is valid for <strong>30 minutes</strong> and can only be used once. "
-            "Do not share this code with anyone."
-        ) +
-        _p(
-            "If you did not request a password reset, please ignore this email. "
-            "Your password will remain unchanged."
-        ) +
+        _p(f"Hi {user},") +
+        _p("Enter this code in the Quotahire app to reset your password.") +
+        _code(otp_code) +
+        _p("The code expires in 30 minutes and can be used once. Please do not share it with "
+           "anyone.") +
+        _p("If you did not request a password reset, you can ignore this email.") +
         _signoff()
     )
-    return _build_email(title="Your Password Reset Code - Quota Hire", body_html=body)
+    return _build_email(title="Your password reset code - Quotahire", body_html=body)
 
 
 def get_login_otp_email_html(user, otp_code):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
+    """Six-digit code for passwordless sign-in in the mobile app."""
     user = _esc(user)
     otp_code = _esc(otp_code)
-    """Generates the HTML email for passwordless email-OTP login on the mobile app."""
     body = (
-        _h1("Your Login Code", "Use this code to sign in to the Quota Hire app") +
-        _p(f"Hi <strong>{user}</strong>,") +
-        _p(
-            "You requested a one-time sign-in code for your Quota Hire account. "
-            "Enter the 6-digit code below in the app to access your dashboard:"
-        ) +
-        '<div style="background-color:#f4fbf2;border:2px dashed #1A6515;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">'
-        f'<div style="font-size:36px;font-weight:900;letter-spacing:12px;color:#1A6515;font-family:monospace;">{otp_code}</div>'
-        '</div>' +
-        _p(
-            "This code is valid for <strong>30 minutes</strong> and can only be used once. "
-            "Do not share this code with anyone. Quota Hire staff will never ask for it."
-        ) +
-        _p(
-            "If you did not try to sign in, please ignore this email. "
-            "Your account is safe and no action is required."
-        ) +
+        _p(f"Hi {user},") +
+        _p("Here is your sign-in code for Quotahire.") +
+        _code(otp_code) +
+        _p("The code expires in 30 minutes and can be used once. Quotahire staff will never "
+           "ask you for it.") +
+        _p("If you did not try to sign in, you can ignore this email.") +
         _signoff()
     )
-    return _build_email(title="Your Login Code - Quota Hire", body_html=body)
-
+    return _build_email(title="Your sign-in code - Quotahire", body_html=body)
 
 
 # =============================================================================
-# 3. WELCOME EMAIL (sent after email verification)
+# 3. WELCOME (sent after email verification)
 # =============================================================================
 
 def get_welcome_email_html(user, is_company=False):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
     user = _esc(user)
+    dashboard = f"{SITE_URL}/dashboard"
     if is_company:
         body = (
-            _h1("Welcome to Quota Hire!", "Your company account is now active") +
-            _p(f"Hi <strong>{user}</strong>,") +
-            _p(
-                "Congratulations! Your email has been verified and your Quota Hire company account is fully activated. "
-                "You can now start attracting top talent by completing your company profile and posting your first job listing."
-            ) +
-            _p(
-                "Our team reviews all job listings to ensure quality, so your listing will go live shortly after submission. "
-                "Head to your dashboard to get started."
-            ) +
-            _cta("https://quotahire.org/dashboard", "Go to My Dashboard") +
+            _p(f"Hi {user},") +
+            _p("Your email is confirmed and your Quotahire company account is active.") +
+            _p("You can now complete your company profile and post your first role. Every "
+               "listing is reviewed before it goes live, which usually takes a few hours.") +
+            _action(dashboard, "Go to my dashboard") +
             _signoff()
         )
     else:
         body = (
-            _h1("Welcome to Quota Hire!", "Your account is fully activated") +
-            _p(f"Hi <strong>{user}</strong>,") +
-            _p(
-                "Congratulations! Your email has been verified and your Quota Hire account is ready. "
-                "We are excited to help you find your next great career opportunity from our growing list of verified employers."
-            ) +
-            _p(
-                "Complete your profile, upload your CV, and start exploring job listings tailored to your skills. "
-                "A complete profile increases your visibility to employers significantly."
-            ) +
-            _cta("https://quotahire.org/dashboard", "Complete My Profile") +
+            _p(f"Hi {user},") +
+            _p("Your email is confirmed and your Quotahire account is ready.") +
+            _p("Add your experience, skills and CV to your profile. Employers search on those "
+               "details, and a complete profile is needed before you can apply for a role.") +
+            _action(dashboard, "Complete my profile") +
             _signoff()
         )
-    return _build_email(title="Welcome - Quota Hire", body_html=body)
+    return _build_email(title="Your account is ready - Quotahire", body_html=body)
 
 
 # =============================================================================
@@ -388,84 +474,44 @@ def get_promoted_job_fee(currency_code: str = 'USD') -> dict:
 
 
 def get_job_submitted_email_html(user, job_title, package=None, currency='USD'):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
     user = _esc(user)
     job_title = _esc(job_title)
+    dashboard = f"{SITE_URL}/dashboard"
 
     if package == 'promoted':
-        fee_info = get_promoted_job_fee(currency)
-        fee_formatted = _esc(fee_info['formatted'])
-        paystack_payment_url = "https://paystack.shop/pay/li1aaf6q8c"
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'https://quotahire.org').strip()
-        dashboard_url = f"{frontend_url}/dashboard"
-
+        fee = _esc(get_promoted_job_fee(currency)['formatted'])
+        paystack_url = "https://paystack.shop/pay/li1aaf6q8c"
         body = (
-            _h1("Job Submitted — Complete Payment to Launch", "Priority promotion & direct applicant access") +
-            _p(f"Hi <strong>{user}</strong>,") +
-            _badge("Action Required &bull; Payment Pending", "yellow") +
-            _p(
-                "Thank you for posting your role on Quota Hire. Your job listing has been received and registered under our "
-                "<strong>Promoted Job &amp; Direct Applicant Access</strong> plan."
-            ) +
-            _dbox("Submitted Job", job_title) +
-            '<div style="background-color:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:18px 20px;margin:20px 0;">'
-            '<table style="width:100%;border-collapse:collapse;">'
-            '<tr>'
-            '<td style="vertical-align:middle;">'
-            '<div style="font-size:11px;font-weight:700;color:#1A6515;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">One-Time Promotion Fee</div>'
-            f'<div style="font-size:24px;font-weight:800;color:#111827;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">{fee_formatted}</div>'
-            '</td>'
-            '<td style="text-align:right;vertical-align:middle;">'
-            '<span style="display:inline-block;padding:5px 12px;background-color:#dcfce7;color:#15803d;font-size:12px;font-weight:700;border-radius:20px;">Direct Hire Plan</span>'
-            '</td>'
-            '</tr>'
-            '</table>'
-            '</div>' +
-            _p(
-                "To activate priority listing placement and begin receiving top candidates, please complete the promotional payment. "
-                "Once payment is confirmed, our team will immediately approve and promote your listing across our active network of qualified sales talent."
-            ) +
-            '<div style="background-color:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:16px 0;">'
-            '<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px;">Included with your Promoted Job:</div>'
-            '<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.8;color:#475569;">'
-            '<li><strong>Promoted Placement:</strong> Boosted position on the job feed for maximum visibility.</li>'
-            '<li><strong>Direct Candidate Access:</strong> View applicant profiles, contact information, and timeline as soon as they apply.</li>'
-            '<li><strong>Full CV &amp; Cover Letter Downloads:</strong> Direct access to complete resumes and candidate cover letters.</li>'
-            '<li><strong>Zero Placement Fees:</strong> You interview, select, and hire directly on your own terms.</li>'
-            '</ul>'
-            '</div>' +
-            _p(
-                "Click the button below to complete your payment securely via Paystack and launch your listing:"
-            ) +
-            _cta(paystack_payment_url, "Pay Now via Paystack") +
-            '<div style="background-color:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:14px;margin:18px 0;text-align:center;">'
-            '<div style="font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Direct Paystack Payment Link</div>'
-            f'<a href="{paystack_payment_url}" target="_blank" rel="noopener noreferrer" style="color:#1A6515;font-weight:700;font-size:13px;word-break:break-all;text-decoration:underline;">{paystack_payment_url}</a>'
-            '</div>' +
-            _p(
-                f'<span style="font-size:13px;color:#64748b;">You can also review your job submission anytime from your <a href="{dashboard_url}" style="color:#1A6515;text-decoration:underline;">company dashboard</a>. Need an invoice or bank transfer details? Simply reply directly to this email or contact our support desk at <a href="mailto:support@quotahire.org" style="color:#1A6515;text-decoration:underline;">support@quotahire.org</a>.</span>'
-            ) +
+            _p(f"Hi {user},") +
+            _p(f"We have received your listing for <strong>{job_title}</strong> under the "
+               "Promoted Job and Direct Applicant Access plan.") +
+            _p(f"The one-time promotion fee is <strong>{fee}</strong>. Your listing goes live "
+               "as soon as the payment clears.") +
+            _p("The plan gives you priority placement in the job feed, applicant profiles and "
+               "contact details as they apply, full CV and cover letter downloads, and no "
+               "placement fee when you hire.") +
+            _action(paystack_url, "Pay securely via Paystack") +
+            _note(f"Payment link: {paystack_url}") +
+            _p(f"You can review the submission on your {_a(dashboard, 'dashboard')} at any time. "
+               f"For an invoice or bank transfer details, reply to this email or write to "
+               f"{_a('mailto:' + SUPPORT_EMAIL, SUPPORT_EMAIL)}.") +
             _signoff()
         )
-        return _build_email(title="Action Required: Complete Payment - Quota Hire", body_html=body)
+        return _build_email(
+            title="Complete payment to publish your job - Quotahire",
+            body_html=body,
+        )
 
-    # Standard review email for all other recruitment packages
     body = (
-        _h1("Job Listing Submitted for Review") +
-        _p(f"Hi <strong>{user}</strong>,") +
-        _p(
-            "Your job listing has been successfully submitted and is now in our review queue. "
-            "Our team carefully reviews every listing to ensure it meets our platform standards before going live."
-        ) +
-        _dbox("Submitted Job", job_title) +
-        _p(
-            "You will receive an email confirmation the moment your listing is approved and live. "
-            "This typically takes 1 to 6 hours during business hours."
-        ) +
-        _cta("https://quotahire.org/dashboard", "View My Dashboard") +
+        _p(f"Hi {user},") +
+        _p(f"Your listing for <strong>{job_title}</strong> has been submitted and is now in "
+           "our review queue.") +
+        _p("We review every listing before it goes live. You will get an email as soon as "
+           "yours is approved, usually within one to six hours.") +
+        _action(dashboard, "View my dashboard") +
         _signoff()
     )
-    return _build_email(title="Job listing submitted - Quota Hire", body_html=body)
+    return _build_email(title="Job listing submitted - Quotahire", body_html=body)
 
 
 # =============================================================================
@@ -473,31 +519,23 @@ def get_job_submitted_email_html(user, job_title, package=None, currency='USD'):
 # =============================================================================
 
 def get_job_approved_email_html(user, job_title, job_code):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
     user = _esc(user)
     job_title = _esc(job_title)
     job_code = _esc(job_code)
-    frontend_url = getattr(settings, 'FRONTEND_URL', 'https://quotahire.org').strip()
+    frontend_url = getattr(settings, 'FRONTEND_URL', SITE_URL).strip()
     share_link = f"{frontend_url}/jobs?code={job_code}"
     body = (
-        _h1("Your Job Listing is Now Live!") +
-        _p(f"Hi <strong>{user}</strong>,") +
-        _badge("Approved &amp; Published", "green") +
-        _p(
-            "Your job listing has been reviewed and approved. "
-            "It is now live and fully visible to our community of active job seekers on Quota Hire."
-        ) +
-        _dbox("Live Job", job_title) +
-        _dbox("Unique Job Code", job_code) +
-        _p(
-            "Share this job code or the direct link below with candidates so they can find and apply for your role easily. "
-            "If they do not have a Quota Hire account yet, they will be guided to sign up first:"
-        ) +
-        _p(f'Shareable Link: <a href="{share_link}" style="color:#1A6515; font-weight:bold; word-break:break-all;">{share_link}</a>') +
-        _cta(share_link, "View Live Job Listing") +
+        _p(f"Hi {user},") +
+        _p(f"Your listing for <strong>{job_title}</strong> has been approved and is now live "
+           "on Quotahire.") +
+        _p(f"Its job code is <strong>{job_code}</strong>. Share the link below with candidates "
+           "so they can go straight to the role. Anyone without an account is asked to sign up "
+           "first.") +
+        _action(share_link, "View the live listing") +
+        _note(f"Shareable link: {share_link}") +
         _signoff()
     )
-    return _build_email(title="Your job listing is now live - Quota Hire", body_html=body)
+    return _build_email(title="Your job listing is live - Quotahire", body_html=body)
 
 
 # =============================================================================
@@ -505,30 +543,22 @@ def get_job_approved_email_html(user, job_title, job_code):
 # =============================================================================
 
 def get_job_rejected_email_html(user, job_title):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
     user = _esc(user)
     job_title = _esc(job_title)
+    dashboard = f"{SITE_URL}/dashboard"
     body = (
-        _h1("Your Job Listing Needs Revision") +
-        _p(f"Hi <strong>{user}</strong>,") +
-        _badge("Needs Revision", "yellow") +
-        _p(
-            "Thank you for submitting your job listing on Quota Hire. "
-            "After a careful review, our team was unable to approve it in its current form."
-        ) +
-        _dbox("Listing Requiring Revision", job_title) +
-        _p(
-            "Common reasons include an incomplete job description, missing compensation details, or content that does not meet our guidelines. "
-            "Please log in to your dashboard, update the listing, and resubmit. Our team will prioritise your re-review."
-        ) +
-        _p(
-            'If you need guidance on what to correct, contact us at '
-            '<a href="mailto:noreply@quotahire.org" style="color:#1A6515;">noreply@quotahire.org</a>.'
-        ) +
-        _cta("https://quotahire.org/dashboard", "Revise &amp; Resubmit") +
+        _p(f"Hi {user},") +
+        _p(f"We have reviewed your listing for <strong>{job_title}</strong> and cannot approve "
+           "it as it stands.") +
+        _p("That is usually down to an incomplete job description, missing compensation "
+           "details, or wording that does not meet our listing guidelines. Update the listing "
+           "on your dashboard and resubmit it, and we will prioritise the re-review.") +
+        _action(dashboard, "Revise my listing") +
+        _p(f"If you would like to know exactly what to change, write to "
+           f"{_a('mailto:' + SUPPORT_EMAIL, SUPPORT_EMAIL)}.") +
         _signoff()
     )
-    return _build_email(title="Job listing needs revision - Quota Hire", body_html=body)
+    return _build_email(title="Your job listing needs a revision - Quotahire", body_html=body)
 
 
 # =============================================================================
@@ -536,181 +566,115 @@ def get_job_rejected_email_html(user, job_title):
 # =============================================================================
 
 def get_application_confirmed_email_html(user, job_title):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
     user = _esc(user)
     job_title = _esc(job_title)
+    dashboard = f"{SITE_URL}/dashboard"
     body = (
-        _h1("Application Submitted Successfully!") +
-        _p(f"Hi <strong>{user}</strong>,") +
-        _p(
-            "Your application has been successfully submitted through Quota Hire and this email serves as your official confirmation. "
-            "The hiring team has received your application and it is now in their review queue."
-        ) +
-        _dbox("Position Applied For", job_title) +
-        _p(
-            "You will receive a separate email notification at each stage of the recruitment process, "
-            "so you are always kept informed. You can also track your application status at any time from your dashboard."
-        ) +
-        _cta("https://quotahire.org/dashboard", "Track My Application") +
+        _p(f"Hi {user},") +
+        _p(f"Your application for <strong>{job_title}</strong> has been sent to the hiring "
+           "team. This email is your confirmation.") +
+        _p("We will email you each time the status of your application changes. You can also "
+           "follow it from your dashboard.") +
+        _action(dashboard, "Track my application") +
         _signoff()
     )
-    return _build_email(title="Application submitted - Quota Hire", body_html=body)
+    return _build_email(title="Application submitted - Quotahire", body_html=body)
 
 
 # =============================================================================
-# 8. APPLICATION STATUS UPDATE (generic notification mirror)
+# 8. APPLICATION STATUS UPDATE
 # =============================================================================
 
+# One entry per status. `intro` is used when no job title is available;
+# `intro_job` takes the escaped job title when there is one.
 _STATUS_CONFIG = {
     "Application Under Review": {
-        "badge": ("Under Review", "blue"),
-        "subtitle": "Your application is being evaluated by the hiring team",
-        "intro": (
-            "We are pleased to let you know that your application is now being actively reviewed by the hiring team. "
-            "This is a positive sign that your profile has passed the initial screening stage."
-        ),
-        "detail": (
-            "No action is required from you at this stage. "
-            "Please ensure your contact details are up to date and your notifications are enabled, "
-            "as the hiring team may reach out to you directly. You will be notified immediately when your status changes."
-        ),
-        "cta": ("https://quotahire.org/dashboard", "View Application Status"),
+        "intro": "Your application is now being reviewed by the hiring team.",
+        "intro_job": "Your application for <strong>{job}</strong> is now being reviewed by "
+                     "the hiring team.",
+        "detail": "Nothing is needed from you at this stage. Keep your contact details current, "
+                  "as the team may reach out directly, and we will email you the moment "
+                  "anything changes.",
+        "cta": ("/dashboard", "View my application"),
     },
     "Interview Invitation": {
-        "badge": ("Interview Invited", "green"),
-        "subtitle": "Congratulations! You have been shortlisted for an interview",
-        "intro": (
-            "We are delighted to inform you that you have been shortlisted and invited for an interview for this position. "
-            "This is a significant achievement and reflects the hiring team's genuine interest in your profile and experience."
-        ),
-        "detail": (
-            "A representative from the company will contact you to confirm the interview format, date, and time. "
-            "Please monitor your email inbox and Quota Hire dashboard closely and respond promptly to any outreach from the employer. "
-            "We wish you every success. Prepare well, be confident, and bring your best self."
-        ),
-        "cta": ("https://quotahire.org/dashboard", "View Interview Details"),
+        "intro": "You have been shortlisted for an interview.",
+        "intro_job": "You have been shortlisted for an interview for the <strong>{job}</strong> "
+                     "position.",
+        "detail": "Someone from the company will contact you to agree the format, date and "
+                  "time. Please keep an eye on your inbox and reply promptly. Good luck.",
+        "cta": ("/dashboard", "View the details"),
     },
     "Decision Pending": {
-        "badge": ("Decision Pending", "yellow"),
-        "subtitle": "The hiring team is making their final decision",
-        "intro": (
-            "Thank you for your continued engagement with this opportunity. "
-            "You have successfully completed the interview stage and the hiring team is now in the final stages of their deliberation."
-        ),
-        "detail": (
-            "A decision is expected very soon and you will be notified the moment it is made. "
-            "Please continue to monitor your email and Quota Hire dashboard closely. "
-            "We appreciate your patience and look forward to sharing the outcome with you shortly."
-        ),
-        "cta": ("https://quotahire.org/dashboard", "View My Applications"),
+        "intro": "You have completed the interview stage and the hiring team is making its "
+                 "final decision.",
+        "intro_job": "You have completed the interview stage for <strong>{job}</strong> and the "
+                     "hiring team is making its final decision.",
+        "detail": "We will write to you as soon as there is an outcome. Nothing is needed from "
+                  "you in the meantime.",
+        "cta": ("/dashboard", "View my applications"),
     },
     "Application Accepted": {
-        "badge": ("Accepted", "green"),
-        "subtitle": "Congratulations! Your application has been successful",
-        "intro": (
-            "We are absolutely thrilled to inform you that your application has been successful. "
-            "The hiring team has made their final decision and selected you as their preferred candidate for this position. Congratulations!"
-        ),
-        "detail": (
-            "A company representative will be contacting you very shortly to discuss the offer details, including your start date and contract terms. "
-            "Please ensure you are available and responsive to their communication. "
-            "We wish you a successful and fulfilling career ahead. Well done from the entire Quota Hire team."
-        ),
-        "cta": ("https://quotahire.org/dashboard", "View Offer Details"),
+        "intro": "Your application has been successful and the hiring team has chosen you for "
+                 "the role. Congratulations.",
+        "intro_job": "Your application for <strong>{job}</strong> has been successful and the "
+                     "hiring team has chosen you for the role. Congratulations.",
+        "detail": "A representative from the company will contact you shortly about the offer, "
+                  "your start date and the contract terms. Please watch your inbox.",
+        "cta": ("/dashboard", "View my offer"),
     },
     "Application Update": {
-        "badge": ("Application Closed", "gray"),
-        "subtitle": "An update on your recent application",
-        "intro": (
-            "Thank you sincerely for applying through Quota Hire and for the time and effort you invested in this opportunity. "
-            "After a careful review of all applications, the hiring team has decided to move forward with another candidate for this role."
-        ),
-        "detail": (
-            "Please be assured this outcome does not reflect on your overall skills, potential, or professional value. "
-            "We sincerely encourage you not to be discouraged. Keep your profile updated and continue exploring other relevant "
-            "opportunities on the platform. The right role for you is out there and we remain committed to helping you find it."
-        ),
-        "cta": ("https://quotahire.org", "Browse More Opportunities"),
+        "intro": "Thank you for applying. The hiring team has decided to go forward with "
+                 "another candidate.",
+        "intro_job": "Thank you for applying for <strong>{job}</strong>. The hiring team has "
+                     "decided to go forward with another candidate.",
+        "detail": "This is not a reflection of your experience. Your profile stays active, and "
+                  "we will keep putting matching roles in front of you.",
+        "cta": ("", "Browse other roles"),
     },
 }
 
+# Stages where the employer may still ask for the CV that was submitted.
+_CV_REMINDER_STAGES = (
+    "Application Under Review",
+    "Interview Invitation",
+)
 
-def get_notification_email_html(user, title, message, job_title=None, is_remote=False, employment_type=None):
-    # QH-18: escape every user-controlled value before it reaches the HTML.
+
+def get_notification_email_html(user, title, message, job_title=None, is_remote=False,
+                                employment_type=None):
+    """Renders an application-status update.
+
+    `is_remote` and `employment_type` are accepted because the existing
+    callers pass them. They no longer change the wording: the old version
+    appended "(remote/freelance)" to the interview line, which added length
+    without telling the candidate anything the listing had not already said.
+    """
     user = _esc(user)
     title = _esc(title)
     message = _esc(message)
     job_title = _esc(job_title)
     cfg = _STATUS_CONFIG.get(title, {})
 
-    badge_html = ""
-    if cfg.get("badge"):
-        badge_html = _badge(*cfg["badge"])
+    if cfg:
+        intro = cfg["intro_job"].format(job=job_title) if job_title else cfg["intro"]
+    else:
+        # An ad-hoc notification: its own message is the body.
+        intro = message
 
-    subtitle = cfg.get("subtitle", "")
-    intro = cfg.get("intro", message)
-    detail = cfg.get("detail", "")
-    href, lbl = cfg.get("cta", ("https://quotahire.org/dashboard", "Go to My Dashboard"))
+    body = _p(f"Hi {user},") + _p(intro)
 
-    # Personalise intro with job title if available
-    if job_title and title == "Application Under Review":
-        intro = (
-            f"We are pleased to let you know that your application for the <strong>{job_title}</strong> position "
-            f"is now being actively reviewed by the hiring team. "
-            f"This is a positive sign that your profile has passed the initial screening stage."
-        )
-    elif job_title and title == "Interview Invitation":
-        is_remote_role = is_remote or (employment_type and "freelance" in employment_type.lower())
-        role_type = "remote/freelance" if is_remote_role else "on-site"
-        intro = (
-            f"We are delighted to inform you that you have been shortlisted and invited for an interview for the "
-            f"<strong>{job_title}</strong> ({role_type}) position. "
-            f"This reflects the hiring team's genuine interest in your profile. Congratulations on reaching this stage."
-        )
-    elif job_title and title == "Decision Pending":
-        intro = (
-            f"You have successfully completed the interview stage for the <strong>{job_title}</strong> position "
-            f"and the hiring team is now in the final stages of their deliberation. "
-            f"A decision is expected very soon and you will be notified the moment it is made."
-        )
-    elif job_title and title == "Application Accepted":
-        intro = (
-            f"We are absolutely thrilled to inform you that your application for the <strong>{job_title}</strong> position "
-            f"has been successful. The hiring team has selected you as their preferred candidate. Congratulations!"
-        )
-    elif job_title and title == "Application Update":
-        intro = (
-            f"Thank you sincerely for applying for the <strong>{job_title}</strong> position through Quota Hire. "
-            f"After careful consideration, the hiring team has decided to move forward with another candidate for this role."
-        )
+    if cfg.get("detail"):
+        body += _p(cfg["detail"])
 
-    body = (
-        _h1(title, subtitle) +
-        _p(f"Hi <strong>{user}</strong>,") +
-        badge_html
-    )
+    if title in _CV_REMINDER_STAGES:
+        body += _p("Have the CV you applied with ready, as the hiring team may ask for it. "
+                   "You can download it from your dashboard.")
 
-    if job_title:
-        body += _dbox("Position", job_title)
+    path, label = cfg.get("cta", ("/dashboard", "Go to my dashboard"))
+    body += _action(f"{SITE_URL}{path}", label) + _signoff()
 
-    body += _p(intro)
-
-    if detail:
-        body += _p(detail)
-
-    if title in ["Application Under Review", "Interview Invitation", "Decision Pending", "Application Accepted"]:
-        body += _p(
-            "<strong>Reminder:</strong> Please make sure you have the CV or resume that you used to apply "
-            "for this role prepared. We highly recommend downloading a copy of the specific CV you submitted "
-            "from your Quota Hire profile dashboard, as the hiring team may request it during the recruitment process."
-        )
-
-    body += (
-        _cta(href, lbl) +
-        _signoff()
-    )
-
-    return _build_email(title=f"{title} - Quota Hire", body_html=body)
+    return _build_email(title=f"{title} - Quotahire", body_html=body)
 
 
 # =============================================================================
@@ -719,17 +683,8 @@ def get_notification_email_html(user, title, message, job_title=None, is_remote=
 
 def get_newsletter_email_html(subject, plain_body):
     paragraphs = [p.strip() for p in plain_body.strip().split("\n") if p.strip()]
-    inner = "".join(_p(para) for para in paragraphs)
-
-    body = (
-        _h1(subject, "An important update from the Quota Hire team") +
-        _hr() +
-        inner +
-        _hr() +
-        _cta("https://quotahire.org", "Visit Quota Hire") +
-        _signoff()
-    )
-    return _build_email(title=f"{subject} - Quota Hire", body_html=body)
+    body = "".join(_p(para) for para in paragraphs) + _signoff()
+    return _build_email(title=f"{subject} - Quotahire", body_html=body)
 
 
 # =============================================================================
@@ -742,6 +697,11 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
     asynchronously without blocking the HTTP request thread.
     If Celery or Redis is unreachable/down, falls back to synchronous sending to ensure delivery.
     """
+    # The plain-text part always mirrors the HTML, so the two cannot drift.
+    # `text_content` is only used for the rare message that has no HTML at all.
+    if html_content:
+        text_content = to_plain_text(html_content)
+
     try:
         from .tasks import send_courier_email_task
         send_courier_email_task.delay(to_email, subject, text_content, html_content)
@@ -754,7 +714,7 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
         try:
             from django.core.mail import EmailMultiAlternatives
             from django.conf import settings
-            
+
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body=text_content,
@@ -770,72 +730,35 @@ def send_courier_email(to_email: str, subject: str, text_content: str, html_cont
             return False
 
 
-def get_custom_admin_email_html(plain_body, attachment_name=None, attachment_is_image=False, attachments=None):
-    """
-    Renders a plain HTML body featuring only the paragraph-separated 
-    message text and the standard platform footer. No heavy design headers.
-    If attachments are present, displays them (either inline image or attachment link) 
-    before the footer.
+# =============================================================================
+# 10. CUSTOM ADMIN MESSAGE
+# =============================================================================
+
+def get_custom_admin_email_html(plain_body, attachment_name=None, attachment_is_image=False,
+                                attachments=None):
+    """A message typed by an administrator, in the same shell as every other
+    email. Any attachments are named at the end, and inline images are shown.
     """
     paragraphs = [p.strip() for p in plain_body.strip().split("\n") if p.strip()]
-    inner = "".join(f"<p>{para}</p>" for para in paragraphs)
-    
-    # Maintain backward compatibility with single attachment params
-    unified_attachments = []
-    if attachments:
-        unified_attachments.extend(attachments)
-    elif attachment_name:
-        unified_attachments.append({
+    body = "".join(_p(para) for para in paragraphs)
+
+    # Keep the older single-attachment arguments working.
+    unified = list(attachments) if attachments else []
+    if not unified and attachment_name:
+        unified.append({
             'name': attachment_name,
             'is_image': attachment_is_image,
-            'cid': 'attached_image'
+            'cid': 'attached_image',
         })
-    
-    attachment_html_parts = []
-    for att in unified_attachments:
-        name = att.get('name')
-        is_image = att.get('is_image', False)
-        cid = att.get('cid')
-        
-        if is_image and cid:
-            part_html = (
-                '<div style="margin-top:20px; padding:12px 16px; background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; display:inline-block; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
-                '<span style="font-size:14px; font-weight:600; color:#111827;">📎 Attached image:</span>'
-                f'<span style="font-size:14px; color:#4b5563; margin-left:8px;">{name}</span>'
-                '</div>'
-                '<div style="margin-top:12px;">'
-                f'<img src="cid:{cid}" alt="Attached Image" style="max-width:100%; height:auto; display:block; border-radius:6px; border:1px solid #e4e4e7;">'
-                '</div>'
-            )
-        else:
-            part_html = (
-                '<div style="margin-top:20px; padding:12px 16px; background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; display:inline-block; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
-                '<span style="font-size:14px; font-weight:600; color:#111827;">📎 Attached file:</span>'
-                f'<span style="font-size:14px; color:#4b5563; margin-left:8px;">{name}</span>'
-                '</div>'
-            )
-        attachment_html_parts.append(part_html)
-        
-    attachment_html = "".join(attachment_html_parts)
 
-    body = (
-        "<!DOCTYPE html>"
-        '<html lang="en">'
-        "<head>"
-        '<meta charset="UTF-8">'
-        '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">'
-        "</head>"
-        '<body style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.7;color:#3f3f46;padding:20px;max-width:600px;margin:0 auto;">'
-        f"<div>{inner}</div>"
-        f"{attachment_html}"
-        '<hr style="border:none;border-top:1px solid #e4e4e7;margin:30px 0 20px;">'
-        '<div style="font-size:12px;color:#a1a1aa;line-height:1.6;text-align:center;">'
-        "<p>&copy; 2026 Quota Hire. All rights reserved.</p>"
-        '<p>You are receiving this because you have an account on '
-        '<a href="https://quotahire.org" style="color:#71717a;text-decoration:underline;">quotahire.org</a>.</p>'
-        '<p><a href="https://quotahire.org" style="color:#71717a;text-decoration:underline;">Visit Platform</a> &nbsp;&middot;&nbsp; '
-        '<a href="https://quotahire.org/dashboard" style="color:#71717a;text-decoration:underline;">My Dashboard</a></p>'
-        "</div>"
-        "</body></html>"
-    )
-    return body
+    for att in unified:
+        name = _esc(att.get('name')) or 'Attachment'
+        cid = att.get('cid')
+        if att.get('is_image') and cid:
+            body += _note(f"Attached image: {name}")
+            body += (f'<img src="cid:{cid}" alt="{name}" style="display:block;max-width:100%;'
+                     'height:auto;margin:0 0 16px;">')
+        else:
+            body += _note(f"Attached file: {name}")
+
+    return _build_email(title="A message from Quotahire", body_html=body)

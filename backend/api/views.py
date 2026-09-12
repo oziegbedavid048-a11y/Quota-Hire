@@ -497,10 +497,10 @@ def _send_verification_email(user):
 
         send_courier_email(
             to_email=user.email,
-            subject="Verify your email for Quota Hire",
+            subject="Confirm your email address - Quotahire",
             text_content=(
                 f"Hi {display_name},\n\n"
-                f"Please verify your email for Quota Hire using this link:\n{verify_link}"
+                f"Please confirm your email address for Quotahire using this link:\n{verify_link}"
             ),
             html_content=get_verification_email_html(user=display_name, redirect=verify_link),
         )
@@ -636,8 +636,8 @@ class GoogleLoginView(APIView):
                     html_content = get_welcome_email_html(user=display_name, is_company=is_company)
                     send_courier_email(
                         to_email=user.email,
-                        subject="Welcome - Quota Hire",
-                        text_content=f"Hi {display_name}, your Quota Hire account is now verified. Complete your profile at https://quotahire.org/dashboard",
+                        subject="Your Quotahire account is ready",
+                        text_content=f"Hi {display_name}, your Quotahire account is now verified. Complete your profile at https://quotahire.org/dashboard",
                         html_content=html_content,
                     )
                 except Exception as e:
@@ -782,7 +782,7 @@ def _get_or_create_play_review_user():
 # One reply for every outcome of an OTP request, so the response cannot be
 # used to tell a registered address from an unregistered one (QH-42).
 OTP_REQUEST_GENERIC_REPLY = (
-    'If that address has a Quota Hire account, a login code is on its way. '
+    'If that address has a Quotahire account, a login code is on its way. '
     'Please check your inbox and your spam folder.'
 )
 
@@ -815,7 +815,7 @@ class LoginOTPRequestView(APIView):
         # SECURITY (QH-42): this used to answer "No account found with this email
         # address." for an unknown address, with a code comment calling it "not
         # sensitive". It is: it turns the endpoint into a free oracle for sorting
-        # any list of addresses into Quota Hire members and non-members, which is
+        # any list of addresses into Quotahire members and non-members, which is
         # exactly what the login form was hardened against in QH-04. The reply is
         # now the same either way, and no code is issued for an unknown address.
         user = CustomUser.objects.filter(email=email).first()
@@ -845,12 +845,12 @@ class LoginOTPRequestView(APIView):
             html_content = get_login_otp_email_html(user=display_name, otp_code=otp_code)
             text_content = (
                 f"Hi {display_name},\n\n"
-                f"Your Quota Hire login code is: {otp_code}\n\n"
+                f"Your Quotahire sign-in code is: {otp_code}\n\n"
                 "This code expires in 30 minutes. Do not share it with anyone."
             )
             send_courier_email(
                 to_email=user.email,
-                subject="Your Login Code - Quota Hire",
+                subject="Your Quotahire sign-in code",
                 text_content=text_content,
                 html_content=html_content,
             )
@@ -1355,8 +1355,18 @@ class JobListCreateView(generics.ListCreateAPIView):
         qs = Job.objects.filter(status__in=['approved', 'closed']).select_related(
             'company', 'company__company_profile'
         ).only(
+            # PERFORMANCE: every column the serializer touches has to be listed
+            # here. `select_related` fetches the joined rows, but `.only()` then
+            # defers everything unnamed, and reading a deferred column issues a
+            # fresh query — per job, not per page. `JobListSerializer` exposes
+            # `company_is_verified`, and CustomUser.is_verified is a property
+            # that reads role, location, and the profile's industry and
+            # about_company. Those four were missing, so a page of twenty jobs
+            # cost seventy-one queries instead of one (Sentry PYTHON-DJANGO-2K).
             'id', 'company__id', 'company__username', 'company__first_name', 'company__last_name',
-            'company__email_verified', 'company__avatar', 'company__company_profile__logo_url', 'company__company_profile__company_name',
+            'company__email_verified', 'company__role', 'company__location',
+            'company__avatar', 'company__company_profile__logo_url', 'company__company_profile__company_name',
+            'company__company_profile__industry', 'company__company_profile__about_company',
             'title', 'description', 'requirements', 'employment_type',
             'is_remote', 'location', 'salary_range', 'commission_range', 'currency',
             'custom_company_name', 'status', 'created_at', 'job_code'
@@ -1416,8 +1426,8 @@ class VerifyEmailView(APIView):
                 html_content = get_welcome_email_html(user=display_name, is_company=is_company)
                 send_courier_email(
                     to_email=user.email,
-                    subject="Welcome - Quota Hire",
-                    text_content=f"Hi {display_name}, your Quota Hire account is now verified. Complete your profile at https://quotahire.org/dashboard",
+                    subject="Your Quotahire account is ready",
+                    text_content=f"Hi {display_name}, your Quotahire account is now verified. Complete your profile at https://quotahire.org/dashboard",
                     html_content=html_content,
                 )
             except Exception as e:
@@ -1468,7 +1478,7 @@ class SendVerificationEmailView(APIView):
             _send_verification_email(user)
 
         return Response(
-            {'message': 'If that address has an unverified Quota Hire account, '
+            {'message': 'If that address has an unverified Quotahire account, '
                         'a verification email is on its way. Please check your '
                         'inbox and your spam folder.'},
             status=status.HTTP_200_OK,
@@ -1565,7 +1575,7 @@ class ForgotPasswordView(APIView):
 
             send_courier_email(
                 to_email=email,
-                subject="Reset your Quota Hire Password",
+                subject="Reset your Quotahire password",
                 text_content=text_content,
                 html_content=html_content
             )
@@ -1697,13 +1707,13 @@ class MobileForgotPasswordView(APIView):
 
         # Build email content using executive branded template
         display_name = user.first_name or user.username or 'there'
-        subject      = 'Your Quota Hire Password Reset Code'
+        subject      = 'Your Quotahire password reset code'
         text_content = (
             f'Hi {display_name},\n\n'
             f'Your password reset code is: {otp_code}\n\n'
             f'This code expires in 30 minutes.\n\n'
-            f'Please enter this code into the Quota Hire app to reset your password.\n\n'
-            f'The Quota Hire Team'
+            f'Please enter this code into the Quotahire app to reset your password.\n\n'
+            f'The Quotahire Team'
         )
 
         try:

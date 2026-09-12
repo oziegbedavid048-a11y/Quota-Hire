@@ -169,7 +169,7 @@ export const Onboarding = () => {
                   {isEmployee ? <User size={32} /> : <Building size={32} />}
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-display font-bold text-neutral-900 dark:text-white mb-2">
-                  Welcome to Quota Hire!
+                  Welcome to Quotahire!
                 </h1>
                 <p className="text-neutral-500 dark:text-neutral-400 text-sm sm:text-base mb-6">
                   {isEmployee ? "Let's set up your contact details to match you with top companies." : "Let's set up your basic information to attract top talent."}

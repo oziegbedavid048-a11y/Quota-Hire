@@ -282,7 +282,7 @@ export const VerifyEmail = () => {
 
         {/* Footer */}
         <p className="text-center text-xs text-neutral-400 dark:text-neutral-600 mt-6">
-          © {new Date().getFullYear()} Quota Hire · All rights reserved
+          © {new Date().getFullYear()} Quotahire · All rights reserved
         </p>
       </motion.div>
     </div>

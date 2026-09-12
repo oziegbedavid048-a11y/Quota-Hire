@@ -16,7 +16,7 @@ export const Logo = ({ size = 40, className = '' }: LogoProps) => (
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
-    aria-label="Quota Hire logo"
+    aria-label="Quotahire logo"
   >
     {/* Outer dark green ring */}
     <circle cx="50" cy="50" r="48" fill="#1A6515" />

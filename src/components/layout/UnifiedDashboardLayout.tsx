@@ -43,7 +43,7 @@ function FloatingHeader({ toggleSidebar, user }: { toggleSidebar: () => void; us
           <Link to="/" className="flex items-center gap-3">
             <Logo size={40} />
             <span className="font-display font-bold text-lg md:text-xl tracking-tight text-neutral-900 dark:text-white hidden sm:block">
-              Quota Hire
+              Quotahire
             </span>
           </Link>
         </div>
@@ -142,7 +142,7 @@ function PillSidebar({ isOpen, closeSidebar, user }: { isOpen: boolean; closeSid
         <div className="flex items-center justify-between p-5 shrink-0 border-b border-neutral-100 dark:border-neutral-800">
           <Link to="/" className="flex items-center gap-3">
             <Logo size={40} />
-            <span className="font-display font-bold text-lg text-neutral-900 dark:text-white tracking-tight">Quota Hire</span>
+            <span className="font-display font-bold text-lg text-neutral-900 dark:text-white tracking-tight">Quotahire</span>
           </Link>
           <button onClick={closeSidebar} className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-full text-neutral-500 hover:text-neutral-900 dark:hover:text-white md:hidden">
             <X size={18} />
