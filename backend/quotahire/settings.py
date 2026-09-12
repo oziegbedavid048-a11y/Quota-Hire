@@ -230,7 +230,7 @@ STORAGES = {
 WHITENOISE_MANIFEST_STRICT = False
 
 # CSRF Trusted Origins for Render (needed for admin login)
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://quotahire-backend.onrender.com,https://quotahire.org,https://quotahire.co.uk,https://www.quotahire.co.uk,http://localhost,http://127.0.0.1').split(',')
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://quotahire-backend.onrender.com,https://quotahire.co.uk,https://www.quotahire.co.uk,https://quotahire.ng,https://www.quotahire.ng,https://quotahire.org,https://www.quotahire.org,http://localhost,http://127.0.0.1').split(',')
 
 # Media files (uploads)
 MEDIA_URL = '/media/'
@@ -297,7 +297,13 @@ SIMPLE_JWT = {
 # mistyped, every signup and login from the www host would fail with a
 # connection error and no obvious cause. A fallback should degrade to safe, not
 # to broken.
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://quotahire.org,https://www.quotahire.org,http://quotahire.org,https://quotahire.co.uk,https://www.quotahire.co.uk,https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
+#
+# quotahire.ng was missing from both this default and render.yaml while the
+# domain was already serving the site. The pages loaded and every API call
+# from them was blocked by the browser, so the whole app was unusable on that
+# domain with nothing in the server logs to show for it. All three domains
+# belong in both lists, primary first.
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='https://quotahire.co.uk,https://www.quotahire.co.uk,https://quotahire.ng,https://www.quotahire.ng,https://quotahire.org,https://www.quotahire.org,http://quotahire.org,https://oziegbedavid048-a11y.github.io,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # ── ZeptoMail API Settings ────────────────────────────────────────────────────
