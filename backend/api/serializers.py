@@ -987,3 +987,18 @@ class ApplicationListSerializer(serializers.ModelSerializer):
 
     def get_employee_name(self, obj):
         return obj.employee.get_full_name() or obj.employee.username
+
+
+class CommunityWaitlistSerializer(serializers.Serializer):
+    """Validates the one field the community waitlist form collects.
+
+    Deliberately not a ModelSerializer: the endpoint is idempotent, so a
+    repeated address must be accepted quietly rather than rejected by the
+    model's uniqueness constraint. The view decides what to do with a
+    duplicate; this only checks that the value is an address at all.
+    """
+    email = serializers.EmailField(max_length=254)
+
+    def validate_email(self, value):
+        # Stored lowercase so the same person joining twice is one row.
+        return value.strip().lower()

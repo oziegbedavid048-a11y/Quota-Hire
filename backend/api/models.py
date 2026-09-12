@@ -861,3 +861,50 @@ class PasswordResetOTP(models.Model):
         return timezone.now() > self.expires_at
 
 
+
+# ── Community Launch Waitlist ────────────────────────────────────────────────
+
+class CommunityWaitlistEntry(models.Model):
+    """Someone who asked to be told when Community opens.
+
+    Community is built on the server but hidden in the app. The "coming soon"
+    notice invites a person to leave an address so they can hear about the
+    launch first.
+
+    Nothing is emailed to them when they join: no confirmation, no welcome,
+    no newsletter. This table is only the list to write to on the day the
+    feature goes live, and `notified_at` records who has already been told so
+    that a second launch announcement cannot reach the same person twice.
+    """
+    email       = models.EmailField(
+        unique=True,
+        help_text="Stored lowercase so the same person cannot join twice.",
+    )
+    user        = models.ForeignKey(
+        CustomUser,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='community_waitlist_entries',
+        help_text="Set when the request came from someone signed in.",
+    )
+    source      = models.CharField(
+        max_length=20,
+        default='mobile',
+        help_text="Which client the person joined from.",
+    )
+    created_at  = models.DateTimeField(auto_now_add=True)
+    notified_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Set once the launch announcement has been sent to this address.",
+    )
+
+    class Meta:
+        verbose_name        = 'Community waitlist entry'
+        verbose_name_plural = 'Community waitlist'
+        ordering            = ['-created_at']
+        indexes             = [
+            models.Index(fields=['notified_at']),
+        ]
+
+    def __str__(self):
+        return self.email

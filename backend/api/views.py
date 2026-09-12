@@ -127,6 +127,16 @@ class CommunityWriteThrottle(UserRateThrottle):
     scope = 'community_write'
 
 
+class WaitlistThrottle(AnonRateThrottle):
+    """Limits community waitlist sign-ups per IP.
+
+    The endpoint is open and writes a row, so it needs a ceiling. It is not a
+    tight one: the form is a single field that a person may fumble, and the
+    request costs one small insert.
+    """
+    scope = 'waitlist'
+
+
 # Failed verifications allowed against one login OTP before it is discarded.
 MAX_LOGIN_OTP_ATTEMPTS = 5
 
@@ -204,6 +214,8 @@ MAX_POLL_CHOICE_CHARS = 100
 
 from .cache_utils import safe_get, safe_set, safe_delete, dashboard_key, DASHBOARD_TTL
 
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
 from .models import (
     CustomUser, UserRole, EmployeeProfile, CompanyProfile, Job, Application,
     Notification, SavedJob, GeneratedCV, PaymentTransaction, DownloadToken,
@@ -214,7 +226,7 @@ from .models import (
     # any applicant.
     ApplicationStatus,
     CommunityPost, CommunityComment, CommunityPoll, CommunityPollChoice, CommunityPollVote,
-    CommunityReport, CommunityCommentReport,
+    CommunityReport, CommunityCommentReport, CommunityWaitlistEntry,
 )
 
 from .serializers import (
@@ -235,6 +247,7 @@ from .serializers import (
     JobListSerializer,
     CompanyApplicantListSerializer,
     ApplicationListSerializer,
+    CommunityWaitlistSerializer,
     optimize_image_url,
 )
 
@@ -4328,3 +4341,55 @@ class CommunityMembersView(APIView):
         return Response(data)
 
 
+
+
+# ── Community launch waitlist ────────────────────────────────────────────────
+
+COMMUNITY_WAITLIST_REPLY = (
+    "You are on the list. We will email you the moment Community opens."
+)
+
+
+class CommunityWaitlistView(APIView):
+    """
+    POST /api/community/waitlist/
+    Records an address to notify when the Community feature launches.
+
+    Request body:  { "email": "person@example.com" }
+
+    No mail is sent from this endpoint — not a confirmation, not a welcome.
+    The address is stored so that one announcement can go out on the day the
+    feature ships, and that is the only message the person has been promised.
+
+    Open to anyone, signed in or not, and idempotent: joining twice returns
+    the same reply as joining once rather than an error, so a person who taps
+    the button again is not told off. When the caller is signed in their user
+    is recorded alongside the address.
+    """
+    permission_classes = []
+    authentication_classes = [JWTAuthentication]
+    throttle_classes = [WaitlistThrottle]
+
+    def post(self, request):
+        serializer = CommunityWaitlistSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        user = request.user if getattr(request.user, 'is_authenticated', False) else None
+        source = (request.data.get('source') or 'mobile').strip()[:20] or 'mobile'
+
+        entry, created = CommunityWaitlistEntry.objects.get_or_create(
+            email=email,
+            defaults={'user': user, 'source': source},
+        )
+
+        # A person who signed up while logged out and later signs in should be
+        # linkable to their account, so fill the gap without overwriting.
+        if not created and user is not None and entry.user_id is None:
+            entry.user = user
+            entry.save(update_fields=['user'])
+
+        return Response(
+            {'message': COMMUNITY_WAITLIST_REPLY, 'already_joined': not created},
+            status=status.HTTP_200_OK,
+        )

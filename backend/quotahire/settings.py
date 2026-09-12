@@ -270,6 +270,7 @@ REST_FRAMEWORK = {
         'payment': '30/hour',            # max 30 payment requests per user per hour
         'apply': '10/hour',              # max 10 job applications per user per hour
         'community_write': '120/hour',   # posts, comments, likes, votes per user (QH-20)
+        'waitlist': '15/hour',           # community launch waitlist sign-ups per IP
     },
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,

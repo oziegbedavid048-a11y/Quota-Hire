@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Pressable, StyleSheet, Dimensions, Platform, DeviceEventEmitter, LayoutChangeEvent, Modal, useWindowDimensions } from 'react-native';
-import { Text, MAX_FONT_SCALE_COMPACT } from '@/components/ui/text';
+import { Text, TextInput, MAX_FONT_SCALE_COMPACT } from '@/components/ui/text';
 // expo-local-authentication may not be available in Expo Go — guard with try/catch
 let LocalAuthentication: any = {
   hasHardwareAsync: async () => false,
@@ -676,6 +676,12 @@ function FloatingPillNavBar({
   );
 }
 
+const WAITLIST_JOINED_KEY = 'community_waitlist_joined';
+
+// Deliberately loose. The server validates properly; this only catches the
+// obvious typo before a round trip.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 // ─── Main App Tabs Layout ─────────────────────────────────────────────────────
 export default function AppTabs({ userRole, userName }: { userRole?: string; userName?: string }) {
   const [fabOpen, setFabOpen] = useState(false);
@@ -685,15 +691,75 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [showPushModal, setShowPushModal] = useState(false);
 
+  // Community launch waitlist. `joined` is remembered on the device so that
+  // someone who has already left their address is thanked rather than asked
+  // again every time they tap the tab.
+  const [userEmail, setUserEmail] = useState('');
+  const [waitlistEmail, setWaitlistEmail] = useState('');
+  const [waitlistError, setWaitlistError] = useState('');
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistJoined, setWaitlistJoined] = useState(false);
+
   // The Community tab lives in FloatingPillNavBar, a child, and announces the
   // tap on the event bus. Subscribe here, where the modal is rendered.
   useEffect(() => {
     const sub = DeviceEventEmitter.addListener(
       'open-community-coming-soon',
-      () => setShowComingSoonModal(true),
+      () => {
+        setWaitlistError('');
+        setShowComingSoonModal(true);
+      },
     );
     return () => sub.remove();
   }, []);
+
+  // Whether this device has already joined the waitlist.
+  useEffect(() => {
+    (async () => {
+      try {
+        const joined = await SecureStore.getItemAsync(WAITLIST_JOINED_KEY);
+        if (joined === 'true') setWaitlistJoined(true);
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  // Prefill with the signed-in address once it is known, unless the person is
+  // already typing something else.
+  useEffect(() => {
+    if (userEmail && !waitlistEmail) setWaitlistEmail(userEmail);
+  }, [userEmail]);
+
+  const closeComingSoon = () => {
+    setShowComingSoonModal(false);
+    setWaitlistError('');
+  };
+
+  const handleJoinWaitlist = async () => {
+    const email = waitlistEmail.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(email)) {
+      setWaitlistError('Please enter a valid email address.');
+      return;
+    }
+
+    setWaitlistError('');
+    setWaitlistSubmitting(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await apiFetch('/community/waitlist/', {
+        method: 'POST',
+        body: JSON.stringify({ email, source: 'mobile' }),
+      });
+      setWaitlistJoined(true);
+      await SecureStore.setItemAsync(WAITLIST_JOINED_KEY, 'true').catch(() => {});
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      setWaitlistError(
+        e?.message || 'We could not save your email just now. Please try again.',
+      );
+    } finally {
+      setWaitlistSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -790,6 +856,8 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
 
       const uData = await apiFetch('/auth/me/').catch(() => null);
       if (!uData) return;
+
+      if (uData?.email) setUserEmail(uData.email);
 
       const userRole = uData?.role || 'employee';
 
@@ -927,37 +995,119 @@ export default function AppTabs({ userRole, userName }: { userRole?: string; use
 
       {/* ── First-Time Biometrics Setup Modal ── */}
       {/* ── Community "Coming Soon" Notice ── */}
+      {/*
+        Community is built but not yet open. Rather than a dead end, the notice
+        invites the person onto the launch list. The address is stored on the
+        server and nothing is sent until the feature ships — which is exactly
+        what the copy promises, so the promise and the behaviour match.
+      */}
       <Modal
         visible={showComingSoonModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowComingSoonModal(false)}
+        onRequestClose={closeComingSoon}
       >
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.card}>
-            <View style={[modalStyles.iconBadge, { backgroundColor: 'rgba(21, 117, 10, 0.12)' }]}>
-              <Feather name="users" size={32} color={Palette.accent600} />
-            </View>
-
-            <Text style={modalStyles.title}>Community is coming soon</Text>
-            <Text style={modalStyles.subtitle}>
-              We are building a space for sales professionals to share wins, ask
-              questions and learn from each other. We will let you know the moment
-              it opens.
-            </Text>
-
-            <View style={modalStyles.buttonColumn}>
-              <HapticPressable
-                onPress={() => setShowComingSoonModal(false)}
-                style={[modalStyles.primaryBtn, { backgroundColor: Palette.accent600 }]}
-              >
-                <View style={modalStyles.gradientBtn}>
-                  <Text style={modalStyles.primaryBtnText}>Got it</Text>
+        <Pressable style={modalStyles.overlay} onPress={closeComingSoon}>
+          <Pressable style={modalStyles.card} onPress={(e) => e.stopPropagation()}>
+            {waitlistJoined ? (
+              <>
+                <View style={[modalStyles.iconBadge, { backgroundColor: 'rgba(21, 117, 10, 0.12)' }]}>
+                  <Feather name="check" size={30} color={Palette.accent600} />
                 </View>
-              </HapticPressable>
-            </View>
-          </View>
-        </View>
+
+                <Text style={modalStyles.title}>You are on the list</Text>
+                <Text style={modalStyles.subtitle}>
+                  We will email you the moment Community opens. Nothing before
+                  then.
+                </Text>
+
+                <View style={modalStyles.buttonColumn}>
+                  <HapticPressable
+                    onPress={closeComingSoon}
+                    style={[modalStyles.primaryBtn, { backgroundColor: Palette.accent600 }]}
+                  >
+                    <View style={modalStyles.gradientBtn}>
+                      <Text style={modalStyles.primaryBtnText}>Done</Text>
+                    </View>
+                  </HapticPressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={[modalStyles.iconBadge, { backgroundColor: 'rgba(21, 117, 10, 0.12)' }]}>
+                  <Feather name="users" size={30} color={Palette.accent600} />
+                </View>
+
+                <Text style={modalStyles.eyebrow}>Coming soon</Text>
+                <Text style={modalStyles.title}>Community</Text>
+                <Text style={modalStyles.subtitle}>
+                  A place for sales professionals to share wins, ask questions
+                  and learn from each other.
+                </Text>
+
+                <View style={modalStyles.divider} />
+
+                <Text style={modalStyles.fieldLabel}>Be the first to know</Text>
+                <Text style={modalStyles.fieldHint}>
+                  Leave your email and we will send you a single message the day
+                  Community opens.
+                </Text>
+
+                <TextInput
+                  value={waitlistEmail}
+                  onChangeText={(t) => {
+                    setWaitlistEmail(t);
+                    if (waitlistError) setWaitlistError('');
+                  }}
+                  placeholder="you@example.com"
+                  placeholderTextColor={Palette.neutral400}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  returnKeyType="go"
+                  editable={!waitlistSubmitting}
+                  onSubmitEditing={handleJoinWaitlist}
+                  style={[
+                    modalStyles.input,
+                    !!waitlistError && modalStyles.inputError,
+                  ]}
+                />
+
+                {!!waitlistError && (
+                  <Text style={modalStyles.errorText}>{waitlistError}</Text>
+                )}
+
+                <View style={modalStyles.buttonColumn}>
+                  <HapticPressable
+                    onPress={handleJoinWaitlist}
+                    disabled={waitlistSubmitting}
+                    style={[
+                      modalStyles.primaryBtn,
+                      waitlistSubmitting && modalStyles.primaryBtnDisabled,
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[Palette.accent600, Palette.accent500]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={modalStyles.gradientBtn}
+                    >
+                      <Text style={modalStyles.primaryBtnText}>
+                        {waitlistSubmitting ? 'Adding you...' : 'Notify me at launch'}
+                      </Text>
+                    </LinearGradient>
+                  </HapticPressable>
+
+                  <HapticPressable onPress={closeComingSoon} style={modalStyles.secondaryBtn}>
+                    <Text style={modalStyles.secondaryBtnText}>Maybe later</Text>
+                  </HapticPressable>
+                </View>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal
@@ -1082,6 +1232,61 @@ const modalStyles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 19,
     marginBottom: 24,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: Palette.accent600,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  divider: {
+    width: '100%',
+    height: 1,
+    backgroundColor: Palette.neutral100,
+    marginBottom: 18,
+  },
+  fieldLabel: {
+    width: '100%',
+    fontSize: 14,
+    fontWeight: '700',
+    color: Palette.neutral900,
+    marginBottom: 4,
+  },
+  fieldHint: {
+    width: '100%',
+    fontSize: 12.5,
+    color: Palette.neutral500,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  input: {
+    width: '100%',
+    minHeight: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Palette.neutral200,
+    backgroundColor: Palette.neutral50,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: Palette.neutral900,
+    marginBottom: 14,
+  },
+  inputError: {
+    borderColor: '#dc2626',
+    backgroundColor: '#fef2f2',
+  },
+  errorText: {
+    width: '100%',
+    fontSize: 12.5,
+    color: '#dc2626',
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.6,
   },
   buttonColumn: {
     width: '100%',

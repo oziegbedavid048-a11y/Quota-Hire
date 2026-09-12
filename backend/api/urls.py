@@ -120,6 +120,7 @@ urlpatterns = [
     path('admin/jobs/<int:pk>/edit/', views.AdminJobUpdateView.as_view(),        name='admin-job-update'),
 
     # ── Community (Mobile App Only) ───────────────────────────────────────────
+    path('community/waitlist/',                       views.CommunityWaitlistView.as_view(),          name='community-waitlist'),
     path('community/posts/',                          views.CommunityFeedView.as_view(),              name='community-feed'),
     path('community/posts/create/',                   views.CommunityPostCreateView.as_view(),        name='community-post-create'),
     path('community/posts/<int:pk>/like/',            views.CommunityPostLikeView.as_view(),          name='community-post-like'),

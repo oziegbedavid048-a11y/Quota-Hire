@@ -18,7 +18,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from .models import CustomUser, UserRole
+from .models import CustomUser, UserRole, CommunityWaitlistEntry
 
 
 class ThrottleIsolatedTestCase(TestCase):
@@ -2750,4 +2750,96 @@ class JobApprovalWorkflowTests(ThrottleIsolatedTestCase):
         self.assertIsNone(
             safe_get(jobs_list_key('')),
             'Public job list still cached after an approval.',
+        )
+
+
+class CommunityWaitlistTests(ThrottleIsolatedTestCase):
+    """The Community launch waitlist.
+
+    The promise made to the person in the app is precise: leave an address,
+    hear about it at launch, and nothing before then. These tests hold the
+    endpoint to that — above all that joining sends no mail at all.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.url = reverse('community-waitlist')
+
+    def _join(self, email, **kwargs):
+        return self.client.post(self.url, {'email': email}, format='json', **kwargs)
+
+    def test_anyone_can_join_without_an_account(self):
+        resp = self._join('stranger@example.com')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        self.assertTrue(
+            CommunityWaitlistEntry.objects.filter(email='stranger@example.com').exists(),
+            'The address was accepted but never stored, so nobody can be told at launch.',
+        )
+
+    def test_joining_sends_no_email(self):
+        """The whole point: the address is collected, not written to."""
+        from django.core import mail
+        mail.outbox = []
+        self._join('quiet@example.com')
+        self.assertEqual(
+            len(mail.outbox), 0,
+            'Joining the waitlist sent mail. Nothing may be sent until launch.',
+        )
+
+    def test_address_is_stored_lowercase(self):
+        self._join('  Mixed.Case@Example.COM  ')
+        self.assertTrue(CommunityWaitlistEntry.objects.filter(email='mixed.case@example.com').exists())
+
+    def test_joining_twice_is_not_an_error(self):
+        first = self._join('twice@example.com')
+        second = self._join('TWICE@example.com')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.status_code, status.HTTP_200_OK, second.data)
+        self.assertEqual(
+            CommunityWaitlistEntry.objects.filter(email='twice@example.com').count(), 1,
+            'A repeated address created a second row.',
+        )
+        self.assertFalse(first.data['already_joined'])
+        self.assertTrue(second.data['already_joined'])
+
+    def test_a_malformed_address_is_rejected(self):
+        for bad in ['', 'not-an-email', 'missing@', '@example.com']:
+            resp = self._join(bad)
+            self.assertEqual(
+                resp.status_code, status.HTTP_400_BAD_REQUEST,
+                f'{bad!r} was accepted as an email address.',
+            )
+        self.assertEqual(CommunityWaitlistEntry.objects.count(), 0)
+
+    def test_a_signed_in_person_is_linked_to_their_entry(self):
+        user = CustomUser.objects.create_user(
+            username='member@example.com', email='member@example.com',
+            password='A-Str0ng-Passw0rd!x', role=UserRole.EMPLOYEE,
+        )
+        self.client.force_authenticate(user=user)
+        self._join('member@example.com')
+        entry = CommunityWaitlistEntry.objects.get(email='member@example.com')
+        self.assertEqual(entry.user_id, user.id)
+
+    def test_signing_in_later_backfills_the_account_link(self):
+        """Joined while logged out, then signed in and tapped again."""
+        self._join('later@example.com')
+        self.assertIsNone(CommunityWaitlistEntry.objects.get(email='later@example.com').user_id)
+
+        user = CustomUser.objects.create_user(
+            username='later@example.com', email='later@example.com',
+            password='A-Str0ng-Passw0rd!x', role=UserRole.EMPLOYEE,
+        )
+        self.client.force_authenticate(user=user)
+        self._join('later@example.com')
+        self.assertEqual(
+            CommunityWaitlistEntry.objects.get(email='later@example.com').user_id, user.id,
+        )
+
+    def test_nobody_is_marked_notified_on_joining(self):
+        self._join('waiting@example.com')
+        self.assertIsNone(
+            CommunityWaitlistEntry.objects.get(email='waiting@example.com').notified_at,
+            'A fresh entry was already marked as notified, so the launch mail would skip them.',
         )

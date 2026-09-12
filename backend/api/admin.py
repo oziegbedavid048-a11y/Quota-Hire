@@ -30,6 +30,7 @@ from .models import (
     CommunityReport,
     CommunityComment,
     CommunityCommentReport,
+    CommunityWaitlistEntry,
 )
 
 
@@ -1190,3 +1191,44 @@ class CommunityCommentReportAdmin(admin.ModelAdmin):
 
 
 
+
+
+@admin.register(CommunityWaitlistEntry)
+class CommunityWaitlistEntryAdmin(admin.ModelAdmin):
+    """The people waiting for Community to open.
+
+    Read-only on purpose. These rows are not something to edit by hand — they
+    are a record of who asked to be told, and the only write worth making is
+    marking a batch as notified once the launch announcement has gone out.
+    """
+    list_display  = ('email', 'joined_via', 'account', 'created_at', 'notified_at')
+    list_filter   = ('source', 'notified_at', 'created_at')
+    search_fields = ('email', 'user__email', 'user__first_name', 'user__last_name')
+    ordering      = ('-created_at',)
+    date_hierarchy = 'created_at'
+    readonly_fields = ('email', 'user', 'source', 'created_at', 'notified_at')
+    actions = ('mark_as_notified', 'mark_as_not_notified')
+
+    def has_add_permission(self, request):
+        return False
+
+    def joined_via(self, obj):
+        return obj.source.title()
+    joined_via.short_description = 'Joined via'
+
+    def account(self, obj):
+        if not obj.user:
+            return '— (not signed in)'
+        return obj.user.get_full_name() or obj.user.username
+    account.short_description = 'Account'
+
+    @admin.action(description='Mark selected as notified about the launch')
+    def mark_as_notified(self, request, queryset):
+        from django.utils import timezone
+        updated = queryset.filter(notified_at__isnull=True).update(notified_at=timezone.now())
+        self.message_user(request, f'Marked {updated} address(es) as notified.')
+
+    @admin.action(description='Clear the notified mark on selected')
+    def mark_as_not_notified(self, request, queryset):
+        updated = queryset.update(notified_at=None)
+        self.message_user(request, f'Cleared the notified mark on {updated} address(es).')

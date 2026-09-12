@@ -12,6 +12,7 @@ import {
   Alert,
   DeviceEventEmitter,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Text, TextInput } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -55,6 +56,7 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
   const [savedCvs, setSavedCvs] = useState<any[]>([]);
   const [selectedCvId, setSelectedCvId] = useState<number | null>(null);
   const [cvWizardVisible, setCvWizardVisible] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
   const continueTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchUserCvs = () => {
@@ -158,6 +160,8 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
       setProgress(0);
       setIsContinuing(false);
       setSelectedCvId(null);
+      // A logo that failed for the last job must not hide the next one's.
+      setLogoFailed(false);
       apiFetch('/auth/me/')
         .then(u => {
           setForm({
@@ -303,16 +307,37 @@ export default function ApplyJobModal({ visible, onClose, job, onSuccess }: Appl
               </Pressable>
             </View>
 
-            {/* Job summary bar */}
+            {/* Job summary bar.
+                The company's picture belongs here and was missing: the bar only
+                ever drew the first letter of the name on a grey square, even
+                though the job carries companyLogoUrl and the details screen
+                behind this sheet is already showing it. The initial is now the
+                fallback for a company with no logo, or one whose image fails to
+                load, rather than the only thing on offer. The company name sits
+                in the header above, so the meta line carries where and how the
+                role is worked instead of repeating it. */}
             <View style={[s.jobBar, { backgroundColor: Palette.neutral50 }]}>
-              <View style={[s.companyBadge, { backgroundColor: Palette.neutral100 }]}>
-                <Text style={[s.companyBadgeText, { color: colors.text }]}>
-                  {(job.companyName || 'C').charAt(0)}
-                </Text>
-              </View>
+              {job.companyLogoUrl && !logoFailed ? (
+                <Image
+                  source={{ uri: job.companyLogoUrl }}
+                  style={s.companyLogo}
+                  contentFit="cover"
+                  transition={150}
+                  onError={() => setLogoFailed(true)}
+                  accessibilityLabel={`${job.companyName} logo`}
+                />
+              ) : (
+                <View style={[s.companyBadge, { backgroundColor: 'rgba(21, 117, 10, 0.10)' }]}>
+                  <Text style={[s.companyBadgeText, { color: Palette.accent600 }]}>
+                    {(job.companyName || 'C').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={[s.jobTitle, { color: colors.text }]} numberOfLines={1}>{job.title}</Text>
-                <Text style={[s.jobMeta, { color: colors.textMuted }]}>{job.companyName} • {job.location}</Text>
+                <Text style={[s.jobMeta, { color: colors.textMuted }]} numberOfLines={1}>
+                  {[job.location, job.workType].filter(Boolean).join(' • ')}
+                </Text>
               </View>
             </View>
 
@@ -659,12 +684,23 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
   },
+  companyLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: Palette.neutral200,
+    flexShrink: 0,
+  },
   companyBadge: {
-    width: 38,
-    minHeight: 38,
+    width: 44,
+    height: 44,
+    minHeight: 44,
     borderRadius: BorderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   companyBadgeText: {
     fontSize: FontSize.base,
