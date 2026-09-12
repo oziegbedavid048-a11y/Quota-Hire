@@ -9,6 +9,20 @@ import {
   Briefcase
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+
+const LinkedinIcon = ({ className, size = 20 }: { className?: string; size?: number }) => (
+  <svg
+    className={className}
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.45a1.62 1.62 0 0 0-1.62 1.62 1.62 1.62 0 0 0 1.62 1.62 1.62 1.62 0 0 0 1.62-1.62c0-.9-.73-1.62-1.62-1.62Z" />
+  </svg>
+);
+
 import { useAppContext } from '../../context/AppContext';
 import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
 
@@ -161,7 +175,7 @@ export const EmployeeSetup = () => {
                           value={formData.linkedinUrl}
                           onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
                         />
-                        <Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
+                        <LinkedinIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" size={20} />
                       </div>
                     </div>
                   </div>
