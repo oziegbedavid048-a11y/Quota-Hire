@@ -58,8 +58,15 @@
         }
       })();
     </script>
-    <script type="module" crossorigin src="/assets/index-Bw5TZTlO.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DUY9mB2h.css">
+    <style>
+      /* The opening animation's background, painted before any JavaScript has
+         run, so the very first frame is the brand colour rather than white.
+         Inline CSS only: the site's Content-Security-Policy allows
+         style-src 'unsafe-inline' but not inline script. */
+      html, body { background: linear-gradient(135deg, #EDEEDE 0%, #E2E1D4 100%); }
+    </style>
+    <script type="module" crossorigin src="/assets/index-BwB8xA9Y.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-zzDbVnVR.css">
   </head>
   <body>
     <div id="root"></div>
