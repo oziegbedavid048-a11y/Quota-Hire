@@ -395,7 +395,7 @@ export const Settings = () => {
                     ) : (
                       <div className="space-y-2">
                         <p className="text-xs text-red-700 dark:text-red-400 font-medium">
-                          Signed up with Google? You have no password to type — send yourself a code instead.
+                          Signed up with Google? You have no password to type. Send yourself a code instead.
                         </p>
                         <div className="flex gap-2">
                           <input

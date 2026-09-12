@@ -735,7 +735,7 @@ export function EuropassCVWizard({ isOpen, onClose, onSaved }: EuropassCVWizardP
                 <div className="p-5 sm:p-6 space-y-5">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                     <div className="flex-1 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 leading-relaxed mr-4">
-                      <strong>Europass Competencies</strong> — Describe your key strengths.
+                      <strong>Europass Competencies:</strong> Describe your key strengths.
                     </div>
                     <button onClick={handleAutoFillCompetencies}
                       className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md transition-colors whitespace-nowrap shrink-0">

@@ -53,7 +53,7 @@ export const ApplicationTracker = () => {
             Application <span className="text-accent-600 dark:text-accent-400">Tracker</span>
           </h1>
           <p className="text-neutral-600 dark:text-neutral-300 text-xs sm:text-sm max-w-sm mx-auto sm:mx-0">
-            Track every step of your job search — from applied to offer.
+            Track every step of your job search, from applied to offer.
           </p>
 
           {/* Stats Grid */}
@@ -191,7 +191,7 @@ export const ApplicationTracker = () => {
                           <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 text-sm">
                             <MapPin size={12} className="shrink-0" />
                             <span className="line-clamp-1">
-                              {job ? (job.isRemote ? 'Remote' : (job.location || '—')) : '—'}
+                              {job ? (job.isRemote ? 'Remote' : (job.location || '-')) : '-'}
                             </span>
                           </div>
                         </td>
@@ -247,7 +247,7 @@ export const ApplicationTracker = () => {
                       {job && (
                         <span className="flex items-center gap-1">
                           <MapPin size={11} />
-                          {job.isRemote ? 'Remote' : (job.location || '—')}
+                          {job.isRemote ? 'Remote' : (job.location || '-')}
                         </span>
                       )}
                       <span className="flex items-center gap-1">

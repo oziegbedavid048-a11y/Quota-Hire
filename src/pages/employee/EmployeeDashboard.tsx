@@ -127,7 +127,7 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
             <p className="text-neutral-600 dark:text-neutral-300 text-sm max-w-md mb-5">
               You have <strong className="text-neutral-900 dark:text-white">{activeApps} active application{activeApps !== 1 ? 's' : ''}</strong> and{' '}
               <strong className="text-neutral-900 dark:text-white">{savedJobs?.length || 0} saved role{(savedJobs?.length || 0) !== 1 ? 's' : ''}</strong>.
-              Keep pushing — your next role is waiting.
+              Keep pushing. Your next role is waiting.
             </p>
             <div className="flex flex-wrap gap-3 justify-center md:justify-start">
               <button
@@ -161,7 +161,7 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Active Applications"
-          value={analyticsLoading ? '—' : activeApps}
+          value={analyticsLoading ? '...' : activeApps}
           icon={Briefcase}
           color="bg-accent-50 text-accent-600"
           sub={`${pendingApps} pending review`}
@@ -185,7 +185,7 @@ export const EmployeeDashboardPage = ({ user, analytics, analyticsLoading }: Pro
         />
         <StatCard
           label="Interviews Won"
-          value={analyticsLoading ? '—' : acceptedApps}
+          value={analyticsLoading ? '...' : acceptedApps}
           icon={CheckCircle2}
           color="bg-violet-50 text-violet-600"
           sub="Applications accepted"

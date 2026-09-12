@@ -230,7 +230,7 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
         reader.onloadend = async () => {
           try {
             const base64data = reader.result?.toString().split(',')[1];
-            if (!base64data) throw new Error('Base64 conversion failed — PDF data is empty.');
+            if (!base64data) throw new Error('Base64 conversion failed. The PDF data is empty.');
 
             const payload = {
               job_id: job.id,
@@ -424,9 +424,9 @@ export function ApplyJobCVWizard({ job, isOpen, onClose, onComplete }: ApplyJobC
                       {effectiveProfile && (
                         <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 space-y-1">
                           <p className="font-semibold text-blue-800 mb-2">✓ Profile data will be used:</p>
-                          <p><span className="font-medium">Name:</span> {effectiveProfile.name || '—'}</p>
-                          <p><span className="font-medium">Skills:</span> {(effectiveProfile.skills || []).slice(0, 5).join(', ') || '—'}</p>
-                          <p><span className="font-medium">Location:</span> {[effectiveProfile.city, effectiveProfile.country].filter(Boolean).join(', ') || '—'}</p>
+                          <p><span className="font-medium">Name:</span> {effectiveProfile.name || '-'}</p>
+                          <p><span className="font-medium">Skills:</span> {(effectiveProfile.skills || []).slice(0, 5).join(', ') || '-'}</p>
+                          <p><span className="font-medium">Location:</span> {[effectiveProfile.city, effectiveProfile.country].filter(Boolean).join(', ') || '-'}</p>
                         </div>
                       )}
                     </div>

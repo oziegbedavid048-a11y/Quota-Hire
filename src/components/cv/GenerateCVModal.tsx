@@ -407,7 +407,7 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
               {!generating && step === 2 && (
                 <div className="p-5 sm:p-6 space-y-5">
                   <p className="text-sm text-gray-500">
-                    Add up to 3 work roles. Type raw duties — the engine converts them into professional bullet points.
+                    Add up to 3 work roles. Type raw duties and the engine converts them into professional bullet points.
                   </p>
 
                   {form.workEntries.map((entry, i) => (
@@ -513,10 +513,10 @@ export function GenerateCVModal({ isOpen, onClose }: GenerateCVModalProps) {
                   {/* Preview of what will be on CV */}
                   <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 space-y-1">
                     <p className="font-bold text-blue-800 mb-2">✓ Summary of your CV content:</p>
-                    <p><span className="font-medium">Name:</span> {profile.name || '—'}</p>
-                    <p><span className="font-medium">Headline:</span> {form.headline || '—'}</p>
+                    <p><span className="font-medium">Name:</span> {profile.name || '-'}</p>
+                    <p><span className="font-medium">Headline:</span> {form.headline || '-'}</p>
                     <p><span className="font-medium">Experience Entries:</span> {form.workEntries.filter(e => e.role).length}</p>
-                    <p><span className="font-medium">Skills:</span> {form.extraSkills.slice(0, 60) || (profile.skills || []).join(', ').slice(0, 60) || '—'}</p>
+                    <p><span className="font-medium">Skills:</span> {form.extraSkills.slice(0, 60) || (profile.skills || []).join(', ').slice(0, 60) || '-'}</p>
                   </div>
                 </div>
               )}

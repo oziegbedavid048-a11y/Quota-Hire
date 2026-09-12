@@ -407,7 +407,7 @@ export const ApplyJobPage = () => {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-1">Email</p>
-                      <p className="font-bold text-sm text-neutral-900 dark:text-white truncate pb-1">{profile?.email || '—'}</p>
+                      <p className="font-bold text-sm text-neutral-900 dark:text-white truncate pb-1">{profile?.email || '-'}</p>
                     </div>
                     <div>
                       <label className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-1 block">Phone Number</label>
@@ -493,7 +493,7 @@ export const ApplyJobPage = () => {
                                           </a>
                                         ) : (
                                           /* An in-app upload has no public URL — it is served only
-                                             to the hiring company — so name the file instead of
+                                             to the hiring company, so name the file instead of
                                              rendering a link that goes nowhere. */
                                           <p className="text-xs font-medium text-neutral-500 mt-1">
                                             {profile?.resumeFilename || 'Uploaded to your profile'}

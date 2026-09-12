@@ -77,7 +77,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`, { ...options, headers: buildHeaders(token) }, timeoutMs);
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      throw new ApiError('The server is taking longer than usual to respond — it may be starting up. Please wait a moment and try again.', 0);
+      throw new ApiError('The server is taking longer than usual to respond. It may be starting up. Please wait a moment and try again.', 0);
     }
     throw new ApiError('We couldn\'t connect to the server. Please check your internet connection.', 0);
   }

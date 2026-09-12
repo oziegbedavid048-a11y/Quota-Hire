@@ -19,7 +19,7 @@ import { CircularTestimonials } from '../components/ui/circular-testimonials';
 import { useTheme } from '../context/ThemeContext';
 import { PhoneMockup } from '../components/home/PhoneMockup';
 // The canonical store URL rather than the bit.ly that was handed over. Both
-// land on the same listing — the short link 301s straight here — but a
+// land on the same listing (the short link 301s straight here), but a
 // shortener is a third party in the path of every install: if it lapses or is
 // rate-limited, the download button dies quietly. The package id matches
 // android.package in mobile/app.json.
@@ -192,7 +192,7 @@ export const Home = () => {
                 Softened & Solution-Oriented
               </p>
               <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed text-sm">
-                Based on current performance, the primary constraint to revenue growth appears to be sales structure. Optimizing the sales system — from pipeline management to closing and retention — typically unlocks immediate revenue gains without increasing marketing spend. I recommend we audit and rebuild this structure to align with your revenue targets.
+                Based on current performance, the primary constraint to revenue growth appears to be sales structure. Optimizing the sales system, from pipeline management to closing and retention, typically unlocks immediate revenue gains without increasing marketing spend. I recommend we audit and rebuild this structure to align with your revenue targets.
               </p>
             </div>
 
@@ -481,7 +481,7 @@ export const Home = () => {
                   src: 'https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?w=120&h=120&q=75&fit=crop&auto=format&fm=webp'
                 },
                 {
-                  quote: 'We hired three reps in a quarter — every one is in the top half of the team. Their vetting works.',
+                  quote: 'We hired three reps in a quarter and every one is in the top half of the team. Their vetting works.',
                   name: 'Priya Kapoor',
                   designation: 'VP Sales @ Helios SaaS',
                   src: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&h=120&q=75&fit=crop&auto=format&fm=webp'
@@ -598,7 +598,7 @@ export const Home = () => {
                 Manage your career on the go.
               </h2>
               <p className="text-lg text-neutral-600 dark:text-neutral-400 mb-10">
-                Track applications, chat with hiring managers, and receive instant job alerts — all from your pocket. Your next quota-crushing role is one tap away.
+                Track applications, chat with hiring managers, and receive instant job alerts, all from your pocket. Your next quota-crushing role is one tap away.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">

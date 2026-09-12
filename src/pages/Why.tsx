@@ -67,7 +67,7 @@ export const Why = () => {
                 <h3 className="text-4xl md:text-5xl font-display font-bold text-neutral-900 dark:text-white mb-6 leading-tight">The Problem We Solve</h3>
                 <div className="space-y-6 text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed">
                   <p>
-                    <strong className="text-neutral-900 dark:text-white">For Business Owners:</strong> 90% of Global SMEs die within 5 years. The #1 cause isn't bad products — it's lack of consistent revenue. Most founders are technicians, not salespeople. They can't afford a full HR team to recruit, train, and manage high-performing Sales & Marketing staff. Result: No pipeline, no cashflow, business shuts down.
+                    <strong className="text-neutral-900 dark:text-white">For Business Owners:</strong> 90% of Global SMEs die within 5 years. The #1 cause isn't bad products. It's a lack of consistent revenue. Most founders are technicians, not salespeople. They can't afford a full HR team to recruit, train, and manage high-performing Sales & Marketing staff. Result: No pipeline, no cashflow, business shuts down.
                   </p>
                   <p>
                     <strong className="text-neutral-900 dark:text-white">For The Economy:</strong> Thousands of skilled Sales, Marketing, Finance, and Ops talents remain in obscurity. They have the ability to generate millions in revenue but lack visibility and structured opportunities. Talent waste = GDP waste.

@@ -72,7 +72,7 @@ export function CVGeneratorPage() {
               Generate Standard CV
             </h2>
             <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-2xl">
-              Professional multi-template CV. Answer a few questions about your experience, skills and goals — we'll generate a polished, downloadable PDF tailored to you.
+              Professional multi-template CV. Answer a few questions about your experience, skills and goals, and we'll generate a polished, downloadable PDF tailored to you.
             </p>
           </div>
 

@@ -15,7 +15,7 @@ export const DeleteAccount: React.FC = () => {
   useScreenInit();
 
   useEffect(() => {
-    document.title = 'Account & Data Deletion Request — Quotahire';
+    document.title = 'Account & Data Deletion Request | Quotahire';
   }, []);
 
   const [email, setEmail] = useState('');

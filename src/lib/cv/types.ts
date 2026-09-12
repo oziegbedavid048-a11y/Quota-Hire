@@ -11,7 +11,7 @@ export interface WorkEntry {
   role: string;
   company: string;
   period: string;
-  duties: string; // raw text the user types — we'll convert to bullets
+  duties: string; // raw text the user types, which we'll convert to bullets
 }
 
 export interface CVData {

@@ -262,7 +262,7 @@ export const JobDetail = () => {
                   </div>
                 ) : null}
                 {!job.salaryRange && !job.commissionRange && (
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">Competitive salary — details discussed during interview.</p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 font-medium">Competitive salary. Details discussed during interview.</p>
                 )}
               </div>
             </div>

@@ -174,7 +174,7 @@ export const Privacy = () => {
             <p>We may retain Personal Data beyond the periods stated above for legal obligations, legal claims, your explicit request, or technical limitations (e.g., encrypted backup systems).</p>
 
             <h3>Transfer of Your Personal Data</h3>
-            <p>Your information, including Personal Data, is processed at the Company's operating offices and in any other places where the parties involved in the processing are located. It means that this information may be transferred to — and maintained on — computers located outside of Your state, province, country or other governmental jurisdiction where the data protection laws may differ from those of Your jurisdiction.</p>
+            <p>Your information, including Personal Data, is processed at the Company's operating offices and in any other places where the parties involved in the processing are located. It means that this information may be transferred to, and maintained on, computers located outside of Your state, province, country or other governmental jurisdiction where the data protection laws may differ from those of Your jurisdiction.</p>
             <p>Where required by applicable law, We will ensure that international transfers of Your Personal Data are subject to appropriate safeguards. No transfer of Your Personal Data will take place to an organization or a country unless there are adequate controls in place.</p>
 
             <h3>Delete Your Personal Data</h3>

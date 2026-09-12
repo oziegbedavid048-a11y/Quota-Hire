@@ -221,7 +221,7 @@ export const Signup = () => {
         // second failure. Point them at login first.
         setGlobalError(
           'Our server was starting up and took too long to answer. Your account may ' +
-          'already have been created — check your email for the verification link, or ' +
+          'already have been created. Check your email for the verification link, or ' +
           'try logging in. If neither works, wait a moment and sign up again.'
         );
       } else if (msg.toLowerCase().includes('already exists')) {

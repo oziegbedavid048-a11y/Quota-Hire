@@ -187,7 +187,7 @@ export const MyJobs = () => {
                               {job.salary_range}
                             </span>
                           ) : (
-                            <span className="text-neutral-400 font-medium">—</span>
+                            <span className="text-neutral-400 font-medium">-</span>
                           )}
                         </td>
                         <td className="py-4 px-6 min-w-[130px]">

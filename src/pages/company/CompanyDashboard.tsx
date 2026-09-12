@@ -177,7 +177,7 @@ export const CompanyDashboardPage = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Active Roles"
-          value={jobsLoading ? '—' : activeJobs.length}
+          value={jobsLoading ? '...' : activeJobs.length}
           icon={Briefcase}
           color="bg-blue-50 text-blue-600"
           sub={`${pendingJobs.length} pending approval`}
@@ -185,21 +185,21 @@ export const CompanyDashboardPage = () => {
         />
         <StatCard
           label="Total Applicants"
-          value={analyticsLoading ? '—' : totalApplicants}
+          value={analyticsLoading ? '...' : totalApplicants}
           icon={Users}
           color="bg-violet-50 text-violet-600"
           sub="Across all roles"
         />
         <StatCard
           label="Top Skill Matches"
-          value={analyticsLoading ? '—' : topMatches}
+          value={analyticsLoading ? '...' : topMatches}
           icon={Star}
           color="bg-amber-50 text-amber-600"
           sub="High-fit candidates"
         />
         <StatCard
           label="Hiring Velocity"
-          value={analyticsLoading ? '—' : `${velocityData.reduce((s: number, d: any) => s + d.applicants, 0)}`}
+          value={analyticsLoading ? '...' : `${velocityData.reduce((s: number, d: any) => s + d.applicants, 0)}`}
           icon={TrendingUp}
           color="bg-emerald-50 text-emerald-600"
           sub="Applications this week"

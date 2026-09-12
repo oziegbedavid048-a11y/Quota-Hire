@@ -98,7 +98,7 @@ export const CookieBanner: React.FC = () => {
                     >
                       PostHog
                     </a>{' '}
-                    analytics to improve QuotaHire — no ads, no data selling.
+                    analytics to improve Quotahire. No ads, no data selling.
                     Change choice anytime in footer.
                   </p>
                 </div>
