@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+
+{% comment %}
+Confirmation step for reopening a closed listing. The Reopen button on the
+changelist is an ordinary link, so the change itself has to happen on a POST
+from here — a link that writes to the database can be followed by a browser
+prefetch or a crawler.
+{% endcomment %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label='api' %}">Api</a>
+    &rsaquo; <a href="{% url 'admin:api_job_changelist' %}">Jobs</a>
+    &rsaquo; Reopen listing
+  </div>
+{% endblock %}
+
+{% block content %}
+  <h1>Reopen this listing?</h1>
+
+  <p style="max-width:44em;line-height:1.6;">
+    <strong>{{ job.title }}</strong>{% if job.job_code %} ({{ job.job_code }}){% endif %}
+    from <strong>{{ job.company_name }}</strong> is currently closed, so it does
+    not appear in the job list and nobody can apply to it.
+  </p>
+
+  <p style="max-width:44em;line-height:1.6;">
+    Reopening puts it back on the job list straight away and lets candidates
+    apply again. The company can close it again themselves at any time.
+  </p>
+
+  <form method="post" style="margin-top:1.5em;">
+    {% csrf_token %}
+    <input type="submit" value="Yes, reopen this listing" class="default">
+    <a href="{% url 'admin:api_job_changelist' %}" class="button cancel-link"
+       style="margin-left:8px;">Cancel</a>
+  </form>
+{% endblock %}

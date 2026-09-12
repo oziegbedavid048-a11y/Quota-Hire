@@ -2947,3 +2947,120 @@ class JobSearchAndFilterTests(TestCase):
             {self.lagos.title, self.london.title, self.remote_ft.title},
             'The employment_type result was served to an unfiltered request.',
         )
+
+
+class AdminReopenClosedJobTests(TestCase):
+    """Only staff can put a closed listing back on the job list.
+
+    A company closes its own listing and cannot undo it, so a listing closed
+    by mistake had no way back at all. Reopening lives in the Django admin.
+    """
+
+    def setUp(self):
+        cache.clear()
+        from .models import Job, JobStatus
+
+        self.staff = CustomUser.objects.create_superuser(
+            username='root@example.com', email='root@example.com',
+            password='A-Str0ng-Passw0rd!x',
+        )
+        self.company = CustomUser.objects.create_user(
+            username='co@example.com', email='co@example.com',
+            password='A-Str0ng-Passw0rd!x', role=UserRole.COMPANY,
+        )
+        self.closed = Job.objects.create(
+            company=self.company, title='Closed Role', location='Lagos',
+            description='d', requirements=['r'], status=JobStatus.CLOSED,
+        )
+        self.live = Job.objects.create(
+            company=self.company, title='Live Role', location='Lagos',
+            description='d', requirements=['r'], status=JobStatus.APPROVED,
+        )
+        self.reopen_url = reverse('admin:api_job_reopen', args=[self.closed.id])
+
+    def _login_staff(self):
+        self.client.force_login(self.staff)
+
+    # ── The button ───────────────────────────────────────────────────────────
+
+    def test_get_shows_a_confirmation_and_changes_nothing(self):
+        self._login_staff()
+        resp = self.client.get(self.reopen_url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.closed.refresh_from_db()
+        self.assertEqual(
+            self.closed.status, 'closed',
+            'Opening the confirmation page reopened the listing. A GET must not write.',
+        )
+
+    def test_post_reopens_the_listing(self):
+        self._login_staff()
+        self.client.post(self.reopen_url)
+        self.closed.refresh_from_db()
+        self.assertEqual(self.closed.status, 'approved')
+
+    def test_a_job_that_is_not_closed_is_left_alone(self):
+        self._login_staff()
+        self.client.post(reverse('admin:api_job_reopen', args=[self.live.id]))
+        self.live.refresh_from_db()
+        self.assertEqual(self.live.status, 'approved')
+
+    def test_a_missing_job_is_a_404(self):
+        self._login_staff()
+        resp = self.client.post(reverse('admin:api_job_reopen', args=[999999]))
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    # ── Who may do it ────────────────────────────────────────────────────────
+
+    def test_an_anonymous_visitor_cannot_reopen(self):
+        resp = self.client.post(self.reopen_url)
+        self.closed.refresh_from_db()
+        self.assertEqual(
+            self.closed.status, 'closed',
+            'An unauthenticated request reopened a listing.',
+        )
+        self.assertIn(resp.status_code, (302, 403))
+
+    def test_the_owning_company_cannot_reopen_through_the_admin(self):
+        """Closing is one-way for a company; the admin route must not be a way round it."""
+        self.client.force_login(self.company)
+        resp = self.client.post(self.reopen_url)
+        self.closed.refresh_from_db()
+        self.assertEqual(self.closed.status, 'closed')
+        self.assertIn(resp.status_code, (302, 403))
+
+    # ── The bulk action ──────────────────────────────────────────────────────
+
+    def test_the_bulk_action_reopens_only_closed_listings(self):
+        from django.contrib.admin.sites import site
+        from .models import Job
+
+        self._login_staff()
+        request = type('R', (), {})()
+        job_admin = site._registry[Job]
+
+        messages_sent = []
+        job_admin.message_user = lambda req, msg, level=None: messages_sent.append(msg)
+        job_admin.reopen_jobs(request, Job.objects.filter(pk__in=[self.closed.pk, self.live.pk]))
+
+        self.closed.refresh_from_db()
+        self.live.refresh_from_db()
+        self.assertEqual(self.closed.status, 'approved')
+        self.assertEqual(self.live.status, 'approved', 'An already-live job was altered.')
+        self.assertTrue(any('1 listing(s) reopened' in m for m in messages_sent), messages_sent)
+        self.assertTrue(any('were not closed' in m for m in messages_sent), messages_sent)
+
+    # ── A reopened listing is really back ────────────────────────────────────
+
+    def test_a_reopened_listing_is_public_again(self):
+        resp = APIClient().get(reverse('job-list-create'))
+        titles = {r['title'] for r in resp.data.get('results', resp.data)}
+        self.assertIn('Closed Role', titles, 'Closed jobs are expected to stay listed.')
+
+        self._login_staff()
+        self.client.post(self.reopen_url)
+        cache.clear()
+
+        resp = APIClient().get(reverse('job-list-create'))
+        rows = {r['title']: r for r in resp.data.get('results', resp.data)}
+        self.assertEqual(rows['Closed Role']['status'], 'approved')

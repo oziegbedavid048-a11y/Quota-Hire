@@ -5,10 +5,12 @@ Registers all models with rich, search-friendly admin views.
 Access at: http://localhost:8000/admin/
 """
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.utils.html import format_html
-from django.urls import reverse
+from django.urls import reverse, path
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
 from django import forms
 import json
 
@@ -335,13 +337,13 @@ class JobAdminForm(forms.ModelForm):
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
     form = JobAdminForm
-    list_display    = ('title', 'job_code', 'company_name_display', 'package', 'status', 'status_badge', 'employment_type', 'is_remote', 'location', 'created_at', 'edit_button')
+    list_display    = ('title', 'job_code', 'company_name_display', 'package', 'status', 'status_badge', 'employment_type', 'is_remote', 'location', 'created_at', 'edit_button', 'reopen_button')
     list_display_links = ('title', 'edit_button')
     list_filter     = ('status', 'package', 'is_remote', 'created_at')
     search_fields   = ('title', 'description', 'company__email', 'location', 'job_code')
     ordering        = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at', 'job_code')
-    actions         = ['approve_jobs', 'reject_jobs', 'close_jobs']
+    actions         = ['approve_jobs', 'reject_jobs', 'close_jobs', 'reopen_jobs']
 
     fieldsets = (
         ('Job Details', {'fields': ('company', 'job_code', 'title', 'description', 'requirements_text', 'requirements')}),
@@ -403,6 +405,99 @@ class JobAdmin(admin.ModelAdmin):
             job.save()
             count += 1
         self.message_user(request, f'{count} job(s) closed.')
+
+    # ── Reopening a closed listing ───────────────────────────────────────────
+    #
+    # A company can close its own listing and cannot undo it — closing is
+    # deliberately one-way on their side. That left no way back at all, so a
+    # listing closed by mistake stayed closed. Reopening lives here instead,
+    # where a staff member has to do it on purpose.
+    #
+    # Two ways to do it: the bulk action below for several at once, and a
+    # Reopen button on each closed row. Filter the changelist by Status =
+    # Closed to see every closed listing.
+
+    @admin.action(description='♻️ Reopen selected closed listings')
+    def reopen_jobs(self, request, queryset):
+        closed = queryset.filter(status='closed')
+        reopened = 0
+        for job in closed:
+            job.status = 'approved'
+            job.save()
+            reopened += 1
+
+        skipped = queryset.count() - reopened
+        if reopened:
+            self.message_user(
+                request,
+                f'{reopened} listing(s) reopened and live again.',
+                level=messages.SUCCESS,
+            )
+        if skipped:
+            self.message_user(
+                request,
+                f'{skipped} selected job(s) were not closed, so they were left alone.',
+                level=messages.WARNING,
+            )
+        if not reopened and not skipped:
+            self.message_user(request, 'Nothing selected.', level=messages.WARNING)
+
+    @admin.display(description='Reopen')
+    def reopen_button(self, obj):
+        if obj.status != 'closed':
+            return '—'
+        url = reverse('admin:api_job_reopen', args=[obj.id])
+        return format_html(
+            '<a class="button" style="background-color:#1A6515;color:white;padding:5px 10px;'
+            'border-radius:4px;font-weight:bold;text-decoration:none;" href="{}">Reopen</a>',
+            url,
+        )
+
+    def get_urls(self):
+        return [
+            path(
+                '<int:job_id>/reopen/',
+                self.admin_site.admin_view(self.reopen_view),
+                name='api_job_reopen',
+            ),
+        ] + super().get_urls()
+
+    def reopen_view(self, request, job_id):
+        """Confirm, then reopen. The button is a link, so the change is made on
+        POST from the confirmation page rather than on the GET that opened it —
+        a link that mutates data can be followed by a prefetch or a crawler."""
+        job = get_object_or_404(Job, pk=job_id)
+
+        if not self.has_change_permission(request, job):
+            self.message_user(
+                request, 'You do not have permission to reopen listings.', level=messages.ERROR,
+            )
+            return redirect('admin:api_job_changelist')
+
+        if request.method == 'POST':
+            if job.status != 'closed':
+                self.message_user(
+                    request,
+                    f'"{job.title}" is not closed, so nothing was changed.',
+                    level=messages.WARNING,
+                )
+            else:
+                job.status = 'approved'
+                job.save()
+                self.message_user(
+                    request,
+                    f'"{job.title}" is open again and back on the job list.',
+                    level=messages.SUCCESS,
+                )
+            return redirect('admin:api_job_changelist')
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Reopen listing',
+            'job': job,
+            'opts': self.model._meta,
+        }
+        return TemplateResponse(request, 'admin/reopen_job.html', context)
 
 
 # ── Application Admin ─────────────────────────────────────────────────────────

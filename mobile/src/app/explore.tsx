@@ -251,14 +251,12 @@ export default function JobsScreen() {
             </Pressable>
           </View>
 
-          {/* Tags: location / work type / salary / OTE / closed */}
+          {/* Tags: location / work type / salary / OTE.
+              No closed marker here. A card in the list is an invitation to
+              look, and a red Closed badge on it turns the whole list into a
+              wall of rejections. Whether a role still takes applications is
+              answered in one place, on the apply button inside the job. */}
           <View style={s.tagsRow}>
-            {job.status === 'closed' && (
-              <View style={[s.tag, { backgroundColor: '#fee2e2', borderColor: '#fecaca', borderWidth: 0.5 }]}>
-                <Feather name="lock" size={10} color="#b91c1c" />
-                <Text style={[s.tagText, { color: '#b91c1c', fontWeight: FontWeight.bold }]}>Closed</Text>
-              </View>
-            )}
             <View style={[s.tag, { backgroundColor: Palette.neutral100 }]}>
               <Feather name="map-pin" size={10} color={colors.textMuted} />
               <Text style={[s.tagText, { color: colors.textSecondary }]}>{job.location}</Text>

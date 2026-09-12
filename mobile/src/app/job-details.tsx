@@ -288,14 +288,10 @@ export default function JobDetailsScreen() {
             </View>
           </View>
 
-          {/* Tags */}
+          {/* Tags. The closed state is stated once, on the apply button at the
+              bottom, and nowhere else — not here in the header, and not in the
+              job list. */}
           <View style={s.tagsRow}>
-            {effectiveStatus === 'closed' && (
-              <View style={[s.tag, { backgroundColor: '#fee2e2', borderColor: '#fecaca', borderWidth: 0.5 }]}>
-                <Feather name="lock" size={11} color="#b91c1c" />
-                <Text style={[s.tagText, { color: '#b91c1c', fontWeight: FontWeight.bold }]}>Closed</Text>
-              </View>
-            )}
             <View style={[s.tag, { backgroundColor: 'rgba(255,255,255,0.7)' }]}>
               <Feather name="map-pin" size={11} color={colors.textMuted} />
               <Text style={[s.tagText, { color: colors.textSecondary }]}>{job.location}</Text>
@@ -359,19 +355,6 @@ export default function JobDetailsScreen() {
             )}
           </View>
         </View>
-
-        {/* Closed Position Notice */}
-        {effectiveStatus === 'closed' && (
-          <View style={s.closedNoticeCard}>
-            <Feather name="lock" size={16} color="#92400e" style={{ marginTop: 2 }} />
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={s.closedNoticeTitle}>Applications Closed</Text>
-              <Text style={s.closedNoticeSub}>
-                This position has been closed by the hiring team and is no longer accepting new applications.
-              </Text>
-            </View>
-          </View>
-        )}
 
         {/* ── ACTION BUTTONS ── */}
         <View style={s.actionBarPage}>
@@ -669,26 +652,6 @@ const s = StyleSheet.create({
     color: Palette.emerald600,
     fontWeight: '700',
     fontSize: 14,
-  },
-  closedNoticeCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 14,
-    borderRadius: BorderRadius.md,
-    backgroundColor: '#fef3c7',
-    borderWidth: 1,
-    borderColor: '#fde68a',
-  },
-  closedNoticeTitle: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
-    color: '#92400e',
-  },
-  closedNoticeSub: {
-    fontSize: FontSize.xs,
-    color: '#92400e',
-    lineHeight: 16,
   },
   closedBtn: {
     flex: 1,
