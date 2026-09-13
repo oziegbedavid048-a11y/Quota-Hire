@@ -7,13 +7,13 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  Image,
   Modal,
   Pressable,
   Keyboard,
   BackHandler,
   DeviceEventEmitter,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Text, TextInput } from '@/components/ui/text';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, FontAwesome } from '@expo/vector-icons';
@@ -56,6 +56,9 @@ function AvatarImage({ author, size = 40, isAnonymous }: { author: any; size?: n
       <Image
         source={{ uri: author.avatar_url }}
         style={{ width: size, height: size, borderRadius: size / 2 }}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={author.avatar_url}
       />
     );
   }

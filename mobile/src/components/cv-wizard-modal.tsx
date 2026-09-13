@@ -10,8 +10,8 @@ import {
   Platform,
   Alert,
   KeyboardAvoidingView,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Text, TextInput } from '@/components/ui/text';
 import { Feather } from '@expo/vector-icons';
@@ -1412,7 +1412,7 @@ export default function CVWizardModal({ visible, onClose, templateType, onSucces
                               <Image
                                 source={{ uri: passportImage }}
                                 style={s.photoImage}
-                                resizeMode="cover"
+                                contentFit="cover"
                               />
                             ) : (
                               <View style={s.photoPlaceholder}>
