@@ -73,6 +73,13 @@
         }
       ],
       "expo-screen-orientation",
+      [
+        "./plugins/withR8Optimization",
+        {
+          "optimize": true,
+          "optimizedResourceShrinking": true
+        }
+      ],
       "expo-font",
       "expo-image",
       "expo-secure-store"
