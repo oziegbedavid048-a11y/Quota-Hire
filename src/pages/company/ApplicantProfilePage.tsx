@@ -1,177 +1,98 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Briefcase, ArrowLeft } from 'lucide-react';
-import { apiFetch } from '../../context/AppContext';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiFetch } from '../../context/AppContext';
+import { SkeletonAvatar, SkeletonBox, SkeletonLine } from '../../components/ui/Skeleton';
+import { CandidateProfile } from '../../components/company/applicants/CandidateProfile';
+import { ResumeViewer, StatusConfirmDialog } from '../../components/company/applicants/ApplicantDialogs';
+import { useApplicantActions } from '../../components/company/applicants/useApplicantActions';
+import { isPromotedPackage } from '../../components/company/applicants/applicantConfig';
 
+/**
+ * A single candidate at their own address, for anyone who reaches one
+ * directly. It shows exactly the profile the applicants page opens in its
+ * sheet, with the same shortlist, CV and status actions, so the two can never
+ * disagree about what a company is allowed to do.
+ */
 export const ApplicantProfilePage = () => {
-  const { jobId, appId } = useParams<{ jobId: string, appId: string }>();
+  const { jobId, appId } = useParams<{ jobId: string; appId: string }>();
   const navigate = useNavigate();
   const [applicant, setApplicant] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const patch = useCallback((id: number, changes: Record<string, unknown>) => {
+    setApplicant((prev: any) => (prev && prev.id === id ? { ...prev, ...changes } : prev));
+  }, []);
+  const actions = useApplicantActions(patch);
+
   useEffect(() => {
-    const fetchApplicant = async () => {
+    if (!appId) return;
+    let cancelled = false;
+    (async () => {
       try {
         const data = await apiFetch(`/company/applications/${appId}/`);
-        setApplicant(data);
-      } catch (error) {
-        toast.error('Failed to load applicant details.');
-        navigate(`/company/jobs/${jobId}/applicants`);
+        if (!cancelled) setApplicant(data);
+      } catch {
+        if (!cancelled) {
+          toast.error('Failed to load applicant details.');
+          navigate(`/company/jobs/${jobId}/applicants`);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    if (appId) fetchApplicant();
+    })();
+    return () => { cancelled = true; };
   }, [appId, jobId, navigate]);
 
-  const cleanText = (text: string) => {
-    if (!text) return text;
-    let cleaned = text;
-    
-    // 1. Strip out lines explicitly labeled as contact info
-    cleaned = cleaned.replace(/^(Email|Address|Location|LinkedIn|Phone|Contact|Mobile|Website|Portfolio)[\s:]*.*$/gmi, '');
-    
-    // 2. Hide basic email addresses
-    cleaned = cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '');
-    
-    // 3. Hide LinkedIn/Portfolio URLs
-    cleaned = cleaned.replace(/(https?:\/\/)?(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?/gi, '');
-    
-    // 4. Hide phone numbers (basic international/national formats)
-    cleaned = cleaned.replace(/(?:(?:\+?\d{1,3}[-.\s]?\(?\d{2,4}\)?)|(?:\(\d{2,4}\)))[-.\s]?\d{3,4}[-.\s]?\d{3,4}/g, '');
-    
-    // 5. Hide typical Street Addresses and PO Boxes
-    cleaned = cleaned.replace(/\b\d{1,5}\s+[a-zA-Z0-9\s.,-]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Court|Ct|Way|Plaza|Plz|Square|Sq|Close|Crescent|Estate)\b/gi, '');
-    cleaned = cleaned.replace(/\b(?:P\.?O\.?\s*Box|Post\s*Office\s*Box)\s*\d+\b/gi, '');
-
-    // 6. Handle cover letter header blocks
-    const lines = cleaned.split('\n');
-    let contentStarted = false;
-    
-    const processedLines = lines.map((line, index) => {
-      if (contentStarted) return line;
-      
-      const trimmed = line.trim();
-      if (trimmed.toLowerCase().startsWith('dear') || trimmed.toLowerCase().startsWith('to whom') || trimmed.split(' ').length > 15) {
-        contentStarted = true;
-        return line;
-      }
-      
-      if (index < 10 && trimmed.length > 0 && trimmed.length < 50) {
-        if (/^[A-Z][a-zA-Z\s.-]+,\s*[A-Z][a-zA-Z\s.-]+(?:\s*\d{4,6})?$/.test(trimmed)) {
-          return '';
-        }
-        if (/^\d{1,5}\s+[A-Z]/.test(trimmed)) {
-          return '';
-        }
-      }
-      return line;
-    });
-    
-    return processedLines.join('\n').trim();
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen py-12 px-4 flex justify-center items-center">
-        <div className="animate-spin text-accent-500 rounded-full h-12 w-12 border-b-2 border-accent-500"></div>
-      </div>
-    );
-  }
-
-  if (!applicant) return null;
-
   return (
-    <div className="min-h-screen py-8 px-4 bg-neutral-50 dark:bg-neutral-950 font-sans">
-      <div className="max-w-5xl mx-auto">
-        {/* Header Bar */}
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl p-4 md:p-6 mb-6 shadow-sm border border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate(`/company/jobs/${jobId}/applicants`)} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors">
-              <ArrowLeft size={20} className="text-neutral-500" />
-            </button>
-            <h2 className="text-xl md:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-              Applicant Profile
-            </h2>
+    <div className="min-h-full py-4 sm:py-6 px-3 sm:px-4">
+      <div className="max-w-lg mx-auto">
+        <button
+          onClick={() => navigate(`/company/jobs/${jobId}/applicants`)}
+          className="mb-4 inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
+          <ArrowLeft size={15} /> Back to Applicants
+        </button>
+
+        <div className="bg-white dark:bg-neutral-900 rounded-3xl border border-slate-200 dark:border-neutral-800 shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-neutral-800">
+            <h1 className="text-[15px] font-extrabold text-slate-900 dark:text-white">Candidate Profile</h1>
           </div>
-
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Column: Core Info */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 shadow-sm border border-neutral-200 dark:border-neutral-800 text-center">
-              {applicant.avatar_url ? (
-                <img src={applicant.avatar_url} alt={applicant.employee_name} className="w-32 h-32 mx-auto rounded-full object-cover shadow-sm border-4 border-neutral-50 dark:border-neutral-800 mb-4" />
-              ) : (
-                <div className="w-32 h-32 mx-auto rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 text-4xl font-bold shadow-sm mb-4">
-                  {applicant.employee_name[0]}
-                </div>
-              )}
-              <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-1">{applicant.employee_name}</h3>
-              <p className="text-neutral-600 dark:text-neutral-400 font-medium mb-4">{applicant.employee_profile?.title || 'No title specified'}</p>
-              
-              <div className="flex justify-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-800 px-3 py-1.5 rounded-md border border-neutral-200 dark:border-neutral-700">
-                  <Briefcase size={14} className="text-neutral-400" /> {
-                    (() => {
-                      const yrs = Number(applicant.experience_years ?? applicant.employee_profile?.experience_years ?? applicant.employee_profile?.experienceYears ?? 0);
-                      if (yrs <= 0) return 'No Experience Listed';
-                      if (yrs === 1) return '1 Year Experience';
-                      return `${yrs} Years Experience`;
-                    })()
-                  }
-                </span>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Right Column: Details */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {applicant.employee_profile?.bio && cleanText(applicant.employee_profile.bio).length > 0 && (
-              <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 md:p-8 shadow-sm border border-neutral-200 dark:border-neutral-800">
-                <h4 className="text-sm font-bold uppercase tracking-widest mb-4 text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-neutral-800 pb-2">Professional Summary</h4>
-                <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap">{cleanText(applicant.employee_profile.bio)}</p>
-              </div>
-            )}
-
-            {applicant.employee_profile?.skills?.length > 0 && (
-              <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 md:p-8 shadow-sm border border-neutral-200 dark:border-neutral-800">
-                <h4 className="text-sm font-bold uppercase tracking-widest mb-4 text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-neutral-800 pb-2">Skills & Expertise</h4>
-                <div className="flex flex-wrap gap-2">
-                  {applicant.employee_profile.skills.map((s: string, i: number) => (
-                    <span key={i} className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-lg text-sm font-medium">{s}</span>
-                  ))}
+          <div className="px-5 pt-5 pb-8">
+            {loading || !applicant ? (
+              <div className="flex flex-col items-center gap-2 pb-5">
+                <SkeletonAvatar size={80} />
+                <SkeletonLine width={160} height={16} />
+                <SkeletonLine width={110} height={12} />
+                <div className="w-full mt-4 flex flex-col gap-3">
+                  <SkeletonBox height={120} radius={16} />
+                  <SkeletonBox height={64} radius={16} />
+                  <SkeletonBox height={90} radius={16} />
                 </div>
               </div>
+            ) : (
+              <CandidateProfile
+                candidate={applicant}
+                isPromoted={isPromotedPackage(applicant.job_package)}
+                onToggleShortlist={() => actions.toggleShortlist(applicant)}
+                onRequestStatus={status => actions.requestStatus(applicant, status)}
+                updatingStatus={actions.updatingStatus}
+                onOpenResume={() => actions.openResume(applicant)}
+                loadingResume={actions.loadingResume}
+              />
             )}
-
-            {applicant.employee_profile?.education && (
-              <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 md:p-8 shadow-sm border border-neutral-200 dark:border-neutral-800">
-                <h4 className="text-sm font-bold uppercase tracking-widest mb-4 text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-neutral-800 pb-2">Education</h4>
-                <p className="text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed">{applicant.employee_profile.education}</p>
-              </div>
-            )}
-
-            {applicant.cover_letter && cleanText(applicant.cover_letter).length > 0 && (
-              <div className="bg-white dark:bg-neutral-900 rounded-2xl p-6 md:p-8 shadow-sm border border-neutral-200 dark:border-neutral-800">
-                <h4 className="text-sm font-bold uppercase tracking-widest mb-4 text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-neutral-800 pb-2">Cover Letter</h4>
-                <div className="text-neutral-700 dark:text-neutral-300 leading-relaxed whitespace-pre-wrap">
-                  {cleanText(applicant.cover_letter)}
-                </div>
-              </div>
-            )}
-
           </div>
         </div>
-
-
       </div>
+
+      <StatusConfirmDialog
+        copy={actions.pendingCopy}
+        busy={actions.updatingStatus}
+        onCancel={actions.cancelStatus}
+        onConfirm={actions.confirmStatus}
+      />
+      <ResumeViewer url={actions.resumeUrl} name={applicant?.employee_name} onClose={actions.closeResume} />
     </div>
   );
 };

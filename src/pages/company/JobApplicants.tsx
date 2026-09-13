@@ -1,139 +1,369 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, User, Star } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, ChevronRight, Eye, FileText, MapPin, Star, Users, X } from 'lucide-react';
 import { apiFetch } from '../../context/AppContext';
-import { AnimatedBackground } from '../../components/ui/AnimatedBackground';
-import { toast } from 'sonner';
+import { SkeletonAvatar, SkeletonBox, SkeletonLine } from '../../components/ui/Skeleton';
+import { Portal } from '../../components/ui/Portal';
+import { CandidateProfile } from '../../components/company/applicants/CandidateProfile';
+import { ResumeViewer, StatusConfirmDialog } from '../../components/company/applicants/ApplicantDialogs';
+import { useApplicantActions } from '../../components/company/applicants/useApplicantActions';
+import { cleanText, experienceText, isPromotedPackage, statusOf } from '../../components/company/applicants/applicantConfig';
 
+type Filter = 'all' | 'shortlisted' | 'interview' | 'accepted' | 'rejected';
+
+const SkeletonApplicantCard = () => (
+  <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800 p-4 flex flex-col gap-3">
+    <div className="flex items-center gap-2.5">
+      <SkeletonAvatar size={42} />
+      <div className="flex-1 flex flex-col gap-1.5">
+        <SkeletonLine width="55%" height={15} />
+        <SkeletonLine width="35%" height={12} />
+      </div>
+      <SkeletonBox width={70} height={22} radius={8} />
+    </div>
+    <div className="flex flex-col gap-1.5">
+      <SkeletonLine width="100%" />
+      <SkeletonLine width="75%" />
+    </div>
+    <div className="flex gap-1.5">
+      <SkeletonBox width={60} height={20} radius={6} />
+      <SkeletonBox width={70} height={20} radius={6} />
+    </div>
+    <div className="flex gap-2">
+      <SkeletonBox width={100} height={32} radius={8} />
+      <SkeletonBox width={80} height={32} radius={8} />
+    </div>
+  </div>
+);
+
+/**
+ * Reviewing the people who applied to one role, rebuilt to match
+ * mobile/src/components/company-applicants.tsx: a banner for the role, filter
+ * tabs, a card per candidate, and a slide-up profile where the company
+ * shortlists, opens the CV and, on promoted roles, moves the candidate through
+ * the evaluation steps.
+ *
+ * The previous page could only shortlist, one way, and had no route at all to
+ * change an applicant's status, so a company hiring from a browser could never
+ * progress anybody.
+ */
 export const JobApplicants = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  const [job, setJob] = useState<any | null>(null);
   const [applicants, setApplicants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<Filter>('all');
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  const patch = useCallback((appId: number, changes: Record<string, unknown>) => {
+    setApplicants(prev => prev.map(a => (a.id === appId ? { ...a, ...changes } : a)));
+  }, []);
+  const actions = useApplicantActions(patch);
 
   useEffect(() => {
-    const fetchApplicants = async () => {
-      try {
-        const data = await apiFetch(`/company/jobs/${id}/applicants/`);
-        setApplicants(Array.isArray(data) ? data : data.results || []);
-      } catch (error) {
-        toast.error('Failed to load applicants.');
-      } finally {
-        setLoading(false);
+    if (!id) return;
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const [jobsRes, appsRes] = await Promise.allSettled([
+        apiFetch('/company/jobs/'),
+        apiFetch(`/company/jobs/${id}/applicants/`),
+      ]);
+      if (cancelled) return;
+      if (jobsRes.status === 'fulfilled') {
+        const list = Array.isArray(jobsRes.value) ? jobsRes.value : jobsRes.value?.results || [];
+        setJob(list.find((j: any) => String(j.id) === String(id)) || null);
       }
-    };
-    if (id) fetchApplicants();
+      if (appsRes.status === 'fulfilled') {
+        setApplicants(Array.isArray(appsRes.value) ? appsRes.value : appsRes.value?.results || []);
+      }
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, [id]);
 
-  const handleShortlist = async (appId: number) => {
+  // Close the profile with Escape, and keep the page behind it from scrolling.
+  useEffect(() => {
+    if (selectedId === null) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null); };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prevOverflow; };
+  }, [selectedId]);
+
+  const isPromoted = isPromotedPackage(job?.package) || applicants.some(a => isPromotedPackage(a.job_package));
+  const selected = applicants.find(a => a.id === selectedId) || null;
+
+  // The list response is enough to open a profile at once; the detail call
+  // then refreshes it with the full, unmasked record.
+  const openCandidate = async (candidate: any) => {
+    setSelectedId(candidate.id);
     try {
-      await apiFetch(`/company/applications/${appId}/shortlist/`, { method: 'POST' });
-      toast.success('Applicant successfully shortlisted!');
-      setApplicants(applicants.map(app => app.id === appId ? { ...app, is_shortlisted: true } : app));
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to shortlist applicant.');
-    }
+      const detailed = await apiFetch(`/company/applications/${candidate.id}/`);
+      if (detailed?.id === candidate.id) patch(candidate.id, detailed);
+    } catch { /* keep the list copy */ }
   };
 
+  const counts = useMemo(() => ({
+    all: applicants.length,
+    shortlisted: applicants.filter(a => a.is_shortlisted).length,
+    interview: applicants.filter(a => a.status === 'interview').length,
+    accepted: applicants.filter(a => a.status === 'accepted').length,
+  }), [applicants]);
+
+  const tabs: { key: Filter; label: string }[] = isPromoted
+    ? [
+        { key: 'all', label: `All (${counts.all})` },
+        { key: 'shortlisted', label: `Shortlisted (${counts.shortlisted})` },
+        { key: 'interview', label: `Interview (${counts.interview})` },
+        { key: 'accepted', label: `Hired (${counts.accepted})` },
+      ]
+    : [
+        { key: 'all', label: `All (${counts.all})` },
+        { key: 'shortlisted', label: `Shortlisted (${counts.shortlisted})` },
+      ];
+
+  const filtered = applicants.filter(a => {
+    if (activeFilter === 'shortlisted') return a.is_shortlisted;
+    if (activeFilter === 'interview') return a.status === 'interview';
+    if (activeFilter === 'accepted') return a.status === 'accepted';
+    if (activeFilter === 'rejected') return a.status === 'rejected';
+    return true;
+  });
+
+  const companyName = job?.company_name || job?.custom_company_name || 'Company';
+  const location = job?.is_remote ? 'Remote' : job?.location || 'Hybrid';
+
   return (
-    <div className="min-h-screen py-12 px-4 relative overflow-hidden font-sans">
-      <AnimatedBackground />
-      <div className="max-w-6xl mx-auto relative z-10">
-        <button onClick={() => navigate('/company/jobs')} className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white mb-6 transition-colors font-semibold">
-          <ArrowLeft size={20} /> Back to My Jobs
+    <div className="min-h-full py-4 sm:py-6 px-3 sm:px-4">
+      <div className="max-w-5xl mx-auto">
+        <button
+          onClick={() => navigate('/company/jobs')}
+          className="mb-4 inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
+          <ArrowLeft size={15} /> Back to My Jobs
         </button>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="card-soft relative overflow-hidden bg-gradient-to-r from-accent-50 to-warm-50 dark:from-accent-900/20 dark:to-warm-900/20 p-6 md:p-8 mb-8 border border-neutral-100 dark:border-neutral-800">
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-accent-200/40 dark:bg-accent-900/40 rounded-full blur-[60px]" />
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex-1 text-center md:text-left w-full order-2 md:order-1">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-accent-600 dark:text-accent-400 bg-accent-100 dark:bg-accent-900/40 px-3 py-1 rounded-full mb-3">
-                <User size={12} /> Candidate Review
-              </span>
-              <h1 className="text-2xl md:text-3xl font-display font-extrabold text-neutral-900 dark:text-white mb-2">
-                Job <span className="text-accent-600 dark:text-accent-400">Applicants</span>
-              </h1>
-              <p className="text-neutral-500 dark:text-neutral-400 text-sm md:text-base max-w-lg mx-auto md:mx-0">
-                Review candidates who applied for this role. Click on an applicant's card to view their full professional profile, resume, and shortlist them.
-              </p>
+        {/* ── Role banner ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-slate-200 dark:border-neutral-800 p-4 mb-2 bg-gradient-to-br from-[#FCEFCF] to-[#E1F6DD] dark:from-amber-950/30 dark:to-emerald-950/30"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl border border-slate-200 bg-white overflow-hidden flex items-center justify-center p-[3px] shrink-0">
+              {job?.company_logo_url ? (
+                <img src={job.company_logo_url} alt={companyName} className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-xl font-extrabold text-slate-800">{(companyName || job?.title || 'Q').charAt(0).toUpperCase()}</span>
+              )}
             </div>
-            <div className="w-40 h-40 md:w-48 md:h-48 shrink-0 order-1 md:order-2 flex justify-center">
-              <img
-                src={`${import.meta.env.BASE_URL}images/applicant_reviewer.webp`}
-                alt="3D Reviewer"
-                loading="lazy"
-                className="w-full h-full object-contain drop-shadow-xl animate-float"
-              />
+            <div className="flex-1 min-w-0">
+              {loading && !job ? (
+                <div className="flex flex-col gap-1.5">
+                  <SkeletonLine width="45%" height={15} />
+                  <SkeletonLine width="30%" height={11} />
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-[15px] font-extrabold text-slate-900 dark:text-white truncate">{job?.title || 'Job Listing'}</h1>
+                  <div className="flex items-center gap-1.5 mt-1 min-w-0">
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-neutral-400 truncate">{companyName}</span>
+                    <span className="text-[10px] text-slate-400">•</span>
+                    <MapPin size={11} className="text-slate-400 shrink-0" />
+                    <span className="text-[11px] text-slate-400 truncate">{location}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </motion.div>
 
+        {/* ── Filter tabs ── */}
+        <div className="flex bg-white dark:bg-neutral-900 border-b border-slate-100 dark:border-neutral-800 rounded-xl p-[3px] mt-1 mb-4">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveFilter(tab.key)}
+              className={`flex-1 py-2 rounded-[9px] text-[11px] font-bold transition-colors ${
+                activeFilter === tab.key ? 'bg-accent-500 text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-neutral-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Candidates ── */}
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin text-accent-500 rounded-full h-12 w-12 border-b-2 border-accent-500"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+            {[1, 2, 3].map(k => <SkeletonApplicantCard key={k} />)}
           </div>
-        ) : applicants.length === 0 ? (
-          <div className="card-soft p-12 text-center text-neutral-500 text-lg font-medium">No applicants yet for this job.</div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center gap-2.5 px-8 py-12 rounded-2xl border border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+            <span className="w-[60px] h-[60px] rounded-full bg-slate-100 dark:bg-neutral-800 flex items-center justify-center">
+              <Users size={32} className="text-slate-400" />
+            </span>
+            <p className="text-[15px] font-extrabold text-slate-900 dark:text-white">No applicants found</p>
+            <p className="text-[11px] text-slate-400 leading-[18px] max-w-xs">
+              {activeFilter === 'all'
+                ? `No candidates have applied to "${job?.title || 'this role'}" yet.`
+                : `No candidates matching the "${activeFilter}" filter.`}
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {applicants.map(app => (
-              <motion.div 
-                key={app.id} 
-                whileHover={{ y: -5 }} 
-                className="card-soft cursor-pointer hover:border-accent-500/30 transition-all p-6 group flex flex-col" 
-                onClick={() => navigate(`/company/jobs/${id}/applicants/${app.id}`)}
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  {app.avatar_url ? (
-                    <img src={app.avatar_url} alt={app.employee_name} loading="lazy" className="w-16 h-16 rounded-full object-cover border-2 border-accent-100 dark:border-accent-900/50 shadow-inner-soft shrink-0" />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center text-accent-600 text-2xl font-bold shadow-inner-soft shrink-0">
-                      {app.employee_name[0]}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+            {filtered.map((app, index) => {
+              const s = statusOf(app.status);
+              const bio = isPromoted ? app.employee_profile?.bio || '' : cleanText(app.employee_profile?.bio || '');
+              const skills: string[] = app.employee_profile?.skills || [];
+              const place = app.applicant_location || app.employee_profile?.city;
+              return (
+                <motion.div
+                  key={app.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(index, 8) * 0.05 }}
+                  onClick={() => openCandidate(app)}
+                  className="bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-800 p-4 flex flex-col gap-2.5 cursor-pointer hover:border-accent-300 dark:hover:border-accent-800 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-11 h-11 rounded-full overflow-hidden bg-accent-50 flex items-center justify-center shrink-0">
+                      {app.avatar_url ? (
+                        <img src={app.avatar_url} alt={app.employee_name} loading="lazy" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[15px] font-extrabold text-accent-700">{(app.employee_name || 'C').charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-[13px] font-extrabold text-slate-900 dark:text-white truncate">{app.employee_name}</p>
+                        {app.is_shortlisted && <Star size={13} className="text-amber-500 fill-amber-500 shrink-0" />}
+                      </div>
+                      <p className="text-[11px] font-medium text-slate-500 dark:text-neutral-400 truncate">
+                        {app.employee_profile?.title || 'Applicant'} • {experienceText(app)}
+                      </p>
+                    </div>
+                    {isPromoted && (
+                      <span className={`shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-xl text-[10px] font-bold ${s.pill} ${s.text}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                        {s.label}
+                      </span>
+                    )}
+                  </div>
+
+                  {(place || (isPromoted && app.has_resume)) && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {place && (
+                        <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-neutral-800 px-2 py-[3.5px] rounded-md max-w-full">
+                          <MapPin size={10.5} className="text-slate-400 shrink-0" />
+                          <span className="text-[10.5px] font-semibold text-slate-500 dark:text-neutral-400 truncate">{place}</span>
+                        </span>
+                      )}
+                      {isPromoted && app.has_resume && (
+                        <span className="inline-flex items-center gap-1 bg-accent-50 border border-accent-200 px-[7px] py-[3px] rounded-md">
+                          <FileText size={10.5} className="text-accent-600" />
+                          <span className="text-[10px] font-bold text-accent-700">CV on file</span>
+                        </span>
+                      )}
                     </div>
                   )}
-                  <div className="min-w-0">
-                    <h3 className="font-extrabold text-lg text-neutral-900 dark:text-white group-hover:text-accent-600 transition-colors truncate">{app.employee_name}</h3>
-                    <p className="text-sm text-neutral-500 font-medium truncate">{app.employee_profile?.title || 'Applicant'}</p>
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-3 leading-relaxed">
-                    {app.employee_profile?.bio || 'No bio available.'}
+
+                  <p className="text-[11px] leading-4 text-slate-500 dark:text-neutral-400 line-clamp-2">
+                    {bio || 'No summary provided.'}
                   </p>
-                </div>
-                <div className="flex flex-wrap gap-2 mb-6 mt-auto">
-                  {(app.employee_profile?.skills || []).slice(0, 4).map((skill: string, i: number) => (
-                    <span key={i} className="text-[11px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-1 rounded border border-neutral-200 dark:border-neutral-700 shadow-sm">{skill}</span>
-                  ))}
-                  {(app.employee_profile?.skills?.length > 4) && <span className="text-[11px] text-neutral-400 font-bold self-center">+{app.employee_profile.skills.length - 4}</span>}
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3 mt-auto border-t border-neutral-100 dark:border-neutral-800 pt-5">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); navigate(`/company/jobs/${id}/applicants/${app.id}`); }}
-                    className="flex-1 py-3 text-sm font-extrabold text-neutral-600 dark:text-neutral-300 flex items-center justify-center gap-2 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-colors"
-                  >
-                    <User size={16}/> View Profile
-                  </button>
-                  {app.is_shortlisted ? (
-                    <button disabled className="flex-[1.5] py-3 text-sm font-extrabold text-green-600 flex items-center justify-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl">
-                      <CheckCircle size={16}/> Shortlisted
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleShortlist(app.id); }}
-                      className="flex-[1.5] py-3 text-sm font-extrabold text-white flex items-center justify-center gap-2 bg-accent-600 hover:bg-accent-700 rounded-xl transition-colors shadow-soft"
-                    >
-                      <Star size={16} className="fill-current" /> Shortlist
-                    </button>
+
+                  {skills.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {skills.slice(0, 3).map(skill => (
+                        <span key={skill} className="bg-slate-50 dark:bg-neutral-800 border border-slate-300 dark:border-neutral-700 px-2 py-[3px] rounded-md text-[9px] font-bold text-slate-600 dark:text-neutral-300">
+                          {skill}
+                        </span>
+                      ))}
+                      {skills.length > 3 && <span className="text-[10px] font-bold text-slate-400">+{skills.length - 3}</span>}
+                    </div>
                   )}
-                </div>
-              </motion.div>
-            ))}
+
+                  <div className="h-px bg-slate-100 dark:bg-neutral-800 mt-auto" />
+
+                  <button
+                    type="button"
+                    onClick={e => { e.stopPropagation(); openCandidate(app); }}
+                    className="flex items-center justify-between bg-accent-500 hover:bg-accent-600 rounded-xl py-2.5 px-3.5 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                        <Eye size={13} className="text-white" />
+                      </span>
+                      <span className="text-[11px] font-bold tracking-[0.15px] text-white">View Details</span>
+                    </span>
+                    <ChevronRight size={15} className="text-white/75" />
+                  </button>
+                </motion.div>
+              );
+            })}
           </div>
         )}
-
       </div>
+
+      {/* ── Candidate profile sheet ── */}
+      <Portal>
+      <AnimatePresence>
+        {selected && (
+          <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/50"
+              onClick={() => setSelectedId(null)}
+            />
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="candidate-sheet-title"
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              className="relative w-full sm:max-w-lg bg-white dark:bg-neutral-900 rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col shadow-2xl"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-neutral-800">
+                <h2 id="candidate-sheet-title" className="text-[15px] font-extrabold text-slate-900 dark:text-white">Candidate Profile</h2>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="overflow-y-auto px-5 pt-5 pb-9">
+                <CandidateProfile
+                  candidate={selected}
+                  isPromoted={isPromoted || isPromotedPackage(selected.job_package)}
+                  onToggleShortlist={() => actions.toggleShortlist(selected)}
+                  onRequestStatus={status => actions.requestStatus(selected, status)}
+                  updatingStatus={actions.updatingStatus}
+                  onOpenResume={() => actions.openResume(selected)}
+                  loadingResume={actions.loadingResume}
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      </Portal>
+
+      <StatusConfirmDialog
+        copy={actions.pendingCopy}
+        busy={actions.updatingStatus}
+        onCancel={actions.cancelStatus}
+        onConfirm={actions.confirmStatus}
+      />
+      <ResumeViewer url={actions.resumeUrl} name={selected?.employee_name} onClose={actions.closeResume} />
     </div>
   );
 };
