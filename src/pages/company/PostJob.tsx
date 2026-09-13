@@ -8,12 +8,25 @@ import { useAppContext } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { worldCurrencies } from '../../utils/currencies';
 import { CompanyProfile } from '../../types';
+import { Portal } from '../../components/ui/Portal';
 
 
+// Same packages, in the same order, as mobile/src/components/company-post-job.tsx.
 const PACKAGES = [
   {
+    id: 'promoted',
+    title: 'QUOTAHIRE PROMOTED JOBS',
+    subtitle: 'Promoted Job Post & Direct Applicant Access',
+    bestFor: 'Fast hiring with unrestricted direct access to candidates',
+    weDo: 'Boost your job listing on the platform, deliver applicant profiles, CVs & cover letters directly to your dashboard',
+    youDo: 'Review applicants directly, schedule interviews, and hire on your terms',
+    promise: 'Boosted listing reach and direct access to candidate CVs & cover letters.',
+    fee: 'One-time promotion fee',
+    guarantee: 'Active until fulfilled'
+  },
+  {
     id: 'pipeline',
-    title: 'QUOTA HIRE PIPELINE',
+    title: 'QUOTAHIRE PIPELINE',
     subtitle: 'Recruit Sales Associate Only',
     bestFor: 'You have Sales Manager + CRM + training',
     weDo: 'Source, vet, test, shortlist 5-7 closers. You interview + hire + manage.',
@@ -24,7 +37,7 @@ const PACKAGES = [
   },
   {
     id: 'hunters',
-    title: 'QUOTA HIRE COMMISSION HUNTERS',
+    title: 'QUOTAHIRE COMMISSION HUNTERS',
     subtitle: 'Commission-Only Specialist',
     bestFor: '100% commission pay. No base budget',
     weDo: 'Pipeline vetting + commission mindset test + cold call roleplay',
@@ -35,7 +48,7 @@ const PACKAGES = [
   },
   {
     id: 'sales_ops',
-    title: 'QUOTA HIRE SALES OPS',
+    title: 'QUOTAHIRE SALES OPS',
     subtitle: 'Recruit + Manage Full Sales Team',
     bestFor: 'You want revenue without hiring a Sales Manager',
     weDo: 'Everything in Pipeline + daily management, scripts, KPI tracking, weekly coaching, pipeline reviews, fire underperformers, monthly reports',
@@ -46,12 +59,46 @@ const PACKAGES = [
   }
 ];
 
+/**
+ * The app's step 4 picker: a compact card per package with the title, a tick
+ * when chosen, the subtitle, the promise and the fee structure.
+ */
+const PackageSelect = ({ selected, onSelect }: { selected: string, onSelect: (id: string) => void }) => (
+  <div role="radiogroup" aria-label="Recruitment package" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    {PACKAGES.map(pkg => {
+      const isSelected = selected === pkg.id;
+      return (
+        <button
+          key={pkg.id}
+          type="button"
+          role="radio"
+          aria-checked={isSelected}
+          onClick={() => onSelect(pkg.id)}
+          className={`text-left flex flex-col bg-white dark:bg-neutral-900 rounded-2xl border-2 p-4 transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-accent-500/30 ${
+            isSelected
+              ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20 shadow-md'
+              : 'border-slate-200 dark:border-neutral-800 hover:border-accent-300'
+          }`}
+        >
+          <span className="flex items-start justify-between gap-3">
+            <span className={`font-extrabold text-sm leading-tight ${isSelected ? 'text-accent-600 dark:text-accent-400' : 'text-slate-900 dark:text-white'}`}>{pkg.title}</span>
+            {isSelected && <CheckCircle2 size={18} className="text-accent-600 dark:text-accent-400 shrink-0" />}
+          </span>
+          <span className="mt-1 text-xs font-bold text-accent-600 dark:text-accent-400">{pkg.subtitle}</span>
+          <span className="mt-2 text-xs text-slate-600 dark:text-neutral-400 leading-relaxed"><span className="font-bold">Promise:</span> {pkg.promise}</span>
+          <span className="mt-1 text-xs text-slate-600 dark:text-neutral-400 leading-relaxed whitespace-pre-line"><span className="font-bold">Fee Structure:</span> {pkg.fee}</span>
+        </button>
+      );
+    })}
+  </div>
+);
+
 const PackageCards = ({ selected, onSelect, readOnly }: { selected?: string, onSelect?: (id: string) => void, readOnly?: boolean }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       {PACKAGES.map(pkg => (
-        <div 
-          key={pkg.id} 
+        <div
+          key={pkg.id}
           onClick={() => !readOnly && onSelect && onSelect(pkg.id)}
           className={`flex flex-col bg-white dark:bg-neutral-900 rounded-2xl border-2 transition-all p-5 shadow-sm ${readOnly ? 'border-neutral-200 dark:border-neutral-800' : selected === pkg.id ? 'border-accent-500 shadow-md ring-4 ring-accent-500/20' : 'border-neutral-200 dark:border-neutral-800 hover:border-accent-300 cursor-pointer'}`}
         >
@@ -96,45 +143,65 @@ export const PostJob = () => {
     package: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  // Which confirmation to show after a successful post. Promoted roles need
+  // payment before they go live, so they get the app's payment wording.
+  const [submitted, setSubmitted] = useState<null | 'promoted' | 'standard'>(null);
   const navigate = useNavigate();
 
   const selectedCurrencyObj = worldCurrencies.find(c => c.code === formData.currency) || worldCurrencies[0];
   const CurrencyIcon = <span className="font-bold text-lg leading-none">{selectedCurrencyObj.symbol}</span>;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setFormData(prev => ({
+      ...prev,
+      title: '',
+      location: '',
+      isRemote: true,
+      salaryRange: '',
+      commissionRange: '',
+      description: '',
+      requirements: '',
+      package: ''
+    }));
+    setStep(0);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (step < 4) {
       setStep(step + 1);
       return;
     }
 
-    if (!formData.package) return;
+    if (!formData.package || isLoading) return;
 
     setIsLoading(true);
-    let finalDescription = formData.description;
+    const posted = await postJob({
+      title: formData.title,
+      location: formData.location,
+      isRemote: formData.isRemote,
+      employment_type: 'Full-time', // Explicitly setting to Full-time as requested
+      currency: formData.currency,
+      salaryRange: formData.salaryRange,
+      commissionRange: formData.commissionRange,
+      description: formData.description,
+      requirements: formData.requirements.split('\n').filter((r) => r.trim() !== ''),
+      contactEmail: formData.contactEmail,
+      contactPhone: formData.contactPhone,
+      whatsappNumber: formData.whatsappNumber,
+      companyAddress: formData.companyAddress,
+      companyName: formData.companyName,
+      package: formData.package
+    });
+    setIsLoading(false);
+    if (posted) setSubmitted(formData.package === 'promoted' ? 'promoted' : 'standard');
+  };
 
-    setTimeout(() => {
-      postJob({
-        title: formData.title,
-        location: formData.location,
-        isRemote: formData.isRemote,
-        employment_type: 'Full-time', // Explicitly setting to Full-time as requested
-        currency: formData.currency,
-        salaryRange: formData.salaryRange,
-        commissionRange: formData.commissionRange,
-        description: finalDescription,
-        requirements: formData.requirements.split('\n').filter((r) => r.trim() !== ''),
-        contactEmail: formData.contactEmail,
-        contactPhone: formData.contactPhone,
-        whatsappNumber: formData.whatsappNumber,
-        companyAddress: formData.companyAddress,
-        companyName: formData.companyName,
-        package: formData.package
-      });
-      setIsLoading(false);
-      navigate('/dashboard');
-    }, 800);
+  const postAnother = () => {
+    setSubmitted(null);
+    resetForm();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const stepVariants = {
@@ -220,8 +287,8 @@ export const PostJob = () => {
               {step === 0 && (
                 <motion.div key="step0" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                   <div className="text-center mb-8">
-                    <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Our Service Packages</h3>
-                    <p className="text-neutral-500">Review our available structures before posting your job.</p>
+                    <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Our Recruitment Packages</h3>
+                    <p className="text-neutral-500">Review our service structures before entering job basics.</p>
                   </div>
                   <PackageCards readOnly />
                 </motion.div>
@@ -476,12 +543,12 @@ export const PostJob = () => {
               {step === 4 && (
                 <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                   <div className="text-center mb-8">
-                    <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Select a Package</h3>
-                    <p className="text-neutral-500">Choose the hiring package that best fits your needs to post this job.</p>
+                    <h3 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Select Recruitment Package</h3>
+                    <p className="text-neutral-500">Choose the structure that matches your hiring plan.</p>
                   </div>
-                  <PackageCards 
-                    selected={formData.package} 
-                    onSelect={(id) => setFormData({ ...formData, package: id })} 
+                  <PackageSelect
+                    selected={formData.package}
+                    onSelect={(id) => setFormData({ ...formData, package: id })}
                   />
                 </motion.div>
               )}
@@ -502,12 +569,63 @@ export const PostJob = () => {
                 isLoading={isLoading && step === 4}
                 disabled={step === 4 && !formData.package}
               >
-                {step === 0 ? 'Continue to Post Job' : step === 3 ? 'Continue to Select Package' : step === 4 ? 'Post Job' : 'Next Step'}
+                {step === 0 ? 'Start Post Job' : step === 4 ? 'Post Role' : 'Next'}
               </Button>
             </div>
           </form>
         </motion.div>
       </div>
+
+      <Portal>
+        <AnimatePresence>
+          {submitted && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px]"
+              />
+              <motion.div
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="job-submitted-title"
+                aria-describedby="job-submitted-message"
+                initial={{ opacity: 0, scale: 0.97, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 8 }}
+                transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                className="relative w-full max-w-sm bg-white dark:bg-neutral-900 rounded-2xl p-6 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/10 text-center"
+              >
+                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-accent-50 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400 flex items-center justify-center">
+                  <CheckCircle2 size={28} />
+                </div>
+                <h2 id="job-submitted-title" className="text-lg font-extrabold text-slate-900 dark:text-white">
+                  {submitted === 'promoted' ? 'Job Submitted Successfully!' : 'Success'}
+                </h2>
+                <p id="job-submitted-message" className="mt-2 text-sm text-slate-600 dark:text-neutral-300 leading-relaxed">
+                  {submitted === 'promoted'
+                    ? 'Your job has been submitted under the Promoted Job plan. Please check your email for payment completion instructions to activate promotion and direct applicant access.'
+                    : 'Job posted successfully! It will be listed once reviewed.'}
+                </p>
+                <div className="mt-6 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    autoFocus
+                    onClick={postAnother}
+                    className="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-accent-500 hover:bg-accent-600 transition-colors"
+                  >
+                    Post Another Job
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard')}
+                    className="w-full py-2.5 rounded-xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                  >
+                    Back to Dashboard
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </Portal>
     </div>
   );
 };

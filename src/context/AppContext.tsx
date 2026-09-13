@@ -167,7 +167,8 @@ interface AppContextType extends AppState {
   logout: () => Promise<void>;
   register: (user: any) => Promise<void>;
   fetchData: (showLoading?: boolean) => Promise<void>;
-  postJob: (job: any) => Promise<void>;
+  /** Resolves true when the server accepted the job. Failures raise their own toast. */
+  postJob: (job: any) => Promise<boolean>;
   applyForJob: (jobId: string, coverLetter?: string, generatedCvId?: number) => Promise<void>;
   updateJobStatus: (jobId: string, status: Job['status']) => Promise<void>;
   updateApplicationStatus: (appId: string, status: Application['status']) => Promise<void>;
@@ -580,11 +581,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           body: JSON.stringify(payload)
       });
       
-      // Fetch data to refresh job list
+      // Fetch data to refresh job list. The Post a Job page shows its own
+      // confirmation, which differs for promoted roles, so no toast here.
       await fetchData(false);
-      toast.success('Job posted successfully!', { description: 'You will be notified once the job listing is approved.' });
+      return true;
     } catch (error: any) {
       toast.error(`${error.message || 'Failed to post job'}. Please try again.`);
+      return false;
     }
   };
 
